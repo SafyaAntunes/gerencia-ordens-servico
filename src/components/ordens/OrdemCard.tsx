@@ -2,6 +2,7 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Clock, Calendar, ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { OrdemServico } from "@/types/ordens";
@@ -14,6 +15,8 @@ interface OrdemCardProps {
 }
 
 export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
+  const navigate = useNavigate();
+  
   // Contador das etapas concluídas
   const totalEtapas = 6; // Número total de etapas
   const etapasConcluidas = Object.values(ordem.etapasAndamento).filter(
@@ -23,10 +26,15 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
   // Cálculo do progresso
   const progresso = Math.round((etapasConcluidas / totalEtapas) * 100);
   
+  const handleNavigateToDetail = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/ordens/${ordem.id}`);
+  };
+  
   return (
     <Card 
       className="card-hover cursor-pointer overflow-hidden"
-      onClick={onClick}
+      onClick={onClick || (() => navigate(`/ordens/${ordem.id}`))}
     >
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
@@ -95,10 +103,7 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
           variant="ghost" 
           size="icon" 
           className="h-8 w-8"
-          onClick={(e) => {
-            e.stopPropagation();
-            // Navegação para detalhes vai aqui
-          }}
+          onClick={handleNavigateToDetail}
         >
           <ArrowRight className="h-4 w-4" />
         </Button>

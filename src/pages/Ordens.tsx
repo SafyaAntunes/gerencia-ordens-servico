@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { PlusCircle, Filter, Search, FileText, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -289,16 +288,21 @@ const ordens: OrdemServico[] = [
   },
 ];
 
-const Ordens = () => {
+interface OrdensProps {
+  onLogout: () => void;
+}
+
+const Ordens = ({ onLogout }: OrdensProps) => {
   const navigate = useNavigate();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusOS | "todas">("todas");
   const [prioridadeFilter, setPrioridadeFilter] = useState<Prioridade | "todas">("todas");
+  const [fotosEntrada, setFotosEntrada] = useState<File[]>([]);
+  const [fotosSaida, setFotosSaida] = useState<File[]>([]);
   
   const handleNavigateToDetalhe = (id: string) => {
-    // Navegar para detalhes da ordem futuramente
-    console.log(`Navegando para ordem ${id}`);
+    navigate(`/ordens/${id}`);
   };
   
   const handleCreateOrdem = (values: any) => {
@@ -333,7 +337,7 @@ const Ordens = () => {
   );
   
   return (
-    <Layout>
+    <Layout onLogout={onLogout}>
       <div className="animate-fade-in">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
@@ -506,7 +510,11 @@ const Ordens = () => {
             </DialogHeader>
             <Separator />
             <div className="p-6 pt-4 max-h-[80vh] overflow-y-auto">
-              <OrdemForm onSubmit={handleCreateOrdem} />
+              <OrdemForm 
+                onSubmit={handleCreateOrdem} 
+                defaultFotosEntrada={fotosEntrada}
+                defaultFotosSaida={fotosSaida}
+              />
             </div>
           </DialogContent>
         </Dialog>

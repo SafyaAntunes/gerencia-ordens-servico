@@ -1,11 +1,10 @@
-
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Check, Plus, X } from "lucide-react";
+import { CalendarIcon, Check, Plus, X, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -35,8 +34,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { Prioridade, TipoServico } from "@/types/ordens";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import FotosForm from "./FotosForm";
 
-// Dados de exemplo para selecionar cliente
 const CLIENTES = [
   { id: "1", nome: "Auto Peças Silva" },
   { id: "2", nome: "Oficina Mecânica Central" },
@@ -58,9 +58,11 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 type OrdemFormProps = {
-  onSubmit: (values: FormValues) => void;
+  onSubmit: (values: FormValues & { fotosEntrada: File[], fotosSaida: File[] }) => void;
   isLoading?: boolean;
   defaultValues?: Partial<FormValues>;
+  defaultFotosEntrada?: File[];
+  defaultFotosSaida?: File[];
 };
 
 const tiposServico: { value: TipoServico; label: string }[] = [
@@ -71,8 +73,17 @@ const tiposServico: { value: TipoServico; label: string }[] = [
   { value: "eixo_comando", label: "Eixo de Comando" },
 ];
 
-export default function OrdemForm({ onSubmit, isLoading = false, defaultValues }: OrdemFormProps) {
+export default function OrdemForm({ 
+  onSubmit, 
+  isLoading = false, 
+  defaultValues,
+  defaultFotosEntrada = [],
+  defaultFotosSaida = [],
+}: OrdemFormProps) {
   const [servicosDescricoes, setServicosDescricoes] = useState<Record<string, string>>({});
+  const [fotosEntrada, setFotosEntrada] = useState<File[]>(defaultFotosEntrada);
+  const [fotosSaida, setFotosSaida] = useState<File[]>(defaultFotosSaida);
+  const [activeTab, setActiveTab] = useState("dados");
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -98,6 +109,8 @@ export default function OrdemForm({ onSubmit, isLoading = false, defaultValues }
     const formData = {
       ...values,
       servicosDescricoes,
+      fotosEntrada,
+      fotosSaida
     };
     
     onSubmit(formData);
@@ -106,239 +119,265 @@ export default function OrdemForm({ onSubmit, isLoading = false, defaultValues }
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="nome"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Nome da Ordem de Serviço</FormLabel>
-                <FormControl>
-                  <Input placeholder="Motor Ford Ka 2019" {...field} />
-                </FormControl>
-                <FormDescription>
-                  Nome ou identificação da OS
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <Tabs 
+          defaultValue="dados" 
+          value={activeTab} 
+          onValueChange={setActiveTab}
+          className="w-full"
+        >
+          <TabsList className="grid grid-cols-2">
+            <TabsTrigger value="dados">Dados da OS</TabsTrigger>
+            <TabsTrigger value="fotos" className="flex items-center gap-2">
+              <Camera className="h-4 w-4" />
+              Fotos
+            </TabsTrigger>
+          </TabsList>
           
-          <FormField
-            control={form.control}
-            name="clienteId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Cliente</FormLabel>
-                <Select 
-                  onValueChange={field.onChange} 
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um cliente" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {CLIENTES.map((cliente) => (
-                      <SelectItem 
-                        key={cliente.id} 
-                        value={cliente.id}
-                      >
-                        {cliente.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormDescription>
-                  Cliente vinculado à OS
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <FormField
-            control={form.control}
-            name="dataAbertura"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Data de Abertura</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
+          <TabsContent value="dados" className="space-y-6 pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="nome"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome da Ordem de Serviço</FormLabel>
                     <FormControl>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
-                        )}
-                      >
-                        {field.value ? (
-                          format(field.value, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
-                        ) : (
-                          <span>Selecione uma data</span>
-                        )}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
+                      <Input placeholder="Motor Ford Ka 2019" {...field} />
                     </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      initialFocus
-                      locale={ptBR}
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                    <FormDescription>
+                      Nome ou identificação da OS
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="clienteId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cliente</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um cliente" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {CLIENTES.map((cliente) => (
+                          <SelectItem 
+                            key={cliente.id} 
+                            value={cliente.id}
+                          >
+                            {cliente.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Cliente vinculado à OS
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <FormField
+                control={form.control}
+                name="dataAbertura"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Data de Abertura</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                            ) : (
+                              <span>Selecione uma data</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          initialFocus
+                          locale={ptBR}
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="dataPrevistaEntrega"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Data Prevista de Entrega</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                            ) : (
+                              <span>Selecione uma data</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) => date < new Date()}
+                          initialFocus
+                          locale={ptBR}
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="prioridade"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Prioridade</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a prioridade" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="baixa">Baixa</SelectItem>
+                        <SelectItem value="media">Média</SelectItem>
+                        <SelectItem value="alta">Alta</SelectItem>
+                        <SelectItem value="urgente">Urgente</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <div>
+              <FormLabel className="text-base">Serviços a serem realizados</FormLabel>
+              <FormDescription className="mb-3">
+                Selecione os serviços que serão executados nesta ordem
+              </FormDescription>
+              
+              <div className="rounded-md border border-border p-4 space-y-4">
+                <FormField
+                  control={form.control}
+                  name="servicosTipos"
+                  render={() => (
+                    <FormItem>
+                      <div className="mb-4">
+                        {tiposServico.map((tipo) => (
+                          <FormField
+                            key={tipo.value}
+                            control={form.control}
+                            name="servicosTipos"
+                            render={({ field }) => {
+                              return (
+                                <FormItem
+                                  key={tipo.value}
+                                  className="flex flex-col space-y-3 my-4"
+                                >
+                                  <div className="flex items-start space-x-3 space-y-0">
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value?.includes(tipo.value)}
+                                        onCheckedChange={(checked) => {
+                                          const updatedValue = checked
+                                            ? [...(field.value || []), tipo.value]
+                                            : field.value?.filter(
+                                                (value) => value !== tipo.value
+                                              ) || [];
+                                          field.onChange(updatedValue);
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <div className="space-y-1 leading-none">
+                                      <FormLabel className="text-sm font-normal">
+                                        {tipo.label}
+                                      </FormLabel>
+                                    </div>
+                                  </div>
+                                  
+                                  {field.value?.includes(tipo.value) && (
+                                    <div className="ml-6">
+                                      <Textarea
+                                        placeholder={`Descreva o serviço de ${tipo.label.toLowerCase()}...`}
+                                        value={servicosDescricoes[tipo.value] || ""}
+                                        onChange={(e) => 
+                                          handleServicoDescricaoChange(tipo.value, e.target.value)
+                                        }
+                                        className="resize-none"
+                                      />
+                                    </div>
+                                  )}
+                                </FormItem>
+                              );
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+          </TabsContent>
           
-          <FormField
-            control={form.control}
-            name="dataPrevistaEntrega"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Data Prevista de Entrega</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
-                        )}
-                      >
-                        {field.value ? (
-                          format(field.value, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
-                        ) : (
-                          <span>Selecione uma data</span>
-                        )}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      disabled={(date) => date < new Date()}
-                      initialFocus
-                      locale={ptBR}
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="prioridade"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Prioridade</FormLabel>
-                <Select 
-                  onValueChange={field.onChange} 
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a prioridade" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="baixa">Baixa</SelectItem>
-                    <SelectItem value="media">Média</SelectItem>
-                    <SelectItem value="alta">Alta</SelectItem>
-                    <SelectItem value="urgente">Urgente</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        
-        <div>
-          <FormLabel className="text-base">Serviços a serem realizados</FormLabel>
-          <FormDescription className="mb-3">
-            Selecione os serviços que serão executados nesta ordem
-          </FormDescription>
-          
-          <div className="rounded-md border border-border p-4 space-y-4">
-            <FormField
-              control={form.control}
-              name="servicosTipos"
-              render={() => (
-                <FormItem>
-                  <div className="mb-4">
-                    {tiposServico.map((tipo) => (
-                      <FormField
-                        key={tipo.value}
-                        control={form.control}
-                        name="servicosTipos"
-                        render={({ field }) => {
-                          return (
-                            <FormItem
-                              key={tipo.value}
-                              className="flex flex-col space-y-3 my-4"
-                            >
-                              <div className="flex items-start space-x-3 space-y-0">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(tipo.value)}
-                                    onCheckedChange={(checked) => {
-                                      const updatedValue = checked
-                                        ? [...(field.value || []), tipo.value]
-                                        : field.value?.filter(
-                                            (value) => value !== tipo.value
-                                          ) || [];
-                                      field.onChange(updatedValue);
-                                    }}
-                                  />
-                                </FormControl>
-                                <div className="space-y-1 leading-none">
-                                  <FormLabel className="text-sm font-normal">
-                                    {tipo.label}
-                                  </FormLabel>
-                                </div>
-                              </div>
-                              
-                              {field.value?.includes(tipo.value) && (
-                                <div className="ml-6">
-                                  <Textarea
-                                    placeholder={`Descreva o serviço de ${tipo.label.toLowerCase()}...`}
-                                    value={servicosDescricoes[tipo.value] || ""}
-                                    onChange={(e) => 
-                                      handleServicoDescricaoChange(tipo.value, e.target.value)
-                                    }
-                                    className="resize-none"
-                                  />
-                                </div>
-                              )}
-                            </FormItem>
-                          );
-                        }}
-                      />
-                    ))}
-                  </div>
-                </FormItem>
-              )}
+          <TabsContent value="fotos" className="pt-4">
+            <FotosForm 
+              fotosEntrada={fotosEntrada}
+              fotosSaida={fotosSaida}
+              onChangeFotosEntrada={setFotosEntrada}
+              onChangeFotosSaida={setFotosSaida}
             />
-          </div>
-        </div>
+          </TabsContent>
+        </Tabs>
         
         <Separator />
         

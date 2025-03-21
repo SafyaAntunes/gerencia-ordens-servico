@@ -1,0 +1,585 @@
+
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import Layout from "@/components/layout/Layout";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { ArrowLeft, Building, Calendar, Clock, MapPin, Phone, User, Mail, Check, X, Edit, FileText } from "lucide-react";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Separator } from "@/components/ui/separator";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { OrdemServico, Servico, StatusOS } from "@/types/ordens";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import OrdemCronometro from "@/components/ordens/OrdemCronometro";
+import { Progress } from "@/components/ui/progress";
+import FotosForm from "@/components/ordens/FotosForm";
+
+interface OrdemDetalhesProps {
+  onLogout: () => void;
+}
+
+export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [ordem, setOrdem] = useState<OrdemServico | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [fotosEntrada, setFotosEntrada] = useState<File[]>([]);
+  const [fotosSaida, setFotosSaida] = useState<File[]>([]);
+
+  useEffect(() => {
+    // Simular carregamento da OS
+    setTimeout(() => {
+      // Dados simulados - em uma aplicação real, isso seria uma chamada à API
+      const ordemEncontrada = {
+        id: "OS-2023-001",
+        nome: "Motor Ford Ka 2019",
+        cliente: {
+          id: "1",
+          nome: "Auto Peças Silva",
+          telefone: "(11) 98765-4321",
+          email: "contato@autopecassilva.com.br",
+        },
+        dataAbertura: new Date(2023, 4, 15),
+        dataPrevistaEntrega: new Date(2023, 4, 30),
+        prioridade: "alta",
+        servicos: [
+          { tipo: "bloco", descricao: "Retífica completa do bloco", concluido: false },
+          { tipo: "virabrequim", descricao: "Balanceamento", concluido: false },
+        ],
+        status: "fabricacao",
+        etapasAndamento: {
+          lavagem: { concluido: true, funcionarioId: "1", iniciado: new Date(2023, 4, 16), finalizado: new Date(2023, 4, 16) },
+          inspecao_inicial: { concluido: true, funcionarioId: "2", iniciado: new Date(2023, 4, 17), finalizado: new Date(2023, 4, 18) },
+          retifica: { concluido: false, funcionarioId: "3", iniciado: new Date(2023, 4, 19) },
+        },
+        tempoRegistros: [
+          {
+            inicio: new Date(2023, 4, 16, 8, 0),
+            fim: new Date(2023, 4, 16, 12, 0),
+            funcionarioId: "1",
+            etapa: "lavagem",
+            pausas: [
+              { inicio: new Date(2023, 4, 16, 10, 0), fim: new Date(2023, 4, 16, 10, 15) },
+            ],
+          },
+          {
+            inicio: new Date(2023, 4, 17, 13, 0),
+            fim: new Date(2023, 4, 18, 17, 0),
+            funcionarioId: "2",
+            etapa: "inspecao_inicial",
+            pausas: [],
+          },
+          {
+            inicio: new Date(2023, 4, 19, 8, 0),
+            funcionarioId: "3",
+            etapa: "retifica",
+            pausas: [
+              { inicio: new Date(2023, 4, 19, 12, 0), fim: new Date(2023, 4, 19, 13, 0) },
+            ],
+          },
+        ],
+      } as OrdemServico;
+      
+      setOrdem(ordemEncontrada);
+      setLoading(false);
+    }, 1000);
+  }, [id]);
+
+  // Função para calcular o progresso
+  const calcularProgresso = () => {
+    if (!ordem) return 0;
+    const totalEtapas = 6; // Número total de etapas
+    const etapasConcluidas = Object.values(ordem.etapasAndamento).filter(
+      (etapa) => etapa?.concluido
+    ).length;
+    
+    return Math.round((etapasConcluidas / totalEtapas) * 100);
+  };
+
+  const handleFotosEntradaChange = (fotos: File[]) => {
+    setFotosEntrada(fotos);
+    // Aqui você salvaria as fotos em uma API real
+  };
+
+  const handleFotosSaidaChange = (fotos: File[]) => {
+    setFotosSaida(fotos);
+    // Aqui você salvaria as fotos em uma API real
+  };
+
+  if (loading) {
+    return (
+      <Layout onLogout={onLogout}>
+        <div className="flex flex-col items-center justify-center p-12">
+          <p className="text-lg text-muted-foreground">Carregando detalhes da ordem...</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!ordem) {
+    return (
+      <Layout onLogout={onLogout}>
+        <div className="flex flex-col items-center justify-center p-12">
+          <h2 className="text-2xl font-bold mb-2">Ordem não encontrada</h2>
+          <p className="text-muted-foreground mb-4">A ordem de serviço solicitada não foi encontrada.</p>
+          <Button onClick={() => navigate("/ordens")}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar para a lista
+          </Button>
+        </div>
+      </Layout>
+    );
+  }
+
+  return (
+    <Layout onLogout={onLogout}>
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="icon" onClick={() => navigate("/ordens")}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                {ordem.nome}
+                <StatusBadge status={ordem.prioridade} size="sm" />
+              </h1>
+              <p className="text-muted-foreground">
+                OS: {ordem.id} • Cliente: {ordem.cliente.nome}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button variant="outline">
+              <Edit className="mr-2 h-4 w-4" />
+              Editar OS
+            </Button>
+            <Button>
+              <FileText className="mr-2 h-4 w-4" />
+              Gerar Relatório
+            </Button>
+          </div>
+        </div>
+
+        <Tabs defaultValue="info">
+          <TabsList className="mb-4">
+            <TabsTrigger value="info">Informações</TabsTrigger>
+            <TabsTrigger value="progresso">Progresso</TabsTrigger>
+            <TabsTrigger value="registros">Registros de Tempo</TabsTrigger>
+            <TabsTrigger value="fotos">Fotos</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="info" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Detalhes da OS</CardTitle>
+                  <CardDescription>Informações gerais da ordem de serviço</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <Calendar className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Data de Abertura</p>
+                      <p className="text-sm text-muted-foreground">
+                        {format(ordem.dataAbertura, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <Clock className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Data Prevista de Entrega</p>
+                      <p className="text-sm text-muted-foreground">
+                        {format(ordem.dataPrevistaEntrega, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <StatusBadge 
+                      status={ordem.status as StatusOS} 
+                      size="md" 
+                      className="shrink-0" 
+                    />
+                    <div>
+                      <p className="font-medium">Status Atual</p>
+                      <p className="text-sm text-muted-foreground">
+                        {ordem.status === "orcamento" && "Em Orçamento"}
+                        {ordem.status === "aguardando_aprovacao" && "Aguardando Aprovação"}
+                        {ordem.status === "fabricacao" && "Em Fabricação"}
+                        {ordem.status === "espera_cliente" && "Em Espera (Cliente)"}
+                        {ordem.status === "finalizado" && "Finalizado"}
+                        {ordem.status === "entregue" && "Entregue"}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <p className="font-medium mb-2">Progresso</p>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Concluído</span>
+                        <span>{calcularProgresso()}%</span>
+                      </div>
+                      <Progress value={calcularProgresso()} className="h-2" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Informações do Cliente</CardTitle>
+                  <CardDescription>Dados do cliente vinculado</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <Building className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Empresa</p>
+                      <p className="text-sm text-muted-foreground">{ordem.cliente.nome}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <Phone className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Telefone</p>
+                      <p className="text-sm text-muted-foreground">{ordem.cliente.telefone}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <Mail className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">E-mail</p>
+                      <p className="text-sm text-muted-foreground">{ordem.cliente.email}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Serviços Solicitados</CardTitle>
+                <CardDescription>Detalhes dos serviços a serem realizados</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {ordem.servicos.length === 0 ? (
+                    <p className="text-muted-foreground">Nenhum serviço cadastrado para esta OS.</p>
+                  ) : (
+                    ordem.servicos.map((servico: Servico, index: number) => (
+                      <div key={index} className="rounded-md border border-border p-4">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium">
+                                {servico.tipo === 'bloco' && 'Bloco'}
+                                {servico.tipo === 'biela' && 'Biela'}
+                                {servico.tipo === 'cabecote' && 'Cabeçote'}
+                                {servico.tipo === 'virabrequim' && 'Virabrequim'}
+                                {servico.tipo === 'eixo_comando' && 'Eixo de Comando'}
+                              </span>
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
+                                {servico.tipo}
+                              </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{servico.descricao}</p>
+                          </div>
+                          <div className="flex items-center">
+                            {servico.concluido ? (
+                              <div className="flex items-center text-sm text-green-600">
+                                <Check className="h-4 w-4 mr-1" />
+                                <span>Concluído</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center text-sm text-yellow-600">
+                                <Clock className="h-4 w-4 mr-1" />
+                                <span>Em andamento</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="progresso">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Andamento das Etapas</CardTitle>
+                <CardDescription>Acompanhe o progresso de cada etapa da ordem de serviço</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <div className="rounded-md border border-border p-4">
+                    <h3 className="font-medium mb-3">Etapa: Lavagem</h3>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          {ordem.etapasAndamento.lavagem?.concluido ? (
+                            <span className="flex items-center text-green-600">
+                              <Check className="h-4 w-4 mr-1" />
+                              Concluído
+                            </span>
+                          ) : (
+                            <span className="flex items-center text-yellow-600">
+                              <Clock className="h-4 w-4 mr-1" />
+                              Em andamento
+                            </span>
+                          )}
+                        </p>
+                        {ordem.etapasAndamento.lavagem?.iniciado && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Iniciado em: {format(ordem.etapasAndamento.lavagem.iniciado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                        )}
+                        {ordem.etapasAndamento.lavagem?.finalizado && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Finalizado em: {format(ordem.etapasAndamento.lavagem.finalizado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                        )}
+                      </div>
+                      <OrdemCronometro />
+                    </div>
+                  </div>
+                  
+                  <div className="rounded-md border border-border p-4">
+                    <h3 className="font-medium mb-3">Etapa: Inspeção Inicial</h3>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          {ordem.etapasAndamento.inspecao_inicial?.concluido ? (
+                            <span className="flex items-center text-green-600">
+                              <Check className="h-4 w-4 mr-1" />
+                              Concluído
+                            </span>
+                          ) : (
+                            <span className="flex items-center text-yellow-600">
+                              <Clock className="h-4 w-4 mr-1" />
+                              Em andamento
+                            </span>
+                          )}
+                        </p>
+                        {ordem.etapasAndamento.inspecao_inicial?.iniciado && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Iniciado em: {format(ordem.etapasAndamento.inspecao_inicial.iniciado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                        )}
+                        {ordem.etapasAndamento.inspecao_inicial?.finalizado && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Finalizado em: {format(ordem.etapasAndamento.inspecao_inicial.finalizado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                        )}
+                      </div>
+                      <OrdemCronometro />
+                    </div>
+                  </div>
+                  
+                  <div className="rounded-md border border-border p-4">
+                    <h3 className="font-medium mb-3">Etapa: Retífica</h3>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          {ordem.etapasAndamento.retifica?.concluido ? (
+                            <span className="flex items-center text-green-600">
+                              <Check className="h-4 w-4 mr-1" />
+                              Concluído
+                            </span>
+                          ) : (
+                            <span className="flex items-center text-yellow-600">
+                              <Clock className="h-4 w-4 mr-1" />
+                              Em andamento
+                            </span>
+                          )}
+                        </p>
+                        {ordem.etapasAndamento.retifica?.iniciado && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Iniciado em: {format(ordem.etapasAndamento.retifica.iniciado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                        )}
+                        {ordem.etapasAndamento.retifica?.finalizado && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Finalizado em: {format(ordem.etapasAndamento.retifica.finalizado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                        )}
+                      </div>
+                      <OrdemCronometro />
+                    </div>
+                  </div>
+                  
+                  <div className="rounded-md border border-border p-4">
+                    <h3 className="font-medium mb-3">Etapa: Montagem Final</h3>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          {ordem.etapasAndamento.montagem_final?.concluido ? (
+                            <span className="flex items-center text-green-600">
+                              <Check className="h-4 w-4 mr-1" />
+                              Concluído
+                            </span>
+                          ) : (
+                            <span className="flex items-center text-muted-foreground">
+                              <X className="h-4 w-4 mr-1" />
+                              Não iniciado
+                            </span>
+                          )}
+                        </p>
+                        {ordem.etapasAndamento.montagem_final?.iniciado && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Iniciado em: {format(ordem.etapasAndamento.montagem_final.iniciado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                        )}
+                      </div>
+                      <OrdemCronometro />
+                    </div>
+                  </div>
+                  
+                  <div className="rounded-md border border-border p-4">
+                    <h3 className="font-medium mb-3">Etapa: Teste</h3>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          <span className="flex items-center text-muted-foreground">
+                            <X className="h-4 w-4 mr-1" />
+                            Não iniciado
+                          </span>
+                        </p>
+                      </div>
+                      <OrdemCronometro />
+                    </div>
+                  </div>
+                  
+                  <div className="rounded-md border border-border p-4">
+                    <h3 className="font-medium mb-3">Etapa: Inspeção Final</h3>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          <span className="flex items-center text-muted-foreground">
+                            <X className="h-4 w-4 mr-1" />
+                            Não iniciado
+                          </span>
+                        </p>
+                      </div>
+                      <OrdemCronometro />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="registros">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Registros de Tempo</CardTitle>
+                <CardDescription>Histórico de tempo de trabalho na OS</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {ordem.tempoRegistros.map((registro, index) => (
+                    <div key={index} className="rounded-md border border-border p-4">
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-2">
+                        <div>
+                          <h4 className="font-medium">
+                            Etapa: {" "}
+                            {registro.etapa === 'lavagem' && 'Lavagem'}
+                            {registro.etapa === 'inspecao_inicial' && 'Inspeção Inicial'}
+                            {registro.etapa === 'retifica' && 'Retífica'}
+                            {registro.etapa === 'montagem_final' && 'Montagem Final'}
+                            {registro.etapa === 'teste' && 'Teste'}
+                            {registro.etapa === 'inspecao_final' && 'Inspeção Final'}
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            Funcionário ID: {registro.funcionarioId}
+                          </p>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-4 w-4" />
+                            {registro.fim ? 'Finalizado' : 'Em andamento'}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Início:</p>
+                          <p className="text-sm">
+                            {format(registro.inicio, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                        </div>
+                        
+                        {registro.fim && (
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Fim:</p>
+                            <p className="text-sm">
+                              {format(registro.fim, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {registro.pausas.length > 0 && (
+                        <div className="mt-3">
+                          <p className="text-xs text-muted-foreground mb-1">Pausas registradas:</p>
+                          {registro.pausas.map((pausa, pausaIndex) => (
+                            <div key={pausaIndex} className="text-sm flex gap-2 mt-1">
+                              <span>
+                                {format(pausa.inicio, "HH:mm", { locale: ptBR })}
+                              </span>
+                              <span>-</span>
+                              <span>
+                                {pausa.fim ? 
+                                  format(pausa.fim, "HH:mm", { locale: ptBR }) : 
+                                  'Em pausa'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="fotos">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Fotos da OS</CardTitle>
+                <CardDescription>Registros fotográficos da entrada e saída</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FotosForm 
+                  fotosEntrada={fotosEntrada}
+                  fotosSaida={fotosSaida}
+                  onChangeFotosEntrada={handleFotosEntradaChange}
+                  onChangeFotosSaida={handleFotosSaidaChange}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </Layout>
+  );
+}
