@@ -1,20 +1,4 @@
 
-export interface TempoRegistro {
-  id: string;
-  timestamp: Date;
-  duracao: number;
-  usuario: string;
-  acao: string;
-  observacao?: string;
-  
-  // Properties used in components
-  inicio: Date;
-  fim?: Date;
-  funcionarioId: string;
-  etapa: string;
-  pausas?: {inicio: Date; fim: Date}[];
-}
-
 export type Cliente = {
   id: string;
   nome: string;
@@ -52,6 +36,14 @@ export type EtapaOS =
   | 'inspecao_final';
 
 export type Prioridade = 'baixa' | 'media' | 'alta' | 'urgente';
+
+export type TempoRegistro = {
+  inicio: Date;
+  fim?: Date;
+  funcionarioId: string;
+  etapa: EtapaOS;
+  pausas: { inicio: Date; fim?: Date }[];
+};
 
 export type OrdemServico = {
   id: string;

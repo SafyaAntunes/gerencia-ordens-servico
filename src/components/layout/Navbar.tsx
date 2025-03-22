@@ -1,15 +1,15 @@
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Menu, Bell, LogOut } from 'lucide-react';
+import { Menu, Bell, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 type NavbarProps = {
   toggleSidebar: () => void;
-  onLogout?: () => void;
 }
 
-export default function Navbar({ toggleSidebar, onLogout }: NavbarProps) {
+export default function Navbar({ toggleSidebar }: NavbarProps) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -40,36 +40,32 @@ export default function Navbar({ toggleSidebar, onLogout }: NavbarProps) {
             <Menu className="h-5 w-5" />
           </Button>
           
-          <div className="flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-2">
             <Link to="/" className="text-xl font-semibold text-primary">
               SGR
             </Link>
+            <span className="text-xs text-muted-foreground">
+              Sistema de Gestão de Retíficas
+            </span>
           </div>
         </div>
 
+        <div className="relative hidden md:flex w-full max-w-md mx-4">
+          <Input
+            type="search"
+            placeholder="Buscar ordens, clientes..."
+            className="pl-10 pr-4 py-2 rounded-full border border-input bg-background/60 backdrop-blur-sm"
+          />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+        </div>
+
         <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="relative animate-fade-in"
-            onClick={() => {}}
-          >
+          <Button variant="ghost" size="icon" className="relative animate-fade-in">
             <Bell className="h-5 w-5" />
             <span className="absolute -top-1 -right-1 h-4 w-4 bg-primary rounded-full flex items-center justify-center text-[10px] text-white">
               3
             </span>
           </Button>
-          
-          {onLogout && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={onLogout}
-              className="ml-2"
-            >
-              <LogOut className="h-5 w-5" />
-            </Button>
-          )}
           
           <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
             AD

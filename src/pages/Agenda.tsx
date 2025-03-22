@@ -183,7 +183,7 @@ export default function Agenda({ onLogout }: AgendaProps) {
                       >
                         <div className="flex items-center justify-between">
                           <span className="truncate">{ordem.nome}</span>
-                          <StatusBadge status={ordem.prioridade} size="sm" />
+                          <StatusBadge status={ordem.prioridade} size="xs" />
                         </div>
                         <span className="text-[10px] text-muted-foreground truncate block">
                           {ordem.cliente.nome}

@@ -1,165 +1,181 @@
 
 import { useState, useEffect } from "react";
-import { Play, Pause, StopCircle, Timer, Save } from "lucide-react";
+import { Play, Pause, StopCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
-export interface OrdemCronometroProps {
+interface OrdemCronometroProps {
   ordemId: string;
   funcionarioId: string;
   etapa: string;
-  onSave?: (tempoRegistro: {
-    inicio: Date;
-    fim?: Date;
-    duracao: number;
-    etapa: string;
-  }) => void;
+  onStart?: () => void;
+  onPause?: () => void;
+  onResume?: () => void;
+  onFinish?: (tempoTotal: number) => void;
 }
 
-export default function OrdemCronometro({ 
-  ordemId, 
-  funcionarioId, 
+export default function OrdemCronometro({
+  ordemId,
+  funcionarioId,
   etapa,
-  onSave 
+  onStart,
+  onPause,
+  onResume,
+  onFinish,
 }: OrdemCronometroProps) {
   const [isRunning, setIsRunning] = useState(false);
-  const [time, setTime] = useState(0);
-  const [startTime, setStartTime] = useState<Date | null>(null);
-  const { toast } = useToast();
-
+  const [isPaused, setIsPaused] = useState(false);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [pauseTime, setPauseTime] = useState<number | null>(null);
+  const [totalPausedTime, setTotalPausedTime] = useState(0);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
+    let interval: number | null = null;
     
-    if (isRunning) {
-      interval = setInterval(() => {
-        setTime((prevTime) => prevTime + 10);
-      }, 10);
-    } else if (interval) {
-      clearInterval(interval);
+    if (isRunning && !isPaused) {
+      interval = window.setInterval(() => {
+        const now = Date.now();
+        const timeElapsed = now - (startTime || 0) - totalPausedTime;
+        setElapsedTime(timeElapsed);
+      }, 100);
     }
     
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isRunning]);
-
+  }, [isRunning, isPaused, startTime, totalPausedTime]);
+  
+  const formatTime = (milliseconds: number) => {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    
+    return [
+      hours.toString().padStart(2, '0'),
+      minutes.toString().padStart(2, '0'),
+      seconds.toString().padStart(2, '0')
+    ].join(':');
+  };
+  
   const handleStart = () => {
     setIsRunning(true);
-    if (!startTime) {
-      setStartTime(new Date());
-    }
-    
-    toast({
-      title: "Cronômetro iniciado",
-      description: `Registrando tempo para a etapa: ${etapa}`,
-    });
+    setIsPaused(false);
+    setStartTime(Date.now());
+    onStart?.();
   };
-
+  
   const handlePause = () => {
-    setIsRunning(false);
-    toast({
-      title: "Cronômetro pausado",
-      description: "O tempo será preservado para continuar depois",
-    });
+    setIsPaused(true);
+    setPauseTime(Date.now());
+    onPause?.();
   };
-
-  const handleStop = () => {
-    setIsRunning(false);
-    
-    // Armazenar os dados do tempo registrado
-    if (startTime && onSave) {
-      const endTime = new Date();
-      const duration = time; // em milissegundos
-      
-      onSave({
-        inicio: startTime,
-        fim: endTime,
-        duracao: duration,
-        etapa: etapa,
-      });
-      
-      toast({
-        title: "Tempo finalizado e salvo",
-        description: `Etapa: ${etapa} - Duração: ${formatTime(time)}`,
-      });
+  
+  const handleResume = () => {
+    if (pauseTime) {
+      const pauseDuration = Date.now() - pauseTime;
+      setTotalPausedTime(prev => prev + pauseDuration);
     }
+    setIsPaused(false);
+    setPauseTime(null);
+    onResume?.();
+  };
+  
+  const handleFinish = () => {
+    setIsRunning(false);
+    setIsPaused(false);
+    onFinish?.(elapsedTime);
     
-    // Resetar o cronômetro
-    setTime(0);
+    // Reset cronômetro
     setStartTime(null);
+    setTotalPausedTime(0);
+    setElapsedTime(0);
   };
-
-  const formatTime = (ms: number) => {
-    const hours = Math.floor(ms / 3600000);
-    const minutes = Math.floor((ms % 3600000) / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  };
-
+  
   return (
-    <Card className="mb-4">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <Timer className="w-5 h-5 mr-2 text-muted-foreground" />
-            <span className="text-sm font-medium">{etapa}</span>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <div className="font-mono text-lg font-medium mr-2">
-              {formatTime(time)}
-            </div>
-            
-            {!isRunning ? (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleStart}
-                className="h-8 px-2"
-              >
-                <Play className="h-4 w-4 mr-1" />
-                Iniciar
-              </Button>
-            ) : (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handlePause}
-                className="h-8 px-2"
-              >
-                <Pause className="h-4 w-4 mr-1" />
-                Pausar
-              </Button>
-            )}
-            
-            <Button 
-              variant="destructive" 
-              size="sm" 
-              onClick={handleStop}
-              disabled={!startTime}
-              className="h-8 px-2"
+    <Card className="overflow-hidden border border-border/50 bg-white/50 backdrop-blur-sm animate-fade-in">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Controle de Tempo</CardTitle>
+      </CardHeader>
+      
+      <CardContent className="text-center py-4">
+        <div className="inline-flex items-center justify-center p-4 rounded-full bg-primary/5 mb-3">
+          <Clock className="h-10 w-10 text-primary" />
+        </div>
+        
+        <div className="font-mono text-4xl font-bold">
+          {formatTime(elapsedTime)}
+        </div>
+        
+        <p className="text-sm mt-2 text-muted-foreground">
+          {isRunning 
+            ? isPaused 
+              ? "Cronômetro pausado" 
+              : "Cronômetro rodando" 
+            : "Cronômetro parado"}
+        </p>
+      </CardContent>
+      
+      <Separator />
+      
+      <CardFooter className="flex justify-between p-4 bg-muted/20">
+        {!isRunning && (
+          <Button
+            onClick={handleStart}
+            className="w-full"
+            variant="default"
+          >
+            <Play className="mr-2 h-4 w-4" />
+            Iniciar
+          </Button>
+        )}
+        
+        {isRunning && !isPaused && (
+          <>
+            <Button
+              onClick={handlePause}
+              variant="outline"
+              className="flex-1 mr-2"
             >
-              <StopCircle className="h-4 w-4 mr-1" />
-              Finalizar
+              <Pause className="mr-2 h-4 w-4" />
+              Pausar
             </Button>
             
-            {onSave && (
-              <Button 
-                variant="default" 
-                size="sm" 
-                onClick={handleStop}
-                disabled={!startTime}
-                className="h-8 px-2"
-              >
-                <Save className="h-4 w-4 mr-1" />
-                Salvar
-              </Button>
-            )}
-          </div>
-        </div>
-      </CardContent>
+            <Button
+              onClick={handleFinish}
+              variant="default"
+              className="flex-1"
+            >
+              <StopCircle className="mr-2 h-4 w-4" />
+              Finalizar
+            </Button>
+          </>
+        )}
+        
+        {isRunning && isPaused && (
+          <>
+            <Button
+              onClick={handleResume}
+              variant="outline"
+              className="flex-1 mr-2"
+            >
+              <Play className="mr-2 h-4 w-4" />
+              Retomar
+            </Button>
+            
+            <Button
+              onClick={handleFinish}
+              variant="default"
+              className="flex-1"
+            >
+              <StopCircle className="mr-2 h-4 w-4" />
+              Finalizar
+            </Button>
+          </>
+        )}
+      </CardFooter>
     </Card>
   );
 }

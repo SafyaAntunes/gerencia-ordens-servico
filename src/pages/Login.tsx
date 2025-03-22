@@ -30,7 +30,7 @@ export default function Login({ onLogin }: LoginProps) {
       if (!success) {
         toast({
           title: "Erro de autenticação",
-          description: "E-mail ou senha inválidos. Para demonstração, use: admin@sgr.com / 123456",
+          description: "E-mail ou senha inválidos. Tente novamente.",
           variant: "destructive",
         });
       }
@@ -113,12 +113,6 @@ export default function Login({ onLogin }: LoginProps) {
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Entrando..." : "Entrar"}
               </Button>
-              
-              <div className="text-center text-sm text-muted-foreground">
-                <p>Para demonstração, use:</p>
-                <p>Email: admin@sgr.com</p>
-                <p>Senha: 123456</p>
-              </div>
             </form>
           </CardContent>
           <CardFooter className="justify-center border-t border-border p-4">
