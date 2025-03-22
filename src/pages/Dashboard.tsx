@@ -5,17 +5,15 @@ import {
   Users,
   CheckCircle,
   TrendingUp,
-  BarChart
 } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import MetricCard from "@/components/dashboard/MetricCard";
 import StatusChart from "@/components/dashboard/StatusChart";
-import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const Dashboard = () => {
+const Dashboard = ({ onLogout }: { onLogout: () => void }) => {
   // Dados de exemplo para métricas
   const metricas = {
     osTotal: 126,
@@ -84,7 +82,7 @@ const Dashboard = () => {
   ];
   
   return (
-    <Layout>
+    <Layout onLogout={onLogout}>
       <div className="animate-fade-in">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
@@ -92,18 +90,6 @@ const Dashboard = () => {
             <p className="text-muted-foreground">
               Acompanhe as métricas e estatísticas do seu negócio
             </p>
-          </div>
-          
-          <div className="flex gap-2">
-            <Button variant="outline">
-              <BarChart className="mr-2 h-4 w-4" />
-              Relatórios
-            </Button>
-            
-            <Button>
-              <FileText className="mr-2 h-4 w-4" />
-              Nova OS
-            </Button>
           </div>
         </div>
         

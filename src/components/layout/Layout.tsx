@@ -7,9 +7,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 
 type LayoutProps = {
   children: React.ReactNode;
+  onLogout?: () => void;
 };
 
-export default function Layout({ children }: LayoutProps) {
+export default function Layout({ children, onLogout }: LayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
 
@@ -46,7 +47,7 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar toggleSidebar={toggleSidebar} />
+      <Navbar toggleSidebar={toggleSidebar} onLogout={onLogout} />
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       
       <main className="pt-20 pb-6 px-4 lg:pl-72">

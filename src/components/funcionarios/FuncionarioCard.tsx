@@ -1,93 +1,124 @@
 
-import { Phone, Mail, Wrench } from "lucide-react";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Funcionario } from "@/types/funcionarios";
-import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Switch } from "@/components/ui/switch";
+import { Mail, Phone, ChevronRight } from "lucide-react";
 
 interface FuncionarioCardProps {
   funcionario: Funcionario;
-  onClick?: () => void;
+  onClick: () => void;
+  onToggleStatus?: (id: string, ativo: boolean) => void;
 }
 
-const tipoServicoLabel = {
-  bloco: "Bloco",
-  biela: "Biela",
-  cabecote: "Cabeçote",
-  virabrequim: "Virabrequim",
-  eixo_comando: "Eixo de Comando"
-};
+export default function FuncionarioCard({ 
+  funcionario, 
+  onClick,
+  onToggleStatus
+}: FuncionarioCardProps) {
+  // Mapeamento para tradução dos tipos de serviço
+  const servicoLabels: Record<string, string> = {
+    bloco: "Bloco",
+    biela: "Biela",
+    cabecote: "Cabeçote",
+    virabrequim: "Virabrequim",
+    eixo_comando: "Eixo de Comando",
+  };
 
-export default function FuncionarioCard({ funcionario, onClick }: FuncionarioCardProps) {
-  // Extrair iniciais do nome para avatar
-  const iniciais = funcionario.nome
-    .split(" ")
-    .map(n => n[0])
-    .join("")
-    .substring(0, 2)
-    .toUpperCase();
-    
+  const handleToggleStatus = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onToggleStatus) {
+      onToggleStatus(funcionario.id, !funcionario.ativo);
+    }
+  };
+  
   return (
-    <Card className="card-hover overflow-hidden">
-      <CardHeader className="flex flex-row items-center gap-4 pb-2">
-        <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center text-primary text-lg font-medium">
-          {iniciais}
-        </div>
-        <div>
-          <h3 className="font-semibold text-lg">{funcionario.nome}</h3>
-          <p className="text-sm text-muted-foreground">
-            {funcionario.especialidades.length} especialidades
-          </p>
+    <Card 
+      className={`cursor-pointer transition-all hover:shadow-md hover:border-primary/50 ${
+        funcionario.ativo ? "" : "opacity-70"
+      }`}
+      onClick={onClick}
+    >
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-lg">{funcionario.nome}</CardTitle>
+            <CardDescription className="flex items-center mt-1">
+              <Mail className="h-3.5 w-3.5 mr-1" />
+              {funcionario.email}
+            </CardDescription>
+          </div>
+          
+          <StatusBadge 
+            status={funcionario.ativo ? "ativo" : "inativo"} 
+            size="sm" 
+          />
         </div>
       </CardHeader>
       
-      <CardContent className="pb-3">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm">
-            <Phone className="h-4 w-4 text-muted-foreground" />
-            <span>{funcionario.telefone}</span>
+      <CardContent>
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm text-muted-foreground flex items-center">
+              <Phone className="h-3.5 w-3.5 mr-1" />
+              {funcionario.telefone}
+            </p>
           </div>
           
-          <div className="flex items-center gap-2 text-sm">
-            <Mail className="h-4 w-4 text-muted-foreground" />
-            <span>{funcionario.email}</span>
-          </div>
-        </div>
-        
-        <div className="mt-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Wrench className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Especialidades</span>
+          <div>
+            <p className="text-sm font-medium mb-2">Especialidades:</p>
+            <div className="flex flex-wrap gap-1.5">
+              {funcionario.especialidades.map((especialidade) => (
+                <Badge 
+                  key={especialidade} 
+                  variant="secondary"
+                  className="capitalize"
+                >
+                  {servicoLabels[especialidade] || especialidade.replace("_", " ")}
+                </Badge>
+              ))}
+            </div>
           </div>
           
-          <div className="flex flex-wrap gap-1.5">
-            {funcionario.especialidades.map((especialidade) => (
-              <span 
-                key={especialidade}
-                className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground"
+          <div className="flex justify-between items-center pt-2">
+            {onToggleStatus && (
+              <div 
+                className="flex items-center space-x-2" 
+                onClick={handleToggleStatus}
               >
-                {tipoServicoLabel[especialidade]}
-              </span>
-            ))}
+                <Switch id={`status-${funcionario.id}`} checked={funcionario.ativo} />
+                <label
+                  htmlFor={`status-${funcionario.id}`}
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  {funcionario.ativo ? "Ativo" : "Inativo"}
+                </label>
+              </div>
+            )}
+            
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="ml-auto"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClick();
+              }}
+            >
+              Detalhes
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
           </div>
         </div>
       </CardContent>
-      
-      <Separator />
-      
-      <CardFooter className="pt-3 flex justify-between">
-        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-          funcionario.ativo 
-            ? "bg-green-100 text-green-800" 
-            : "bg-red-100 text-red-800"
-        }`}>
-          {funcionario.ativo ? "Ativo" : "Inativo"}
-        </span>
-        
-        <Button variant="outline" size="sm" onClick={onClick}>
-          Ver detalhes
-        </Button>
-      </CardFooter>
     </Card>
   );
 }

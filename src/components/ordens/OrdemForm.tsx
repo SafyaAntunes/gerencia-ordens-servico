@@ -1,10 +1,11 @@
+
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Check, Plus, X, Camera } from "lucide-react";
+import { CalendarIcon, Check, Trash2, X, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -29,7 +30,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -46,19 +46,23 @@ const CLIENTES = [
 ];
 
 const formSchema = z.object({
-  nome: z.string().min(2, { message: "Nome deve ter pelo menos 2 caracteres" }),
+  numero: z.string().min(2, { message: "Número da OS deve ter pelo menos 2 caracteres" }),
+  descricaoServico: z.string().min(2, { message: "Descrição deve ter pelo menos 2 caracteres" }),
+  tipoMotor: z.string().min(2, { message: "Tipo de motor é obrigatório" }),
+  modelo: z.string().min(2, { message: "Modelo é obrigatório" }),
+  combustivel: z.string().min(2, { message: "Combustível é obrigatório" }),
   clienteId: z.string({ required_error: "Selecione um cliente" }),
   dataAbertura: z.date({ required_error: "Selecione a data de abertura" }),
   dataPrevistaEntrega: z.date({ required_error: "Selecione a data prevista para entrega" }),
   prioridade: z.enum(["baixa", "media", "alta", "urgente"] as const),
-  servicosTipos: z.array(z.string()).optional(),
-  servicosDescricoes: z.record(z.string()).optional(),
+  servicosTipos: z.array(z.string()).min(1, { message: "Selecione pelo menos um serviço" }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
 type OrdemFormProps = {
   onSubmit: (values: FormValues & { fotosEntrada: File[], fotosSaida: File[] }) => void;
+  onDelete?: () => void;
   isLoading?: boolean;
   defaultValues?: Partial<FormValues>;
   defaultFotosEntrada?: File[];
@@ -75,12 +79,12 @@ const tiposServico: { value: TipoServico; label: string }[] = [
 
 export default function OrdemForm({ 
   onSubmit, 
+  onDelete,
   isLoading = false, 
   defaultValues,
   defaultFotosEntrada = [],
   defaultFotosSaida = [],
 }: OrdemFormProps) {
-  const [servicosDescricoes, setServicosDescricoes] = useState<Record<string, string>>({});
   const [fotosEntrada, setFotosEntrada] = useState<File[]>(defaultFotosEntrada);
   const [fotosSaida, setFotosSaida] = useState<File[]>(defaultFotosSaida);
   const [activeTab, setActiveTab] = useState("dados");
@@ -88,27 +92,22 @@ export default function OrdemForm({
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      nome: defaultValues?.nome || "",
+      numero: defaultValues?.numero || "",
+      descricaoServico: defaultValues?.descricaoServico || "",
+      tipoMotor: defaultValues?.tipoMotor || "",
+      modelo: defaultValues?.modelo || "",
+      combustivel: defaultValues?.combustivel || "",
       clienteId: defaultValues?.clienteId || "",
       dataAbertura: defaultValues?.dataAbertura || new Date(),
       dataPrevistaEntrega: defaultValues?.dataPrevistaEntrega || new Date(),
       prioridade: defaultValues?.prioridade || "media",
       servicosTipos: defaultValues?.servicosTipos || [],
-      servicosDescricoes: defaultValues?.servicosDescricoes || {},
     },
   });
-  
-  const handleServicoDescricaoChange = (tipo: string, descricao: string) => {
-    setServicosDescricoes(prev => ({
-      ...prev,
-      [tipo]: descricao
-    }));
-  };
   
   const handleFormSubmit = (values: FormValues) => {
     const formData = {
       ...values,
-      servicosDescricoes,
       fotosEntrada,
       fotosSaida
     };
@@ -137,15 +136,15 @@ export default function OrdemForm({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
-                name="nome"
+                name="numero"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome da Ordem de Serviço</FormLabel>
+                    <FormLabel>Número da OS</FormLabel>
                     <FormControl>
-                      <Input placeholder="Motor Ford Ka 2019" {...field} />
+                      <Input placeholder="OS-2023-001" {...field} />
                     </FormControl>
                     <FormDescription>
-                      Nome ou identificação da OS
+                      Número de identificação da OS
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -154,38 +153,113 @@ export default function OrdemForm({
               
               <FormField
                 control={form.control}
-                name="clienteId"
+                name="descricaoServico"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Cliente</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione um cliente" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {CLIENTES.map((cliente) => (
-                          <SelectItem 
-                            key={cliente.id} 
-                            value={cliente.id}
-                          >
-                            {cliente.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Descrição do Serviço</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Retífica de motor completa" {...field} />
+                    </FormControl>
                     <FormDescription>
-                      Cliente vinculado à OS
+                      Descrição breve do serviço
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <FormField
+                control={form.control}
+                name="tipoMotor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo de Motor</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Fire 1.0" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="modelo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Modelo</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Fiat Uno 2018" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="combustivel"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Combustível</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="gasolina">Gasolina</SelectItem>
+                        <SelectItem value="etanol">Etanol</SelectItem>
+                        <SelectItem value="flex">Flex</SelectItem>
+                        <SelectItem value="diesel">Diesel</SelectItem>
+                        <SelectItem value="gnv">GNV</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <FormField
+              control={form.control}
+              name="clienteId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cliente</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um cliente" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {CLIENTES.map((cliente) => (
+                        <SelectItem 
+                          key={cliente.id} 
+                          value={cliente.id}
+                        >
+                          {cliente.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Cliente vinculado à OS
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <FormField
@@ -321,47 +395,33 @@ export default function OrdemForm({
                               return (
                                 <FormItem
                                   key={tipo.value}
-                                  className="flex flex-col space-y-3 my-4"
+                                  className="flex items-start space-x-3 space-y-0 my-4"
                                 >
-                                  <div className="flex items-start space-x-3 space-y-0">
-                                    <FormControl>
-                                      <Checkbox
-                                        checked={field.value?.includes(tipo.value)}
-                                        onCheckedChange={(checked) => {
-                                          const updatedValue = checked
-                                            ? [...(field.value || []), tipo.value]
-                                            : field.value?.filter(
-                                                (value) => value !== tipo.value
-                                              ) || [];
-                                          field.onChange(updatedValue);
-                                        }}
-                                      />
-                                    </FormControl>
-                                    <div className="space-y-1 leading-none">
-                                      <FormLabel className="text-sm font-normal">
-                                        {tipo.label}
-                                      </FormLabel>
-                                    </div>
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(tipo.value)}
+                                      onCheckedChange={(checked) => {
+                                        const updatedValue = checked
+                                          ? [...(field.value || []), tipo.value]
+                                          : field.value?.filter(
+                                              (value) => value !== tipo.value
+                                            ) || [];
+                                        field.onChange(updatedValue);
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <div className="space-y-1 leading-none">
+                                    <FormLabel className="text-sm font-normal">
+                                      {tipo.label}
+                                    </FormLabel>
                                   </div>
-                                  
-                                  {field.value?.includes(tipo.value) && (
-                                    <div className="ml-6">
-                                      <Textarea
-                                        placeholder={`Descreva o serviço de ${tipo.label.toLowerCase()}...`}
-                                        value={servicosDescricoes[tipo.value] || ""}
-                                        onChange={(e) => 
-                                          handleServicoDescricaoChange(tipo.value, e.target.value)
-                                        }
-                                        className="resize-none"
-                                      />
-                                    </div>
-                                  )}
                                 </FormItem>
                               );
                             }}
                           />
                         ))}
                       </div>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -381,27 +441,40 @@ export default function OrdemForm({
         
         <Separator />
         
-        <div className="flex justify-end gap-3">
-          <Button 
-            type="button" 
-            variant="outline"
-            onClick={() => form.reset()}
-          >
-            <X className="mr-2 h-4 w-4" />
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? (
-              <span className="flex items-center gap-1">
-                Salvando...
-              </span>
-            ) : (
-              <>
-                <Check className="mr-2 h-4 w-4" />
-                Salvar
-              </>
-            )}
-          </Button>
+        <div className="flex justify-between gap-3">
+          {onDelete && (
+            <Button 
+              type="button" 
+              variant="destructive"
+              onClick={onDelete}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Excluir OS
+            </Button>
+          )}
+          
+          <div className="flex gap-3 ml-auto">
+            <Button 
+              type="button" 
+              variant="outline"
+              onClick={() => form.reset()}
+            >
+              <X className="mr-2 h-4 w-4" />
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? (
+                <span className="flex items-center gap-1">
+                  Salvando...
+                </span>
+              ) : (
+                <>
+                  <Check className="mr-2 h-4 w-4" />
+                  Salvar
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </form>
     </Form>
