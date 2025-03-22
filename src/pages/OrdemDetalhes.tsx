@@ -50,8 +50,28 @@ const ordemExemplo: OrdemServico = {
     retifica: { concluido: false, funcionarioId: "3", iniciado: new Date(2023, 4, 19) },
   },
   tempoRegistros: [
-    { inicio: new Date(2023, 4, 16, 8, 0), fim: new Date(2023, 4, 16, 10, 30), duracao: 9000000, etapa: "lavagem", funcionarioId: "1" },
-    { inicio: new Date(2023, 4, 17, 9, 0), fim: new Date(2023, 4, 18, 11, 0), duracao: 93600000, etapa: "inspecao_inicial", funcionarioId: "2" },
+    { 
+      id: '1',
+      timestamp: new Date(),
+      usuario: 'usuario1',
+      acao: 'inicio',
+      inicio: new Date(2023, 4, 16, 8, 0), 
+      fim: new Date(2023, 4, 16, 10, 30), 
+      duracao: 9000000, 
+      etapa: "lavagem", 
+      funcionarioId: "1" 
+    },
+    { 
+      id: '2',
+      timestamp: new Date(),
+      usuario: 'usuario2',
+      acao: 'inicio',
+      inicio: new Date(2023, 4, 17, 9, 0), 
+      fim: new Date(2023, 4, 18, 11, 0), 
+      duracao: 93600000, 
+      etapa: "inspecao_inicial", 
+      funcionarioId: "2" 
+    },
   ],
 };
 
