@@ -7,11 +7,11 @@ export interface TempoRegistro {
   acao: string;
   observacao?: string;
   
-  // Campos adicionais que estão sendo usados nos componentes
-  inicio?: Date;
+  // Properties used in components
+  inicio: Date;
   fim?: Date;
-  funcionarioId?: string;
-  etapa?: string;
+  funcionarioId: string;
+  etapa: string;
   pausas?: {inicio: Date; fim: Date}[];
 }
 

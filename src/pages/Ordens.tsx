@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { PlusCircle, Filter, Search, FileText, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -57,6 +58,11 @@ const ordens: OrdemServico[] = [
     },
     tempoRegistros: [
       {
+        id: "tr1",
+        timestamp: new Date(2023, 4, 16, 8, 0),
+        duracao: 4 * 60 * 60 * 1000, // 4 hours in milliseconds
+        usuario: "José Silva",
+        acao: "registro",
         inicio: new Date(2023, 4, 16, 8, 0),
         fim: new Date(2023, 4, 16, 12, 0),
         funcionarioId: "1",
@@ -66,6 +72,11 @@ const ordens: OrdemServico[] = [
         ],
       },
       {
+        id: "tr2",
+        timestamp: new Date(2023, 4, 17, 13, 0),
+        duracao: 28 * 60 * 60 * 1000, // 28 hours
+        usuario: "Maria Souza",
+        acao: "registro",
         inicio: new Date(2023, 4, 17, 13, 0),
         fim: new Date(2023, 4, 18, 17, 0),
         funcionarioId: "2",
@@ -73,6 +84,11 @@ const ordens: OrdemServico[] = [
         pausas: [],
       },
       {
+        id: "tr3",
+        timestamp: new Date(2023, 4, 19, 8, 0),
+        duracao: 0, // ainda em andamento
+        usuario: "Carlos Ferreira",
+        acao: "inicio",
         inicio: new Date(2023, 4, 19, 8, 0),
         funcionarioId: "3",
         etapa: "retifica",
@@ -104,6 +120,11 @@ const ordens: OrdemServico[] = [
     },
     tempoRegistros: [
       {
+        id: "tr4",
+        timestamp: new Date(2023, 4, 11, 9, 0),
+        duracao: 2.5 * 60 * 60 * 1000, // 2.5 hours
+        usuario: "José Silva",
+        acao: "registro",
         inicio: new Date(2023, 4, 11, 9, 0),
         fim: new Date(2023, 4, 11, 11, 30),
         funcionarioId: "1",
@@ -111,6 +132,11 @@ const ordens: OrdemServico[] = [
         pausas: [],
       },
       {
+        id: "tr5",
+        timestamp: new Date(2023, 4, 12, 14, 0),
+        duracao: 2 * 60 * 60 * 1000, // 2 hours
+        usuario: "Maria Souza",
+        acao: "registro",
         inicio: new Date(2023, 4, 12, 14, 0),
         fim: new Date(2023, 4, 12, 16, 0),
         funcionarioId: "2",
@@ -140,6 +166,11 @@ const ordens: OrdemServico[] = [
     },
     tempoRegistros: [
       {
+        id: "tr6",
+        timestamp: new Date(2023, 4, 6, 10, 0),
+        duracao: 2 * 60 * 60 * 1000, // 2 hours
+        usuario: "José Silva",
+        acao: "registro",
         inicio: new Date(2023, 4, 6, 10, 0),
         fim: new Date(2023, 4, 6, 12, 0),
         funcionarioId: "1",
@@ -174,6 +205,11 @@ const ordens: OrdemServico[] = [
     },
     tempoRegistros: [
       {
+        id: "tr7",
+        timestamp: new Date(2023, 3, 26, 8, 0),
+        duracao: 2 * 60 * 60 * 1000, // 2 hours
+        usuario: "José Silva",
+        acao: "registro",
         inicio: new Date(2023, 3, 26, 8, 0),
         fim: new Date(2023, 3, 26, 10, 0),
         funcionarioId: "1",
@@ -181,6 +217,11 @@ const ordens: OrdemServico[] = [
         pausas: [],
       },
       {
+        id: "tr8",
+        timestamp: new Date(2023, 3, 27, 13, 0),
+        duracao: 2 * 60 * 60 * 1000, // 2 hours
+        usuario: "Maria Souza",
+        acao: "registro",
         inicio: new Date(2023, 3, 27, 13, 0),
         fim: new Date(2023, 3, 27, 15, 0),
         funcionarioId: "2",
@@ -188,6 +229,11 @@ const ordens: OrdemServico[] = [
         pausas: [],
       },
       {
+        id: "tr9",
+        timestamp: new Date(2023, 3, 28, 8, 0),
+        duracao: 9 * 24 * 60 * 60 * 1000, // 9 days
+        usuario: "Carlos Ferreira",
+        acao: "registro",
         inicio: new Date(2023, 3, 28, 8, 0),
         fim: new Date(2023, 4, 2, 17, 0),
         funcionarioId: "3",
@@ -195,6 +241,11 @@ const ordens: OrdemServico[] = [
         pausas: [],
       },
       {
+        id: "tr10",
+        timestamp: new Date(2023, 4, 3, 8, 0),
+        duracao: 33 * 60 * 60 * 1000, // 33 hours
+        usuario: "Paulo Oliveira",
+        acao: "registro",
         inicio: new Date(2023, 4, 3, 8, 0),
         fim: new Date(2023, 4, 4, 17, 0),
         funcionarioId: "4",
@@ -202,6 +253,11 @@ const ordens: OrdemServico[] = [
         pausas: [],
       },
       {
+        id: "tr11",
+        timestamp: new Date(2023, 4, 5, 9, 0),
+        duracao: 3 * 60 * 60 * 1000, // 3 hours
+        usuario: "Ana Santos",
+        acao: "registro",
         inicio: new Date(2023, 4, 5, 9, 0),
         fim: new Date(2023, 4, 5, 12, 0),
         funcionarioId: "5",
@@ -209,6 +265,11 @@ const ordens: OrdemServico[] = [
         pausas: [],
       },
       {
+        id: "tr12",
+        timestamp: new Date(2023, 4, 6, 13, 0),
+        duracao: 1 * 60 * 60 * 1000, // 1 hour
+        usuario: "Maria Souza",
+        acao: "registro",
         inicio: new Date(2023, 4, 6, 13, 0),
         fim: new Date(2023, 4, 6, 14, 0),
         funcionarioId: "2",
@@ -243,6 +304,11 @@ const ordens: OrdemServico[] = [
     },
     tempoRegistros: [
       {
+        id: "tr13",
+        timestamp: new Date(2023, 4, 3, 9, 0),
+        duracao: 2 * 60 * 60 * 1000, // 2 hours
+        usuario: "José Silva",
+        acao: "registro",
         inicio: new Date(2023, 4, 3, 9, 0),
         fim: new Date(2023, 4, 3, 11, 0),
         funcionarioId: "1",
@@ -250,6 +316,11 @@ const ordens: OrdemServico[] = [
         pausas: [],
       },
       {
+        id: "tr14",
+        timestamp: new Date(2023, 4, 4, 14, 0),
+        duracao: 2 * 60 * 60 * 1000, // 2 hours
+        usuario: "Maria Souza",
+        acao: "registro",
         inicio: new Date(2023, 4, 4, 14, 0),
         fim: new Date(2023, 4, 4, 16, 0),
         funcionarioId: "2",
@@ -257,6 +328,11 @@ const ordens: OrdemServico[] = [
         pausas: [],
       },
       {
+        id: "tr15",
+        timestamp: new Date(2023, 4, 5, 8, 0),
+        duracao: 3 * 24 * 60 * 60 * 1000, // 3 days
+        usuario: "Carlos Ferreira",
+        acao: "registro",
         inicio: new Date(2023, 4, 5, 8, 0),
         fim: new Date(2023, 4, 8, 17, 0),
         funcionarioId: "3",
@@ -264,6 +340,11 @@ const ordens: OrdemServico[] = [
         pausas: [],
       },
       {
+        id: "tr16",
+        timestamp: new Date(2023, 4, 9, 8, 0),
+        duracao: 33 * 60 * 60 * 1000, // 33 hours
+        usuario: "Paulo Oliveira",
+        acao: "registro",
         inicio: new Date(2023, 4, 9, 8, 0),
         fim: new Date(2023, 4, 10, 17, 0),
         funcionarioId: "4",
@@ -271,6 +352,11 @@ const ordens: OrdemServico[] = [
         pausas: [],
       },
       {
+        id: "tr17",
+        timestamp: new Date(2023, 4, 11, 9, 0),
+        duracao: 3 * 60 * 60 * 1000, // 3 hours
+        usuario: "Ana Santos",
+        acao: "registro",
         inicio: new Date(2023, 4, 11, 9, 0),
         fim: new Date(2023, 4, 11, 12, 0),
         funcionarioId: "5",
@@ -278,6 +364,11 @@ const ordens: OrdemServico[] = [
         pausas: [],
       },
       {
+        id: "tr18",
+        timestamp: new Date(2023, 4, 12, 13, 0),
+        duracao: 1 * 60 * 60 * 1000, // 1 hour
+        usuario: "Maria Souza",
+        acao: "registro",
         inicio: new Date(2023, 4, 12, 13, 0),
         fim: new Date(2023, 4, 12, 14, 0),
         funcionarioId: "2",
