@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { format } from "date-fns";
@@ -25,10 +24,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import OrdemCronometro from "@/components/ordens/OrdemCronometro";
-import { OrdemServico, Status } from "@/types/ordens";
+import { OrdemServico, StatusOS } from "@/types/ordens";
 import { Funcionario } from "@/types/funcionarios";
 
-// Dados de exemplo
 const ordemExemplo: OrdemServico = {
   id: "OS-2023-001",
   nome: "Motor Ford Ka 2019",
@@ -57,7 +55,6 @@ const ordemExemplo: OrdemServico = {
   ],
 };
 
-// Lista de funcionários para exemplo
 const funcionariosExemplo: Funcionario[] = [
   {
     id: "1",
@@ -88,13 +85,12 @@ const funcionariosExemplo: Funcionario[] = [
 export default function OrdemDetalhes({ onLogout }: { onLogout: () => void }) {
   const { id } = useParams<{ id: string }>();
   const [ordem, setOrdem] = useState<OrdemServico>(ordemExemplo);
-  const [status, setStatus] = useState<Status>(ordem.status);
+  const [status, setStatus] = useState<StatusOS>(ordem.status);
   const { toast } = useToast();
   
-  const handleChangeStatus = (newStatus: Status) => {
+  const handleChangeStatus = (newStatus: StatusOS) => {
     setStatus(newStatus);
     
-    // Em uma aplicação real, você atualizaria o status no backend
     toast({
       title: "Status atualizado",
       description: `O status da OS foi alterado para ${newStatus}`,
@@ -107,8 +103,6 @@ export default function OrdemDetalhes({ onLogout }: { onLogout: () => void }) {
     duracao: number;
     etapa: string;
   }) => {
-    // Em uma aplicação real, você salvaria no backend
-    
     toast({
       title: "Tempo registrado com sucesso",
       description: `Etapa: ${tempoRegistro.etapa}`,
@@ -117,8 +111,6 @@ export default function OrdemDetalhes({ onLogout }: { onLogout: () => void }) {
   };
   
   const handleDeleteOrdem = () => {
-    // Em uma aplicação real, você deletaria no backend
-    
     toast({
       title: "OS excluída com sucesso",
       description: `A OS ${ordem.id} foi excluída permanentemente`,
@@ -126,7 +118,7 @@ export default function OrdemDetalhes({ onLogout }: { onLogout: () => void }) {
     });
   };
   
-  const getStatusColor = (status: Status) => {
+  const getStatusColor = (status: StatusOS) => {
     switch (status) {
       case "orcamento":
         return "border-blue-200";
@@ -189,7 +181,7 @@ export default function OrdemDetalhes({ onLogout }: { onLogout: () => void }) {
               
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Status:</span>
-                <Select value={status} onValueChange={(value) => handleChangeStatus(value as Status)}>
+                <Select value={status} onValueChange={(value) => handleChangeStatus(value as StatusOS)}>
                   <SelectTrigger className="w-44">
                     <SelectValue placeholder="Status da OS" />
                   </SelectTrigger>
@@ -390,7 +382,6 @@ export default function OrdemDetalhes({ onLogout }: { onLogout: () => void }) {
                     </div>
                   ))}
                   
-                  {/* Observações técnicas detalhadas */}
                   <div className="pt-4">
                     <h3 className="text-md font-medium mb-2">Observações Técnicas</h3>
                     <p className="text-sm text-muted-foreground">
