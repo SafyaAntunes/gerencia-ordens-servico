@@ -30,7 +30,8 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const handleLogin = (credentials: { email: string; password: string }) => {
-    // Simple authentication for example
+    // For demonstration purposes - use "admin@sgr.com" and "123456" for login
+    console.log("Login attempt with:", credentials);
     if (credentials.email === "admin@sgr.com" && credentials.password === "123456") {
       setIsLoggedIn(true);
       return true;
@@ -56,7 +57,7 @@ function App() {
               <>
                 <Route path="/" element={<Dashboard onLogout={handleLogout} />} />
                 <Route path="/ordens" element={<Ordens onLogout={handleLogout} />} />
-                <Route path="/ordens/:id" element={<OrdemDetalhes onLogout={handleLogout} />} />
+                <Route path="/ordens/:id" element={<OrdemDetalhes />} />
                 <Route path="/funcionarios" element={<Funcionarios onLogout={handleLogout} />} />
                 <Route path="/clientes" element={<Clientes onLogout={handleLogout} />} />
                 <Route path="/agenda" element={<Agenda onLogout={handleLogout} />} />
