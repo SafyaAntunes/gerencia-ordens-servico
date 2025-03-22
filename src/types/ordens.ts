@@ -6,6 +6,13 @@ export interface TempoRegistro {
   usuario: string;
   acao: string;
   observacao?: string;
+  
+  // Campos adicionais que estão sendo usados nos componentes
+  inicio?: Date;
+  fim?: Date;
+  funcionarioId?: string;
+  etapa?: string;
+  pausas?: {inicio: Date; fim: Date}[];
 }
 
 export type Cliente = {

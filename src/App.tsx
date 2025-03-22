@@ -57,7 +57,7 @@ function App() {
               <>
                 <Route path="/" element={<Dashboard onLogout={handleLogout} />} />
                 <Route path="/ordens" element={<Ordens onLogout={handleLogout} />} />
-                <Route path="/ordens/:id" element={<OrdemDetalhes onLogout={handleLogout} />} />
+                <Route path="/ordens/:id" element={<OrdemDetalhes />} />
                 <Route path="/funcionarios" element={<Funcionarios onLogout={handleLogout} />} />
                 <Route path="/clientes" element={<Clientes onLogout={handleLogout} />} />
                 <Route path="/agenda" element={<Agenda onLogout={handleLogout} />} />

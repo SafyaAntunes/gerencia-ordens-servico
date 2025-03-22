@@ -82,7 +82,7 @@ const funcionariosExemplo: Funcionario[] = [
   },
 ];
 
-export default function OrdemDetalhes({ onLogout }: { onLogout: () => void }) {
+export default function OrdemDetalhes() {
   const { id } = useParams<{ id: string }>();
   const [ordem, setOrdem] = useState<OrdemServico>(ordemExemplo);
   const [status, setStatus] = useState<StatusOS>(ordem.status);
@@ -138,7 +138,7 @@ export default function OrdemDetalhes({ onLogout }: { onLogout: () => void }) {
   };
   
   return (
-    <Layout onLogout={onLogout}>
+    <Layout>
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
