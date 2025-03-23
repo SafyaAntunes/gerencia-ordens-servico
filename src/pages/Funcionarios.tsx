@@ -1,8 +1,8 @@
-
 import { useState } from "react";
 import { PlusCircle, Filter, Search, Users, CheckCircle2 } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import FuncionarioCard from "@/components/funcionarios/FuncionarioCard";
+import FuncionarioDetalhes from "@/components/funcionarios/FuncionarioDetalhes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -37,7 +37,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Funcionario } from "@/types/funcionarios";
 import { TipoServico } from "@/types/ordens";
 
-// Dados de exemplo
 const funcionarios: Funcionario[] = [
   {
     id: "1",
@@ -99,11 +98,13 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-const Funcionarios = () => {
+const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [especialidadeFilter, setEspecialidadeFilter] = useState<TipoServico | "todas">("todas");
   const [statusFilter, setStatusFilter] = useState<"ativos" | "inativos" | "todos">("todos");
+  const [selectedFuncionario, setSelectedFuncionario] = useState<Funcionario | null>(null);
+  const [isDetalhesOpen, setIsDetalhesOpen] = useState(false);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -123,18 +124,19 @@ const Funcionarios = () => {
     // Aqui você adicionaria o novo funcionário ao estado ou enviaria para a API
   };
   
-  // Filtrar funcionários
+  const handleViewDetails = (funcionario: Funcionario) => {
+    setSelectedFuncionario(funcionario);
+    setIsDetalhesOpen(true);
+  };
+  
   const filteredFuncionarios = funcionarios.filter((funcionario) => {
-    // Filtro de busca por nome ou email
     const matchesSearch = searchTerm === "" ||
       funcionario.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       funcionario.email.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // Filtro de especialidade
     const matchesEspecialidade = especialidadeFilter === "todas" || 
       funcionario.especialidades.includes(especialidadeFilter);
     
-    // Filtro de status (ativo/inativo)
     const matchesStatus = statusFilter === "todos" ||
       (statusFilter === "ativos" && funcionario.ativo) ||
       (statusFilter === "inativos" && !funcionario.ativo);
@@ -146,7 +148,7 @@ const Funcionarios = () => {
   const funcionariosInativos = filteredFuncionarios.filter(f => !f.ativo);
   
   return (
-    <Layout>
+    <Layout onLogout={onLogout}>
       <div className="animate-fade-in">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
@@ -250,7 +252,7 @@ const Funcionarios = () => {
                   <FuncionarioCard
                     key={funcionario.id}
                     funcionario={funcionario}
-                    onClick={() => console.log(`Ver detalhes de ${funcionario.nome}`)}
+                    onClick={() => handleViewDetails(funcionario)}
                   />
                 ))}
               </div>
@@ -276,7 +278,7 @@ const Funcionarios = () => {
                   <FuncionarioCard
                     key={funcionario.id}
                     funcionario={funcionario}
-                    onClick={() => console.log(`Ver detalhes de ${funcionario.nome}`)}
+                    onClick={() => handleViewDetails(funcionario)}
                   />
                 ))}
               </div>
@@ -298,7 +300,7 @@ const Funcionarios = () => {
                   <FuncionarioCard
                     key={funcionario.id}
                     funcionario={funcionario}
-                    onClick={() => console.log(`Ver detalhes de ${funcionario.nome}`)}
+                    onClick={() => handleViewDetails(funcionario)}
                   />
                 ))}
               </div>
@@ -454,6 +456,12 @@ const Funcionarios = () => {
             </Form>
           </DialogContent>
         </Dialog>
+        
+        <FuncionarioDetalhes 
+          funcionario={selectedFuncionario} 
+          isOpen={isDetalhesOpen} 
+          onClose={() => setIsDetalhesOpen(false)} 
+        />
       </div>
     </Layout>
   );

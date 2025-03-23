@@ -9,7 +9,8 @@ import {
   BarChart, 
   Calendar,
   ChevronRight,
-  LogOut
+  LogOut,
+  UserSquare
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,7 @@ import { Separator } from '@/components/ui/separator';
 type SidebarProps = {
   isOpen: boolean;
   onClose: () => void;
+  onLogout?: () => void;
 };
 
 type NavItemProps = {
@@ -55,11 +57,17 @@ const NavItem = ({ icon: Icon, label, to, badge, isCollapsed = false }: NavItemP
   );
 };
 
-export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+export default function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
+  };
+  
+  const handleLogout = () => {
+    if (onLogout) {
+      onLogout();
+    }
   };
   
   const sidebarVariants = {
@@ -122,6 +130,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             <NavItem icon={LayoutDashboard} label="Dashboard" to="/" />
             <NavItem icon={FileText} label="Ordens de Serviço" to="/ordens" badge={12} />
             <NavItem icon={Users} label="Funcionários" to="/funcionarios" />
+            <NavItem icon={UserSquare} label="Clientes" to="/clientes" />
             <NavItem icon={Calendar} label="Agenda" to="/agenda" />
             <NavItem icon={BarChart} label="Relatórios" to="/relatorios" />
             <Separator className="my-4 bg-sidebar-border" />
@@ -129,7 +138,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
           
           <div className="p-4 mt-auto">
-            <Button variant="ghost" className="w-full justify-start text-sidebar-foreground">
+            <Button variant="ghost" className="w-full justify-start text-sidebar-foreground" onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               Sair
             </Button>
@@ -168,6 +177,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             <NavItem icon={LayoutDashboard} label="Dashboard" to="/" isCollapsed={isCollapsed} />
             <NavItem icon={FileText} label="Ordens de Serviço" to="/ordens" badge={isCollapsed ? undefined : 12} isCollapsed={isCollapsed} />
             <NavItem icon={Users} label="Funcionários" to="/funcionarios" isCollapsed={isCollapsed} />
+            <NavItem icon={UserSquare} label="Clientes" to="/clientes" isCollapsed={isCollapsed} />
             <NavItem icon={Calendar} label="Agenda" to="/agenda" isCollapsed={isCollapsed} />
             <NavItem icon={BarChart} label="Relatórios" to="/relatorios" isCollapsed={isCollapsed} />
             <Separator className="my-4 bg-sidebar-border" />
@@ -176,13 +186,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           
           <div className="p-4 mt-auto">
             {!isCollapsed && (
-              <Button variant="ghost" className="w-full justify-start text-sidebar-foreground">
+              <Button variant="ghost" className="w-full justify-start text-sidebar-foreground" onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Sair
               </Button>
             )}
             {isCollapsed && (
-              <Button variant="ghost" size="icon" className="mx-auto text-sidebar-foreground">
+              <Button variant="ghost" size="icon" className="mx-auto text-sidebar-foreground" onClick={handleLogout}>
                 <LogOut className="h-4 w-4" />
               </Button>
             )}
