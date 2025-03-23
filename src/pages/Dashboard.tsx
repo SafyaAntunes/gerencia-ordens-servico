@@ -1,4 +1,3 @@
-
 import {
   FileText,
   Clock,
@@ -14,8 +13,11 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+  
   // Dados de exemplo para métricas
   const metricas = {
     osTotal: 126,
@@ -83,6 +85,10 @@ const Dashboard = () => {
     }
   ];
   
+  const handleViewDetails = (osId: string) => {
+    navigate(`/ordens/${osId}`);
+  };
+  
   return (
     <Layout>
       <div className="animate-fade-in">
@@ -100,7 +106,7 @@ const Dashboard = () => {
               Relatórios
             </Button>
             
-            <Button>
+            <Button onClick={() => navigate("/ordens/nova")}>
               <FileText className="mr-2 h-4 w-4" />
               Nova OS
             </Button>
@@ -201,7 +207,11 @@ const Dashboard = () => {
                                 <StatusBadge status={os.prioridade} size="sm" />
                               </td>
                               <td className="p-4 text-right">
-                                <Button variant="ghost" size="sm">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => handleViewDetails(os.id)}
+                                >
                                   Detalhes
                                 </Button>
                               </td>
