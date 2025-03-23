@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -16,28 +15,24 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { OrdemServico, Servico, StatusOS } from "@/types/ordens";
+import { OrdemServico, Servico, StatusOS, EtapaOS } from "@/types/ordens";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import OrdemCronometro from "@/components/ordens/OrdemCronometro";
 import { Progress } from "@/components/ui/progress";
 import FotosForm from "@/components/ordens/FotosForm";
 
-interface OrdemDetalhesProps {
-  onLogout: () => void;
-}
-
-export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
+export default function OrdemDetalhes() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [ordem, setOrdem] = useState<OrdemServico | null>(null);
   const [loading, setLoading] = useState(true);
   const [fotosEntrada, setFotosEntrada] = useState<File[]>([]);
   const [fotosSaida, setFotosSaida] = useState<File[]>([]);
+  
+  const funcionarioAtualId = "123"; // Simulando um ID de funcionário logado
 
   useEffect(() => {
-    // Simular carregamento da OS
     setTimeout(() => {
-      // Dados simulados - em uma aplicação real, isso seria uma chamada à API
       const ordemEncontrada = {
         id: "OS-2023-001",
         nome: "Motor Ford Ka 2019",
@@ -93,7 +88,6 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
     }, 1000);
   }, [id]);
 
-  // Função para calcular o progresso
   const calcularProgresso = () => {
     if (!ordem) return 0;
     const totalEtapas = 6; // Número total de etapas
@@ -116,7 +110,7 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
 
   if (loading) {
     return (
-      <Layout onLogout={onLogout}>
+      <Layout>
         <div className="flex flex-col items-center justify-center p-12">
           <p className="text-lg text-muted-foreground">Carregando detalhes da ordem...</p>
         </div>
@@ -126,7 +120,7 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
 
   if (!ordem) {
     return (
-      <Layout onLogout={onLogout}>
+      <Layout>
         <div className="flex flex-col items-center justify-center p-12">
           <h2 className="text-2xl font-bold mb-2">Ordem não encontrada</h2>
           <p className="text-muted-foreground mb-4">A ordem de serviço solicitada não foi encontrada.</p>
@@ -140,7 +134,7 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
   }
 
   return (
-    <Layout onLogout={onLogout}>
+    <Layout>
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center gap-3">
@@ -357,7 +351,11 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
                           </p>
                         )}
                       </div>
-                      <OrdemCronometro />
+                      <OrdemCronometro 
+                        ordemId={ordem.id} 
+                        funcionarioId={funcionarioAtualId} 
+                        etapa="lavagem"
+                      />
                     </div>
                   </div>
                   
@@ -389,7 +387,11 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
                           </p>
                         )}
                       </div>
-                      <OrdemCronometro />
+                      <OrdemCronometro 
+                        ordemId={ordem.id} 
+                        funcionarioId={funcionarioAtualId} 
+                        etapa="inspecao_inicial"
+                      />
                     </div>
                   </div>
                   
@@ -421,7 +423,11 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
                           </p>
                         )}
                       </div>
-                      <OrdemCronometro />
+                      <OrdemCronometro 
+                        ordemId={ordem.id} 
+                        funcionarioId={funcionarioAtualId} 
+                        etapa="retifica"
+                      />
                     </div>
                   </div>
                   
@@ -448,7 +454,11 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
                           </p>
                         )}
                       </div>
-                      <OrdemCronometro />
+                      <OrdemCronometro 
+                        ordemId={ordem.id} 
+                        funcionarioId={funcionarioAtualId} 
+                        etapa="montagem_final"
+                      />
                     </div>
                   </div>
                   
@@ -463,7 +473,11 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
                           </span>
                         </p>
                       </div>
-                      <OrdemCronometro />
+                      <OrdemCronometro 
+                        ordemId={ordem.id} 
+                        funcionarioId={funcionarioAtualId} 
+                        etapa="teste"
+                      />
                     </div>
                   </div>
                   
@@ -478,7 +492,11 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
                           </span>
                         </p>
                       </div>
-                      <OrdemCronometro />
+                      <OrdemCronometro 
+                        ordemId={ordem.id} 
+                        funcionarioId={funcionarioAtualId} 
+                        etapa="inspecao_final"
+                      />
                     </div>
                   </div>
                 </div>

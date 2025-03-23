@@ -4,8 +4,9 @@ import { Play, Pause, StopCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { EtapaOS } from "@/types/ordens";
 
-interface OrdemCronometroProps {
+export interface OrdemCronometroProps {
   ordemId: string;
   funcionarioId: string;
   etapa: string;

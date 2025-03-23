@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { format, addDays, startOfWeek, addWeeks, subWeeks, isToday, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -183,7 +182,7 @@ export default function Agenda({ onLogout }: AgendaProps) {
                       >
                         <div className="flex items-center justify-between">
                           <span className="truncate">{ordem.nome}</span>
-                          <StatusBadge status={ordem.prioridade} size="xs" />
+                          <StatusBadge status={ordem.prioridade} size="sm" />
                         </div>
                         <span className="text-[10px] text-muted-foreground truncate block">
                           {ordem.cliente.nome}

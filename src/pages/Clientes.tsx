@@ -171,7 +171,12 @@ export default function Clientes({ onLogout }: ClientesProps) {
     if (editingCliente) {
       // Atualizar cliente existente
       setClientes(clientes.map(c => 
-        c.id === editingCliente.id ? { ...c, ...values } : c
+        c.id === editingCliente.id ? { 
+          ...c, 
+          nome: values.nome,
+          telefone: values.telefone,
+          email: values.email
+        } : c
       ));
       toast({
         title: "Cliente atualizado",
@@ -181,7 +186,9 @@ export default function Clientes({ onLogout }: ClientesProps) {
       // Adicionar novo cliente
       const newCliente: Cliente = {
         id: `${Date.now()}`, // Gera um ID baseado no timestamp atual
-        ...values,
+        nome: values.nome,
+        telefone: values.telefone,
+        email: values.email,
       };
       setClientes([...clientes, newCliente]);
       toast({

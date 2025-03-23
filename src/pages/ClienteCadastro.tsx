@@ -143,7 +143,12 @@ export default function ClienteCadastro() {
       // Atualizar cliente existente
       const clienteAtualizado: Cliente = {
         ...cliente,
-        ...values,
+        nome: values.nome, // Garantir que campos obrigatórios estejam presentes
+        telefone: values.telefone,
+        email: values.email,
+        endereco: values.endereco,
+        cnpj_cpf: values.cnpj_cpf,
+        observacoes: values.observacoes,
         motores,
       };
       
@@ -156,7 +161,12 @@ export default function ClienteCadastro() {
       // Criar novo cliente
       const novoCliente: Cliente = {
         id: `${Date.now()}`,
-        ...values,
+        nome: values.nome, // Garantir que campos obrigatórios estejam presentes
+        telefone: values.telefone,
+        email: values.email,
+        endereco: values.endereco,
+        cnpj_cpf: values.cnpj_cpf,
+        observacoes: values.observacoes,
         motores,
       };
       
@@ -173,7 +183,15 @@ export default function ClienteCadastro() {
     if (motorEmEdicao) {
       // Atualizar motor existente
       const motoresAtualizados = motores.map(motor => 
-        motor.id === motorEmEdicao.id ? { ...motor, ...values } : motor
+        motor.id === motorEmEdicao.id ? { 
+          ...motor, 
+          marca: values.marca, // Garantir que campos obrigatórios estejam presentes
+          modelo: values.modelo,
+          ano: values.ano,
+          numeroSerie: values.numeroSerie,
+          cilindradas: values.cilindradas,
+          observacoes: values.observacoes 
+        } : motor
       );
       setMotores(motoresAtualizados);
       
@@ -185,7 +203,12 @@ export default function ClienteCadastro() {
       // Adicionar novo motor
       const novoMotor: Motor = {
         id: `motor_${Date.now()}`,
-        ...values,
+        marca: values.marca, // Garantir que campos obrigatórios estejam presentes
+        modelo: values.modelo,
+        ano: values.ano,
+        numeroSerie: values.numeroSerie,
+        cilindradas: values.cilindradas,
+        observacoes: values.observacoes,
       };
       
       setMotores([...motores, novoMotor]);
