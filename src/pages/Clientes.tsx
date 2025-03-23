@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Search, Building, Phone, Mail, Edit, Trash, Users, FilterX } from "lucide-react";
+import { PlusCircle, Search, Building, Phone, Mail, Edit, Trash, Users, FilterX, Car } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -46,6 +46,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 // Dados de exemplo
 const CLIENTES: Cliente[] = [
@@ -54,6 +55,26 @@ const CLIENTES: Cliente[] = [
     nome: "Auto Peças Silva",
     telefone: "(11) 98765-4321",
     email: "contato@autopecassilva.com.br",
+    endereco: "Rua das Retíficas, 123 - São Paulo/SP",
+    cnpj_cpf: "12.345.678/0001-90",
+    motores: [
+      {
+        id: "m1",
+        marca: "Volkswagen",
+        modelo: "AP 1.8",
+        ano: "2010",
+        numeroSerie: "AP18123456",
+        cilindradas: "1800",
+      },
+      {
+        id: "m2",
+        marca: "Fiat",
+        modelo: "Fire 1.0",
+        ano: "2015",
+        numeroSerie: "FIRE789456",
+        cilindradas: "1000",
+      }
+    ]
   },
   {
     id: "2",
@@ -66,6 +87,16 @@ const CLIENTES: Cliente[] = [
     nome: "Concessionária Motors",
     telefone: "(11) 9999-0000",
     email: "pecas@motors.com.br",
+    motores: [
+      {
+        id: "m3",
+        marca: "Toyota",
+        modelo: "Corolla 2.0",
+        ano: "2019",
+        numeroSerie: "CRL2019123",
+        cilindradas: "2000",
+      }
+    ]
   },
   {
     id: "4",
@@ -170,6 +201,15 @@ export default function Clientes({ onLogout }: ClientesProps) {
     });
   };
 
+  // Funções para navegação
+  const handleAddCliente = () => {
+    navigate("/clientes/cadastro");
+  };
+
+  const handleEditCliente = (id: string) => {
+    navigate(`/clientes/editar/${id}`);
+  };
+
   return (
     <Layout onLogout={onLogout}>
       <div className="space-y-6">
@@ -181,7 +221,7 @@ export default function Clientes({ onLogout }: ClientesProps) {
             </p>
           </div>
           
-          <Button onClick={() => handleOpenDialog()}>
+          <Button onClick={handleAddCliente}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Novo Cliente
           </Button>
@@ -218,7 +258,7 @@ export default function Clientes({ onLogout }: ClientesProps) {
                 "Comece adicionando seu primeiro cliente para poder criar ordens de serviço."
               )}
             </p>
-            <Button className="mt-4" onClick={() => handleOpenDialog()}>
+            <Button className="mt-4" onClick={handleAddCliente}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Novo Cliente
             </Button>
@@ -230,6 +270,12 @@ export default function Clientes({ onLogout }: ClientesProps) {
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center justify-between">
                     <span>{cliente.nome}</span>
+                    {cliente.motores && cliente.motores.length > 0 && (
+                      <Badge variant="outline" className="flex items-center gap-1">
+                        <Car className="h-3 w-3" />
+                        {cliente.motores.length}
+                      </Badge>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -250,7 +296,7 @@ export default function Clientes({ onLogout }: ClientesProps) {
                   <Button 
                     variant="ghost" 
                     size="icon"
-                    onClick={() => handleOpenDialog(cliente)}
+                    onClick={() => handleEditCliente(cliente.id)}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -291,7 +337,18 @@ export default function Clientes({ onLogout }: ClientesProps) {
           <DialogHeader>
             <DialogTitle>{editingCliente ? "Editar" : "Novo"} Cliente</DialogTitle>
             <DialogDescription>
-              Preencha os dados para {editingCliente ? "atualizar o" : "cadastrar um novo"} cliente.
+              Para cadastro completo com motores, use a <Button 
+                variant="link" 
+                className="p-0 h-auto" 
+                onClick={() => {
+                  setIsDialogOpen(false);
+                  editingCliente ? 
+                    navigate(`/clientes/editar/${editingCliente.id}`) : 
+                    navigate("/clientes/cadastro");
+                }}
+              >
+                página de cadastro avançado
+              </Button>.
             </DialogDescription>
           </DialogHeader>
           

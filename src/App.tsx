@@ -10,6 +10,7 @@ import Funcionarios from "./pages/Funcionarios";
 import NotFound from "./pages/NotFound";
 import OrdemDetalhes from "./pages/OrdemDetalhes";
 import Clientes from "./pages/Clientes";
+import ClienteCadastro from "./pages/ClienteCadastro";
 import Login from "./pages/Login";
 import Agenda from "./pages/Agenda";
 import Relatorios from "./pages/Relatorios";
@@ -74,7 +75,7 @@ const App = () => {
             />
             <Route 
               path="/ordens/:id" 
-              element={isAuthenticated ? <OrdemDetalhes onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <OrdemDetalhes /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/funcionarios" 
@@ -83,6 +84,14 @@ const App = () => {
             <Route 
               path="/clientes" 
               element={isAuthenticated ? <Clientes onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
+            />
+            <Route 
+              path="/clientes/cadastro" 
+              element={isAuthenticated ? <ClienteCadastro /> : <Navigate to="/login" replace />} 
+            />
+            <Route 
+              path="/clientes/editar/:id" 
+              element={isAuthenticated ? <ClienteCadastro /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/agenda" 

@@ -4,6 +4,20 @@ export type Cliente = {
   nome: string;
   telefone: string;
   email: string;
+  endereco?: string;
+  cnpj_cpf?: string;
+  observacoes?: string;
+  motores?: Motor[];
+};
+
+export type Motor = {
+  id: string;
+  marca: string;
+  modelo: string;
+  ano?: string;
+  numeroSerie?: string;
+  cilindradas?: string;
+  observacoes?: string;
 };
 
 export type TipoServico = 
