@@ -17,6 +17,7 @@ export interface OrdemCronometroProps {
   onPause?: () => void;
   onResume?: () => void;
   onFinish?: (tempoTotal: number) => void;
+  isEtapaConcluida?: boolean;
 }
 
 const tipoServicoLabel: Record<string, string> = {
@@ -36,6 +37,7 @@ export default function OrdemCronometro({
   onPause,
   onResume,
   onFinish,
+  isEtapaConcluida = false,
 }: OrdemCronometroProps) {
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -43,50 +45,60 @@ export default function OrdemCronometro({
   const [pauseTime, setPauseTime] = useState<number | null>(null);
   const [totalPausedTime, setTotalPausedTime] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [totalSavedTime, setTotalSavedTime] = useState(0);
   const { toast } = useToast();
+  
+  // Generate a unique key for localStorage
+  const storageKey = `cronometro-${ordemId}-${etapa}${tipoServico ? `-${tipoServico}` : ''}`;
   
   // Load saved time from localStorage
   useEffect(() => {
-    const key = `cronometro-${ordemId}-${etapa}${tipoServico ? `-${tipoServico}` : ''}`;
-    const savedData = localStorage.getItem(key);
+    const savedData = localStorage.getItem(storageKey);
     
     if (savedData) {
       try {
         const data = JSON.parse(savedData);
+        
+        // If the etapa is completed, just show the total saved time
+        if (isEtapaConcluida) {
+          setTotalSavedTime(data.totalTime || 0);
+          return;
+        }
+        
         if (data.isRunning) {
           setIsRunning(true);
           setIsPaused(data.isPaused);
           setStartTime(data.startTime);
           setTotalPausedTime(data.totalPausedTime);
+          setTotalSavedTime(data.totalTime || 0);
           
           if (data.isPaused) {
             setPauseTime(data.pauseTime);
           }
-        } else if (data.elapsedTime > 0) {
-          setElapsedTime(data.elapsedTime);
+        } else if (data.totalTime > 0) {
+          setTotalSavedTime(data.totalTime);
         }
       } catch (error) {
         console.error("Erro ao carregar dados do cronômetro:", error);
       }
     }
-  }, [ordemId, etapa, tipoServico]);
+  }, [ordemId, etapa, tipoServico, isEtapaConcluida, storageKey]);
   
   // Save state to localStorage
   useEffect(() => {
-    if (isRunning || elapsedTime > 0) {
-      const key = `cronometro-${ordemId}-${etapa}${tipoServico ? `-${tipoServico}` : ''}`;
+    if (isRunning || totalSavedTime > 0) {
       const dataToSave = {
         isRunning,
         isPaused,
         startTime,
         pauseTime,
         totalPausedTime,
-        elapsedTime: isRunning ? elapsedTime : elapsedTime,
+        totalTime: totalSavedTime + (isRunning ? elapsedTime : 0),
       };
       
-      localStorage.setItem(key, JSON.stringify(dataToSave));
+      localStorage.setItem(storageKey, JSON.stringify(dataToSave));
     }
-  }, [isRunning, isPaused, startTime, pauseTime, totalPausedTime, elapsedTime, ordemId, etapa, tipoServico]);
+  }, [isRunning, isPaused, startTime, pauseTime, totalPausedTime, elapsedTime, totalSavedTime, storageKey]);
   
   useEffect(() => {
     let interval: number | null = null;
@@ -159,23 +171,62 @@ export default function OrdemCronometro({
     setIsRunning(false);
     setIsPaused(false);
     const finalTime = elapsedTime;
+    // Add current session time to total saved time
+    const totalTime = totalSavedTime + finalTime;
+    setTotalSavedTime(totalTime);
     
     toast({
       title: "Cronômetro finalizado",
-      description: `Tempo total: ${formatTime(finalTime)}`,
+      description: `Tempo total: ${formatTime(totalTime)}`,
     });
     
-    onFinish?.(finalTime);
+    onFinish?.(totalTime);
     
-    // Reset cronômetro
+    // Reset current session
     setStartTime(null);
     setTotalPausedTime(0);
     setElapsedTime(0);
     
-    // Remove from localStorage
-    const key = `cronometro-${ordemId}-${etapa}${tipoServico ? `-${tipoServico}` : ''}`;
-    localStorage.removeItem(key);
+    // Save total time to localStorage
+    localStorage.setItem(storageKey, JSON.stringify({
+      isRunning: false,
+      isPaused: false,
+      totalTime: totalTime,
+    }));
   };
+  
+  // Calculate total time (saved + current if running)
+  const displayTime = isRunning ? totalSavedTime + elapsedTime : totalSavedTime;
+  
+  // If the stage is completed, just show the saved time without controls
+  if (isEtapaConcluida) {
+    return (
+      <Card className="overflow-hidden border border-border/50 bg-white/50 backdrop-blur-sm animate-fade-in">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex justify-between items-center">
+            <span>Tempo Registrado</span>
+            {tipoServico && (
+              <Badge variant="outline">{tipoServicoLabel[tipoServico]}</Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        
+        <CardContent className="text-center py-4">
+          <div className="inline-flex items-center justify-center p-4 rounded-full bg-primary/5 mb-3">
+            <Clock className="h-10 w-10 text-green-500" />
+          </div>
+          
+          <div className="font-mono text-4xl font-bold">
+            {formatTime(totalSavedTime)}
+          </div>
+          
+          <p className="text-sm mt-2 text-green-600 font-medium">
+            Etapa concluída
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
   
   return (
     <Card className="overflow-hidden border border-border/50 bg-white/50 backdrop-blur-sm animate-fade-in">
@@ -194,7 +245,7 @@ export default function OrdemCronometro({
         </div>
         
         <div className="font-mono text-4xl font-bold">
-          {formatTime(elapsedTime)}
+          {formatTime(displayTime)}
         </div>
         
         <p className="text-sm mt-2 text-muted-foreground">
@@ -204,6 +255,12 @@ export default function OrdemCronometro({
               : "Cronômetro rodando" 
             : "Cronômetro parado"}
         </p>
+        
+        {totalSavedTime > 0 && !isRunning && (
+          <p className="text-xs mt-1 text-muted-foreground">
+            Tempo acumulado: {formatTime(totalSavedTime)}
+          </p>
+        )}
       </CardContent>
       
       <Separator />

@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ArrowLeft, Building, Calendar, Clock, MapPin, Phone, User, Mail, Check, X, Edit, FileText, Trash2 } from "lucide-react";
+import { ArrowLeft, Building, Calendar, Clock, Phone, Mail, Check, X, Edit, FileText, Trash2, AlertCircle } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
@@ -23,8 +23,13 @@ import { Progress } from "@/components/ui/progress";
 import FotosForm from "@/components/ordens/FotosForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export default function OrdemDetalhes() {
+export interface OrdemDetalhesProps {
+  onLogout?: () => void;
+}
+
+export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [ordem, setOrdem] = useState<OrdemServico | null>(null);
@@ -32,6 +37,8 @@ export default function OrdemDetalhes() {
   const [fotosEntrada, setFotosEntrada] = useState<File[]>([]);
   const [fotosSaida, setFotosSaida] = useState<File[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [novoStatus, setNovoStatus] = useState<StatusOS | null>(null);
   const { toast } = useToast();
   
   const funcionarioAtualId = "123"; // Simulando um ID de funcionário logado
@@ -136,8 +143,53 @@ export default function OrdemDetalhes() {
   };
   
   const handleFinishTimer = (etapa: EtapaOS, tipoServico: TipoServico | undefined, tempoTotal: number) => {
+    if (!ordem) return;
+    
+    // Criar cópia da ordem para modificar
+    const ordemAtualizada = { ...ordem };
+    
+    // Atualizar etapa como concluída
+    if (ordemAtualizada.etapasAndamento[etapa]) {
+      ordemAtualizada.etapasAndamento[etapa] = {
+        ...ordemAtualizada.etapasAndamento[etapa]!,
+        concluido: true,
+        finalizado: new Date()
+      };
+    } else {
+      ordemAtualizada.etapasAndamento[etapa] = {
+        concluido: true,
+        funcionarioId: funcionarioAtualId,
+        iniciado: new Date(),
+        finalizado: new Date()
+      };
+    }
+    
+    // Se for a etapa de retífica, marcar o serviço específico como concluído se tipoServico for fornecido
+    if (etapa === 'retifica' && tipoServico) {
+      const servicosAtualizados = ordemAtualizada.servicos.map(servico => {
+        if (servico.tipo === tipoServico) {
+          return { ...servico, concluido: true };
+        }
+        return servico;
+      });
+      
+      ordemAtualizada.servicos = servicosAtualizados;
+    }
+    
+    // Atualizar registros de tempo
+    const registroAtual = ordemAtualizada.tempoRegistros.find(
+      registro => registro.etapa === etapa && !registro.fim
+    );
+    
+    if (registroAtual) {
+      registroAtual.fim = new Date();
+    }
+    
+    // Atualizar a ordem
+    setOrdem(ordemAtualizada);
+    
     toast({
-      title: "Tempo registrado",
+      title: "Tempo registrado e etapa finalizada",
       description: `Tempo total para ${etapa}${tipoServico ? ` (${tipoServico})` : ''}: ${formatarTempoTotal(tempoTotal)}`,
     });
     
@@ -165,10 +217,38 @@ export default function OrdemDetalhes() {
     
     return funcionarios[id] || `Funcionário ID ${id}`;
   };
+  
+  const handleChangeStatus = () => {
+    if (!ordem || !novoStatus) return;
+    
+    // Atualizar status da ordem
+    const ordemAtualizada = { ...ordem, status: novoStatus };
+    setOrdem(ordemAtualizada);
+    setIsStatusDialogOpen(false);
+    
+    toast({
+      title: "Status atualizado",
+      description: `O status da ordem foi alterado para ${getStatusLabel(novoStatus)}.`,
+    });
+    
+    // Aqui você atualizaria o status na API real
+  };
+  
+  const getStatusLabel = (status: StatusOS) => {
+    switch (status) {
+      case "orcamento": return "Em Orçamento";
+      case "aguardando_aprovacao": return "Aguardando Aprovação";
+      case "fabricacao": return "Em Fabricação";
+      case "espera_cliente": return "Em Espera (Cliente)";
+      case "finalizado": return "Finalizado";
+      case "entregue": return "Entregue";
+      default: return "Desconhecido";
+    }
+  };
 
   if (loading) {
     return (
-      <Layout>
+      <Layout onLogout={onLogout}>
         <div className="flex flex-col items-center justify-center p-12">
           <p className="text-lg text-muted-foreground">Carregando detalhes da ordem...</p>
         </div>
@@ -178,7 +258,7 @@ export default function OrdemDetalhes() {
 
   if (!ordem) {
     return (
-      <Layout>
+      <Layout onLogout={onLogout}>
         <div className="flex flex-col items-center justify-center p-12">
           <h2 className="text-2xl font-bold mb-2">Ordem não encontrada</h2>
           <p className="text-muted-foreground mb-4">A ordem de serviço solicitada não foi encontrada.</p>
@@ -192,7 +272,7 @@ export default function OrdemDetalhes() {
   }
 
   return (
-    <Layout>
+    <Layout onLogout={onLogout}>
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center gap-3">
@@ -211,6 +291,16 @@ export default function OrdemDetalhes() {
           </div>
           
           <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setNovoStatus(ordem.status);
+                setIsStatusDialogOpen(true);
+              }}
+            >
+              <AlertCircle className="mr-2 h-4 w-4" />
+              Alterar Status
+            </Button>
             <Button variant="outline" onClick={handleEditOrdem}>
               <Edit className="mr-2 h-4 w-4" />
               Editar OS
@@ -423,6 +513,7 @@ export default function OrdemDetalhes() {
                         funcionarioId={funcionarioAtualId} 
                         etapa="lavagem"
                         onFinish={(tempo) => handleFinishTimer("lavagem", undefined, tempo)}
+                        isEtapaConcluida={ordem.etapasAndamento.lavagem?.concluido}
                       />
                     </div>
                   </div>
@@ -465,6 +556,7 @@ export default function OrdemDetalhes() {
                         funcionarioId={funcionarioAtualId} 
                         etapa="inspecao_inicial"
                         onFinish={(tempo) => handleFinishTimer("inspecao_inicial", undefined, tempo)}
+                        isEtapaConcluida={ordem.etapasAndamento.inspecao_inicial?.concluido}
                       />
                     </div>
                   </div>
@@ -515,6 +607,7 @@ export default function OrdemDetalhes() {
                             etapa="retifica"
                             tipoServico={servico.tipo as TipoServico}
                             onFinish={(tempo) => handleFinishTimer("retifica", servico.tipo as TipoServico, tempo)}
+                            isEtapaConcluida={servico.concluido}
                           />
                         ))}
                       </div>
@@ -554,6 +647,7 @@ export default function OrdemDetalhes() {
                         funcionarioId={funcionarioAtualId} 
                         etapa="montagem_final"
                         onFinish={(tempo) => handleFinishTimer("montagem_final", undefined, tempo)}
+                        isEtapaConcluida={ordem.etapasAndamento.montagem_final?.concluido}
                       />
                     </div>
                   </div>
@@ -563,17 +657,35 @@ export default function OrdemDetalhes() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-muted-foreground">
-                          <span className="flex items-center text-muted-foreground">
-                            <X className="h-4 w-4 mr-1" />
-                            Não iniciado
-                          </span>
+                          {ordem.etapasAndamento.teste?.concluido ? (
+                            <span className="flex items-center text-green-600">
+                              <Check className="h-4 w-4 mr-1" />
+                              Concluído
+                            </span>
+                          ) : (
+                            <span className="flex items-center text-muted-foreground">
+                              <X className="h-4 w-4 mr-1" />
+                              Não iniciado
+                            </span>
+                          )}
                         </p>
+                        {ordem.etapasAndamento.teste?.iniciado && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Iniciado em: {format(ordem.etapasAndamento.teste.iniciado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                        )}
+                        {ordem.etapasAndamento.teste?.funcionarioId && (
+                          <p className="text-xs font-medium mt-1">
+                            Responsável: {getFuncionarioNome(ordem.etapasAndamento.teste.funcionarioId)}
+                          </p>
+                        )}
                       </div>
                       <OrdemCronometro 
                         ordemId={ordem.id} 
                         funcionarioId={funcionarioAtualId} 
                         etapa="teste"
                         onFinish={(tempo) => handleFinishTimer("teste", undefined, tempo)}
+                        isEtapaConcluida={ordem.etapasAndamento.teste?.concluido}
                       />
                     </div>
                   </div>
@@ -583,17 +695,35 @@ export default function OrdemDetalhes() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-muted-foreground">
-                          <span className="flex items-center text-muted-foreground">
-                            <X className="h-4 w-4 mr-1" />
-                            Não iniciado
-                          </span>
+                          {ordem.etapasAndamento.inspecao_final?.concluido ? (
+                            <span className="flex items-center text-green-600">
+                              <Check className="h-4 w-4 mr-1" />
+                              Concluído
+                            </span>
+                          ) : (
+                            <span className="flex items-center text-muted-foreground">
+                              <X className="h-4 w-4 mr-1" />
+                              Não iniciado
+                            </span>
+                          )}
                         </p>
+                        {ordem.etapasAndamento.inspecao_final?.iniciado && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Iniciado em: {format(ordem.etapasAndamento.inspecao_final.iniciado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                        )}
+                        {ordem.etapasAndamento.inspecao_final?.funcionarioId && (
+                          <p className="text-xs font-medium mt-1">
+                            Responsável: {getFuncionarioNome(ordem.etapasAndamento.inspecao_final.funcionarioId)}
+                          </p>
+                        )}
                       </div>
                       <OrdemCronometro 
                         ordemId={ordem.id} 
                         funcionarioId={funcionarioAtualId} 
                         etapa="inspecao_final"
                         onFinish={(tempo) => handleFinishTimer("inspecao_final", undefined, tempo)}
+                        isEtapaConcluida={ordem.etapasAndamento.inspecao_final?.concluido}
                       />
                     </div>
                   </div>
@@ -712,6 +842,44 @@ export default function OrdemDetalhes() {
             </Button>
             <Button variant="destructive" onClick={handleDeleteOrdem}>
               Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Dialog para alterar o status da OS */}
+      <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Alterar Status da OS</DialogTitle>
+            <DialogDescription>
+              Selecione o novo status para esta ordem de serviço.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Select
+              value={novoStatus || undefined}
+              onValueChange={(value) => setNovoStatus(value as StatusOS)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione um status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="orcamento">Em Orçamento</SelectItem>
+                <SelectItem value="aguardando_aprovacao">Aguardando Aprovação</SelectItem>
+                <SelectItem value="fabricacao">Em Fabricação</SelectItem>
+                <SelectItem value="espera_cliente">Em Espera (Cliente)</SelectItem>
+                <SelectItem value="finalizado">Finalizado</SelectItem>
+                <SelectItem value="entregue">Entregue</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsStatusDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleChangeStatus}>
+              Salvar
             </Button>
           </DialogFooter>
         </DialogContent>

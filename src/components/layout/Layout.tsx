@@ -6,7 +6,7 @@ import Sidebar from './Sidebar';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Toaster } from '@/components/ui/toaster';
 
-type LayoutProps = {
+export type LayoutProps = {
   children: React.ReactNode;
   onLogout?: () => void;
 };
