@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -10,16 +11,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ArrowLeft, Building, Calendar, Clock, MapPin, Phone, User, Mail, Check, X, Edit, FileText } from "lucide-react";
+import { ArrowLeft, Building, Calendar, Clock, MapPin, Phone, User, Mail, Check, X, Edit, FileText, Trash2 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { OrdemServico, Servico, StatusOS, EtapaOS } from "@/types/ordens";
+import { OrdemServico, Servico, StatusOS, EtapaOS, TipoServico } from "@/types/ordens";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import OrdemCronometro from "@/components/ordens/OrdemCronometro";
 import { Progress } from "@/components/ui/progress";
 import FotosForm from "@/components/ordens/FotosForm";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
 export default function OrdemDetalhes() {
   const { id } = useParams<{ id: string }>();
@@ -28,6 +31,8 @@ export default function OrdemDetalhes() {
   const [loading, setLoading] = useState(true);
   const [fotosEntrada, setFotosEntrada] = useState<File[]>([]);
   const [fotosSaida, setFotosSaida] = useState<File[]>([]);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const { toast } = useToast();
   
   const funcionarioAtualId = "123"; // Simulando um ID de funcionário logado
 
@@ -101,11 +106,64 @@ export default function OrdemDetalhes() {
   const handleFotosEntradaChange = (fotos: File[]) => {
     setFotosEntrada(fotos);
     // Aqui você salvaria as fotos em uma API real
+    toast({
+      title: "Fotos atualizadas",
+      description: "As fotos de entrada foram atualizadas com sucesso.",
+    });
   };
 
   const handleFotosSaidaChange = (fotos: File[]) => {
     setFotosSaida(fotos);
     // Aqui você salvaria as fotos em uma API real
+    toast({
+      title: "Fotos atualizadas",
+      description: "As fotos de saída foram atualizadas com sucesso.",
+    });
+  };
+  
+  const handleEditOrdem = () => {
+    navigate(`/ordens/editar/${id}`);
+  };
+  
+  const handleDeleteOrdem = () => {
+    // Aqui você deletaria a ordem na API real
+    setIsDeleteDialogOpen(false);
+    navigate("/ordens");
+    toast({
+      title: "Ordem de serviço excluída",
+      description: "A ordem de serviço foi excluída com sucesso.",
+    });
+  };
+  
+  const handleFinishTimer = (etapa: EtapaOS, tipoServico: TipoServico | undefined, tempoTotal: number) => {
+    toast({
+      title: "Tempo registrado",
+      description: `Tempo total para ${etapa}${tipoServico ? ` (${tipoServico})` : ''}: ${formatarTempoTotal(tempoTotal)}`,
+    });
+    
+    // Aqui você salvaria o registro de tempo na API real
+  };
+  
+  const formatarTempoTotal = (milliseconds: number) => {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}min`;
+    }
+    return `${minutes}min`;
+  };
+  
+  const getFuncionarioNome = (id: string) => {
+    // Simulação - em um sistema real você buscaria o nome do funcionário
+    const funcionarios: Record<string, string> = {
+      "1": "João Silva",
+      "2": "Maria Oliveira",
+      "3": "Pedro Santos"
+    };
+    
+    return funcionarios[id] || `Funcionário ID ${id}`;
   };
 
   if (loading) {
@@ -153,9 +211,13 @@ export default function OrdemDetalhes() {
           </div>
           
           <div className="flex items-center gap-2">
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleEditOrdem}>
               <Edit className="mr-2 h-4 w-4" />
               Editar OS
+            </Button>
+            <Button variant="outline" className="text-red-500 hover:text-red-600" onClick={() => setIsDeleteDialogOpen(true)}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Excluir
             </Button>
             <Button>
               <FileText className="mr-2 h-4 w-4" />
@@ -350,11 +412,17 @@ export default function OrdemDetalhes() {
                             Finalizado em: {format(ordem.etapasAndamento.lavagem.finalizado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                           </p>
                         )}
+                        {ordem.etapasAndamento.lavagem?.funcionarioId && (
+                          <p className="text-xs font-medium mt-1">
+                            Responsável: {getFuncionarioNome(ordem.etapasAndamento.lavagem.funcionarioId)}
+                          </p>
+                        )}
                       </div>
                       <OrdemCronometro 
                         ordemId={ordem.id} 
                         funcionarioId={funcionarioAtualId} 
                         etapa="lavagem"
+                        onFinish={(tempo) => handleFinishTimer("lavagem", undefined, tempo)}
                       />
                     </div>
                   </div>
@@ -386,48 +454,70 @@ export default function OrdemDetalhes() {
                             Finalizado em: {format(ordem.etapasAndamento.inspecao_inicial.finalizado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                           </p>
                         )}
+                        {ordem.etapasAndamento.inspecao_inicial?.funcionarioId && (
+                          <p className="text-xs font-medium mt-1">
+                            Responsável: {getFuncionarioNome(ordem.etapasAndamento.inspecao_inicial.funcionarioId)}
+                          </p>
+                        )}
                       </div>
                       <OrdemCronometro 
                         ordemId={ordem.id} 
                         funcionarioId={funcionarioAtualId} 
                         etapa="inspecao_inicial"
+                        onFinish={(tempo) => handleFinishTimer("inspecao_inicial", undefined, tempo)}
                       />
                     </div>
                   </div>
                   
                   <div className="rounded-md border border-border p-4">
                     <h3 className="font-medium mb-3">Etapa: Retífica</h3>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          {ordem.etapasAndamento.retifica?.concluido ? (
-                            <span className="flex items-center text-green-600">
-                              <Check className="h-4 w-4 mr-1" />
-                              Concluído
-                            </span>
-                          ) : (
-                            <span className="flex items-center text-yellow-600">
-                              <Clock className="h-4 w-4 mr-1" />
-                              Em andamento
-                            </span>
+                    <div>
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            {ordem.etapasAndamento.retifica?.concluido ? (
+                              <span className="flex items-center text-green-600">
+                                <Check className="h-4 w-4 mr-1" />
+                                Concluído
+                              </span>
+                            ) : (
+                              <span className="flex items-center text-yellow-600">
+                                <Clock className="h-4 w-4 mr-1" />
+                                Em andamento
+                              </span>
+                            )}
+                          </p>
+                          {ordem.etapasAndamento.retifica?.iniciado && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Iniciado em: {format(ordem.etapasAndamento.retifica.iniciado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            </p>
                           )}
-                        </p>
-                        {ordem.etapasAndamento.retifica?.iniciado && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Iniciado em: {format(ordem.etapasAndamento.retifica.iniciado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                          </p>
-                        )}
-                        {ordem.etapasAndamento.retifica?.finalizado && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Finalizado em: {format(ordem.etapasAndamento.retifica.finalizado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                          </p>
-                        )}
+                          {ordem.etapasAndamento.retifica?.finalizado && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Finalizado em: {format(ordem.etapasAndamento.retifica.finalizado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            </p>
+                          )}
+                          {ordem.etapasAndamento.retifica?.funcionarioId && (
+                            <p className="text-xs font-medium mt-1">
+                              Responsável: {getFuncionarioNome(ordem.etapasAndamento.retifica.funcionarioId)}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <OrdemCronometro 
-                        ordemId={ordem.id} 
-                        funcionarioId={funcionarioAtualId} 
-                        etapa="retifica"
-                      />
+                      
+                      {/* Cronômetros específicos para cada tipo de serviço na etapa de retífica */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        {ordem.servicos.map((servico) => (
+                          <OrdemCronometro 
+                            key={servico.tipo}
+                            ordemId={ordem.id} 
+                            funcionarioId={funcionarioAtualId} 
+                            etapa="retifica"
+                            tipoServico={servico.tipo as TipoServico}
+                            onFinish={(tempo) => handleFinishTimer("retifica", servico.tipo as TipoServico, tempo)}
+                          />
+                        ))}
+                      </div>
                     </div>
                   </div>
                   
@@ -453,11 +543,17 @@ export default function OrdemDetalhes() {
                             Iniciado em: {format(ordem.etapasAndamento.montagem_final.iniciado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                           </p>
                         )}
+                        {ordem.etapasAndamento.montagem_final?.funcionarioId && (
+                          <p className="text-xs font-medium mt-1">
+                            Responsável: {getFuncionarioNome(ordem.etapasAndamento.montagem_final.funcionarioId)}
+                          </p>
+                        )}
                       </div>
                       <OrdemCronometro 
                         ordemId={ordem.id} 
                         funcionarioId={funcionarioAtualId} 
                         etapa="montagem_final"
+                        onFinish={(tempo) => handleFinishTimer("montagem_final", undefined, tempo)}
                       />
                     </div>
                   </div>
@@ -477,6 +573,7 @@ export default function OrdemDetalhes() {
                         ordemId={ordem.id} 
                         funcionarioId={funcionarioAtualId} 
                         etapa="teste"
+                        onFinish={(tempo) => handleFinishTimer("teste", undefined, tempo)}
                       />
                     </div>
                   </div>
@@ -496,6 +593,7 @@ export default function OrdemDetalhes() {
                         ordemId={ordem.id} 
                         funcionarioId={funcionarioAtualId} 
                         etapa="inspecao_final"
+                        onFinish={(tempo) => handleFinishTimer("inspecao_final", undefined, tempo)}
                       />
                     </div>
                   </div>
@@ -526,7 +624,7 @@ export default function OrdemDetalhes() {
                             {registro.etapa === 'inspecao_final' && 'Inspeção Final'}
                           </h4>
                           <p className="text-sm text-muted-foreground">
-                            Funcionário ID: {registro.funcionarioId}
+                            Funcionário: {getFuncionarioNome(registro.funcionarioId)}
                           </p>
                         </div>
                         <div className="text-sm text-muted-foreground">
@@ -598,6 +696,26 @@ export default function OrdemDetalhes() {
           </TabsContent>
         </Tabs>
       </div>
+      
+      {/* Dialog de confirmação para excluir a OS */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir Ordem de Serviço</DialogTitle>
+            <DialogDescription>
+              Você tem certeza que deseja excluir esta ordem de serviço? Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteOrdem}>
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }

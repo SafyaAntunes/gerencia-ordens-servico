@@ -4,22 +4,34 @@ import { Play, Pause, StopCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { EtapaOS } from "@/types/ordens";
+import { EtapaOS, TipoServico } from "@/types/ordens";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 
 export interface OrdemCronometroProps {
   ordemId: string;
   funcionarioId: string;
-  etapa: string;
+  etapa: EtapaOS;
+  tipoServico?: TipoServico;
   onStart?: () => void;
   onPause?: () => void;
   onResume?: () => void;
   onFinish?: (tempoTotal: number) => void;
 }
 
+const tipoServicoLabel: Record<string, string> = {
+  bloco: "Bloco",
+  biela: "Biela",
+  cabecote: "Cabeçote",
+  virabrequim: "Virabrequim",
+  eixo_comando: "Eixo de Comando"
+};
+
 export default function OrdemCronometro({
   ordemId,
   funcionarioId,
   etapa,
+  tipoServico,
   onStart,
   onPause,
   onResume,
@@ -31,6 +43,50 @@ export default function OrdemCronometro({
   const [pauseTime, setPauseTime] = useState<number | null>(null);
   const [totalPausedTime, setTotalPausedTime] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const { toast } = useToast();
+  
+  // Load saved time from localStorage
+  useEffect(() => {
+    const key = `cronometro-${ordemId}-${etapa}${tipoServico ? `-${tipoServico}` : ''}`;
+    const savedData = localStorage.getItem(key);
+    
+    if (savedData) {
+      try {
+        const data = JSON.parse(savedData);
+        if (data.isRunning) {
+          setIsRunning(true);
+          setIsPaused(data.isPaused);
+          setStartTime(data.startTime);
+          setTotalPausedTime(data.totalPausedTime);
+          
+          if (data.isPaused) {
+            setPauseTime(data.pauseTime);
+          }
+        } else if (data.elapsedTime > 0) {
+          setElapsedTime(data.elapsedTime);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar dados do cronômetro:", error);
+      }
+    }
+  }, [ordemId, etapa, tipoServico]);
+  
+  // Save state to localStorage
+  useEffect(() => {
+    if (isRunning || elapsedTime > 0) {
+      const key = `cronometro-${ordemId}-${etapa}${tipoServico ? `-${tipoServico}` : ''}`;
+      const dataToSave = {
+        isRunning,
+        isPaused,
+        startTime,
+        pauseTime,
+        totalPausedTime,
+        elapsedTime: isRunning ? elapsedTime : elapsedTime,
+      };
+      
+      localStorage.setItem(key, JSON.stringify(dataToSave));
+    }
+  }, [isRunning, isPaused, startTime, pauseTime, totalPausedTime, elapsedTime, ordemId, etapa, tipoServico]);
   
   useEffect(() => {
     let interval: number | null = null;
@@ -66,12 +122,22 @@ export default function OrdemCronometro({
     setIsPaused(false);
     setStartTime(Date.now());
     onStart?.();
+    
+    toast({
+      title: "Cronômetro iniciado",
+      description: `Medindo tempo para ${etapa}${tipoServico ? ` (${tipoServicoLabel[tipoServico]})` : ''}`,
+    });
   };
   
   const handlePause = () => {
     setIsPaused(true);
     setPauseTime(Date.now());
     onPause?.();
+    
+    toast({
+      title: "Cronômetro pausado",
+      description: "O tempo não está sendo contabilizado",
+    });
   };
   
   const handleResume = () => {
@@ -82,23 +148,44 @@ export default function OrdemCronometro({
     setIsPaused(false);
     setPauseTime(null);
     onResume?.();
+    
+    toast({
+      title: "Cronômetro retomado",
+      description: "Continuando a medição de tempo",
+    });
   };
   
   const handleFinish = () => {
     setIsRunning(false);
     setIsPaused(false);
-    onFinish?.(elapsedTime);
+    const finalTime = elapsedTime;
+    
+    toast({
+      title: "Cronômetro finalizado",
+      description: `Tempo total: ${formatTime(finalTime)}`,
+    });
+    
+    onFinish?.(finalTime);
     
     // Reset cronômetro
     setStartTime(null);
     setTotalPausedTime(0);
     setElapsedTime(0);
+    
+    // Remove from localStorage
+    const key = `cronometro-${ordemId}-${etapa}${tipoServico ? `-${tipoServico}` : ''}`;
+    localStorage.removeItem(key);
   };
   
   return (
     <Card className="overflow-hidden border border-border/50 bg-white/50 backdrop-blur-sm animate-fade-in">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Controle de Tempo</CardTitle>
+        <CardTitle className="text-base flex justify-between items-center">
+          <span>Controle de Tempo</span>
+          {tipoServico && (
+            <Badge variant="outline">{tipoServicoLabel[tipoServico]}</Badge>
+          )}
+        </CardTitle>
       </CardHeader>
       
       <CardContent className="text-center py-4">

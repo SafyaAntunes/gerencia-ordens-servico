@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Toaster } from '@/components/ui/toaster';
 
 type LayoutProps = {
   children: React.ReactNode;
@@ -64,6 +65,8 @@ export default function Layout({ children, onLogout }: LayoutProps) {
           </motion.div>
         </AnimatePresence>
       </main>
+      
+      <Toaster />
     </div>
   );
 }
