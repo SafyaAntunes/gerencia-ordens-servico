@@ -19,7 +19,7 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
   
   // Contador das etapas concluídas
   const totalEtapas = 6; // Número total de etapas
-  const etapasConcluidas = Object.values(ordem.etapasAndamento).filter(
+  const etapasConcluidas = Object.values(ordem.etapasAndamento || {}).filter(
     (etapa) => etapa?.concluido
   ).length;
   
@@ -28,13 +28,23 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
   
   const handleNavigateToDetail = (e: React.MouseEvent) => {
     e.stopPropagation();
+    console.log("Navegando para a ordem:", ordem.id);
     navigate(`/ordens/${ordem.id}`);
+  };
+  
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    } else {
+      console.log("Navegando para a ordem via onClick:", ordem.id);
+      navigate(`/ordens/${ordem.id}`);
+    }
   };
   
   return (
     <Card 
       className="card-hover cursor-pointer overflow-hidden"
-      onClick={onClick || (() => navigate(`/ordens/${ordem.id}`))}
+      onClick={handleClick}
     >
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
@@ -53,13 +63,13 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Calendar className="h-4 w-4" />
             <span>
-              {format(ordem.dataAbertura, "dd MMM yyyy", { locale: ptBR })}
+              {format(new Date(ordem.dataAbertura), "dd MMM yyyy", { locale: ptBR })}
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Clock className="h-4 w-4" />
             <span>
-              Previsão: {format(ordem.dataPrevistaEntrega, "dd MMM yyyy", { locale: ptBR })}
+              Previsão: {format(new Date(ordem.dataPrevistaEntrega), "dd MMM yyyy", { locale: ptBR })}
             </span>
           </div>
         </div>
@@ -86,7 +96,7 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
       
       <CardFooter className="flex justify-between pt-3">
         <div className="flex flex-wrap gap-1">
-          {ordem.servicos.map((servico, index) => (
+          {ordem.servicos && ordem.servicos.map((servico, index) => (
             <span 
               key={index}
               className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground"
