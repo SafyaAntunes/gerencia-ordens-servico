@@ -44,61 +44,166 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
   const funcionarioAtualId = "123"; // Simulando um ID de funcionário logado
 
   useEffect(() => {
-    setTimeout(() => {
-      const ordemEncontrada = {
-        id: "OS-2023-001",
-        nome: "Motor Ford Ka 2019",
-        cliente: {
-          id: "1",
-          nome: "Auto Peças Silva",
-          telefone: "(11) 98765-4321",
-          email: "contato@autopecassilva.com.br",
-        },
-        dataAbertura: new Date(2023, 4, 15),
-        dataPrevistaEntrega: new Date(2023, 4, 30),
-        prioridade: "alta",
-        servicos: [
-          { tipo: "bloco", descricao: "Retífica completa do bloco", concluido: false },
-          { tipo: "virabrequim", descricao: "Balanceamento", concluido: false },
-        ],
-        status: "fabricacao",
-        etapasAndamento: {
-          lavagem: { concluido: true, funcionarioId: "1", iniciado: new Date(2023, 4, 16), finalizado: new Date(2023, 4, 16) },
-          inspecao_inicial: { concluido: true, funcionarioId: "2", iniciado: new Date(2023, 4, 17), finalizado: new Date(2023, 4, 18) },
-          retifica: { concluido: false, funcionarioId: "3", iniciado: new Date(2023, 4, 19) },
-        },
-        tempoRegistros: [
-          {
-            inicio: new Date(2023, 4, 16, 8, 0),
-            fim: new Date(2023, 4, 16, 12, 0),
-            funcionarioId: "1",
-            etapa: "lavagem",
-            pausas: [
-              { inicio: new Date(2023, 4, 16, 10, 0), fim: new Date(2023, 4, 16, 10, 15) },
-            ],
-          },
-          {
-            inicio: new Date(2023, 4, 17, 13, 0),
-            fim: new Date(2023, 4, 18, 17, 0),
-            funcionarioId: "2",
-            etapa: "inspecao_inicial",
-            pausas: [],
-          },
-          {
-            inicio: new Date(2023, 4, 19, 8, 0),
-            funcionarioId: "3",
-            etapa: "retifica",
-            pausas: [
-              { inicio: new Date(2023, 4, 19, 12, 0), fim: new Date(2023, 4, 19, 13, 0) },
-            ],
-          },
-        ],
-      } as OrdemServico;
+    const carregarOS = () => {
+      setLoading(true);
       
-      setOrdem(ordemEncontrada);
+      // Buscar as ordens salvas no localStorage
+      const ordensString = localStorage.getItem('ordens-servico');
+      if (ordensString) {
+        try {
+          const ordensParseadas = JSON.parse(ordensString);
+          
+          // Converter strings de data para objetos Date
+          const ordens = ordensParseadas.map((ordem: any) => ({
+            ...ordem,
+            dataAbertura: new Date(ordem.dataAbertura),
+            dataPrevistaEntrega: new Date(ordem.dataPrevistaEntrega),
+            etapasAndamento: Object.entries(ordem.etapasAndamento || {}).reduce((acc: any, [etapa, dados]: [string, any]) => {
+              acc[etapa] = {
+                ...dados,
+                iniciado: dados.iniciado ? new Date(dados.iniciado) : undefined,
+                finalizado: dados.finalizado ? new Date(dados.finalizado) : undefined
+              };
+              return acc;
+            }, {}),
+            tempoRegistros: (ordem.tempoRegistros || []).map((registro: any) => ({
+              ...registro,
+              inicio: new Date(registro.inicio),
+              fim: registro.fim ? new Date(registro.fim) : undefined,
+              pausas: (registro.pausas || []).map((pausa: any) => ({
+                inicio: new Date(pausa.inicio),
+                fim: pausa.fim ? new Date(pausa.fim) : undefined
+              }))
+            }))
+          }));
+          
+          // Encontrar a ordem correspondente ao ID da URL
+          const ordemEncontrada = ordens.find((o: OrdemServico) => o.id === id);
+          
+          if (ordemEncontrada) {
+            setOrdem(ordemEncontrada);
+          } else {
+            console.warn(`Ordem com ID ${id} não encontrada`);
+            // Se não encontrou a ordem, carregamos a ordem de exemplo (para compatibilidade)
+            const ordemExemplo = {
+              id: "OS-2023-001",
+              nome: "Motor Ford Ka 2019",
+              cliente: {
+                id: "1",
+                nome: "Auto Peças Silva",
+                telefone: "(11) 98765-4321",
+                email: "contato@autopecassilva.com.br",
+              },
+              dataAbertura: new Date(2023, 4, 15),
+              dataPrevistaEntrega: new Date(2023, 4, 30),
+              prioridade: "alta",
+              servicos: [
+                { tipo: "bloco", descricao: "Retífica completa do bloco", concluido: false },
+                { tipo: "virabrequim", descricao: "Balanceamento", concluido: false },
+              ],
+              status: "fabricacao",
+              etapasAndamento: {
+                lavagem: { concluido: true, funcionarioId: "1", iniciado: new Date(2023, 4, 16), finalizado: new Date(2023, 4, 16) },
+                inspecao_inicial: { concluido: true, funcionarioId: "2", iniciado: new Date(2023, 4, 17), finalizado: new Date(2023, 4, 18) },
+                retifica: { concluido: false, funcionarioId: "3", iniciado: new Date(2023, 4, 19) },
+              },
+              tempoRegistros: [
+                {
+                  inicio: new Date(2023, 4, 16, 8, 0),
+                  fim: new Date(2023, 4, 16, 12, 0),
+                  funcionarioId: "1",
+                  etapa: "lavagem",
+                  pausas: [
+                    { inicio: new Date(2023, 4, 16, 10, 0), fim: new Date(2023, 4, 16, 10, 15) },
+                  ],
+                },
+                {
+                  inicio: new Date(2023, 4, 17, 13, 0),
+                  fim: new Date(2023, 4, 18, 17, 0),
+                  funcionarioId: "2",
+                  etapa: "inspecao_inicial",
+                  pausas: [],
+                },
+                {
+                  inicio: new Date(2023, 4, 19, 8, 0),
+                  funcionarioId: "3",
+                  etapa: "retifica",
+                  pausas: [
+                    { inicio: new Date(2023, 4, 19, 12, 0), fim: new Date(2023, 4, 19, 13, 0) },
+                  ],
+                },
+              ],
+            } as OrdemServico;
+            setOrdem(ordemExemplo);
+          }
+        } catch (error) {
+          console.error("Erro ao processar ordens do localStorage:", error);
+          toast({
+            title: "Erro",
+            description: "Não foi possível carregar os dados da ordem de serviço.",
+            variant: "destructive",
+          });
+        }
+      } else {
+        console.warn("Nenhuma ordem de serviço encontrada no localStorage");
+        // Carregar ordem de exemplo para compatibilidade
+        const ordemExemplo = {
+          id: "OS-2023-001",
+          nome: "Motor Ford Ka 2019",
+          cliente: {
+            id: "1",
+            nome: "Auto Peças Silva",
+            telefone: "(11) 98765-4321",
+            email: "contato@autopecassilva.com.br",
+          },
+          dataAbertura: new Date(2023, 4, 15),
+          dataPrevistaEntrega: new Date(2023, 4, 30),
+          prioridade: "alta",
+          servicos: [
+            { tipo: "bloco", descricao: "Retífica completa do bloco", concluido: false },
+            { tipo: "virabrequim", descricao: "Balanceamento", concluido: false },
+          ],
+          status: "fabricacao",
+          etapasAndamento: {
+            lavagem: { concluido: true, funcionarioId: "1", iniciado: new Date(2023, 4, 16), finalizado: new Date(2023, 4, 16) },
+            inspecao_inicial: { concluido: true, funcionarioId: "2", iniciado: new Date(2023, 4, 17), finalizado: new Date(2023, 4, 18) },
+            retifica: { concluido: false, funcionarioId: "3", iniciado: new Date(2023, 4, 19) },
+          },
+          tempoRegistros: [
+            {
+              inicio: new Date(2023, 4, 16, 8, 0),
+              fim: new Date(2023, 4, 16, 12, 0),
+              funcionarioId: "1",
+              etapa: "lavagem",
+              pausas: [
+                { inicio: new Date(2023, 4, 16, 10, 0), fim: new Date(2023, 4, 16, 10, 15) },
+              ],
+            },
+            {
+              inicio: new Date(2023, 4, 17, 13, 0),
+              fim: new Date(2023, 4, 18, 17, 0),
+              funcionarioId: "2",
+              etapa: "inspecao_inicial",
+              pausas: [],
+            },
+            {
+              inicio: new Date(2023, 4, 19, 8, 0),
+              funcionarioId: "3",
+              etapa: "retifica",
+              pausas: [
+                { inicio: new Date(2023, 4, 19, 12, 0), fim: new Date(2023, 4, 19, 13, 0) },
+              ],
+            },
+          ],
+        } as OrdemServico;
+        setOrdem(ordemExemplo);
+      }
+      
       setLoading(false);
-    }, 1000);
-  }, [id]);
+    };
+    
+    carregarOS();
+  }, [id, toast]);
 
   const calcularProgresso = () => {
     if (!ordem) return 0;
@@ -133,13 +238,37 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
   };
   
   const handleDeleteOrdem = () => {
-    // Aqui você deletaria a ordem na API real
-    setIsDeleteDialogOpen(false);
-    navigate("/ordens");
-    toast({
-      title: "Ordem de serviço excluída",
-      description: "A ordem de serviço foi excluída com sucesso.",
-    });
+    if (!ordem) return;
+    
+    // Recuperar ordens atuais
+    const ordensString = localStorage.getItem('ordens-servico');
+    if (ordensString) {
+      try {
+        const ordens = JSON.parse(ordensString);
+        // Filtrar a ordem atual
+        const ordensAtualizadas = ordens.filter((o: OrdemServico) => o.id !== ordem.id);
+        // Salvar ordens atualizadas
+        localStorage.setItem('ordens-servico', JSON.stringify(ordensAtualizadas));
+        
+        setIsDeleteDialogOpen(false);
+        navigate("/ordens");
+        toast({
+          title: "Ordem de serviço excluída",
+          description: "A ordem de serviço foi excluída com sucesso.",
+        });
+      } catch (error) {
+        console.error("Erro ao processar ordens do localStorage:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível excluir a ordem de serviço.",
+          variant: "destructive",
+        });
+      }
+    } else {
+      // Se não existir ordens no localStorage, apenas navega de volta
+      setIsDeleteDialogOpen(false);
+      navigate("/ordens");
+    }
   };
   
   const handleFinishTimer = (etapa: EtapaOS, tipoServico: TipoServico | undefined, tempoTotal: number) => {
@@ -185,15 +314,27 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
       registroAtual.fim = new Date();
     }
     
-    // Atualizar a ordem
+    // Atualizar a ordem local
     setOrdem(ordemAtualizada);
+    
+    // Atualizar a ordem no localStorage
+    const ordensString = localStorage.getItem('ordens-servico');
+    if (ordensString) {
+      try {
+        const ordens = JSON.parse(ordensString);
+        const ordensAtualizadas = ordens.map((o: OrdemServico) => 
+          o.id === ordemAtualizada.id ? ordemAtualizada : o
+        );
+        localStorage.setItem('ordens-servico', JSON.stringify(ordensAtualizadas));
+      } catch (error) {
+        console.error("Erro ao atualizar ordem no localStorage:", error);
+      }
+    }
     
     toast({
       title: "Tempo registrado e etapa finalizada",
       description: `Tempo total para ${etapa}${tipoServico ? ` (${tipoServico})` : ''}: ${formatarTempoTotal(tempoTotal)}`,
     });
-    
-    // Aqui você salvaria o registro de tempo na API real
   };
   
   const formatarTempoTotal = (milliseconds: number) => {
@@ -208,7 +349,21 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
   };
   
   const getFuncionarioNome = (id: string) => {
-    // Simulação - em um sistema real você buscaria o nome do funcionário
+    // Tentar buscar o funcionário no localStorage
+    const funcionariosString = localStorage.getItem('funcionarios');
+    if (funcionariosString) {
+      try {
+        const funcionarios = JSON.parse(funcionariosString);
+        const funcionario = funcionarios.find((f: any) => f.id === id);
+        if (funcionario) {
+          return `${funcionario.nome}`;
+        }
+      } catch (error) {
+        console.error("Erro ao buscar funcionários do localStorage:", error);
+      }
+    }
+    
+    // Fallback para simulação
     const funcionarios: Record<string, string> = {
       "1": "João Silva",
       "2": "Maria Oliveira",
@@ -224,14 +379,27 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
     // Atualizar status da ordem
     const ordemAtualizada = { ...ordem, status: novoStatus };
     setOrdem(ordemAtualizada);
+    
+    // Atualizar a ordem no localStorage
+    const ordensString = localStorage.getItem('ordens-servico');
+    if (ordensString) {
+      try {
+        const ordens = JSON.parse(ordensString);
+        const ordensAtualizadas = ordens.map((o: OrdemServico) => 
+          o.id === ordemAtualizada.id ? ordemAtualizada : o
+        );
+        localStorage.setItem('ordens-servico', JSON.stringify(ordensAtualizadas));
+      } catch (error) {
+        console.error("Erro ao atualizar ordem no localStorage:", error);
+      }
+    }
+    
     setIsStatusDialogOpen(false);
     
     toast({
       title: "Status atualizado",
       description: `O status da ordem foi alterado para ${getStatusLabel(novoStatus)}.`,
     });
-    
-    // Aqui você atualizaria o status na API real
   };
   
   const getStatusLabel = (status: StatusOS) => {
