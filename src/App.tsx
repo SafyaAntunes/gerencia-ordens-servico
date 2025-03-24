@@ -75,7 +75,7 @@ const App = () => {
             />
             <Route 
               path="/ordens/:id" 
-              element={isAuthenticated ? <OrdemDetalhes /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <OrdemDetalhes onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/funcionarios" 
@@ -87,11 +87,11 @@ const App = () => {
             />
             <Route 
               path="/clientes/cadastro" 
-              element={isAuthenticated ? <ClienteCadastro /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <ClienteCadastro onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/clientes/editar/:id" 
-              element={isAuthenticated ? <ClienteCadastro /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <ClienteCadastro onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/agenda" 

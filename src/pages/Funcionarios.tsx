@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PlusCircle, Filter, Search, Users, CheckCircle2 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 import Layout from "@/components/layout/Layout";
 import FuncionarioCard from "@/components/funcionarios/FuncionarioCard";
 import FuncionarioDetalhes from "@/components/funcionarios/FuncionarioDetalhes";
@@ -37,7 +38,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Funcionario } from "@/types/funcionarios";
 import { TipoServico } from "@/types/ordens";
 
-const funcionarios: Funcionario[] = [
+// Dados iniciais
+const funcionariosIniciais: Funcionario[] = [
   {
     id: "1",
     nome: "João Silva",
@@ -99,12 +101,26 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
+  const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [especialidadeFilter, setEspecialidadeFilter] = useState<TipoServico | "todas">("todas");
   const [statusFilter, setStatusFilter] = useState<"ativos" | "inativos" | "todos">("todos");
   const [selectedFuncionario, setSelectedFuncionario] = useState<Funcionario | null>(null);
   const [isDetalhesOpen, setIsDetalhesOpen] = useState(false);
+  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
+  
+  // Carregar funcionários do localStorage ao iniciar
+  useEffect(() => {
+    const funcionariosSalvos = localStorage.getItem("sgr-funcionarios");
+    if (funcionariosSalvos) {
+      setFuncionarios(JSON.parse(funcionariosSalvos));
+    } else {
+      // Se não houver dados salvos, usar os dados iniciais
+      setFuncionarios(funcionariosIniciais);
+      localStorage.setItem("sgr-funcionarios", JSON.stringify(funcionariosIniciais));
+    }
+  }, []);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -118,15 +134,58 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
   });
   
   const handleCreateFuncionario = (values: FormValues) => {
-    console.log("Novo funcionário:", values);
+    // Gerar ID único para o novo funcionário
+    const newId = `f-${Date.now()}`;
+    
+    // Criar novo funcionário
+    const novoFuncionario: Funcionario = {
+      id: newId,
+      nome: values.nome,
+      email: values.email,
+      telefone: values.telefone,
+      especialidades: values.especialidades as TipoServico[],
+      ativo: values.ativo,
+    };
+    
+    // Adicionar ao estado e salvar no localStorage
+    const funcionariosAtualizados = [...funcionarios, novoFuncionario];
+    setFuncionarios(funcionariosAtualizados);
+    localStorage.setItem("sgr-funcionarios", JSON.stringify(funcionariosAtualizados));
+    
+    // Fechar diálogo e resetar formulário
     setIsDialogOpen(false);
     form.reset();
-    // Aqui você adicionaria o novo funcionário ao estado ou enviaria para a API
+    
+    // Mostrar mensagem de sucesso
+    toast({
+      title: "Funcionário cadastrado",
+      description: `${values.nome} foi adicionado com sucesso.`,
+    });
   };
   
   const handleViewDetails = (funcionario: Funcionario) => {
     setSelectedFuncionario(funcionario);
     setIsDetalhesOpen(true);
+  };
+  
+  const handleUpdateFuncionario = (funcionarioAtualizado: Funcionario) => {
+    // Atualizar funcionário na lista
+    const funcionariosAtualizados = funcionarios.map(f => 
+      f.id === funcionarioAtualizado.id ? funcionarioAtualizado : f
+    );
+    
+    // Atualizar estado e localStorage
+    setFuncionarios(funcionariosAtualizados);
+    localStorage.setItem("sgr-funcionarios", JSON.stringify(funcionariosAtualizados));
+    
+    // Fechar diálogo de detalhes
+    setIsDetalhesOpen(false);
+    
+    // Mostrar mensagem de sucesso
+    toast({
+      title: "Funcionário atualizado",
+      description: `Dados de ${funcionarioAtualizado.nome} foram atualizados com sucesso.`,
+    });
   };
   
   const filteredFuncionarios = funcionarios.filter((funcionario) => {
@@ -460,7 +519,8 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
         <FuncionarioDetalhes 
           funcionario={selectedFuncionario} 
           isOpen={isDetalhesOpen} 
-          onClose={() => setIsDetalhesOpen(false)} 
+          onClose={() => setIsDetalhesOpen(false)}
+          onUpdate={handleUpdateFuncionario}
         />
       </div>
     </Layout>

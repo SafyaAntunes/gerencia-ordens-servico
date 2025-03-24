@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { PlusCircle, Filter, Search, FileText, AlertCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { PlusCircle, Filter, Search, FileText, AlertCircle, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useToast } from "@/components/ui/use-toast";
 import Layout from "@/components/layout/Layout";
 import OrdemCard from "@/components/ordens/OrdemCard";
 import { Button } from "@/components/ui/button";
@@ -26,13 +27,13 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import OrdemForm from "@/components/ordens/OrdemForm";
-import { OrdemServico, StatusOS, Cliente, Prioridade } from "@/types/ordens";
+import { OrdemServico, StatusOS, Prioridade, TipoServico } from "@/types/ordens";
 
-// Dados de exemplo
-const ordens: OrdemServico[] = [
+const ordensIniciais: OrdemServico[] = [
   {
     id: "OS-2023-001",
     nome: "Motor Ford Ka 2019",
@@ -55,32 +56,7 @@ const ordens: OrdemServico[] = [
       inspecao_inicial: { concluido: true, funcionarioId: "2", iniciado: new Date(2023, 4, 17), finalizado: new Date(2023, 4, 18) },
       retifica: { concluido: false, funcionarioId: "3", iniciado: new Date(2023, 4, 19) },
     },
-    tempoRegistros: [
-      {
-        inicio: new Date(2023, 4, 16, 8, 0),
-        fim: new Date(2023, 4, 16, 12, 0),
-        funcionarioId: "1",
-        etapa: "lavagem",
-        pausas: [
-          { inicio: new Date(2023, 4, 16, 10, 0), fim: new Date(2023, 4, 16, 10, 15) },
-        ],
-      },
-      {
-        inicio: new Date(2023, 4, 17, 13, 0),
-        fim: new Date(2023, 4, 18, 17, 0),
-        funcionarioId: "2",
-        etapa: "inspecao_inicial",
-        pausas: [],
-      },
-      {
-        inicio: new Date(2023, 4, 19, 8, 0),
-        funcionarioId: "3",
-        etapa: "retifica",
-        pausas: [
-          { inicio: new Date(2023, 4, 19, 12, 0), fim: new Date(2023, 4, 19, 13, 0) },
-        ],
-      },
-    ],
+    tempoRegistros: [],
   },
   {
     id: "OS-2023-002",
@@ -294,40 +270,123 @@ interface OrdensProps {
 
 const Ordens = ({ onLogout }: OrdensProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteOrdemId, setDeleteOrdemId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusOS | "todas">("todas");
   const [prioridadeFilter, setPrioridadeFilter] = useState<Prioridade | "todas">("todas");
   const [fotosEntrada, setFotosEntrada] = useState<File[]>([]);
   const [fotosSaida, setFotosSaida] = useState<File[]>([]);
+  const [ordens, setOrdens] = useState<OrdemServico[]>([]);
+  
+  useEffect(() => {
+    const ordensSalvas = localStorage.getItem("sgr-ordens");
+    if (ordensSalvas) {
+      const parsedOrdens = JSON.parse(ordensSalvas, (key, value) => {
+        if (key === "dataAbertura" || key === "dataPrevistaEntrega" || 
+            key === "iniciado" || key === "finalizado" || 
+            key === "inicio" || key === "fim") {
+          return value ? new Date(value) : null;
+        }
+        return value;
+      });
+      setOrdens(parsedOrdens);
+    } else {
+      setOrdens(ordensIniciais);
+      localStorage.setItem("sgr-ordens", JSON.stringify(ordensIniciais));
+    }
+  }, []);
   
   const handleNavigateToDetalhe = (id: string) => {
     navigate(`/ordens/${id}`);
   };
   
   const handleCreateOrdem = (values: any) => {
-    console.log("Nova ordem de serviço:", values);
+    const newId = `OS-${new Date().getFullYear()}-${String(ordens.length + 1).padStart(3, '0')}`;
+    
+    const servicos = values.servicosTipos?.map((tipo: TipoServico) => ({
+      tipo,
+      descricao: values.servicosDescricoes[tipo] || "",
+      concluido: false
+    })) || [];
+    
+    const clienteId = values.clienteId;
+    
+    const clientes = [
+      { id: "1", nome: "Auto Peças Silva", telefone: "(11) 98765-4321", email: "contato@autopecassilva.com.br" },
+      { id: "2", nome: "Oficina Mecânica Central", telefone: "(11) 3333-4444", email: "oficina@central.com.br" },
+      { id: "3", nome: "Concessionária Motors", telefone: "(11) 9999-0000", email: "pecas@motors.com.br" },
+      { id: "4", nome: "Autoelétrica Express", telefone: "(11) 7777-8888", email: "atendimento@express.com.br" },
+      { id: "5", nome: "Transportadora Rodovia", telefone: "(11) 5555-6666", email: "manutencao@rodovia.com.br" },
+    ];
+    
+    const cliente = clientes.find(c => c.id === clienteId) || clientes[0];
+    
+    const novaOrdem: OrdemServico = {
+      id: newId,
+      nome: values.nome,
+      cliente,
+      dataAbertura: values.dataAbertura,
+      dataPrevistaEntrega: values.dataPrevistaEntrega,
+      prioridade: values.prioridade,
+      servicos,
+      status: "orcamento",
+      etapasAndamento: {},
+      tempoRegistros: [],
+    };
+    
+    console.log("Nova ordem de serviço:", novaOrdem);
+    
+    const ordensAtualizadas = [...ordens, novaOrdem];
+    setOrdens(ordensAtualizadas);
+    localStorage.setItem("sgr-ordens", JSON.stringify(ordensAtualizadas));
+    
     setIsDialogOpen(false);
-    // Aqui você adicionaria a nova ordem ao estado ou enviaria para a API
+    
+    toast({
+      title: "Ordem criada com sucesso",
+      description: `A ordem ${newId} foi criada com sucesso.`,
+    });
+    
+    navigate(`/ordens/${newId}`);
   };
   
-  // Filtrar ordens
+  const handleDeleteOrdem = (id: string) => {
+    setDeleteOrdemId(id);
+    setIsDeleteDialogOpen(true);
+  };
+  
+  const confirmDeleteOrdem = () => {
+    if (!deleteOrdemId) return;
+    
+    const ordensAtualizadas = ordens.filter(ordem => ordem.id !== deleteOrdemId);
+    
+    setOrdens(ordensAtualizadas);
+    localStorage.setItem("sgr-ordens", JSON.stringify(ordensAtualizadas));
+    
+    setIsDeleteDialogOpen(false);
+    setDeleteOrdemId(null);
+    
+    toast({
+      title: "Ordem excluída",
+      description: `A ordem foi excluída com sucesso.`,
+    });
+  };
+  
   const filteredOrdens = ordens.filter((ordem) => {
-    // Filtro de busca por nome ou cliente
     const matchesSearch = searchTerm === "" ||
       ordem.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ordem.cliente.nome.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // Filtro de status
     const matchesStatus = statusFilter === "todas" || ordem.status === statusFilter;
     
-    // Filtro de prioridade
     const matchesPrioridade = prioridadeFilter === "todas" || ordem.prioridade === prioridadeFilter;
     
     return matchesSearch && matchesStatus && matchesPrioridade;
   });
   
-  // Agrupar ordens por status para as tabs
   const ordensEmAndamento = filteredOrdens.filter(
     (ordem) => ["orcamento", "aguardando_aprovacao", "fabricacao", "espera_cliente"].includes(ordem.status)
   );
@@ -441,11 +500,23 @@ const Ordens = ({ onLogout }: OrdensProps) => {
             ) : (
               <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {filteredOrdens.map((ordem) => (
-                  <OrdemCard
-                    key={ordem.id}
-                    ordem={ordem}
-                    onClick={() => handleNavigateToDetalhe(ordem.id)}
-                  />
+                  <div key={ordem.id} className="relative group">
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="absolute right-2 top-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteOrdem(ordem.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                    <OrdemCard
+                      ordem={ordem}
+                      onClick={() => handleNavigateToDetalhe(ordem.id)}
+                    />
+                  </div>
                 ))}
               </div>
             )}
@@ -467,11 +538,23 @@ const Ordens = ({ onLogout }: OrdensProps) => {
             ) : (
               <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {ordensEmAndamento.map((ordem) => (
-                  <OrdemCard
-                    key={ordem.id}
-                    ordem={ordem}
-                    onClick={() => handleNavigateToDetalhe(ordem.id)}
-                  />
+                  <div key={ordem.id} className="relative group">
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="absolute right-2 top-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteOrdem(ordem.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                    <OrdemCard
+                      ordem={ordem}
+                      onClick={() => handleNavigateToDetalhe(ordem.id)}
+                    />
+                  </div>
                 ))}
               </div>
             )}
@@ -489,11 +572,23 @@ const Ordens = ({ onLogout }: OrdensProps) => {
             ) : (
               <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {ordensConcluidas.map((ordem) => (
-                  <OrdemCard
-                    key={ordem.id}
-                    ordem={ordem}
-                    onClick={() => handleNavigateToDetalhe(ordem.id)}
-                  />
+                  <div key={ordem.id} className="relative group">
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="absolute right-2 top-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteOrdem(ordem.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                    <OrdemCard
+                      ordem={ordem}
+                      onClick={() => handleNavigateToDetalhe(ordem.id)}
+                    />
+                  </div>
                 ))}
               </div>
             )}
@@ -518,9 +613,29 @@ const Ordens = ({ onLogout }: OrdensProps) => {
             </div>
           </DialogContent>
         </Dialog>
+        
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Excluir Ordem de Serviço</DialogTitle>
+              <DialogDescription>
+                Tem certeza que deseja excluir esta ordem de serviço? Esta ação não pode ser desfeita.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button variant="destructive" onClick={confirmDeleteOrdem}>
+                Excluir
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
 };
 
 export default Ordens;
+
