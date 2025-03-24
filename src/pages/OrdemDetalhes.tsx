@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -26,11 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
-export interface OrdemDetalhesProps {
-  onLogout?: () => void;
-}
-
-export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
+const OrdemDetalhes = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [ordem, setOrdem] = useState<OrdemServico | null>(null);
@@ -51,46 +46,70 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
       try {
         // Buscar todas as ordens do localStorage
         const ordensJson = localStorage.getItem("ordens");
+        console.log("Ordens no localStorage:", ordensJson);
+        
+        if (!ordensJson) {
+          console.log("Nenhuma ordem encontrada no localStorage");
+          setLoading(false);
+          return;
+        }
+        
         let ordens: OrdemServico[] = [];
         
-        if (ordensJson) {
-          // Parsear as ordens e converter datas
-          const parsedOrdens = JSON.parse(ordensJson);
-          ordens = parsedOrdens.map((ordem: any) => ({
-            ...ordem,
-            dataAbertura: new Date(ordem.dataAbertura),
-            dataPrevistaEntrega: new Date(ordem.dataPrevistaEntrega),
-            etapasAndamento: Object.fromEntries(
-              Object.entries(ordem.etapasAndamento || {}).map(([key, etapa]: [string, any]) => [
-                key,
-                etapa ? {
-                  ...etapa,
-                  iniciado: etapa.iniciado ? new Date(etapa.iniciado) : undefined,
-                  finalizado: etapa.finalizado ? new Date(etapa.finalizado) : undefined
-                } : null
-              ])
-            ),
-            tempoRegistros: (ordem.tempoRegistros || []).map((registro: any) => ({
-              ...registro,
-              inicio: new Date(registro.inicio),
-              fim: registro.fim ? new Date(registro.fim) : undefined,
-              pausas: (registro.pausas || []).map((pausa: any) => ({
-                ...pausa,
-                inicio: new Date(pausa.inicio),
-                fim: pausa.fim ? new Date(pausa.fim) : undefined
-              }))
-            }))
-          }));
+        try {
+          // Parsear as ordens
+          ordens = JSON.parse(ordensJson);
+          console.log("Ordens parseadas:", ordens);
+          
+          // Verificar se ordens é um array
+          if (!Array.isArray(ordens)) {
+            console.error("Ordens não é um array:", ordens);
+            ordens = [];
+          }
+        } catch (parseError) {
+          console.error("Erro ao parsear ordens:", parseError);
+          ordens = [];
         }
         
         // Encontrar a ordem pelo ID
+        console.log("Procurando ordem com ID:", id);
         const ordemEncontrada = ordens.find(ordem => ordem.id === id);
         
+        console.log("Ordem encontrada:", ordemEncontrada);
+        
         if (ordemEncontrada) {
-          console.log("Ordem encontrada:", ordemEncontrada);
-          setOrdem(ordemEncontrada);
+          // Converter datas
+          const ordemFormatada = {
+            ...ordemEncontrada,
+            dataAbertura: new Date(ordemEncontrada.dataAbertura),
+            dataPrevistaEntrega: new Date(ordemEncontrada.dataPrevistaEntrega),
+            etapasAndamento: ordemEncontrada.etapasAndamento || {},
+            tempoRegistros: ordemEncontrada.tempoRegistros || []
+          };
+          
+          // Converter datas nas etapas e registros, se existirem
+          Object.keys(ordemFormatada.etapasAndamento).forEach(key => {
+            const etapa = ordemFormatada.etapasAndamento[key];
+            if (etapa) {
+              if (etapa.iniciado) etapa.iniciado = new Date(etapa.iniciado);
+              if (etapa.finalizado) etapa.finalizado = new Date(etapa.finalizado);
+            }
+          });
+          
+          ordemFormatada.tempoRegistros.forEach(registro => {
+            registro.inicio = new Date(registro.inicio);
+            if (registro.fim) registro.fim = new Date(registro.fim);
+            
+            if (registro.pausas && Array.isArray(registro.pausas)) {
+              registro.pausas.forEach(pausa => {
+                pausa.inicio = new Date(pausa.inicio);
+                if (pausa.fim) pausa.fim = new Date(pausa.fim);
+              });
+            }
+          });
+          
+          setOrdem(ordemFormatada);
         } else {
-          console.log("Ordem não encontrada para o ID:", id);
           toast("Ordem não encontrada", {
             description: `Não foi possível encontrar a ordem com ID ${id}.`,
             duration: 3000
@@ -111,7 +130,9 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
       }
     };
     
-    loadOrderData();
+    if (id) {
+      loadOrderData();
+    }
   }, [id, navigate]);
 
   const calcularProgresso = () => {
@@ -306,7 +327,7 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
 
   if (loading) {
     return (
-      <Layout onLogout={onLogout}>
+      <Layout>
         <div className="flex flex-col items-center justify-center p-12">
           <p className="text-lg text-muted-foreground">Carregando detalhes da ordem...</p>
         </div>
@@ -316,7 +337,7 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
 
   if (!ordem) {
     return (
-      <Layout onLogout={onLogout}>
+      <Layout>
         <div className="flex flex-col items-center justify-center p-12">
           <h2 className="text-2xl font-bold mb-2">Ordem não encontrada</h2>
           <p className="text-muted-foreground mb-4">A ordem de serviço solicitada não foi encontrada.</p>
@@ -330,7 +351,7 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
   }
 
   return (
-    <Layout onLogout={onLogout}>
+    <Layout>
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center gap-3">
@@ -751,197 +772,3 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
                   <div className="rounded-md border border-border p-4">
                     <h3 className="font-medium mb-3">Etapa: Inspeção Final</h3>
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          {ordem.etapasAndamento.inspecao_final?.concluido ? (
-                            <span className="flex items-center text-green-600">
-                              <Check className="h-4 w-4 mr-1" />
-                              Concluído
-                            </span>
-                          ) : (
-                            <span className="flex items-center text-muted-foreground">
-                              <X className="h-4 w-4 mr-1" />
-                              Não iniciado
-                            </span>
-                          )}
-                        </p>
-                        {ordem.etapasAndamento.inspecao_final?.iniciado && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Iniciado em: {format(ordem.etapasAndamento.inspecao_final.iniciado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                          </p>
-                        )}
-                        {ordem.etapasAndamento.inspecao_final?.funcionarioId && (
-                          <p className="text-xs font-medium mt-1">
-                            Responsável: {getFuncionarioNome(ordem.etapasAndamento.inspecao_final.funcionarioId)}
-                          </p>
-                        )}
-                      </div>
-                      <OrdemCronometro 
-                        ordemId={ordem.id} 
-                        funcionarioId={funcionarioAtualId} 
-                        etapa="inspecao_final"
-                        onFinish={(tempo) => handleFinishTimer("inspecao_final", undefined, tempo)}
-                        isEtapaConcluida={ordem.etapasAndamento.inspecao_final?.concluido}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="registros">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Registros de Tempo</CardTitle>
-                <CardDescription>Histórico de tempo de trabalho na OS</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {ordem.tempoRegistros.map((registro, index) => (
-                    <div key={index} className="rounded-md border border-border p-4">
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-2">
-                        <div>
-                          <h4 className="font-medium">
-                            Etapa: {" "}
-                            {registro.etapa === 'lavagem' && 'Lavagem'}
-                            {registro.etapa === 'inspecao_inicial' && 'Inspeção Inicial'}
-                            {registro.etapa === 'retifica' && 'Retífica'}
-                            {registro.etapa === 'montagem_final' && 'Montagem Final'}
-                            {registro.etapa === 'teste' && 'Teste'}
-                            {registro.etapa === 'inspecao_final' && 'Inspeção Final'}
-                          </h4>
-                          <p className="text-sm text-muted-foreground">
-                            Funcionário: {getFuncionarioNome(registro.funcionarioId)}
-                          </p>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4" />
-                            {registro.fim ? 'Finalizado' : 'Em andamento'}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">Início:</p>
-                          <p className="text-sm">
-                            {format(registro.inicio, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                          </p>
-                        </div>
-                        
-                        {registro.fim && (
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">Fim:</p>
-                            <p className="text-sm">
-                              {format(registro.fim, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {registro.pausas.length > 0 && (
-                        <div className="mt-3">
-                          <p className="text-xs text-muted-foreground mb-1">Pausas registradas:</p>
-                          {registro.pausas.map((pausa, pausaIndex) => (
-                            <div key={pausaIndex} className="text-sm flex gap-2 mt-1">
-                              <span>
-                                {format(pausa.inicio, "HH:mm", { locale: ptBR })}
-                              </span>
-                              <span>-</span>
-                              <span>
-                                {pausa.fim ? 
-                                  format(pausa.fim, "HH:mm", { locale: ptBR }) : 
-                                  'Em pausa'}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="fotos">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Fotos da OS</CardTitle>
-                <CardDescription>Registros fotográficos da entrada e saída</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <FotosForm 
-                  fotosEntrada={fotosEntrada}
-                  fotosSaida={fotosSaida}
-                  onChangeFotosEntrada={handleFotosEntradaChange}
-                  onChangeFotosSaida={handleFotosSaidaChange}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-      
-      {/* Dialog de confirmação para excluir a OS */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Excluir Ordem de Serviço</DialogTitle>
-            <DialogDescription>
-              Você tem certeza que deseja excluir esta ordem de serviço? Esta ação não pode ser desfeita.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteOrdem}>
-              Excluir
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Dialog para alterar o status da OS */}
-      <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Alterar Status da OS</DialogTitle>
-            <DialogDescription>
-              Selecione o novo status para esta ordem de serviço.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Select
-              value={novoStatus || undefined}
-              onValueChange={(value) => setNovoStatus(value as StatusOS)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="orcamento">Em Orçamento</SelectItem>
-                <SelectItem value="aguardando_aprovacao">Aguardando Aprovação</SelectItem>
-                <SelectItem value="fabricacao">Em Fabricação</SelectItem>
-                <SelectItem value="espera_cliente">Em Espera (Cliente)</SelectItem>
-                <SelectItem value="finalizado">Finalizado</SelectItem>
-                <SelectItem value="entregue">Entregue</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsStatusDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleChangeStatus}>
-              Salvar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </Layout>
-  );
-}
