@@ -1,61 +1,92 @@
-import { PlusCircle, Clock, Calendar, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  FileText,
+  Clock,
+  Users,
+  CheckCircle,
+  TrendingUp,
+  BarChart
+} from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import MetricCard from "@/components/dashboard/MetricCard";
 import StatusChart from "@/components/dashboard/StatusChart";
-import { useEffect, useState } from "react";
-import { OrdemServico } from "@/types/ordens";
-import { countOrdensByStatus, countOrdensByPriority, loadOrdens } from "@/utils/storageUtils";
+import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useNavigate } from "react-router-dom";
 
-interface DashboardProps {
-  onLogout?: () => void;
-}
-
-export default function Dashboard({ onLogout }: DashboardProps) {
+const Dashboard = () => {
   const navigate = useNavigate();
-  const [ordensRecentes, setOrdensRecentes] = useState<OrdemServico[]>([]);
-  const [ordensUrgentes, setOrdensUrgentes] = useState<OrdemServico[]>([]);
-  const [totalOrdensAndamento, setTotalOrdensAndamento] = useState(0);
-  const [totalOrdensFinalizadas, setTotalOrdensFinalizadas] = useState(0);
-  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
-  const [priorityCounts, setPriorityCounts] = useState<Record<string, number>>({});
   
-  useEffect(() => {
-    // Carregar dados para o dashboard
-    const ordens = loadOrdens();
-    
-    // Ordens recentes (últimas 5)
-    const recentOrdens = [...ordens].sort((a, b) => {
-      return new Date(b.dataAbertura).getTime() - new Date(a.dataAbertura).getTime();
-    }).slice(0, 5);
-    
-    // Ordens urgentes
-    const urgentOrdens = ordens.filter(o => o.prioridade === 'urgente' || o.prioridade === 'alta')
-      .filter(o => o.status !== 'finalizado' && o.status !== 'entregue')
-      .slice(0, 5);
-    
-    // Contagens de status e prioridades
-    const statusCount = countOrdensByStatus();
-    const priorityCount = countOrdensByPriority();
-    
-    // Total de ordens em andamento e finalizadas
-    const andamento = ordens.filter(o => o.status !== 'finalizado' && o.status !== 'entregue').length;
-    const finalizadas = ordens.filter(o => o.status === 'finalizado' || o.status === 'entregue').length;
-    
-    setOrdensRecentes(recentOrdens);
-    setOrdensUrgentes(urgentOrdens);
-    setStatusCounts(statusCount);
-    setPriorityCounts(priorityCount);
-    setTotalOrdensAndamento(andamento);
-    setTotalOrdensFinalizadas(finalizadas);
-  }, []);
+  // Dados de exemplo para métricas
+  const metricas = {
+    osTotal: 126,
+    osPendentes: 42,
+    tempoOperacao: "128h 45m",
+    tempoPausa: "18h 20m",
+    eficiencia: 87.5,
+  };
   
-  const handleNavigateToOrdem = (id: string) => {
-    navigate(`/ordens/${id}`);
+  // Dados de exemplo para o gráfico de status
+  const statusData = [
+    { name: "Em Orçamento", total: 14 },
+    { name: "Aguardando Aprovação", total: 8 },
+    { name: "Em Fabricação", total: 16 },
+    { name: "Em Espera", total: 4 },
+    { name: "Finalizado", total: 10 },
+    { name: "Entregue", total: 78 },
+  ];
+  
+  // Dados de exemplo para o gráfico de serviços
+  const servicosData = [
+    { name: "Bloco", total: 48 },
+    { name: "Biela", total: 32 },
+    { name: "Cabeçote", total: 62 },
+    { name: "Virabrequim", total: 41 },
+    { name: "Eixo de Comando", total: 18 },
+  ];
+  
+  // Dados de exemplo para OSs por prioridade
+  const osRecentes = [
+    {
+      id: "OS-2023-089",
+      nome: "Motor Ford Ka 2019",
+      cliente: "Auto Peças Silva",
+      status: "fabricacao" as const,
+      prioridade: "alta" as const,
+    },
+    {
+      id: "OS-2023-088",
+      nome: "Cabeçote Fiat Uno",
+      cliente: "Oficina Mecânica Central",
+      status: "orcamento" as const,
+      prioridade: "media" as const,
+    },
+    {
+      id: "OS-2023-087",
+      nome: "Virabrequim Caminhão Scania",
+      cliente: "Transportadora Rodovia",
+      status: "aguardando_aprovacao" as const,
+      prioridade: "urgente" as const,
+    },
+    {
+      id: "OS-2023-086",
+      nome: "Eixo de Comando Golf GTI",
+      cliente: "Concessionária Motors",
+      status: "finalizado" as const,
+      prioridade: "media" as const,
+    },
+    {
+      id: "OS-2023-085",
+      nome: "Bielas Honda Civic",
+      cliente: "Autoelétrica Express",
+      status: "entregue" as const,
+      prioridade: "baixa" as const,
+    }
+  ];
+  
+  const handleViewDetails = (osId: string) => {
+    navigate(`/ordens/${osId}`);
   };
   
   return (

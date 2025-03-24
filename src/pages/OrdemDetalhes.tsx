@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -23,7 +24,6 @@ import FotosForm from "@/components/ordens/FotosForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { deleteOrdem, updateOrdem } from "@/utils/storageUtils";
 
 export interface OrdemDetalhesProps {
   onLogout?: () => void;
@@ -44,77 +44,61 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
   const funcionarioAtualId = "123"; // Simulando um ID de funcionário logado
 
   useEffect(() => {
-    const carregarOS = () => {
-      setLoading(true);
+    setTimeout(() => {
+      const ordemEncontrada = {
+        id: "OS-2023-001",
+        nome: "Motor Ford Ka 2019",
+        cliente: {
+          id: "1",
+          nome: "Auto Peças Silva",
+          telefone: "(11) 98765-4321",
+          email: "contato@autopecassilva.com.br",
+        },
+        dataAbertura: new Date(2023, 4, 15),
+        dataPrevistaEntrega: new Date(2023, 4, 30),
+        prioridade: "alta",
+        servicos: [
+          { tipo: "bloco", descricao: "Retífica completa do bloco", concluido: false },
+          { tipo: "virabrequim", descricao: "Balanceamento", concluido: false },
+        ],
+        status: "fabricacao",
+        etapasAndamento: {
+          lavagem: { concluido: true, funcionarioId: "1", iniciado: new Date(2023, 4, 16), finalizado: new Date(2023, 4, 16) },
+          inspecao_inicial: { concluido: true, funcionarioId: "2", iniciado: new Date(2023, 4, 17), finalizado: new Date(2023, 4, 18) },
+          retifica: { concluido: false, funcionarioId: "3", iniciado: new Date(2023, 4, 19) },
+        },
+        tempoRegistros: [
+          {
+            inicio: new Date(2023, 4, 16, 8, 0),
+            fim: new Date(2023, 4, 16, 12, 0),
+            funcionarioId: "1",
+            etapa: "lavagem",
+            pausas: [
+              { inicio: new Date(2023, 4, 16, 10, 0), fim: new Date(2023, 4, 16, 10, 15) },
+            ],
+          },
+          {
+            inicio: new Date(2023, 4, 17, 13, 0),
+            fim: new Date(2023, 4, 18, 17, 0),
+            funcionarioId: "2",
+            etapa: "inspecao_inicial",
+            pausas: [],
+          },
+          {
+            inicio: new Date(2023, 4, 19, 8, 0),
+            funcionarioId: "3",
+            etapa: "retifica",
+            pausas: [
+              { inicio: new Date(2023, 4, 19, 12, 0), fim: new Date(2023, 4, 19, 13, 0) },
+            ],
+          },
+        ],
+      } as OrdemServico;
       
-      // Buscar as ordens salvas no localStorage - CORREÇÃO: usar sgr-ordens em vez de ordens-servico
-      const ordensString = localStorage.getItem('sgr-ordens');
-      if (ordensString) {
-        try {
-          const ordensParseadas = JSON.parse(ordensString);
-          
-          // Converter strings de data para objetos Date
-          const ordens = ordensParseadas.map((ordem: any) => ({
-            ...ordem,
-            dataAbertura: new Date(ordem.dataAbertura),
-            dataPrevistaEntrega: new Date(ordem.dataPrevistaEntrega),
-            etapasAndamento: Object.entries(ordem.etapasAndamento || {}).reduce((acc: any, [etapa, dados]: [string, any]) => {
-              acc[etapa] = {
-                ...dados,
-                iniciado: dados.iniciado ? new Date(dados.iniciado) : undefined,
-                finalizado: dados.finalizado ? new Date(dados.finalizado) : undefined
-              };
-              return acc;
-            }, {}),
-            tempoRegistros: (ordem.tempoRegistros || []).map((registro: any) => ({
-              ...registro,
-              inicio: new Date(registro.inicio),
-              fim: registro.fim ? new Date(registro.fim) : undefined,
-              pausas: (registro.pausas || []).map((pausa: any) => ({
-                inicio: new Date(pausa.inicio),
-                fim: pausa.fim ? new Date(pausa.fim) : undefined
-              }))
-            }))
-          }));
-          
-          // Encontrar a ordem correspondente ao ID da URL
-          const ordemEncontrada = ordens.find((o: OrdemServico) => o.id === id);
-          
-          if (ordemEncontrada) {
-            console.log("Ordem encontrada:", ordemEncontrada);
-            setOrdem(ordemEncontrada);
-          } else {
-            console.warn(`Ordem com ID ${id} não encontrada`);
-            toast({
-              title: "Erro",
-              description: `Não foi possível encontrar a ordem com ID ${id}.`,
-              variant: "destructive",
-            });
-            navigate("/ordens");
-          }
-        } catch (error) {
-          console.error("Erro ao processar ordens do localStorage:", error);
-          toast({
-            title: "Erro",
-            description: "Não foi possível carregar os dados da ordem de serviço.",
-            variant: "destructive",
-          });
-        }
-      } else {
-        console.warn("Nenhuma ordem de serviço encontrada no localStorage");
-        toast({
-          title: "Erro",
-          description: "Não foi possível encontrar ordens de serviço.",
-          variant: "destructive",
-        });
-        navigate("/ordens");
-      }
-      
+      setOrdem(ordemEncontrada);
       setLoading(false);
-    };
-    
-    carregarOS();
-  }, [id, toast, navigate]);
+    }, 1000);
+  }, [id]);
 
   const calcularProgresso = () => {
     if (!ordem) return 0;
@@ -149,25 +133,13 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
   };
   
   const handleDeleteOrdem = () => {
-    if (!ordem) return;
-    
-    if (deleteOrdem(ordem.id)) {
-      setIsDeleteDialogOpen(false);
-      setDeleteOrdemId(null);
-      
-      toast({
-        title: "Ordem excluída",
-        description: `A ordem foi excluída com sucesso.`,
-      });
-      
-      navigate("/ordens");
-    } else {
-      toast({
-        title: "Erro",
-        description: "Não foi possível excluir a ordem de serviço.",
-        variant: "destructive",
-      });
-    }
+    // Aqui você deletaria a ordem na API real
+    setIsDeleteDialogOpen(false);
+    navigate("/ordens");
+    toast({
+      title: "Ordem de serviço excluída",
+      description: "A ordem de serviço foi excluída com sucesso.",
+    });
   };
   
   const handleFinishTimer = (etapa: EtapaOS, tipoServico: TipoServico | undefined, tempoTotal: number) => {
@@ -213,27 +185,15 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
       registroAtual.fim = new Date();
     }
     
-    // Atualizar a ordem local
+    // Atualizar a ordem
     setOrdem(ordemAtualizada);
-    
-    // Atualizar a ordem no localStorage
-    const ordensString = localStorage.getItem('ordens-servico');
-    if (ordensString) {
-      try {
-        const ordens = JSON.parse(ordensString);
-        const ordensAtualizadas = ordens.map((o: OrdemServico) => 
-          o.id === ordemAtualizada.id ? ordemAtualizada : o
-        );
-        localStorage.setItem('ordens-servico', JSON.stringify(ordensAtualizadas));
-      } catch (error) {
-        console.error("Erro ao atualizar ordem no localStorage:", error);
-      }
-    }
     
     toast({
       title: "Tempo registrado e etapa finalizada",
       description: `Tempo total para ${etapa}${tipoServico ? ` (${tipoServico})` : ''}: ${formatarTempoTotal(tempoTotal)}`,
     });
+    
+    // Aqui você salvaria o registro de tempo na API real
   };
   
   const formatarTempoTotal = (milliseconds: number) => {
@@ -248,21 +208,7 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
   };
   
   const getFuncionarioNome = (id: string) => {
-    // Tentar buscar o funcionário no localStorage
-    const funcionariosString = localStorage.getItem('funcionarios');
-    if (funcionariosString) {
-      try {
-        const funcionarios = JSON.parse(funcionariosString);
-        const funcionario = funcionarios.find((f: any) => f.id === id);
-        if (funcionario) {
-          return `${funcionario.nome}`;
-        }
-      } catch (error) {
-        console.error("Erro ao buscar funcionários do localStorage:", error);
-      }
-    }
-    
-    // Fallback para simulação
+    // Simulação - em um sistema real você buscaria o nome do funcionário
     const funcionarios: Record<string, string> = {
       "1": "João Silva",
       "2": "Maria Oliveira",
@@ -277,22 +223,15 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
     
     // Atualizar status da ordem
     const ordemAtualizada = { ...ordem, status: novoStatus };
+    setOrdem(ordemAtualizada);
+    setIsStatusDialogOpen(false);
     
-    if (updateOrdem(ordemAtualizada)) {
-      setOrdem(ordemAtualizada);
-      setIsStatusDialogOpen(false);
-      
-      toast({
-        title: "Status atualizado",
-        description: `O status da ordem foi alterado para ${getStatusLabel(novoStatus)}.`,
-      });
-    } else {
-      toast({
-        title: "Erro",
-        description: "Não foi possível atualizar o status da ordem.",
-        variant: "destructive",
-      });
-    }
+    toast({
+      title: "Status atualizado",
+      description: `O status da ordem foi alterado para ${getStatusLabel(novoStatus)}.`,
+    });
+    
+    // Aqui você atualizaria o status na API real
   };
   
   const getStatusLabel = (status: StatusOS) => {

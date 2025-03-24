@@ -19,7 +19,7 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
   
   // Contador das etapas concluídas
   const totalEtapas = 6; // Número total de etapas
-  const etapasConcluidas = Object.values(ordem.etapasAndamento || {}).filter(
+  const etapasConcluidas = Object.values(ordem.etapasAndamento).filter(
     (etapa) => etapa?.concluido
   ).length;
   
@@ -31,16 +31,10 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
     navigate(`/ordens/${ordem.id}`);
   };
   
-  // Ensure dates are properly formatted
-  const formatDate = (date: Date | string) => {
-    const dateObj = date instanceof Date ? date : new Date(date);
-    return format(dateObj, "dd MMM yyyy", { locale: ptBR });
-  };
-  
   return (
     <Card 
       className="card-hover cursor-pointer overflow-hidden"
-      onClick={onClick || handleNavigateToDetail}
+      onClick={onClick || (() => navigate(`/ordens/${ordem.id}`))}
     >
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
@@ -59,13 +53,13 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Calendar className="h-4 w-4" />
             <span>
-              {formatDate(ordem.dataAbertura)}
+              {format(ordem.dataAbertura, "dd MMM yyyy", { locale: ptBR })}
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Clock className="h-4 w-4" />
             <span>
-              Previsão: {formatDate(ordem.dataPrevistaEntrega)}
+              Previsão: {format(ordem.dataPrevistaEntrega, "dd MMM yyyy", { locale: ptBR })}
             </span>
           </div>
         </div>
