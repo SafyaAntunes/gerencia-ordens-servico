@@ -31,6 +31,12 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
     navigate(`/ordens/${ordem.id}`);
   };
   
+  // Ensure dates are properly formatted
+  const formatDate = (date: Date | string) => {
+    const dateObj = date instanceof Date ? date : new Date(date);
+    return format(dateObj, "dd MMM yyyy", { locale: ptBR });
+  };
+  
   return (
     <Card 
       className="card-hover cursor-pointer overflow-hidden"
@@ -53,13 +59,13 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Calendar className="h-4 w-4" />
             <span>
-              {format(new Date(ordem.dataAbertura), "dd MMM yyyy", { locale: ptBR })}
+              {formatDate(ordem.dataAbertura)}
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Clock className="h-4 w-4" />
             <span>
-              Previsão: {format(new Date(ordem.dataPrevistaEntrega), "dd MMM yyyy", { locale: ptBR })}
+              Previsão: {formatDate(ordem.dataPrevistaEntrega)}
             </span>
           </div>
         </div>

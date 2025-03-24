@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { PlusCircle, Filter, Search, FileText, AlertCircle, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -284,16 +285,23 @@ const Ordens = ({ onLogout }: OrdensProps) => {
   useEffect(() => {
     const ordensSalvas = localStorage.getItem("sgr-ordens");
     if (ordensSalvas) {
-      const parsedOrdens = JSON.parse(ordensSalvas, (key, value) => {
-        if (key === "dataAbertura" || key === "dataPrevistaEntrega" || 
-            key === "iniciado" || key === "finalizado" || 
-            key === "inicio" || key === "fim") {
-          return value ? new Date(value) : null;
-        }
-        return value;
-      });
-      setOrdens(parsedOrdens);
+      try {
+        const parsedOrdens = JSON.parse(ordensSalvas, (key, value) => {
+          if (key === "dataAbertura" || key === "dataPrevistaEntrega" || 
+              key === "iniciado" || key === "finalizado" || 
+              key === "inicio" || key === "fim") {
+            return value ? new Date(value) : null;
+          }
+          return value;
+        });
+        setOrdens(parsedOrdens);
+        console.log("Ordens carregadas:", parsedOrdens.length);
+      } catch (error) {
+        console.error("Erro ao processar ordens do localStorage:", error);
+        setOrdens(ordensIniciais);
+      }
     } else {
+      console.log("Nenhuma ordem encontrada, carregando ordens iniciais");
       setOrdens(ordensIniciais);
       localStorage.setItem("sgr-ordens", JSON.stringify(ordensIniciais));
     }
@@ -638,4 +646,3 @@ const Ordens = ({ onLogout }: OrdensProps) => {
 };
 
 export default Ordens;
-
