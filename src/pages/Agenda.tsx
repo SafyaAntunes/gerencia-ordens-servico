@@ -1,8 +1,6 @@
-
 import { useState } from "react";
 import { format, addDays, startOfWeek, addWeeks, subWeeks, isToday, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import {
   Card,
@@ -17,7 +15,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { OrdemServico } from "@/types/ordens";
 
 interface AgendaProps {
-  onLogout?: () => void;
+  onLogout: () => void;
 }
 
 // Dados de exemplo para a agenda
@@ -73,7 +71,6 @@ const ordens: OrdemServico[] = [
 export default function Agenda({ onLogout }: AgendaProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState<"diaria" | "semanal" | "mensal">("semanal");
-  const navigate = useNavigate();
 
   // Navegar para semana anterior
   const goToPreviousWeek = () => {
@@ -99,14 +96,6 @@ export default function Agenda({ onLogout }: AgendaProps) {
         entregaDate.getFullYear() === date.getFullYear()
       );
     });
-  };
-  
-  const handleNovaOrdem = () => {
-    navigate("/ordens/nova");
-  };
-  
-  const handleViewDetails = (ordemId: string) => {
-    navigate(`/ordens/${ordemId}`);
   };
 
   return (
@@ -141,7 +130,7 @@ export default function Agenda({ onLogout }: AgendaProps) {
             <Button variant="outline" size="icon" onClick={goToNextWeek}>
               <ChevronRight className="h-4 w-4" />
             </Button>
-            <Button onClick={handleNovaOrdem}>
+            <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
               Nova Ordem
             </Button>
@@ -180,7 +169,7 @@ export default function Agenda({ onLogout }: AgendaProps) {
                     }`}>
                       {format(day, "d", { locale: ptBR })}
                     </span>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleNovaOrdem}>
+                    <Button variant="ghost" size="icon" className="h-6 w-6">
                       <PlusCircle className="h-3 w-3" />
                     </Button>
                   </div>
@@ -190,7 +179,6 @@ export default function Agenda({ onLogout }: AgendaProps) {
                       <div
                         key={ordem.id}
                         className="text-xs p-1 rounded bg-secondary/50 hover:bg-secondary cursor-pointer"
-                        onClick={() => handleViewDetails(ordem.id)}
                       >
                         <div className="flex items-center justify-between">
                           <span className="truncate">{ordem.nome}</span>

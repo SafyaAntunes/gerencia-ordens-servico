@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Play, Pause, StopCircle, Clock, Timer } from "lucide-react";
+import { Play, Pause, StopCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -241,7 +241,7 @@ export default function OrdemCronometro({
       
       <CardContent className="text-center py-4">
         <div className="inline-flex items-center justify-center p-4 rounded-full bg-primary/5 mb-3">
-          <Timer className="h-10 w-10 text-primary" />
+          <Clock className="h-10 w-10 text-primary" />
         </div>
         
         <div className="font-mono text-4xl font-bold">
@@ -256,18 +256,10 @@ export default function OrdemCronometro({
             : "Cronômetro parado"}
         </p>
         
-        {totalSavedTime > 0 && (
-          <div className="mt-3 bg-muted/50 rounded-md p-2">
-            <p className="text-sm font-medium text-primary">
-              Tempo acumulado: {formatTime(totalSavedTime)}
-            </p>
-            
-            {isRunning && !isPaused && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Tempo atual: {formatTime(elapsedTime)}
-              </p>
-            )}
-          </div>
+        {totalSavedTime > 0 && !isRunning && (
+          <p className="text-xs mt-1 text-muted-foreground">
+            Tempo acumulado: {formatTime(totalSavedTime)}
+          </p>
         )}
       </CardContent>
       
