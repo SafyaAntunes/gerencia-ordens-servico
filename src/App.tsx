@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -22,7 +21,6 @@ const queryClient = new QueryClient();
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
-  // Verificar autenticação ao iniciar
   useEffect(() => {
     const auth = localStorage.getItem("sgr-auth");
     if (auth) {
@@ -30,9 +28,7 @@ const App = () => {
     }
   }, []);
   
-  // Função para autenticação
   const handleLogin = (credentials: { email: string; password: string }) => {
-    // Implementação simplificada de autenticação
     if (credentials.email && credentials.password) {
       localStorage.setItem("sgr-auth", "true");
       setIsAuthenticated(true);
@@ -41,7 +37,6 @@ const App = () => {
     return false;
   };
   
-  // Função para logout
   const handleLogout = () => {
     localStorage.removeItem("sgr-auth");
     setIsAuthenticated(false);
@@ -54,7 +49,6 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Rota de login acessível sem autenticação */}
             <Route 
               path="/login" 
               element={
@@ -64,10 +58,9 @@ const App = () => {
               } 
             />
             
-            {/* Rotas protegidas */}
             <Route 
               path="/" 
-              element={isAuthenticated ? <Dashboard onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/ordens" 
@@ -106,7 +99,6 @@ const App = () => {
               element={isAuthenticated ? <Configuracoes onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
             />
             
-            {/* Rota 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
