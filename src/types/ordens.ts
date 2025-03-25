@@ -56,6 +56,7 @@ export type TempoRegistro = {
   fim?: Date;
   funcionarioId: string;
   etapa: EtapaOS;
+  tipoServico?: TipoServico;
   pausas: { inicio: Date; fim?: Date }[];
 };
 
