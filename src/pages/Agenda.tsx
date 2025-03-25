@@ -1,7 +1,8 @@
 
-import { useState, useEffect } from "react";
-import { format, addDays, startOfWeek, addWeeks, subWeeks, isToday, isSameDay } from "date-fns";
+import { useState } from "react";
+import { format, addDays, startOfWeek, addWeeks, subWeeks, isToday, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import {
   Card,
@@ -14,45 +15,65 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChevronLeft, ChevronRight, PlusCircle } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { OrdemServico } from "@/types/ordens";
-import { useNavigate } from "react-router-dom";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
-import OrdemForm from "@/components/ordens/OrdemForm";
 
 interface AgendaProps {
-  onLogout: () => void;
+  onLogout?: () => void;
 }
+
+// Dados de exemplo para a agenda
+const ordens: OrdemServico[] = [
+  {
+    id: "OS-2023-001",
+    nome: "Motor Ford Ka 2019",
+    cliente: {
+      id: "1",
+      nome: "Auto Peças Silva",
+      telefone: "(11) 98765-4321",
+      email: "contato@autopecassilva.com.br",
+    },
+    dataAbertura: new Date(2023, 4, 15),
+    dataPrevistaEntrega: new Date(2023, 4, 30),
+    prioridade: "alta",
+    servicos: [
+      { tipo: "bloco", descricao: "Retífica completa do bloco", concluido: false },
+      { tipo: "virabrequim", descricao: "Balanceamento", concluido: false },
+    ],
+    status: "fabricacao",
+    etapasAndamento: {
+      lavagem: { concluido: true, funcionarioId: "1", iniciado: new Date(2023, 4, 16), finalizado: new Date(2023, 4, 16) },
+      inspecao_inicial: { concluido: true, funcionarioId: "2", iniciado: new Date(2023, 4, 17), finalizado: new Date(2023, 4, 18) },
+      retifica: { concluido: false, funcionarioId: "3", iniciado: new Date(2023, 4, 19) },
+    },
+    tempoRegistros: [],
+  },
+  {
+    id: "OS-2023-002",
+    nome: "Cabeçote Fiat Uno",
+    cliente: {
+      id: "2",
+      nome: "Oficina Mecânica Central",
+      telefone: "(11) 3333-4444",
+      email: "oficina@central.com.br",
+    },
+    dataAbertura: new Date(2023, 4, 10),
+    dataPrevistaEntrega: new Date(2023, 4, 25),
+    prioridade: "media",
+    servicos: [
+      { tipo: "cabecote", descricao: "Retífica de válvulas", concluido: false },
+    ],
+    status: "aguardando_aprovacao",
+    etapasAndamento: {
+      lavagem: { concluido: true, funcionarioId: "1", iniciado: new Date(2023, 4, 11), finalizado: new Date(2023, 4, 11) },
+      inspecao_inicial: { concluido: true, funcionarioId: "2", iniciado: new Date(2023, 4, 12), finalizado: new Date(2023, 4, 12) },
+    },
+    tempoRegistros: [],
+  },
+];
 
 export default function Agenda({ onLogout }: AgendaProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState<"diaria" | "semanal" | "mensal">("semanal");
-  const [ordens, setOrdens] = useState<OrdemServico[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const navigate = useNavigate();
-
-  // Carregar ordens do localStorage
-  useEffect(() => {
-    const carregarOrdens = () => {
-      const ordensJson = localStorage.getItem("ordens");
-      if (ordensJson) {
-        try {
-          const parsedOrdens = JSON.parse(ordensJson);
-          // Converter strings de data para objetos Date
-          const ordensFormatadas = parsedOrdens.map((ordem: any) => ({
-            ...ordem,
-            dataAbertura: new Date(ordem.dataAbertura),
-            dataPrevistaEntrega: new Date(ordem.dataPrevistaEntrega),
-          }));
-          setOrdens(ordensFormatadas);
-        } catch (error) {
-          console.error("Erro ao carregar ordens:", error);
-          setOrdens([]);
-        }
-      }
-    };
-
-    carregarOrdens();
-  }, []);
 
   // Navegar para semana anterior
   const goToPreviousWeek = () => {
@@ -72,22 +93,20 @@ export default function Agenda({ onLogout }: AgendaProps) {
   const getOrdensForDay = (date: Date) => {
     return ordens.filter(ordem => {
       const entregaDate = new Date(ordem.dataPrevistaEntrega);
-      return isSameDay(entregaDate, date);
+      return (
+        entregaDate.getDate() === date.getDate() &&
+        entregaDate.getMonth() === date.getMonth() &&
+        entregaDate.getFullYear() === date.getFullYear()
+      );
     });
   };
   
-  // Função para navegar para a página de detalhes da ordem
-  const handleNavigateToOrdem = (id: string) => {
-    console.log(`Navegando para a ordem: ${id}`);
-    navigate(`/ordens/${id}`);
+  const handleNovaOrdem = () => {
+    navigate("/ordens/nova");
   };
   
-  // Função para adicionar nova ordem
-  const handleCreateOrdem = (values: any) => {
-    console.log("Nova ordem de serviço:", values);
-    setIsDialogOpen(false);
-    // Aqui você adicionaria a nova ordem ao estado ou enviaria para a API
-    // E depois atualizaria a lista
+  const handleViewDetails = (ordemId: string) => {
+    navigate(`/ordens/${ordemId}`);
   };
 
   return (
@@ -122,7 +141,7 @@ export default function Agenda({ onLogout }: AgendaProps) {
             <Button variant="outline" size="icon" onClick={goToNextWeek}>
               <ChevronRight className="h-4 w-4" />
             </Button>
-            <Button onClick={() => setIsDialogOpen(true)}>
+            <Button onClick={handleNovaOrdem}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Nova Ordem
             </Button>
@@ -161,12 +180,7 @@ export default function Agenda({ onLogout }: AgendaProps) {
                     }`}>
                       {format(day, "d", { locale: ptBR })}
                     </span>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-6 w-6"
-                      onClick={() => setIsDialogOpen(true)}
-                    >
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleNovaOrdem}>
                       <PlusCircle className="h-3 w-3" />
                     </Button>
                   </div>
@@ -176,7 +190,7 @@ export default function Agenda({ onLogout }: AgendaProps) {
                       <div
                         key={ordem.id}
                         className="text-xs p-1 rounded bg-secondary/50 hover:bg-secondary cursor-pointer"
-                        onClick={() => handleNavigateToOrdem(ordem.id)}
+                        onClick={() => handleViewDetails(ordem.id)}
                       >
                         <div className="flex items-center justify-between">
                           <span className="truncate">{ordem.nome}</span>
@@ -194,22 +208,6 @@ export default function Agenda({ onLogout }: AgendaProps) {
           </CardContent>
         </Card>
       </div>
-      
-      {/* Dialog para criar nova ordem */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] p-0">
-          <DialogHeader className="p-6 pb-2">
-            <DialogTitle>Nova Ordem de Serviço</DialogTitle>
-            <DialogDescription>
-              Preencha todos os campos para cadastrar uma nova ordem de serviço.
-            </DialogDescription>
-          </DialogHeader>
-          <Separator />
-          <div className="p-6 pt-4 max-h-[80vh] overflow-y-auto">
-            <OrdemForm onSubmit={handleCreateOrdem} />
-          </div>
-        </DialogContent>
-      </Dialog>
     </Layout>
   );
 }
