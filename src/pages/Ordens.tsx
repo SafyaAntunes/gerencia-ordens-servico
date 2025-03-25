@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PlusCircle, Filter, Search, FileText, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -32,6 +31,42 @@ import { Separator } from "@/components/ui/separator";
 import OrdemForm from "@/components/ordens/OrdemForm";
 import { OrdemServico, StatusOS, Cliente, Prioridade } from "@/types/ordens";
 import { toast } from "sonner";
+
+// Dados de exemplo para clientes
+const CLIENTES = [
+  {
+    id: "1",
+    nome: "Auto Peças Silva",
+    telefone: "(11) 98765-4321",
+    email: "contato@autopecassilva.com.br",
+    endereco: "Rua das Retíficas, 123 - São Paulo/SP",
+    cnpj_cpf: "12.345.678/0001-90",
+  },
+  {
+    id: "2",
+    nome: "Oficina Mecânica Central",
+    telefone: "(11) 3333-4444",
+    email: "oficina@central.com.br",
+  },
+  {
+    id: "3",
+    nome: "Concessionária Motors",
+    telefone: "(11) 9999-0000",
+    email: "pecas@motors.com.br",
+  },
+  {
+    id: "4",
+    nome: "Autoelétrica Express",
+    telefone: "(11) 7777-8888",
+    email: "atendimento@express.com.br",
+  },
+  {
+    id: "5",
+    nome: "Transportadora Rodovia",
+    telefone: "(11) 5555-6666",
+    email: "manutencao@rodovia.com.br",
+  },
+];
 
 // Dados de exemplo
 const ordensExemplo: OrdemServico[] = [
@@ -335,11 +370,30 @@ const Ordens = ({ onLogout }: OrdensProps) => {
   const handleCreateOrdem = (values: any) => {
     console.log("Nova ordem de serviço:", values);
     
+    // Encontrar o cliente pelo ID antes de criar a ordem
+    const cliente = values.clienteId ? CLIENTES.find(c => c.id === values.clienteId) : null;
+    
+    if (!cliente) {
+      toast("Erro ao criar ordem", {
+        description: "Cliente não encontrado. Selecione um cliente válido.",
+      });
+      return;
+    }
+    
     // Criar nova ordem com os valores do formulário
     const novaOrdem: OrdemServico = {
       id: `OS-${new Date().getFullYear()}-${(ordens.length + 1).toString().padStart(3, '0')}`,
-      ...values,
-      dataAbertura: new Date(),
+      nome: values.nome,
+      cliente: cliente, // Usar o objeto cliente completo, não apenas o ID
+      dataAbertura: values.dataAbertura instanceof Date ? values.dataAbertura : new Date(),
+      dataPrevistaEntrega: values.dataPrevistaEntrega instanceof Date ? values.dataPrevistaEntrega : new Date(),
+      prioridade: values.prioridade || "media",
+      servicos: (values.servicosTipos || []).map((tipo: string) => ({
+        tipo: tipo as any,
+        descricao: values.servicosDescricoes?.[tipo] || "",
+        concluido: false
+      })),
+      status: "orcamento",
       etapasAndamento: {},
       tempoRegistros: [],
     };
