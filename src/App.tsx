@@ -71,11 +71,11 @@ const App = () => {
             />
             <Route 
               path="/ordens" 
-              element={isAuthenticated ? <Ordens onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <Ordens /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/ordens/:id" 
-              element={isAuthenticated ? <OrdemDetalhes onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <OrdemDetalhes /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/funcionarios" 
@@ -99,11 +99,11 @@ const App = () => {
             />
             <Route 
               path="/relatorios" 
-              element={isAuthenticated ? <Relatorios /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <Relatorios onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/configuracoes" 
-              element={isAuthenticated ? <Configuracoes /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <Configuracoes onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
             />
             
             {/* Rota 404 */}
