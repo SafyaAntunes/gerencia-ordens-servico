@@ -17,47 +17,31 @@ interface OrdemCardProps {
 export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
   const navigate = useNavigate();
   
-  // Safely handle cases where ordem or its properties might be undefined
-  if (!ordem) {
-    console.error("OrdemCard: ordem prop is undefined");
-    return null;
-  }
-  
   // Contador das etapas concluídas
   const totalEtapas = 6; // Número total de etapas
-  const etapasConcluidas = Object.values(ordem.etapasAndamento || {}).filter(
+  const etapasConcluidas = Object.values(ordem.etapasAndamento).filter(
     (etapa) => etapa?.concluido
   ).length;
   
   // Cálculo do progresso
   const progresso = Math.round((etapasConcluidas / totalEtapas) * 100);
   
-  const handleClick = () => {
-    console.log("Clicou na ordem:", ordem.id);
-    if (onClick) {
-      onClick();
-    } else {
-      navigate(`/ordens/${ordem.id}`);
-    }
-  };
-  
-  // Função para navegar para os detalhes
   const handleNavigateToDetail = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Evita que o evento de clique se propague para o card
+    e.stopPropagation();
     navigate(`/ordens/${ordem.id}`);
   };
   
   return (
     <Card 
       className="card-hover cursor-pointer overflow-hidden"
-      onClick={handleClick}
+      onClick={onClick || (() => navigate(`/ordens/${ordem.id}`))}
     >
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-lg">{ordem.nome}</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              Cliente: {ordem.cliente?.nome || "Cliente não informado"}
+              Cliente: {ordem.cliente.nome}
             </p>
           </div>
           <StatusBadge status={ordem.prioridade} />
@@ -69,13 +53,13 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Calendar className="h-4 w-4" />
             <span>
-              {ordem.dataAbertura ? format(new Date(ordem.dataAbertura), "dd MMM yyyy", { locale: ptBR }) : "Data não informada"}
+              {format(ordem.dataAbertura, "dd MMM yyyy", { locale: ptBR })}
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Clock className="h-4 w-4" />
             <span>
-              Previsão: {ordem.dataPrevistaEntrega ? format(new Date(ordem.dataPrevistaEntrega), "dd MMM yyyy", { locale: ptBR }) : "Não informada"}
+              Previsão: {format(ordem.dataPrevistaEntrega, "dd MMM yyyy", { locale: ptBR })}
             </span>
           </div>
         </div>
@@ -102,7 +86,7 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
       
       <CardFooter className="flex justify-between pt-3">
         <div className="flex flex-wrap gap-1">
-          {ordem.servicos && ordem.servicos.map((servico, index) => (
+          {ordem.servicos.map((servico, index) => (
             <span 
               key={index}
               className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground"

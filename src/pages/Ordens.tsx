@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { PlusCircle, Filter, Search, FileText, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
@@ -31,46 +30,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 import OrdemForm from "@/components/ordens/OrdemForm";
 import { OrdemServico, StatusOS, Cliente, Prioridade } from "@/types/ordens";
-import { toast } from "sonner";
-
-// Dados de exemplo para clientes
-const CLIENTES = [
-  {
-    id: "1",
-    nome: "Auto Peças Silva",
-    telefone: "(11) 98765-4321",
-    email: "contato@autopecassilva.com.br",
-    endereco: "Rua das Retíficas, 123 - São Paulo/SP",
-    cnpj_cpf: "12.345.678/0001-90",
-  },
-  {
-    id: "2",
-    nome: "Oficina Mecânica Central",
-    telefone: "(11) 3333-4444",
-    email: "oficina@central.com.br",
-  },
-  {
-    id: "3",
-    nome: "Concessionária Motors",
-    telefone: "(11) 9999-0000",
-    email: "pecas@motors.com.br",
-  },
-  {
-    id: "4",
-    nome: "Autoelétrica Express",
-    telefone: "(11) 7777-8888",
-    email: "atendimento@express.com.br",
-  },
-  {
-    id: "5",
-    nome: "Transportadora Rodovia",
-    telefone: "(11) 5555-6666",
-    email: "manutencao@rodovia.com.br",
-  },
-];
 
 // Dados de exemplo
-const ordensExemplo: OrdemServico[] = [
+const ordens: OrdemServico[] = [
   {
     id: "OS-2023-001",
     nome: "Motor Ford Ka 2019",
@@ -327,42 +289,17 @@ const ordensExemplo: OrdemServico[] = [
 ];
 
 interface OrdensProps {
-  onLogout?: () => void;
+  onLogout: () => void;
 }
 
 const Ordens = ({ onLogout }: OrdensProps) => {
   const navigate = useNavigate();
-  const [ordens, setOrdens] = useState<OrdemServico[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusOS | "todas">("todas");
   const [prioridadeFilter, setPrioridadeFilter] = useState<Prioridade | "todas">("todas");
   const [fotosEntrada, setFotosEntrada] = useState<File[]>([]);
   const [fotosSaida, setFotosSaida] = useState<File[]>([]);
-
-  // Carregar ou inicializar ordens
-  useEffect(() => {
-    const savedOrdens = localStorage.getItem("ordens");
-    
-    if (savedOrdens) {
-      try {
-        const parsedOrdens = JSON.parse(savedOrdens);
-        // Verificar se é um array válido
-        if (Array.isArray(parsedOrdens) && parsedOrdens.length > 0) {
-          console.log("Ordens carregadas do localStorage:", parsedOrdens.length);
-          setOrdens(parsedOrdens);
-          return;
-        }
-      } catch (error) {
-        console.error("Erro ao carregar ordens do localStorage:", error);
-      }
-    }
-    
-    // Se não tiver ordens no localStorage ou ocorrer erro, inicializar com dados de exemplo
-    console.log("Inicializando ordens com dados de exemplo");
-    setOrdens(ordensExemplo);
-    localStorage.setItem("ordens", JSON.stringify(ordensExemplo));
-  }, []);
   
   const handleNavigateToDetalhe = (id: string) => {
     navigate(`/ordens/${id}`);
@@ -370,51 +307,8 @@ const Ordens = ({ onLogout }: OrdensProps) => {
   
   const handleCreateOrdem = (values: any) => {
     console.log("Nova ordem de serviço:", values);
-    
-    // Encontrar o cliente pelo ID antes de criar a ordem
-    const cliente = values.clienteId ? CLIENTES.find(c => c.id === values.clienteId) : null;
-    
-    if (!cliente) {
-      toast("Erro ao criar ordem", {
-        description: "Cliente não encontrado. Selecione um cliente válido.",
-      });
-      return;
-    }
-    
-    // Verificar se o usuário forneceu um ID para a ordem
-    const ordemId = values.numeroOS ? 
-      values.numeroOS : 
-      `OS-${new Date().getFullYear()}-${(ordens.length + 1).toString().padStart(3, '0')}`;
-    
-    // Criar nova ordem com os valores do formulário
-    const novaOrdem: OrdemServico = {
-      id: ordemId,
-      nome: values.nome,
-      cliente: cliente, // Usar o objeto cliente completo, não apenas o ID
-      dataAbertura: values.dataAbertura instanceof Date ? values.dataAbertura : new Date(),
-      dataPrevistaEntrega: values.dataPrevistaEntrega instanceof Date ? values.dataPrevistaEntrega : new Date(),
-      prioridade: values.prioridade || "media",
-      servicos: (values.servicosTipos || []).map((tipo: string) => ({
-        tipo: tipo as any,
-        descricao: values.servicosDescricoes?.[tipo] || "",
-        concluido: false
-      })),
-      status: "orcamento" as StatusOS,
-      etapasAndamento: {},
-      tempoRegistros: [],
-    };
-    
-    // Adicionar à lista de ordens
-    const ordensAtualizadas = [...ordens, novaOrdem];
-    setOrdens(ordensAtualizadas);
-    
-    // Salvar no localStorage
-    localStorage.setItem("ordens", JSON.stringify(ordensAtualizadas));
-    
     setIsDialogOpen(false);
-    toast("Ordem de serviço criada", {
-      description: `Nova OS ${novaOrdem.id} foi criada com sucesso.`,
-    });
+    // Aqui você adicionaria a nova ordem ao estado ou enviaria para a API
   };
   
   // Filtrar ordens
@@ -422,7 +316,7 @@ const Ordens = ({ onLogout }: OrdensProps) => {
     // Filtro de busca por nome ou cliente
     const matchesSearch = searchTerm === "" ||
       ordem.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ordem.cliente?.nome.toLowerCase().includes(searchTerm.toLowerCase());
+      ordem.cliente.nome.toLowerCase().includes(searchTerm.toLowerCase());
     
     // Filtro de status
     const matchesStatus = statusFilter === "todas" || ordem.status === statusFilter;
@@ -620,7 +514,6 @@ const Ordens = ({ onLogout }: OrdensProps) => {
                 onSubmit={handleCreateOrdem} 
                 defaultFotosEntrada={fotosEntrada}
                 defaultFotosSaida={fotosSaida}
-                includeNumeroOS={true}
               />
             </div>
           </DialogContent>
