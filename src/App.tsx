@@ -18,10 +18,11 @@ import NotFound from './pages/NotFound';
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(true); // em ambiente de produção seria false
 
-  const handleLogin = (username: string, password: string) => {
+  const handleLogin = (credentials: { email: string; password: string }): boolean => {
     // Simulação de login bem-sucedido
-    console.log("Login com:", username, password);
+    console.log("Login com:", credentials.email, credentials.password);
     setIsLoggedIn(true);
+    return true; // Indica login bem-sucedido
   };
 
   const handleLogout = () => {
