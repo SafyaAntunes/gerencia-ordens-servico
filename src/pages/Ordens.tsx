@@ -152,7 +152,7 @@ export default function Ordens({ onLogout }: OrdensProps) {
               <SelectValue placeholder="Filtrar por status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os status</SelectItem>
+              <SelectItem value="all">Todos os status</SelectItem>
               <SelectItem value="orcamento">Orçamento</SelectItem>
               <SelectItem value="aguardando_aprovacao">Aguardando Aprovação</SelectItem>
               <SelectItem value="fabricacao">Fabricação</SelectItem>
@@ -166,7 +166,7 @@ export default function Ordens({ onLogout }: OrdensProps) {
               <SelectValue placeholder="Filtrar por prioridade" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas as prioridades</SelectItem>
+              <SelectItem value="all">Todas as prioridades</SelectItem>
               <SelectItem value="alta">Alta</SelectItem>
               <SelectItem value="media">Média</SelectItem>
               <SelectItem value="baixa">Baixa</SelectItem>
