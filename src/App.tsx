@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -86,23 +87,23 @@ const App = () => {
             />
             <Route 
               path="/clientes/cadastro" 
-              element={isAuthenticated ? <ClienteCadastro onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <ClienteCadastro /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/clientes/editar/:id" 
-              element={isAuthenticated ? <ClienteCadastro onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <ClienteCadastro /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/agenda" 
-              element={isAuthenticated ? <Agenda onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <Agenda /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/relatorios" 
-              element={isAuthenticated ? <Relatorios onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <Relatorios /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/configuracoes" 
-              element={isAuthenticated ? <Configuracoes onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <Configuracoes /> : <Navigate to="/login" replace />} 
             />
             
             {/* Rota 404 */}

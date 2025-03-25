@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -5,7 +6,7 @@ import OrdemCard from "@/components/ordens/OrdemCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PlusCircle, Search, Calendar, Filter } from "lucide-react";
-import { OrdemServico } from "@/types/ordens";
+import { OrdemServico, StatusOS, Prioridade, EtapaOS } from "@/types/ordens";
 import { 
   Select, 
   SelectContent, 
@@ -33,56 +34,74 @@ export default function Ordens({ onLogout }: OrdensProps) {
         {
           id: "1",
           nome: "Ordem 1",
-          cliente: { id: "1", nome: "Cliente A" },
+          cliente: { 
+            id: "1", 
+            nome: "Cliente A",
+            telefone: "123456789",
+            email: "clientea@exemplo.com"
+          },
           dataAbertura: new Date(),
           dataPrevistaEntrega: new Date(),
-          prioridade: "alta",
-          status: "pendente",
-          servicos: [{ tipo: "bloco" }],
+          prioridade: "alta" as Prioridade,
+          status: "orcamento" as StatusOS,
+          servicos: [{ tipo: "bloco", descricao: "Descrição do serviço", concluido: false }],
           etapasAndamento: {
-            etapa1: { concluido: true },
-            etapa2: { concluido: false },
-            etapa3: { concluido: true },
-            etapa4: { concluido: false },
-            etapa5: { concluido: true },
-            etapa6: { concluido: false },
+            lavagem: { concluido: true },
+            inspecao_inicial: { concluido: false },
+            retifica: { concluido: true },
+            montagem_final: { concluido: false },
+            teste: { concluido: true },
+            inspecao_final: { concluido: false },
           },
+          tempoRegistros: []
         },
         {
           id: "2",
           nome: "Ordem 2",
-          cliente: { id: "2", nome: "Cliente B" },
+          cliente: { 
+            id: "2", 
+            nome: "Cliente B",
+            telefone: "987654321",
+            email: "clienteb@exemplo.com"
+          },
           dataAbertura: new Date(),
           dataPrevistaEntrega: new Date(),
-          prioridade: "baixa",
-          status: "concluida",
-          servicos: [{ tipo: "biela" }],
+          prioridade: "baixa" as Prioridade,
+          status: "finalizado" as StatusOS,
+          servicos: [{ tipo: "biela", descricao: "Descrição do serviço", concluido: true }],
           etapasAndamento: {
-            etapa1: { concluido: true },
-            etapa2: { concluido: true },
-            etapa3: { concluido: true },
-            etapa4: { concluido: true },
-            etapa5: { concluido: true },
-            etapa6: { concluido: true },
+            lavagem: { concluido: true },
+            inspecao_inicial: { concluido: true },
+            retifica: { concluido: true },
+            montagem_final: { concluido: true },
+            teste: { concluido: true },
+            inspecao_final: { concluido: true },
           },
+          tempoRegistros: []
         },
         {
           id: "3",
           nome: "Ordem 3",
-          cliente: { id: "3", nome: "Cliente C" },
+          cliente: { 
+            id: "3", 
+            nome: "Cliente C",
+            telefone: "555555555",
+            email: "clientec@exemplo.com"
+          },
           dataAbertura: new Date(),
           dataPrevistaEntrega: new Date(),
-          prioridade: "media",
-          status: "em_andamento",
-          servicos: [{ tipo: "cabecote" }],
+          prioridade: "media" as Prioridade,
+          status: "fabricacao" as StatusOS,
+          servicos: [{ tipo: "cabecote", descricao: "Descrição do serviço", concluido: false }],
           etapasAndamento: {
-            etapa1: { concluido: true },
-            etapa2: { concluido: true },
-            etapa3: { concluido: false },
-            etapa4: { concluido: false },
-            etapa5: { concluido: false },
-            etapa6: { concluido: false },
+            lavagem: { concluido: true },
+            inspecao_inicial: { concluido: true },
+            retifica: { concluido: false },
+            montagem_final: { concluido: false },
+            teste: { concluido: false },
+            inspecao_final: { concluido: false },
           },
+          tempoRegistros: []
         },
       ];
       setOrdens(mockOrdens);
@@ -134,10 +153,12 @@ export default function Ordens({ onLogout }: OrdensProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="">Todos os status</SelectItem>
-              <SelectItem value="pendente">Pendente</SelectItem>
-              <SelectItem value="em_andamento">Em Andamento</SelectItem>
-              <SelectItem value="concluida">Concluída</SelectItem>
-              <SelectItem value="cancelada">Cancelada</SelectItem>
+              <SelectItem value="orcamento">Orçamento</SelectItem>
+              <SelectItem value="aguardando_aprovacao">Aguardando Aprovação</SelectItem>
+              <SelectItem value="fabricacao">Fabricação</SelectItem>
+              <SelectItem value="espera_cliente">Aguardando Cliente</SelectItem>
+              <SelectItem value="finalizado">Finalizado</SelectItem>
+              <SelectItem value="entregue">Entregue</SelectItem>
             </SelectContent>
           </Select>
           <Select onValueChange={prioridadeFilter ? () => setPrioridadeFilter("") : (value) => setPrioridadeFilter(value)}>
@@ -149,6 +170,7 @@ export default function Ordens({ onLogout }: OrdensProps) {
               <SelectItem value="alta">Alta</SelectItem>
               <SelectItem value="media">Média</SelectItem>
               <SelectItem value="baixa">Baixa</SelectItem>
+              <SelectItem value="urgente">Urgente</SelectItem>
             </SelectContent>
           </Select>
         </div>
