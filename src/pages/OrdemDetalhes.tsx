@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -772,3 +773,172 @@ const OrdemDetalhes = () => {
                   <div className="rounded-md border border-border p-4">
                     <h3 className="font-medium mb-3">Etapa: Inspeção Final</h3>
                     <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          {ordem.etapasAndamento.inspecao_final?.concluido ? (
+                            <span className="flex items-center text-green-600">
+                              <Check className="h-4 w-4 mr-1" />
+                              Concluído
+                            </span>
+                          ) : (
+                            <span className="flex items-center text-muted-foreground">
+                              <X className="h-4 w-4 mr-1" />
+                              Não iniciado
+                            </span>
+                          )}
+                        </p>
+                        {ordem.etapasAndamento.inspecao_final?.iniciado && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Iniciado em: {format(ordem.etapasAndamento.inspecao_final.iniciado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                        )}
+                        {ordem.etapasAndamento.inspecao_final?.funcionarioId && (
+                          <p className="text-xs font-medium mt-1">
+                            Responsável: {getFuncionarioNome(ordem.etapasAndamento.inspecao_final.funcionarioId)}
+                          </p>
+                        )}
+                      </div>
+                      <OrdemCronometro 
+                        ordemId={ordem.id} 
+                        funcionarioId={funcionarioAtualId} 
+                        etapa="inspecao_final"
+                        onFinish={(tempo) => handleFinishTimer("inspecao_final", undefined, tempo)}
+                        isEtapaConcluida={ordem.etapasAndamento.inspecao_final?.concluido}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="registros">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Registros de Tempo</CardTitle>
+                <CardDescription>Histórico de tempo registrado nas etapas</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {ordem.tempoRegistros.length === 0 ? (
+                  <p className="text-muted-foreground">Nenhum registro de tempo encontrado para esta OS.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {ordem.tempoRegistros.map((registro, index) => (
+                      <div key={index} className="rounded-md border border-border p-4">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-medium">
+                              Etapa: {registro.etapa === "lavagem" && "Lavagem"}
+                              {registro.etapa === "inspecao_inicial" && "Inspeção Inicial"}
+                              {registro.etapa === "retifica" && "Retífica"}
+                              {registro.etapa === "montagem_final" && "Montagem Final"}
+                              {registro.etapa === "teste" && "Teste"}
+                              {registro.etapa === "inspecao_final" && "Inspeção Final"}
+                            </p>
+                            {registro.tipoServico && (
+                              <p className="text-sm text-muted-foreground">
+                                Tipo de Serviço: {registro.tipoServico}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Iniciado: {format(registro.inicio, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            </p>
+                            {registro.fim && (
+                              <p className="text-xs text-muted-foreground">
+                                Finalizado: {format(registro.fim, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <span className="text-sm font-medium">
+                              {registro.fim ? formatarTempoTotal(new Date(registro.fim).getTime() - new Date(registro.inicio).getTime()) : "Em andamento"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="fotos">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Fotos da Ordem de Serviço</CardTitle>
+                <CardDescription>Gerenciar fotos de entrada e saída</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FotosForm 
+                  fotosEntrada={fotosEntrada}
+                  fotosSaida={fotosSaida}
+                  onChangeFotosEntrada={handleFotosEntradaChange}
+                  onChangeFotosSaida={handleFotosSaidaChange}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+        
+        {/* Dialog confirmação exclusão */}
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirmar Exclusão</DialogTitle>
+              <DialogDescription>
+                Tem certeza que deseja excluir esta ordem de serviço? 
+                Esta ação não pode ser desfeita.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteOrdem}>
+                Excluir
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Dialog alterar status */}
+        <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Alterar Status da OS</DialogTitle>
+              <DialogDescription>
+                Escolha o novo status para esta ordem de serviço.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <Select value={novoStatus || undefined} onValueChange={(value) => setNovoStatus(value as StatusOS)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="orcamento">Em Orçamento</SelectItem>
+                  <SelectItem value="aguardando_aprovacao">Aguardando Aprovação</SelectItem>
+                  <SelectItem value="fabricacao">Em Fabricação</SelectItem>
+                  <SelectItem value="espera_cliente">Em Espera (Cliente)</SelectItem>
+                  <SelectItem value="finalizado">Finalizado</SelectItem>
+                  <SelectItem value="entregue">Entregue</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsStatusDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleChangeStatus} disabled={!novoStatus}>
+                Alterar Status
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </Layout>
+  );
+};
+
+export default OrdemDetalhes;
