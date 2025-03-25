@@ -75,7 +75,7 @@ const App = () => {
             />
             <Route 
               path="/ordens/:id" 
-              element={isAuthenticated ? <OrdemDetalhes /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <OrdemDetalhes onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/funcionarios" 

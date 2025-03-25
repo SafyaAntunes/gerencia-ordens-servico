@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -16,7 +15,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { OrdemServico, Servico, StatusOS, EtapaOS, TipoServico } from "@/types/ordens";
+import { OrdemServico, Servico, StatusOS, EtapaOS, TipoServico, Prioridade } from "@/types/ordens";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import OrdemCronometro from "@/components/ordens/OrdemCronometro";
 import { Progress } from "@/components/ui/progress";
@@ -56,12 +55,12 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
         },
         dataAbertura: new Date(2023, 4, 15),
         dataPrevistaEntrega: new Date(2023, 4, 30),
-        prioridade: "alta",
+        prioridade: "alta" as Prioridade,
         servicos: [
-          { tipo: "bloco", descricao: "Retífica completa do bloco", concluido: false },
-          { tipo: "virabrequim", descricao: "Balanceamento", concluido: false },
+          { tipo: "bloco" as TipoServico, descricao: "Retífica completa do bloco", concluido: false },
+          { tipo: "virabrequim" as TipoServico, descricao: "Balanceamento", concluido: false },
         ],
-        status: "fabricacao",
+        status: "fabricacao" as StatusOS,
         etapasAndamento: {
           lavagem: { concluido: true, funcionarioId: "1", iniciado: new Date(2023, 4, 16), finalizado: new Date(2023, 4, 16) },
           inspecao_inicial: { concluido: true, funcionarioId: "2", iniciado: new Date(2023, 4, 17), finalizado: new Date(2023, 4, 18) },
@@ -72,7 +71,7 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
             inicio: new Date(2023, 4, 16, 8, 0),
             fim: new Date(2023, 4, 16, 12, 0),
             funcionarioId: "1",
-            etapa: "lavagem",
+            etapa: "lavagem" as EtapaOS,
             pausas: [
               { inicio: new Date(2023, 4, 16, 10, 0), fim: new Date(2023, 4, 16, 10, 15) },
             ],
@@ -81,13 +80,13 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
             inicio: new Date(2023, 4, 17, 13, 0),
             fim: new Date(2023, 4, 18, 17, 0),
             funcionarioId: "2",
-            etapa: "inspecao_inicial",
+            etapa: "inspecao_inicial" as EtapaOS,
             pausas: [],
           },
           {
             inicio: new Date(2023, 4, 19, 8, 0),
             funcionarioId: "3",
-            etapa: "retifica",
+            etapa: "retifica" as EtapaOS,
             pausas: [
               { inicio: new Date(2023, 4, 19, 12, 0), fim: new Date(2023, 4, 19, 13, 0) },
             ],
