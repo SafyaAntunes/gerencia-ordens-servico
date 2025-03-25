@@ -25,11 +25,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
-export interface OrdemDetalhesProps {
-  onLogout?: () => void;
-}
+export interface OrdemDetalhesProps {}
 
-export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
+export default function OrdemDetalhes() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [ordem, setOrdem] = useState<OrdemServico | null>(null);
@@ -238,13 +236,37 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
   };
   
   const handleDeleteOrdem = () => {
-    // Aqui você deletaria a ordem na API real
-    setIsDeleteDialogOpen(false);
-    navigate("/ordens");
-    uiToast({
-      title: "Ordem de serviço excluída",
-      description: "A ordem de serviço foi excluída com sucesso.",
-    });
+    if (!id) return;
+    
+    try {
+      // Buscar ordens existentes do localStorage
+      const ordensJSON = localStorage.getItem("ordens");
+      if (!ordensJSON) {
+        toast("Nenhuma ordem encontrada", {
+          description: "Não foi possível excluir a ordem pois não existem ordens cadastradas.",
+        });
+        return;
+      }
+      
+      // Parsear e filtrar a ordem a ser excluída
+      const ordens: OrdemServico[] = JSON.parse(ordensJSON);
+      const ordensAtualizadas = ordens.filter(ordem => ordem.id !== id);
+      
+      // Salvar as ordens atualizadas no localStorage
+      localStorage.setItem("ordens", JSON.stringify(ordensAtualizadas));
+      
+      setIsDeleteDialogOpen(false);
+      navigate("/ordens");
+      uiToast({
+        title: "Ordem de serviço excluída",
+        description: "A ordem de serviço foi excluída com sucesso.",
+      });
+    } catch (error) {
+      console.error("Erro ao excluir ordem:", error);
+      toast("Erro ao excluir", {
+        description: "Ocorreu um erro ao excluir a ordem de serviço.",
+      });
+    }
   };
   
   const handleFinishTimer = (etapa: EtapaOS, tipoServico: TipoServico | undefined, tempoTotal: number) => {
@@ -290,15 +312,35 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
       registroAtual.fim = new Date();
     }
     
-    // Atualizar a ordem
+    // Atualizar a ordem local
     setOrdem(ordemAtualizada);
+    
+    // Atualizar no localStorage
+    atualizarOrdemNoLocalStorage(ordemAtualizada);
     
     uiToast({
       title: "Tempo registrado e etapa finalizada",
       description: `Tempo total para ${etapa}${tipoServico ? ` (${tipoServico})` : ''}: ${formatarTempoTotal(tempoTotal)}`,
     });
-    
-    // Aqui você salvaria o registro de tempo na API real
+  };
+  
+  // Função para atualizar a ordem no localStorage
+  const atualizarOrdemNoLocalStorage = (ordemAtualizada: OrdemServico) => {
+    try {
+      const ordensJSON = localStorage.getItem("ordens");
+      if (!ordensJSON) return;
+      
+      const ordens: OrdemServico[] = JSON.parse(ordensJSON);
+      const index = ordens.findIndex(o => o.id === ordemAtualizada.id);
+      
+      if (index !== -1) {
+        ordens[index] = ordemAtualizada;
+        localStorage.setItem("ordens", JSON.stringify(ordens));
+        console.log("Ordem atualizada no localStorage:", ordemAtualizada.id);
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar ordem no localStorage:", error);
+    }
   };
   
   const formatarTempoTotal = (milliseconds: number) => {
@@ -327,16 +369,23 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
     if (!ordem || !novoStatus) return;
     
     // Atualizar status da ordem
-    const ordemAtualizada = { ...ordem, status: novoStatus };
+    const ordemAtualizada: OrdemServico = { 
+      ...ordem, 
+      status: novoStatus 
+    };
+    
+    // Atualizar estado local
     setOrdem(ordemAtualizada);
+    
+    // Salvar no localStorage
+    atualizarOrdemNoLocalStorage(ordemAtualizada);
+    
     setIsStatusDialogOpen(false);
     
     uiToast({
       title: "Status atualizado",
       description: `O status da ordem foi alterado para ${getStatusLabel(novoStatus)}.`,
     });
-    
-    // Aqui você atualizaria o status na API real
   };
   
   const getStatusLabel = (status: StatusOS) => {
@@ -353,7 +402,7 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
 
   if (loading) {
     return (
-      <Layout onLogout={onLogout}>
+      <Layout>
         <div className="flex flex-col items-center justify-center p-12">
           <p className="text-lg text-muted-foreground">Carregando detalhes da ordem...</p>
         </div>
@@ -363,7 +412,7 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
 
   if (!ordem) {
     return (
-      <Layout onLogout={onLogout}>
+      <Layout>
         <div className="flex flex-col items-center justify-center p-12">
           <h2 className="text-2xl font-bold mb-2">Ordem não encontrada</h2>
           <p className="text-muted-foreground mb-4">A ordem de serviço solicitada não foi encontrada.</p>
@@ -377,7 +426,7 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
   }
 
   return (
-    <Layout onLogout={onLogout}>
+    <Layout>
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center gap-3">
@@ -386,11 +435,11 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
             </Button>
             <div>
               <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                {ordem.nome}
-                <StatusBadge status={ordem.prioridade} size="sm" />
+                {ordem?.nome}
+                <StatusBadge status={ordem?.prioridade || "media"} size="sm" />
               </h1>
               <p className="text-muted-foreground">
-                OS: {ordem.id} • Cliente: {ordem.cliente.nome}
+                OS: {ordem?.id} • Cliente: {ordem?.cliente?.nome}
               </p>
             </div>
           </div>
@@ -399,7 +448,7 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
             <Button 
               variant="outline" 
               onClick={() => {
-                setNovoStatus(ordem.status);
+                setNovoStatus(ordem?.status || "orcamento");
                 setIsStatusDialogOpen(true);
               }}
             >
@@ -992,3 +1041,4 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
     </Layout>
   );
 }
+

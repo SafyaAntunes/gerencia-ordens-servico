@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { PlusCircle, Filter, Search, FileText, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -326,7 +327,7 @@ const ordensExemplo: OrdemServico[] = [
 ];
 
 interface OrdensProps {
-  onLogout: () => void;
+  onLogout?: () => void;
 }
 
 const Ordens = ({ onLogout }: OrdensProps) => {
@@ -380,9 +381,14 @@ const Ordens = ({ onLogout }: OrdensProps) => {
       return;
     }
     
+    // Verificar se o usuário forneceu um ID para a ordem
+    const ordemId = values.numeroOS ? 
+      values.numeroOS : 
+      `OS-${new Date().getFullYear()}-${(ordens.length + 1).toString().padStart(3, '0')}`;
+    
     // Criar nova ordem com os valores do formulário
     const novaOrdem: OrdemServico = {
-      id: `OS-${new Date().getFullYear()}-${(ordens.length + 1).toString().padStart(3, '0')}`,
+      id: ordemId,
       nome: values.nome,
       cliente: cliente, // Usar o objeto cliente completo, não apenas o ID
       dataAbertura: values.dataAbertura instanceof Date ? values.dataAbertura : new Date(),
@@ -393,7 +399,7 @@ const Ordens = ({ onLogout }: OrdensProps) => {
         descricao: values.servicosDescricoes?.[tipo] || "",
         concluido: false
       })),
-      status: "orcamento",
+      status: "orcamento" as StatusOS,
       etapasAndamento: {},
       tempoRegistros: [],
     };
@@ -416,7 +422,7 @@ const Ordens = ({ onLogout }: OrdensProps) => {
     // Filtro de busca por nome ou cliente
     const matchesSearch = searchTerm === "" ||
       ordem.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ordem.cliente.nome.toLowerCase().includes(searchTerm.toLowerCase());
+      ordem.cliente?.nome.toLowerCase().includes(searchTerm.toLowerCase());
     
     // Filtro de status
     const matchesStatus = statusFilter === "todas" || ordem.status === statusFilter;
@@ -614,6 +620,7 @@ const Ordens = ({ onLogout }: OrdensProps) => {
                 onSubmit={handleCreateOrdem} 
                 defaultFotosEntrada={fotosEntrada}
                 defaultFotosSaida={fotosSaida}
+                includeNumeroOS={true}
               />
             </div>
           </DialogContent>

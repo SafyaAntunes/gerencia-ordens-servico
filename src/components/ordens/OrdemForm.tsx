@@ -1,22 +1,9 @@
+
 import { useState } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Check, Plus, X, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { 
   Select,
   SelectContent,
   SelectItem,
@@ -24,386 +11,372 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { Prioridade, TipoServico } from "@/types/ordens";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import FotosForm from "./FotosForm";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { CalendarIcon } from "lucide-react";
+import { toast } from "sonner";
 
-const CLIENTES = [
-  { id: "1", nome: "Auto Peças Silva" },
-  { id: "2", nome: "Oficina Mecânica Central" },
-  { id: "3", nome: "Concessionária Motors" },
-  { id: "4", nome: "Autoelétrica Express" },
-  { id: "5", nome: "Transportadora Rodovia" },
-];
-
-const formSchema = z.object({
-  nome: z.string().min(2, { message: "Nome deve ter pelo menos 2 caracteres" }),
-  clienteId: z.string({ required_error: "Selecione um cliente" }),
-  dataAbertura: z.date({ required_error: "Selecione a data de abertura" }),
-  dataPrevistaEntrega: z.date({ required_error: "Selecione a data prevista para entrega" }),
-  prioridade: z.enum(["baixa", "media", "alta", "urgente"] as const),
-  servicosTipos: z.array(z.string()).optional(),
-  servicosDescricoes: z.record(z.string()).optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
-type OrdemFormProps = {
-  onSubmit: (values: FormValues & { fotosEntrada: File[], fotosSaida: File[] }) => void;
-  isLoading?: boolean;
-  defaultValues?: Partial<FormValues>;
+interface OrdemFormProps {
+  initialData?: any;
+  onSubmit: (data: any) => void;
   defaultFotosEntrada?: File[];
   defaultFotosSaida?: File[];
-};
+  includeNumeroOS?: boolean;
+}
 
-const tiposServico: { value: TipoServico; label: string }[] = [
-  { value: "bloco", label: "Bloco" },
-  { value: "biela", label: "Biela" },
-  { value: "cabecote", label: "Cabeçote" },
-  { value: "virabrequim", label: "Virabrequim" },
-  { value: "eixo_comando", label: "Eixo de Comando" },
+// Dados de exemplo para clientes
+const CLIENTES = [
+  {
+    id: "1",
+    nome: "Auto Peças Silva",
+    telefone: "(11) 98765-4321",
+    email: "contato@autopecassilva.com.br",
+  },
+  {
+    id: "2",
+    nome: "Oficina Mecânica Central",
+    telefone: "(11) 3333-4444",
+    email: "oficina@central.com.br",
+  },
+  {
+    id: "3",
+    nome: "Concessionária Motors",
+    telefone: "(11) 9999-0000",
+    email: "pecas@motors.com.br",
+  },
+  {
+    id: "4",
+    nome: "Autoelétrica Express",
+    telefone: "(11) 7777-8888",
+    email: "atendimento@express.com.br",
+  },
+  {
+    id: "5",
+    nome: "Transportadora Rodovia",
+    telefone: "(11) 5555-6666",
+    email: "manutencao@rodovia.com.br",
+  },
 ];
 
 export default function OrdemForm({ 
+  initialData, 
   onSubmit, 
-  isLoading = false, 
-  defaultValues,
-  defaultFotosEntrada = [],
+  defaultFotosEntrada = [], 
   defaultFotosSaida = [],
+  includeNumeroOS = false
 }: OrdemFormProps) {
-  const [servicosDescricoes, setServicosDescricoes] = useState<Record<string, string>>({});
-  const [fotosEntrada, setFotosEntrada] = useState<File[]>(defaultFotosEntrada);
-  const [fotosSaida, setFotosSaida] = useState<File[]>(defaultFotosSaida);
-  const [activeTab, setActiveTab] = useState("dados");
+  // Inicializar com dados existentes ou valores padrão
+  const [nome, setNome] = useState(initialData?.nome || "");
+  const [clienteId, setClienteId] = useState(initialData?.clienteId || "");
+  const [numeroOS, setNumeroOS] = useState(initialData?.numeroOS || "");
+  const [dataAbertura, setDataAbertura] = useState<Date | undefined>(
+    initialData?.dataAbertura ? new Date(initialData.dataAbertura) : new Date()
+  );
+  const [dataPrevistaEntrega, setDataPrevistaEntrega] = useState<Date | undefined>(
+    initialData?.dataPrevistaEntrega ? new Date(initialData.dataPrevistaEntrega) : undefined
+  );
+  const [prioridade, setPrioridade] = useState(initialData?.prioridade || "media");
+  const [observacoes, setObservacoes] = useState(initialData?.observacoes || "");
   
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      nome: defaultValues?.nome || "",
-      clienteId: defaultValues?.clienteId || "",
-      dataAbertura: defaultValues?.dataAbertura || new Date(),
-      dataPrevistaEntrega: defaultValues?.dataPrevistaEntrega || new Date(),
-      prioridade: defaultValues?.prioridade || "media",
-      servicosTipos: defaultValues?.servicosTipos || [],
-      servicosDescricoes: defaultValues?.servicosDescricoes || {},
-    },
-  });
+  // Serviços disponíveis
+  const servicosTiposDisponiveis = [
+    { id: "bloco", label: "Bloco" },
+    { id: "biela", label: "Biela" },
+    { id: "cabecote", label: "Cabeçote" },
+    { id: "virabrequim", label: "Virabrequim" },
+    { id: "eixo_comando", label: "Eixo de Comando" },
+  ];
   
+  // Estado para controlar quais serviços estão selecionados
+  const [servicosTipos, setServicosTipos] = useState<string[]>(
+    initialData?.servicosTipos || []
+  );
+  
+  // Estado para armazenar descrições de serviços
+  const [servicosDescricoes, setServicosDescricoes] = useState<Record<string, string>>(
+    initialData?.servicosDescricoes || {}
+  );
+  
+  // Gerenciar toggles de serviços
+  const handleServicoToggle = (tipo: string) => {
+    setServicosTipos((current) => {
+      if (current.includes(tipo)) {
+        // Se já existe, remova
+        return current.filter((t) => t !== tipo);
+      } else {
+        // Se não existe, adicione
+        return [...current, tipo];
+      }
+    });
+  };
+  
+  // Gerenciar descrições de serviços
   const handleServicoDescricaoChange = (tipo: string, descricao: string) => {
-    setServicosDescricoes(prev => ({
+    setServicosDescricoes((prev) => ({
       ...prev,
-      [tipo]: descricao
+      [tipo]: descricao,
     }));
   };
   
-  const handleFormSubmit = (values: FormValues) => {
+  // Validação básica antes de enviar
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Verificar campos obrigatórios
+    if (!nome.trim()) {
+      toast("Campo obrigatório", {
+        description: "O nome da ordem de serviço é obrigatório.",
+      });
+      return;
+    }
+    
+    if (!clienteId) {
+      toast("Campo obrigatório", {
+        description: "Selecione um cliente para a ordem de serviço.",
+      });
+      return;
+    }
+    
+    if (servicosTipos.length === 0) {
+      toast("Campo obrigatório", {
+        description: "Selecione pelo menos um tipo de serviço.",
+      });
+      return;
+    }
+    
+    // Verificar se todos os serviços selecionados têm descrição
+    const servicosSemDescricao = servicosTipos.filter(tipo => 
+      !servicosDescricoes[tipo] || servicosDescricoes[tipo].trim() === ""
+    );
+    
+    if (servicosSemDescricao.length > 0) {
+      toast("Descrições obrigatórias", {
+        description: "Preencha a descrição para todos os serviços selecionados.",
+      });
+      return;
+    }
+    
+    // Preparar objeto para envio
     const formData = {
-      ...values,
+      nome,
+      clienteId,
+      numeroOS: numeroOS.trim() || undefined,
+      dataAbertura,
+      dataPrevistaEntrega,
+      prioridade,
+      observacoes,
+      servicosTipos,
       servicosDescricoes,
-      fotosEntrada,
-      fotosSaida
     };
     
+    // Enviar para o callback
     onSubmit(formData);
   };
   
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
-        <Tabs 
-          defaultValue="dados" 
-          value={activeTab} 
-          onValueChange={setActiveTab}
-          className="w-full"
-        >
-          <TabsList className="grid grid-cols-2">
-            <TabsTrigger value="dados">Dados da OS</TabsTrigger>
-            <TabsTrigger value="fotos" className="flex items-center gap-2">
-              <Camera className="h-4 w-4" />
-              Fotos
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="dados" className="space-y-6 pt-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="nome"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome da Ordem de Serviço</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Motor Ford Ka 2019" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Nome ou identificação da OS
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="clienteId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cliente</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione um cliente" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {CLIENTES.map((cliente) => (
-                          <SelectItem 
-                            key={cliente.id} 
-                            value={cliente.id}
-                          >
-                            {cliente.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      Cliente vinculado à OS
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <FormField
-                control={form.control}
-                name="dataAbertura"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Data de Abertura</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
-                            ) : (
-                              <span>Selecione uma data</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                          locale={ptBR}
-                          className="pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="dataPrevistaEntrega"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Data Prevista de Entrega</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
-                            ) : (
-                              <span>Selecione uma data</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => date < new Date()}
-                          initialFocus
-                          locale={ptBR}
-                          className="pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="prioridade"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Prioridade</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a prioridade" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="baixa">Baixa</SelectItem>
-                        <SelectItem value="media">Média</SelectItem>
-                        <SelectItem value="alta">Alta</SelectItem>
-                        <SelectItem value="urgente">Urgente</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            <div>
-              <FormLabel className="text-base">Serviços a serem realizados</FormLabel>
-              <FormDescription className="mb-3">
-                Selecione os serviços que serão executados nesta ordem
-              </FormDescription>
-              
-              <div className="rounded-md border border-border p-4 space-y-4">
-                <FormField
-                  control={form.control}
-                  name="servicosTipos"
-                  render={() => (
-                    <FormItem>
-                      <div className="mb-4">
-                        {tiposServico.map((tipo) => (
-                          <FormField
-                            key={tipo.value}
-                            control={form.control}
-                            name="servicosTipos"
-                            render={({ field }) => {
-                              return (
-                                <FormItem
-                                  key={tipo.value}
-                                  className="flex flex-col space-y-3 my-4"
-                                >
-                                  <div className="flex items-start space-x-3 space-y-0">
-                                    <FormControl>
-                                      <Checkbox
-                                        checked={field.value?.includes(tipo.value)}
-                                        onCheckedChange={(checked) => {
-                                          const updatedValue = checked
-                                            ? [...(field.value || []), tipo.value]
-                                            : field.value?.filter(
-                                                (value) => value !== tipo.value
-                                              ) || [];
-                                          field.onChange(updatedValue);
-                                        }}
-                                      />
-                                    </FormControl>
-                                    <div className="space-y-1 leading-none">
-                                      <FormLabel className="text-sm font-normal">
-                                        {tipo.label}
-                                      </FormLabel>
-                                    </div>
-                                  </div>
-                                  
-                                  {field.value?.includes(tipo.value) && (
-                                    <div className="ml-6">
-                                      <Textarea
-                                        placeholder={`Descreva o serviço de ${tipo.label.toLowerCase()}...`}
-                                        value={servicosDescricoes[tipo.value] || ""}
-                                        onChange={(e) => 
-                                          handleServicoDescricaoChange(tipo.value, e.target.value)
-                                        }
-                                        className="resize-none"
-                                      />
-                                    </div>
-                                  )}
-                                </FormItem>
-                              );
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </FormItem>
-                  )}
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <Tabs defaultValue="informacoes" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="informacoes">Informações</TabsTrigger>
+          <TabsTrigger value="servicos">Serviços</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="informacoes" className="space-y-6">
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="nome">Nome da Ordem</Label>
+                <Input
+                  id="nome"
+                  placeholder="Ex: Motor Fiat Palio 1.0"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
                 />
               </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="cliente">Cliente</Label>
+                <Select value={clienteId} onValueChange={setClienteId}>
+                  <SelectTrigger id="cliente">
+                    <SelectValue placeholder="Selecione um cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CLIENTES.map((cliente) => (
+                      <SelectItem key={cliente.id} value={cliente.id}>
+                        {cliente.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </TabsContent>
-          
-          <TabsContent value="fotos" className="pt-4">
-            <FotosForm 
-              fotosEntrada={fotosEntrada}
-              fotosSaida={fotosSaida}
-              onChangeFotosEntrada={setFotosEntrada}
-              onChangeFotosSaida={setFotosSaida}
-            />
-          </TabsContent>
-        </Tabs>
-        
-        <Separator />
-        
-        <div className="flex justify-end gap-3">
-          <Button 
-            type="button" 
-            variant="outline"
-            onClick={() => form.reset()}
-          >
-            <X className="mr-2 h-4 w-4" />
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? (
-              <span className="flex items-center gap-1">
-                Salvando...
-              </span>
-            ) : (
-              <>
-                <Check className="mr-2 h-4 w-4" />
-                Salvar
-              </>
+            
+            {includeNumeroOS && (
+              <div className="space-y-2">
+                <Label htmlFor="numeroOS">Número da OS (opcional)</Label>
+                <Input
+                  id="numeroOS"
+                  placeholder="Ex: OS-2023-001 (Deixe em branco para gerar automaticamente)"
+                  value={numeroOS}
+                  onChange={(e) => setNumeroOS(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Se deixado em branco, o sistema gerará um número automaticamente.
+                </p>
+              </div>
             )}
-          </Button>
-        </div>
-      </form>
-    </Form>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Data de Abertura</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !dataAbertura && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dataAbertura ? (
+                        format(dataAbertura, "PPP", { locale: ptBR })
+                      ) : (
+                        <span>Selecione uma data</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dataAbertura}
+                      onSelect={setDataAbertura}
+                      initialFocus
+                      locale={ptBR}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Previsão de Entrega</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !dataPrevistaEntrega && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dataPrevistaEntrega ? (
+                        format(dataPrevistaEntrega, "PPP", { locale: ptBR })
+                      ) : (
+                        <span>Selecione uma data</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dataPrevistaEntrega}
+                      onSelect={setDataPrevistaEntrega}
+                      initialFocus
+                      locale={ptBR}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="prioridade">Prioridade</Label>
+                <Select value={prioridade} onValueChange={setPrioridade}>
+                  <SelectTrigger id="prioridade">
+                    <SelectValue placeholder="Selecione a prioridade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="baixa">Baixa</SelectItem>
+                    <SelectItem value="media">Média</SelectItem>
+                    <SelectItem value="alta">Alta</SelectItem>
+                    <SelectItem value="urgente">Urgente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="observacoes">Observações</Label>
+              <Textarea
+                id="observacoes"
+                placeholder="Observações adicionais sobre esta ordem de serviço..."
+                value={observacoes}
+                onChange={(e) => setObservacoes(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="servicos" className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-medium mb-2">Tipos de Serviço</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Selecione os tipos de serviço que serão realizados nesta ordem.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {servicosTiposDisponiveis.map((servico) => (
+                  <div key={servico.id} className="flex items-start space-x-3 p-3 border rounded-md">
+                    <Checkbox
+                      id={`servico-${servico.id}`}
+                      checked={servicosTipos.includes(servico.id)}
+                      onCheckedChange={() => handleServicoToggle(servico.id)}
+                    />
+                    <div className="space-y-2 w-full">
+                      <Label
+                        htmlFor={`servico-${servico.id}`}
+                        className="font-medium cursor-pointer"
+                      >
+                        {servico.label}
+                      </Label>
+                      
+                      {servicosTipos.includes(servico.id) && (
+                        <Textarea
+                          placeholder={`Descreva os detalhes do serviço de ${servico.label.toLowerCase()}...`}
+                          value={servicosDescricoes[servico.id] || ""}
+                          onChange={(e) => handleServicoDescricaoChange(servico.id, e.target.value)}
+                          rows={3}
+                        />
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+      
+      <Separator className="my-4" />
+      
+      <div className="flex justify-end">
+        <Button type="submit" size="lg">
+          Salvar Ordem de Serviço
+        </Button>
+      </div>
+    </form>
   );
 }

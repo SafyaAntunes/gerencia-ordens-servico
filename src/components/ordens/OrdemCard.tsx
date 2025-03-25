@@ -69,13 +69,13 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Calendar className="h-4 w-4" />
             <span>
-              {ordem.dataAbertura ? format(ordem.dataAbertura, "dd MMM yyyy", { locale: ptBR }) : "Data não informada"}
+              {ordem.dataAbertura ? format(new Date(ordem.dataAbertura), "dd MMM yyyy", { locale: ptBR }) : "Data não informada"}
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Clock className="h-4 w-4" />
             <span>
-              Previsão: {ordem.dataPrevistaEntrega ? format(ordem.dataPrevistaEntrega, "dd MMM yyyy", { locale: ptBR }) : "Não informada"}
+              Previsão: {ordem.dataPrevistaEntrega ? format(new Date(ordem.dataPrevistaEntrega), "dd MMM yyyy", { locale: ptBR }) : "Não informada"}
             </span>
           </div>
         </div>
