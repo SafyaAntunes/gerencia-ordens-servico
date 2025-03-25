@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -87,11 +86,11 @@ const App = () => {
             />
             <Route 
               path="/clientes/cadastro" 
-              element={isAuthenticated ? <ClienteCadastro /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <ClienteCadastro onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/clientes/editar/:id" 
-              element={isAuthenticated ? <ClienteCadastro /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <ClienteCadastro onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/agenda" 
