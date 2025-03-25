@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { PlusCircle, Filter, Search, FileText, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
@@ -30,9 +31,10 @@ import {
 import { Separator } from "@/components/ui/separator";
 import OrdemForm from "@/components/ordens/OrdemForm";
 import { OrdemServico, StatusOS, Cliente, Prioridade } from "@/types/ordens";
+import { toast } from "sonner";
 
 // Dados de exemplo
-const ordens: OrdemServico[] = [
+const ordensExemplo: OrdemServico[] = [
   {
     id: "OS-2023-001",
     nome: "Motor Ford Ka 2019",
@@ -294,12 +296,37 @@ interface OrdensProps {
 
 const Ordens = ({ onLogout }: OrdensProps) => {
   const navigate = useNavigate();
+  const [ordens, setOrdens] = useState<OrdemServico[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusOS | "todas">("todas");
   const [prioridadeFilter, setPrioridadeFilter] = useState<Prioridade | "todas">("todas");
   const [fotosEntrada, setFotosEntrada] = useState<File[]>([]);
   const [fotosSaida, setFotosSaida] = useState<File[]>([]);
+
+  // Carregar ou inicializar ordens
+  useEffect(() => {
+    const savedOrdens = localStorage.getItem("ordens");
+    
+    if (savedOrdens) {
+      try {
+        const parsedOrdens = JSON.parse(savedOrdens);
+        // Verificar se é um array válido
+        if (Array.isArray(parsedOrdens) && parsedOrdens.length > 0) {
+          console.log("Ordens carregadas do localStorage:", parsedOrdens.length);
+          setOrdens(parsedOrdens);
+          return;
+        }
+      } catch (error) {
+        console.error("Erro ao carregar ordens do localStorage:", error);
+      }
+    }
+    
+    // Se não tiver ordens no localStorage ou ocorrer erro, inicializar com dados de exemplo
+    console.log("Inicializando ordens com dados de exemplo");
+    setOrdens(ordensExemplo);
+    localStorage.setItem("ordens", JSON.stringify(ordensExemplo));
+  }, []);
   
   const handleNavigateToDetalhe = (id: string) => {
     navigate(`/ordens/${id}`);
@@ -307,8 +334,27 @@ const Ordens = ({ onLogout }: OrdensProps) => {
   
   const handleCreateOrdem = (values: any) => {
     console.log("Nova ordem de serviço:", values);
+    
+    // Criar nova ordem com os valores do formulário
+    const novaOrdem: OrdemServico = {
+      id: `OS-${new Date().getFullYear()}-${(ordens.length + 1).toString().padStart(3, '0')}`,
+      ...values,
+      dataAbertura: new Date(),
+      etapasAndamento: {},
+      tempoRegistros: [],
+    };
+    
+    // Adicionar à lista de ordens
+    const ordensAtualizadas = [...ordens, novaOrdem];
+    setOrdens(ordensAtualizadas);
+    
+    // Salvar no localStorage
+    localStorage.setItem("ordens", JSON.stringify(ordensAtualizadas));
+    
     setIsDialogOpen(false);
-    // Aqui você adicionaria a nova ordem ao estado ou enviaria para a API
+    toast("Ordem de serviço criada", {
+      description: `Nova OS ${novaOrdem.id} foi criada com sucesso.`,
+    });
   };
   
   // Filtrar ordens

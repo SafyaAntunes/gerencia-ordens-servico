@@ -19,22 +19,26 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
   
   // Contador das etapas concluídas
   const totalEtapas = 6; // Número total de etapas
-  const etapasConcluidas = Object.values(ordem.etapasAndamento).filter(
+  const etapasConcluidas = Object.values(ordem.etapasAndamento || {}).filter(
     (etapa) => etapa?.concluido
   ).length;
   
   // Cálculo do progresso
   const progresso = Math.round((etapasConcluidas / totalEtapas) * 100);
   
-  const handleNavigateToDetail = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigate(`/ordens/${ordem.id}`);
+  const handleClick = () => {
+    console.log("Clicou na ordem:", ordem.id);
+    if (onClick) {
+      onClick();
+    } else {
+      navigate(`/ordens/${ordem.id}`);
+    }
   };
   
   return (
     <Card 
       className="card-hover cursor-pointer overflow-hidden"
-      onClick={onClick || (() => navigate(`/ordens/${ordem.id}`))}
+      onClick={handleClick}
     >
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
