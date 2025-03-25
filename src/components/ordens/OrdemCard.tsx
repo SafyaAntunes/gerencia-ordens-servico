@@ -35,6 +35,12 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
     }
   };
   
+  // Adicionando a função que estava faltando
+  const handleNavigateToDetail = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Evita que o evento de clique se propague para o card
+    navigate(`/ordens/${ordem.id}`);
+  };
+  
   return (
     <Card 
       className="card-hover cursor-pointer overflow-hidden"
