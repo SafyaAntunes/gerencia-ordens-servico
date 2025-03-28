@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { PlusCircle, Filter, Search, Users, CheckCircle2 } from "lucide-react";
 import Layout from "@/components/layout/Layout";
@@ -36,8 +37,10 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Funcionario } from "@/types/funcionarios";
 import { TipoServico } from "@/types/ordens";
+import { toast } from "sonner";
 
-const funcionarios: Funcionario[] = [
+// Dados de exemplo iniciais
+const funcionariosIniciais: Funcionario[] = [
   {
     id: "1",
     nome: "João Silva",
@@ -99,6 +102,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
+  const [funcionarios, setFuncionarios] = useState<Funcionario[]>(funcionariosIniciais);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [especialidadeFilter, setEspecialidadeFilter] = useState<TipoServico | "todas">("todas");
@@ -118,15 +122,31 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
   });
   
   const handleCreateFuncionario = (values: FormValues) => {
-    console.log("Novo funcionário:", values);
+    const novoFuncionario: Funcionario = {
+      id: `${Date.now()}`, // ID baseado no timestamp
+      nome: values.nome,
+      email: values.email,
+      telefone: values.telefone,
+      especialidades: values.especialidades as TipoServico[],
+      ativo: values.ativo,
+    };
+    
+    setFuncionarios([...funcionarios, novoFuncionario]);
+    toast.success("Funcionário cadastrado com sucesso!");
     setIsDialogOpen(false);
     form.reset();
-    // Aqui você adicionaria o novo funcionário ao estado ou enviaria para a API
   };
   
   const handleViewDetails = (funcionario: Funcionario) => {
     setSelectedFuncionario(funcionario);
     setIsDetalhesOpen(true);
+  };
+  
+  const handleUpdateFuncionario = (funcionarioAtualizado: Funcionario) => {
+    setFuncionarios(funcionarios.map(func => 
+      func.id === funcionarioAtualizado.id ? funcionarioAtualizado : func
+    ));
+    toast.success("Funcionário atualizado com sucesso!");
   };
   
   const filteredFuncionarios = funcionarios.filter((funcionario) => {
@@ -461,6 +481,7 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
           funcionario={selectedFuncionario} 
           isOpen={isDetalhesOpen} 
           onClose={() => setIsDetalhesOpen(false)} 
+          onSave={handleUpdateFuncionario}
         />
       </div>
     </Layout>
