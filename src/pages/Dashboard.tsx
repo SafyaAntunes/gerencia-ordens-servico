@@ -138,14 +138,16 @@ export default function Dashboard({ onLogout }: DashboardProps) {
           title="Em andamento"
           value={ordensEmAndamento}
           description="Ordens em fabricação"
-          trend={{ value: 12, isPositive: true }}
+          trend="up"
+          trendValue="12%"
           icon="wrench"
         />
         <MetricCard
           title="Finalizadas"
           value={ordensFinalizadas}
           description="Ordens entregues"
-          trend={{ value: 5, isPositive: false }}
+          trend="down"
+          trendValue="5%"
           icon="check"
         />
         <MetricCard
@@ -158,17 +160,14 @@ export default function Dashboard({ onLogout }: DashboardProps) {
       
       <div className="grid gap-4 mt-4 md:grid-cols-2 lg:grid-cols-3">
         <div className="md:col-span-2">
-          <StatusChart 
-            title="Status das Ordens"
-            data={[
-              { name: 'Orçamento', total: statusCounts.orcamento },
-              { name: 'Aguardando', total: statusCounts.aguardando_aprovacao },
-              { name: 'Fabricação', total: statusCounts.fabricacao },
-              { name: 'Esp. Cliente', total: statusCounts.espera_cliente },
-              { name: 'Finalizado', total: statusCounts.finalizado },
-              { name: 'Entregue', total: statusCounts.entregue }
-            ]} 
-          />
+          <StatusChart data={[
+            { name: 'Orçamento', value: statusCounts.orcamento },
+            { name: 'Aguardando', value: statusCounts.aguardando_aprovacao },
+            { name: 'Fabricação', value: statusCounts.fabricacao },
+            { name: 'Esp. Cliente', value: statusCounts.espera_cliente },
+            { name: 'Finalizado', value: statusCounts.finalizado },
+            { name: 'Entregue', value: statusCounts.entregue }
+          ]} />
         </div>
         
         <div className="space-y-4">

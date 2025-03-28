@@ -7,7 +7,7 @@ interface MetricCardProps {
   title: string;
   value: string | number;
   description?: string;
-  icon: string | ReactNode;
+  icon: ReactNode;
   trend?: {
     value: number;
     isPositive: boolean;
