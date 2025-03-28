@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -24,11 +23,9 @@ export default function OrdemDetalhes() {
     const loadOrdem = () => {
       setLoading(true);
       try {
-        // Buscar as ordens do localStorage
         const savedOrdens = localStorage.getItem('sgr-ordens');
         
         if (savedOrdens) {
-          // Parse JSON e converter datas de string para Date
           const ordens = JSON.parse(savedOrdens, (key, value) => {
             if (key === 'dataAbertura' || key === 'dataPrevistaEntrega') {
               return new Date(value);
@@ -36,7 +33,6 @@ export default function OrdemDetalhes() {
             return value;
           });
           
-          // Buscar a ordem específica pelo ID
           const ordemEncontrada = ordens.find((o: OrdemServico) => o.id === id);
           
           if (ordemEncontrada) {
@@ -88,13 +84,11 @@ export default function OrdemDetalhes() {
     );
   }
 
-  // Contador das etapas concluídas
-  const totalEtapas = 6; // Número total de etapas
+  const totalEtapas = 6;
   const etapasConcluidas = Object.values(ordem.etapasAndamento).filter(
     (etapa) => etapa?.concluido
   ).length;
   
-  // Cálculo do progresso
   const progresso = Math.round((etapasConcluidas / totalEtapas) * 100);
 
   return (
@@ -241,7 +235,9 @@ export default function OrdemDetalhes() {
                     <div key={index} className="border rounded-md p-4">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="font-semibold">{tipoServico}</h3>
-                        <StatusBadge status={servico.concluido ? "concluido" : "pendente"} />
+                        <div className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${servico.concluido ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                          {servico.concluido ? 'Concluído' : 'Pendente'}
+                        </div>
                       </div>
                       <p className="text-muted-foreground">{servico.descricao}</p>
                     </div>
