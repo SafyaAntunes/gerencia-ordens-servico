@@ -119,11 +119,19 @@ export default function Ordens({ onLogout }: OrdensProps) {
     return searchMatch && statusMatch && prioridadeMatch;
   });
 
+  const handleNovaOrdem = () => {
+    navigate("/ordens/nova");
+  };
+
+  const handleVerOrdem = (id: string) => {
+    navigate(`/ordens/${id}`);
+  };
+
   return (
     <Layout onLogout={onLogout}>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Ordens de Serviço</h1>
-        <Button onClick={() => navigate("/ordens/nova")}>
+        <Button onClick={handleNovaOrdem}>
           <PlusCircle className="h-4 w-4 mr-2" />
           Nova Ordem
         </Button>
@@ -173,7 +181,11 @@ export default function Ordens({ onLogout }: OrdensProps) {
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {filteredOrdens.map((ordem) => (
-          <OrdemCard key={ordem.id} ordem={ordem} />
+          <OrdemCard 
+            key={ordem.id} 
+            ordem={ordem} 
+            onClick={() => handleVerOrdem(ordem.id)}
+          />
         ))}
       </div>
     </Layout>

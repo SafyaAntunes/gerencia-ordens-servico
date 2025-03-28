@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import Ordens from "./pages/Ordens";
+import NovaOrdem from "./pages/NovaOrdem";
 import Funcionarios from "./pages/Funcionarios";
 import NotFound from "./pages/NotFound";
 import OrdemDetalhes from "./pages/OrdemDetalhes";
@@ -65,6 +66,10 @@ const App = () => {
             <Route 
               path="/ordens" 
               element={isAuthenticated ? <Ordens /> : <Navigate to="/login" replace />} 
+            />
+            <Route 
+              path="/ordens/nova" 
+              element={isAuthenticated ? <NovaOrdem /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/ordens/:id" 
