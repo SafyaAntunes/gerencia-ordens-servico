@@ -14,6 +14,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import { toast } from "sonner";
 
 interface OrdensProps {
   onLogout?: () => void;
@@ -25,11 +26,13 @@ export default function Ordens({ onLogout }: OrdensProps) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [prioridadeFilter, setPrioridadeFilter] = useState("all");
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Carregar ordens do localStorage
     const carregarOrdens = () => {
       try {
+        setLoading(true);
         const ordensArmazenadas = localStorage.getItem('ordens');
         
         // Se não houver ordens armazenadas, criar dados iniciais de exemplo
@@ -113,18 +116,54 @@ export default function Ordens({ onLogout }: OrdensProps) {
           localStorage.setItem('ordens', JSON.stringify(ordensIniciais));
           setOrdens(ordensIniciais);
         } else {
-          // Converter datas para objetos Date
-          const ordensParsed = JSON.parse(ordensArmazenadas);
-          const ordensFormatadas = ordensParsed.map((ordem: any) => ({
-            ...ordem,
-            dataAbertura: new Date(ordem.dataAbertura),
-            dataPrevistaEntrega: new Date(ordem.dataPrevistaEntrega),
-          }));
-          
-          setOrdens(ordensFormatadas);
+          try {
+            // Converter datas para objetos Date
+            const ordensParsed = JSON.parse(ordensArmazenadas);
+            
+            // Validar cada ordem para garantir que tem todos os campos necessários
+            const ordensFormatadas = ordensParsed.map((ordem: any) => {
+              // Verificar se a ordem tem todos os campos necessários
+              if (!ordem || !ordem.id || !ordem.nome) {
+                console.error("Ordem inválida:", ordem);
+                return null;
+              }
+              
+              // Garantir que cliente existe
+              const cliente = ordem.cliente || { 
+                id: "unknown", 
+                nome: "Cliente Desconhecido",
+                telefone: "N/A",
+                email: "N/A"
+              };
+              
+              return {
+                ...ordem,
+                cliente,
+                dataAbertura: new Date(ordem.dataAbertura),
+                dataPrevistaEntrega: new Date(ordem.dataPrevistaEntrega),
+                prioridade: ordem.prioridade || "media",
+                status: ordem.status || "orcamento",
+                servicos: Array.isArray(ordem.servicos) ? ordem.servicos : [],
+                etapasAndamento: ordem.etapasAndamento || {},
+                tempoRegistros: Array.isArray(ordem.tempoRegistros) ? ordem.tempoRegistros : []
+              };
+            }).filter(Boolean); // Remover ordens inválidas (null)
+            
+            setOrdens(ordensFormatadas);
+          } catch (parseError) {
+            console.error("Erro ao analisar ordens do localStorage:", parseError);
+            toast.error("Erro ao carregar ordens. Usando dados padrão.");
+            
+            // Resetar para dados iniciais em caso de erro de análise
+            localStorage.removeItem('ordens');
+            carregarOrdens(); // Tentar carregar novamente (vai criar os dados iniciais)
+          }
         }
       } catch (error) {
         console.error("Erro ao carregar ordens:", error);
+        toast.error("Erro ao carregar ordens");
+      } finally {
+        setLoading(false);
       }
     };
     
@@ -132,8 +171,12 @@ export default function Ordens({ onLogout }: OrdensProps) {
   }, []);
 
   const filteredOrdens = ordens.filter((ordem) => {
-    const searchMatch = ordem.nome.toLowerCase().includes(search.toLowerCase()) ||
-                        ordem.cliente.nome.toLowerCase().includes(search.toLowerCase());
+    if (!ordem) return false; // Skip invalid orders
+    
+    const searchMatch = 
+      ordem.nome.toLowerCase().includes(search.toLowerCase()) ||
+      (ordem.cliente?.nome || '').toLowerCase().includes(search.toLowerCase());
+    
     const statusMatch = statusFilter === "all" ? true : ordem.status === statusFilter;
     const prioridadeMatch = prioridadeFilter === "all" ? true : ordem.prioridade === prioridadeFilter;
 
@@ -200,15 +243,23 @@ export default function Ordens({ onLogout }: OrdensProps) {
         </div>
       </div>
 
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {filteredOrdens.map((ordem) => (
-          <OrdemCard 
-            key={ordem.id} 
-            ordem={ordem} 
-            onClick={() => handleVerOrdem(ordem.id)}
-          />
-        ))}
-      </div>
+      {loading ? (
+        <div className="text-center py-8">Carregando ordens...</div>
+      ) : filteredOrdens.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">
+          Nenhuma ordem encontrada com os filtros selecionados.
+        </div>
+      ) : (
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          {filteredOrdens.map((ordem) => (
+            <OrdemCard 
+              key={ordem.id} 
+              ordem={ordem} 
+              onClick={() => handleVerOrdem(ordem.id)}
+            />
+          ))}
+        </div>
+      )}
     </Layout>
   );
 }
