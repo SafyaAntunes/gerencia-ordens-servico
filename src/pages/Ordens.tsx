@@ -22,8 +22,8 @@ interface OrdensProps {
 export default function Ordens({ onLogout }: OrdensProps) {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [prioridadeFilter, setPrioridadeFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [prioridadeFilter, setPrioridadeFilter] = useState("all");
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
 
   useEffect(() => {
@@ -113,8 +113,8 @@ export default function Ordens({ onLogout }: OrdensProps) {
   const filteredOrdens = ordens.filter((ordem) => {
     const searchMatch = ordem.nome.toLowerCase().includes(search.toLowerCase()) ||
                         ordem.cliente.nome.toLowerCase().includes(search.toLowerCase());
-    const statusMatch = statusFilter ? ordem.status === statusFilter : true;
-    const prioridadeMatch = prioridadeFilter ? ordem.prioridade === prioridadeFilter : true;
+    const statusMatch = statusFilter === "all" ? true : ordem.status === statusFilter;
+    const prioridadeMatch = prioridadeFilter === "all" ? true : ordem.prioridade === prioridadeFilter;
 
     return searchMatch && statusMatch && prioridadeMatch;
   });
@@ -147,7 +147,7 @@ export default function Ordens({ onLogout }: OrdensProps) {
 
         <div className="flex items-center space-x-2">
           <Filter className="h-5 w-5 text-muted-foreground mr-2" />
-          <Select onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filtrar por status" />
             </SelectTrigger>
@@ -161,7 +161,7 @@ export default function Ordens({ onLogout }: OrdensProps) {
               <SelectItem value="entregue">Entregue</SelectItem>
             </SelectContent>
           </Select>
-          <Select onValueChange={prioridadeFilter ? () => setPrioridadeFilter("") : (value) => setPrioridadeFilter(value)}>
+          <Select value={prioridadeFilter} onValueChange={setPrioridadeFilter}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filtrar por prioridade" />
             </SelectTrigger>
