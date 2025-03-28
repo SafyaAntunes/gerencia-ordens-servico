@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -46,6 +47,7 @@ const CLIENTES = [
 ];
 
 const formSchema = z.object({
+  id: z.string().min(1, { message: "Número da OS é obrigatório" }),
   nome: z.string().min(2, { message: "Nome deve ter pelo menos 2 caracteres" }),
   clienteId: z.string({ required_error: "Selecione um cliente" }),
   dataAbertura: z.date({ required_error: "Selecione a data de abertura" }),
@@ -88,6 +90,7 @@ export default function OrdemForm({
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      id: defaultValues?.id || "",
       nome: defaultValues?.nome || "",
       clienteId: defaultValues?.clienteId || "",
       dataAbertura: defaultValues?.dataAbertura || new Date(),
@@ -137,6 +140,23 @@ export default function OrdemForm({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
+                name="id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Número da OS</FormLabel>
+                    <FormControl>
+                      <Input placeholder="001/2023" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Número ou identificador único da OS
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="nome"
                 render={({ field }) => (
                   <FormItem>
@@ -151,41 +171,41 @@ export default function OrdemForm({
                   </FormItem>
                 )}
               />
-              
-              <FormField
-                control={form.control}
-                name="clienteId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cliente</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione um cliente" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {CLIENTES.map((cliente) => (
-                          <SelectItem 
-                            key={cliente.id} 
-                            value={cliente.id}
-                          >
-                            {cliente.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      Cliente vinculado à OS
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
+            
+            <FormField
+              control={form.control}
+              name="clienteId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cliente</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um cliente" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {CLIENTES.map((cliente) => (
+                        <SelectItem 
+                          key={cliente.id} 
+                          value={cliente.id}
+                        >
+                          {cliente.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Cliente vinculado à OS
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <FormField

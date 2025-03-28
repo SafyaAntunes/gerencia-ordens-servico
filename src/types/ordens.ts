@@ -59,6 +59,13 @@ export type TempoRegistro = {
   pausas: { inicio: Date; fim?: Date }[];
 };
 
+export type FotoBase64 = {
+  nome: string;
+  tipo: string;
+  tamanho: number;
+  data: string;
+};
+
 export type OrdemServico = {
   id: string;
   nome: string;
@@ -77,4 +84,6 @@ export type OrdemServico = {
     }
   };
   tempoRegistros: TempoRegistro[];
+  fotosEntrada?: FotoBase64[];
+  fotosSaida?: FotoBase64[];
 };

@@ -47,12 +47,12 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-lg">{ordem.nome}</CardTitle>
+            <CardTitle className="text-lg">{ordem.nome || "Sem título"}</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
               Cliente: {clienteNome}
             </p>
           </div>
-          <StatusBadge status={ordem.prioridade} />
+          <StatusBadge status={ordem.prioridade || "media"} />
         </div>
       </CardHeader>
       
@@ -61,13 +61,17 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Calendar className="h-4 w-4" />
             <span>
-              {format(new Date(ordem.dataAbertura), "dd MMM yyyy", { locale: ptBR })}
+              {ordem.dataAbertura ? 
+                format(new Date(ordem.dataAbertura), "dd MMM yyyy", { locale: ptBR }) :
+                "Data não definida"}
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Clock className="h-4 w-4" />
             <span>
-              Previsão: {format(new Date(ordem.dataPrevistaEntrega), "dd MMM yyyy", { locale: ptBR })}
+              Previsão: {ordem.dataPrevistaEntrega ? 
+                format(new Date(ordem.dataPrevistaEntrega), "dd MMM yyyy", { locale: ptBR }) :
+                "Não definida"}
             </span>
           </div>
         </div>
@@ -86,7 +90,7 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
         </div>
         
         <div className="mt-3">
-          <StatusBadge status={ordem.status} size="md" />
+          <StatusBadge status={ordem.status || "orcamento"} size="md" />
         </div>
       </CardContent>
       
