@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -43,61 +44,113 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
   const funcionarioAtualId = "123"; // Simulando um ID de funcionário logado
 
   useEffect(() => {
-    setTimeout(() => {
-      const ordemEncontrada = {
-        id: "OS-2023-001",
-        nome: "Motor Ford Ka 2019",
-        cliente: {
-          id: "1",
-          nome: "Auto Peças Silva",
-          telefone: "(11) 98765-4321",
-          email: "contato@autopecassilva.com.br",
-        },
-        dataAbertura: new Date(2023, 4, 15),
-        dataPrevistaEntrega: new Date(2023, 4, 30),
-        prioridade: "alta" as Prioridade,
-        servicos: [
-          { tipo: "bloco" as TipoServico, descricao: "Retífica completa do bloco", concluido: false },
-          { tipo: "virabrequim" as TipoServico, descricao: "Balanceamento", concluido: false },
-        ],
-        status: "fabricacao" as StatusOS,
-        etapasAndamento: {
-          lavagem: { concluido: true, funcionarioId: "1", iniciado: new Date(2023, 4, 16), finalizado: new Date(2023, 4, 16) },
-          inspecao_inicial: { concluido: true, funcionarioId: "2", iniciado: new Date(2023, 4, 17), finalizado: new Date(2023, 4, 18) },
-          retifica: { concluido: false, funcionarioId: "3", iniciado: new Date(2023, 4, 19) },
-        },
-        tempoRegistros: [
-          {
-            inicio: new Date(2023, 4, 16, 8, 0),
-            fim: new Date(2023, 4, 16, 12, 0),
-            funcionarioId: "1",
-            etapa: "lavagem" as EtapaOS,
-            pausas: [
-              { inicio: new Date(2023, 4, 16, 10, 0), fim: new Date(2023, 4, 16, 10, 15) },
-            ],
-          },
-          {
-            inicio: new Date(2023, 4, 17, 13, 0),
-            fim: new Date(2023, 4, 18, 17, 0),
-            funcionarioId: "2",
-            etapa: "inspecao_inicial" as EtapaOS,
-            pausas: [],
-          },
-          {
-            inicio: new Date(2023, 4, 19, 8, 0),
-            funcionarioId: "3",
-            etapa: "retifica" as EtapaOS,
-            pausas: [
-              { inicio: new Date(2023, 4, 19, 12, 0), fim: new Date(2023, 4, 19, 13, 0) },
-            ],
-          },
-        ],
-      } as OrdemServico;
+    // Carrega a ordem específica baseada no ID
+    const carregarOrdem = () => {
+      setLoading(true);
       
-      setOrdem(ordemEncontrada);
-      setLoading(false);
-    }, 1000);
-  }, [id]);
+      try {
+        // Recuperar ordens do localStorage
+        const ordensArmazenadas = localStorage.getItem('ordens');
+        
+        if (ordensArmazenadas) {
+          const ordens = JSON.parse(ordensArmazenadas);
+          // Converter strings de data para objetos Date
+          const ordensFormatadas = ordens.map((ordem: any) => ({
+            ...ordem,
+            dataAbertura: new Date(ordem.dataAbertura),
+            dataPrevistaEntrega: new Date(ordem.dataPrevistaEntrega),
+            etapasAndamento: {
+              ...ordem.etapasAndamento,
+              ...(ordem.etapasAndamento.lavagem?.iniciado && { 
+                lavagem: { 
+                  ...ordem.etapasAndamento.lavagem,
+                  iniciado: new Date(ordem.etapasAndamento.lavagem.iniciado),
+                  ...(ordem.etapasAndamento.lavagem.finalizado && { finalizado: new Date(ordem.etapasAndamento.lavagem.finalizado) })
+                } 
+              }),
+              ...(ordem.etapasAndamento.inspecao_inicial?.iniciado && { 
+                inspecao_inicial: { 
+                  ...ordem.etapasAndamento.inspecao_inicial,
+                  iniciado: new Date(ordem.etapasAndamento.inspecao_inicial.iniciado),
+                  ...(ordem.etapasAndamento.inspecao_inicial.finalizado && { finalizado: new Date(ordem.etapasAndamento.inspecao_inicial.finalizado) })
+                } 
+              }),
+              ...(ordem.etapasAndamento.retifica?.iniciado && { 
+                retifica: { 
+                  ...ordem.etapasAndamento.retifica,
+                  iniciado: new Date(ordem.etapasAndamento.retifica.iniciado),
+                  ...(ordem.etapasAndamento.retifica.finalizado && { finalizado: new Date(ordem.etapasAndamento.retifica.finalizado) })
+                } 
+              }),
+              ...(ordem.etapasAndamento.montagem_final?.iniciado && { 
+                montagem_final: { 
+                  ...ordem.etapasAndamento.montagem_final,
+                  iniciado: new Date(ordem.etapasAndamento.montagem_final.iniciado),
+                  ...(ordem.etapasAndamento.montagem_final.finalizado && { finalizado: new Date(ordem.etapasAndamento.montagem_final.finalizado) })
+                } 
+              }),
+              ...(ordem.etapasAndamento.teste?.iniciado && { 
+                teste: { 
+                  ...ordem.etapasAndamento.teste,
+                  iniciado: new Date(ordem.etapasAndamento.teste.iniciado),
+                  ...(ordem.etapasAndamento.teste.finalizado && { finalizado: new Date(ordem.etapasAndamento.teste.finalizado) })
+                } 
+              }),
+              ...(ordem.etapasAndamento.inspecao_final?.iniciado && { 
+                inspecao_final: { 
+                  ...ordem.etapasAndamento.inspecao_final,
+                  iniciado: new Date(ordem.etapasAndamento.inspecao_final.iniciado),
+                  ...(ordem.etapasAndamento.inspecao_final.finalizado && { finalizado: new Date(ordem.etapasAndamento.inspecao_final.finalizado) })
+                } 
+              })
+            },
+            tempoRegistros: ordem.tempoRegistros.map((registro: any) => ({
+              ...registro,
+              inicio: new Date(registro.inicio),
+              ...(registro.fim && { fim: new Date(registro.fim) }),
+              pausas: registro.pausas.map((pausa: any) => ({
+                ...pausa,
+                inicio: new Date(pausa.inicio),
+                ...(pausa.fim && { fim: new Date(pausa.fim) })
+              }))
+            }))
+          }));
+          
+          // Encontrar a ordem com o ID especificado
+          const ordemEncontrada = ordensFormatadas.find((ordem: OrdemServico) => ordem.id === id);
+          
+          if (ordemEncontrada) {
+            setOrdem(ordemEncontrada);
+          } else {
+            // Caso a ordem não seja encontrada, exibe um erro
+            toast({
+              title: "Ordem não encontrada",
+              description: "A ordem de serviço solicitada não foi encontrada.",
+              variant: "destructive"
+            });
+          }
+        } else {
+          // Caso não existam ordens armazenadas
+          toast({
+            title: "Erro ao carregar ordens",
+            description: "Não foi possível carregar as ordens de serviço.",
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        console.error("Erro ao carregar ordem:", error);
+        toast({
+          title: "Erro ao carregar ordem",
+          description: "Ocorreu um erro ao tentar carregar a ordem de serviço.",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    carregarOrdem();
+  }, [id, toast]);
 
   const calcularProgresso = () => {
     if (!ordem) return 0;
@@ -132,13 +185,35 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
   };
   
   const handleDeleteOrdem = () => {
-    // Aqui você deletaria a ordem na API real
+    try {
+      // Recupera as ordens do localStorage
+      const ordensArmazenadas = localStorage.getItem('ordens');
+      
+      if (ordensArmazenadas) {
+        const ordens = JSON.parse(ordensArmazenadas);
+        // Filtra a ordem a ser excluída
+        const novasOrdens = ordens.filter((ordem: OrdemServico) => ordem.id !== id);
+        
+        // Atualiza o localStorage
+        localStorage.setItem('ordens', JSON.stringify(novasOrdens));
+        
+        toast({
+          title: "Ordem de serviço excluída",
+          description: "A ordem de serviço foi excluída com sucesso.",
+        });
+        
+        navigate("/ordens");
+      }
+    } catch (error) {
+      console.error("Erro ao excluir ordem:", error);
+      toast({
+        title: "Erro ao excluir ordem",
+        description: "Ocorreu um erro ao tentar excluir a ordem de serviço.",
+        variant: "destructive"
+      });
+    }
+    
     setIsDeleteDialogOpen(false);
-    navigate("/ordens");
-    toast({
-      title: "Ordem de serviço excluída",
-      description: "A ordem de serviço foi excluída com sucesso.",
-    });
   };
   
   const handleFinishTimer = (etapa: EtapaOS, tipoServico: TipoServico | undefined, tempoTotal: number) => {
@@ -187,12 +262,38 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
     // Atualizar a ordem
     setOrdem(ordemAtualizada);
     
+    // Salvar no localStorage
+    salvarAtualizacaoOrdem(ordemAtualizada);
+    
     toast({
       title: "Tempo registrado e etapa finalizada",
       description: `Tempo total para ${etapa}${tipoServico ? ` (${tipoServico})` : ''}: ${formatarTempoTotal(tempoTotal)}`,
     });
-    
-    // Aqui você salvaria o registro de tempo na API real
+  };
+  
+  const salvarAtualizacaoOrdem = (ordemAtualizada: OrdemServico) => {
+    try {
+      // Recupera as ordens do localStorage
+      const ordensArmazenadas = localStorage.getItem('ordens');
+      
+      if (ordensArmazenadas) {
+        const ordens = JSON.parse(ordensArmazenadas);
+        // Atualiza a ordem específica
+        const novasOrdens = ordens.map((ordem: OrdemServico) => 
+          ordem.id === ordemAtualizada.id ? ordemAtualizada : ordem
+        );
+        
+        // Atualiza o localStorage
+        localStorage.setItem('ordens', JSON.stringify(novasOrdens));
+      }
+    } catch (error) {
+      console.error("Erro ao salvar atualização da ordem:", error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Ocorreu um erro ao salvar as alterações.",
+        variant: "destructive"
+      });
+    }
   };
   
   const formatarTempoTotal = (milliseconds: number) => {
@@ -223,14 +324,16 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
     // Atualizar status da ordem
     const ordemAtualizada = { ...ordem, status: novoStatus };
     setOrdem(ordemAtualizada);
+    
+    // Salvar no localStorage
+    salvarAtualizacaoOrdem(ordemAtualizada);
+    
     setIsStatusDialogOpen(false);
     
     toast({
       title: "Status atualizado",
       description: `O status da ordem foi alterado para ${getStatusLabel(novoStatus)}.`,
     });
-    
-    // Aqui você atualizaria o status na API real
   };
   
   const getStatusLabel = (status: StatusOS) => {
@@ -280,11 +383,11 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
             </Button>
             <div>
               <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                {ordem.nome}
-                <StatusBadge status={ordem.prioridade} size="sm" />
+                {ordem?.nome}
+                <StatusBadge status={ordem?.prioridade || "media"} size="sm" />
               </h1>
               <p className="text-muted-foreground">
-                OS: {ordem.id} • Cliente: {ordem.cliente.nome}
+                OS: {ordem?.id} • Cliente: {ordem?.cliente.nome}
               </p>
             </div>
           </div>
@@ -293,7 +396,7 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
             <Button 
               variant="outline" 
               onClick={() => {
-                setNovoStatus(ordem.status);
+                setNovoStatus(ordem?.status || "orcamento");
                 setIsStatusDialogOpen(true);
               }}
             >

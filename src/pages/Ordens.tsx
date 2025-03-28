@@ -6,7 +6,7 @@ import OrdemCard from "@/components/ordens/OrdemCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PlusCircle, Search, Filter } from "lucide-react";
-import { OrdemServico, StatusOS, Prioridade, EtapaOS } from "@/types/ordens";
+import { OrdemServico, StatusOS, Prioridade } from "@/types/ordens";
 import { 
   Select, 
   SelectContent, 
@@ -27,87 +27,108 @@ export default function Ordens({ onLogout }: OrdensProps) {
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
 
   useEffect(() => {
-    // Função para buscar as ordens de serviço (substitua com sua lógica real)
-    const fetchOrdens = async () => {
-      // Simulação de dados (substitua pela chamada à API)
-      const mockOrdens: OrdemServico[] = [
-        {
-          id: "1",
-          nome: "Ordem 1",
-          cliente: { 
-            id: "1", 
-            nome: "Cliente A",
-            telefone: "123456789",
-            email: "clientea@exemplo.com"
-          },
-          dataAbertura: new Date(),
-          dataPrevistaEntrega: new Date(),
-          prioridade: "alta" as Prioridade,
-          status: "orcamento" as StatusOS,
-          servicos: [{ tipo: "bloco", descricao: "Descrição do serviço", concluido: false }],
-          etapasAndamento: {
-            lavagem: { concluido: true },
-            inspecao_inicial: { concluido: false },
-            retifica: { concluido: true },
-            montagem_final: { concluido: false },
-            teste: { concluido: true },
-            inspecao_final: { concluido: false },
-          },
-          tempoRegistros: []
-        },
-        {
-          id: "2",
-          nome: "Ordem 2",
-          cliente: { 
-            id: "2", 
-            nome: "Cliente B",
-            telefone: "987654321",
-            email: "clienteb@exemplo.com"
-          },
-          dataAbertura: new Date(),
-          dataPrevistaEntrega: new Date(),
-          prioridade: "baixa" as Prioridade,
-          status: "finalizado" as StatusOS,
-          servicos: [{ tipo: "biela", descricao: "Descrição do serviço", concluido: true }],
-          etapasAndamento: {
-            lavagem: { concluido: true },
-            inspecao_inicial: { concluido: true },
-            retifica: { concluido: true },
-            montagem_final: { concluido: true },
-            teste: { concluido: true },
-            inspecao_final: { concluido: true },
-          },
-          tempoRegistros: []
-        },
-        {
-          id: "3",
-          nome: "Ordem 3",
-          cliente: { 
-            id: "3", 
-            nome: "Cliente C",
-            telefone: "555555555",
-            email: "clientec@exemplo.com"
-          },
-          dataAbertura: new Date(),
-          dataPrevistaEntrega: new Date(),
-          prioridade: "media" as Prioridade,
-          status: "fabricacao" as StatusOS,
-          servicos: [{ tipo: "cabecote", descricao: "Descrição do serviço", concluido: false }],
-          etapasAndamento: {
-            lavagem: { concluido: true },
-            inspecao_inicial: { concluido: true },
-            retifica: { concluido: false },
-            montagem_final: { concluido: false },
-            teste: { concluido: false },
-            inspecao_final: { concluido: false },
-          },
-          tempoRegistros: []
-        },
-      ];
-      setOrdens(mockOrdens);
+    // Carregar ordens do localStorage
+    const carregarOrdens = () => {
+      try {
+        const ordensArmazenadas = localStorage.getItem('ordens');
+        
+        // Se não houver ordens armazenadas, criar dados iniciais de exemplo
+        if (!ordensArmazenadas) {
+          const ordensIniciais: OrdemServico[] = [
+            {
+              id: "1",
+              nome: "Ordem 1",
+              cliente: { 
+                id: "1", 
+                nome: "Cliente A",
+                telefone: "123456789",
+                email: "clientea@exemplo.com"
+              },
+              dataAbertura: new Date(),
+              dataPrevistaEntrega: new Date(),
+              prioridade: "alta",
+              status: "orcamento",
+              servicos: [{ tipo: "bloco", descricao: "Descrição do serviço", concluido: false }],
+              etapasAndamento: {
+                lavagem: { concluido: true },
+                inspecao_inicial: { concluido: false },
+                retifica: { concluido: true },
+                montagem_final: { concluido: false },
+                teste: { concluido: true },
+                inspecao_final: { concluido: false },
+              },
+              tempoRegistros: []
+            },
+            {
+              id: "2",
+              nome: "Ordem 2",
+              cliente: { 
+                id: "2", 
+                nome: "Cliente B",
+                telefone: "987654321",
+                email: "clienteb@exemplo.com"
+              },
+              dataAbertura: new Date(),
+              dataPrevistaEntrega: new Date(),
+              prioridade: "baixa",
+              status: "finalizado",
+              servicos: [{ tipo: "biela", descricao: "Descrição do serviço", concluido: true }],
+              etapasAndamento: {
+                lavagem: { concluido: true },
+                inspecao_inicial: { concluido: true },
+                retifica: { concluido: true },
+                montagem_final: { concluido: true },
+                teste: { concluido: true },
+                inspecao_final: { concluido: true },
+              },
+              tempoRegistros: []
+            },
+            {
+              id: "3",
+              nome: "Ordem 3",
+              cliente: { 
+                id: "3", 
+                nome: "Cliente C",
+                telefone: "555555555",
+                email: "clientec@exemplo.com"
+              },
+              dataAbertura: new Date(),
+              dataPrevistaEntrega: new Date(),
+              prioridade: "media",
+              status: "fabricacao",
+              servicos: [{ tipo: "cabecote", descricao: "Descrição do serviço", concluido: false }],
+              etapasAndamento: {
+                lavagem: { concluido: true },
+                inspecao_inicial: { concluido: true },
+                retifica: { concluido: false },
+                montagem_final: { concluido: false },
+                teste: { concluido: false },
+                inspecao_final: { concluido: false },
+              },
+              tempoRegistros: []
+            },
+          ];
+          
+          // Salvar os dados iniciais
+          localStorage.setItem('ordens', JSON.stringify(ordensIniciais));
+          setOrdens(ordensIniciais);
+        } else {
+          // Converter datas para objetos Date
+          const ordensParsed = JSON.parse(ordensArmazenadas);
+          const ordensFormatadas = ordensParsed.map((ordem: any) => ({
+            ...ordem,
+            dataAbertura: new Date(ordem.dataAbertura),
+            dataPrevistaEntrega: new Date(ordem.dataPrevistaEntrega),
+          }));
+          
+          setOrdens(ordensFormatadas);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar ordens:", error);
+      }
     };
-
-    fetchOrdens();
+    
+    carregarOrdens();
   }, []);
 
   const filteredOrdens = ordens.filter((ordem) => {

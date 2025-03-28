@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import Layout from "@/components/layout/Layout";
 import OrdemForm from "@/components/ordens/OrdemForm";
-import { Prioridade, TipoServico } from "@/types/ordens";
+import { Prioridade, TipoServico, OrdemServico } from "@/types/ordens";
 
 export default function NovaOrdem() {
   const navigate = useNavigate();
@@ -14,19 +14,16 @@ export default function NovaOrdem() {
     setIsSubmitting(true);
     
     try {
-      // Here you would normally call an API to create the order
-      console.log("Creating new order:", values);
-      
-      // Generate fake ID for demo purposes (this would come from the backend in a real app)
+      // Gerar ID para a nova ordem
       const newId = Math.floor(Math.random() * 10000).toString();
       
-      // Convert form values to order object
-      const newOrder = {
+      // Converter form values para objeto de ordem
+      const newOrder: OrdemServico = {
         id: newId,
         nome: values.nome,
         cliente: {
           id: values.clienteId,
-          nome: "Cliente Teste", // In a real app, you'd get this from the client data
+          nome: "Cliente Teste", // Em uma aplicação real, você buscaria esses dados do cliente
           telefone: "123456789", 
           email: "cliente@example.com"
         },
@@ -50,12 +47,26 @@ export default function NovaOrdem() {
         tempoRegistros: []
       };
       
+      // Recuperar ordens existentes do localStorage
+      const ordensArmazenadas = localStorage.getItem('ordens');
+      let ordens = [];
+      
+      if (ordensArmazenadas) {
+        ordens = JSON.parse(ordensArmazenadas);
+      }
+      
+      // Adicionar a nova ordem
+      ordens.push(newOrder);
+      
+      // Salvar no localStorage
+      localStorage.setItem('ordens', JSON.stringify(ordens));
+      
       toast.success("Ordem de serviço criada com sucesso!");
       
-      // Navigate to the order view page
+      // Navegar para a página da ordem
       navigate(`/ordens/${newId}`);
     } catch (error) {
-      console.error("Error creating order:", error);
+      console.error("Erro ao criar ordem:", error);
       toast.error("Erro ao criar ordem de serviço");
     } finally {
       setIsSubmitting(false);
