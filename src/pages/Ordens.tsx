@@ -5,7 +5,7 @@ import Layout from "@/components/layout/Layout";
 import OrdemCard from "@/components/ordens/OrdemCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Search, Calendar, Filter } from "lucide-react";
+import { PlusCircle, Search, Filter } from "lucide-react";
 import { OrdemServico, StatusOS, Prioridade, EtapaOS } from "@/types/ordens";
 import { 
   Select, 
@@ -129,7 +129,7 @@ export default function Ordens({ onLogout }: OrdensProps) {
         </Button>
       </div>
 
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-6">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-2 mb-6">
         <div className="flex items-center space-x-2">
           <Input
             type="search"
@@ -138,11 +138,6 @@ export default function Ordens({ onLogout }: OrdensProps) {
             onChange={(e) => setSearch(e.target.value)}
           />
           <Search className="h-5 w-5 text-muted-foreground -ml-8" />
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Calendar className="h-5 w-5 text-muted-foreground mr-2" />
-          <span>Filtrar por data:</span>
         </div>
 
         <div className="flex items-center space-x-2">
