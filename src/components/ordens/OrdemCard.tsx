@@ -55,11 +55,19 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
     e.stopPropagation();
     navigate(`/ordens/${ordem.id}`);
   };
+
+  const handleCardClick = () => {
+    if (onClick) {
+      onClick();
+    } else {
+      navigate(`/ordens/${ordem.id}`);
+    }
+  };
   
   return (
     <Card 
       className="card-hover cursor-pointer overflow-hidden"
-      onClick={onClick || (() => navigate(`/ordens/${ordem.id}`))}
+      onClick={handleCardClick}
     >
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
