@@ -1,11 +1,11 @@
 
-import { ChangeEvent, forwardRef, useState } from "react";
+import { ChangeEvent, forwardRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ImageIcon, X, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FileUploadProps {
-  value?: File | string;
+  value?: File | string | any; // Pode ser File, string base64 ou objeto com data: base64
   onChange?: (file: File | null) => void;
   onRemove?: () => void;
   accept?: string;
@@ -15,10 +15,31 @@ interface FileUploadProps {
 
 const FileUpload = forwardRef<HTMLInputElement, FileUploadProps>(
   ({ value, onChange, onRemove, accept = "image/*", className, maxSize = 5 }, ref) => {
-    const [preview, setPreview] = useState<string | null>(
-      typeof value === "string" ? value : null
-    );
+    const [preview, setPreview] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+
+    // Processar o valor para extrair a URL de visualização
+    useEffect(() => {
+      if (!value) {
+        setPreview(null);
+        return;
+      }
+
+      if (typeof value === 'string') {
+        // Se for uma string base64 direta
+        setPreview(value);
+      } else if (value instanceof File) {
+        // Se for um arquivo, criar URL de objeto
+        const fileUrl = URL.createObjectURL(value);
+        setPreview(fileUrl);
+        
+        // Limpar URL do objeto quando o componente for desmontado
+        return () => URL.revokeObjectURL(fileUrl);
+      } else if (value && typeof value === 'object' && 'data' in value) {
+        // Se for um objeto com propriedade data (formato { nome, tipo, tamanho, data })
+        setPreview(value.data);
+      }
+    }, [value]);
 
     const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
       setError(null);

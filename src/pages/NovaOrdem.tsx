@@ -22,18 +22,23 @@ export default function NovaOrdem() {
         const fotosBase64 = [];
         
         for (const foto of fotos) {
-          const base64 = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(foto);
-          });
-          
-          fotosBase64.push({
-            nome: foto.name,
-            tipo: foto.type,
-            tamanho: foto.size,
-            data: base64
-          });
+          // Verificar se já é uma string base64 ou um objeto File
+          if (typeof foto === 'string' || (foto && typeof foto === 'object' && 'data' in foto)) {
+            fotosBase64.push(foto);
+          } else {
+            const base64 = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(foto);
+            });
+            
+            fotosBase64.push({
+              nome: foto.name,
+              tipo: foto.type,
+              tamanho: foto.size,
+              data: base64
+            });
+          }
         }
         
         return fotosBase64;
@@ -54,6 +59,7 @@ export default function NovaOrdem() {
             telefone: "123456789", 
             email: "cliente@example.com"
           },
+          motorId: values.motorId, // Adicionamos o motor selecionado
           dataAbertura: values.dataAbertura,
           dataPrevistaEntrega: values.dataPrevistaEntrega,
           prioridade: values.prioridade as Prioridade,

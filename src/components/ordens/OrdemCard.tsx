@@ -1,13 +1,27 @@
 
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Clock, Calendar, ArrowRight } from "lucide-react";
+import { Clock, Calendar, ArrowRight, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { OrdemServico } from "@/types/ordens";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Separator } from "@/components/ui/separator";
+
+// Lista de motores conhecidos para exibição
+const MOTORES_DISPLAY: Record<string, string> = {
+  "101": "Ford Zetec Rocam 1.0",
+  "102": "Ford Zetec Rocam 1.6",
+  "201": "VW EA111 1.0",
+  "202": "VW EA211 1.6",
+  "301": "Fiat Fire 1.0",
+  "302": "Fiat E.torQ 1.6",
+  "401": "GM Econo.Flex 1.0",
+  "402": "GM Family 1.4",
+  "501": "Mercedes OM 366",
+  "502": "Scania DC13",
+};
 
 interface OrdemCardProps {
   ordem: OrdemServico;
@@ -24,6 +38,9 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
   
   // Safely access cliente
   const clienteNome = ordem.cliente?.nome || "Cliente não especificado";
+  
+  // Identificar o motor selecionado se houver
+  const motorInfo = ordem.motorId ? MOTORES_DISPLAY[ordem.motorId] || "Motor #" + ordem.motorId : null;
   
   // Contador das etapas concluídas
   const totalEtapas = 6; // Número total de etapas
@@ -51,6 +68,12 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
             <p className="text-sm text-muted-foreground mt-1">
               Cliente: {clienteNome}
             </p>
+            {motorInfo && (
+              <p className="text-xs flex items-center gap-1 mt-1">
+                <Settings className="h-3 w-3" />
+                {motorInfo}
+              </p>
+            )}
           </div>
           <StatusBadge status={ordem.prioridade || "media"} />
         </div>

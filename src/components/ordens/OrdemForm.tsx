@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -34,7 +34,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { Prioridade, TipoServico } from "@/types/ordens";
+import { Prioridade, TipoServico, Motor } from "@/types/ordens";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FotosForm from "./FotosForm";
 
@@ -46,10 +46,35 @@ const CLIENTES = [
   { id: "5", nome: "Transportadora Rodovia" },
 ];
 
+// Motores de exemplo para demonstração
+const MOTORES: Record<string, Motor[]> = {
+  "1": [
+    { id: "101", marca: "Ford", modelo: "Zetec Rocam 1.0", numeroSerie: "ZR10-123456", ano: "2018" },
+    { id: "102", marca: "Ford", modelo: "Zetec Rocam 1.6", numeroSerie: "ZR16-234567", ano: "2019" }
+  ],
+  "2": [
+    { id: "201", marca: "Volkswagen", modelo: "EA111 1.0", numeroSerie: "EA111-345678", ano: "2018" },
+    { id: "202", marca: "Volkswagen", modelo: "EA211 1.6", numeroSerie: "EA211-456789", ano: "2020" }
+  ],
+  "3": [
+    { id: "301", marca: "Fiat", modelo: "Fire 1.0", numeroSerie: "FIRE-567890", ano: "2017" },
+    { id: "302", marca: "Fiat", modelo: "E.torQ 1.6", numeroSerie: "ETORQ-678901", ano: "2018" }
+  ],
+  "4": [
+    { id: "401", marca: "Chevrolet", modelo: "Econo.Flex 1.0", numeroSerie: "EFLEX-789012", ano: "2019" },
+    { id: "402", marca: "Chevrolet", modelo: "Family 1.4", numeroSerie: "FAM-890123", ano: "2020" }
+  ],
+  "5": [
+    { id: "501", marca: "Mercedes", modelo: "OM 366", numeroSerie: "OM366-901234", ano: "2017" },
+    { id: "502", marca: "Scania", modelo: "DC13", numeroSerie: "DC13-012345", ano: "2018" }
+  ]
+};
+
 const formSchema = z.object({
   id: z.string().min(1, { message: "Número da OS é obrigatório" }),
   nome: z.string().min(2, { message: "Nome deve ter pelo menos 2 caracteres" }),
   clienteId: z.string({ required_error: "Selecione um cliente" }),
+  motorId: z.string().optional(),
   dataAbertura: z.date({ required_error: "Selecione a data de abertura" }),
   dataPrevistaEntrega: z.date({ required_error: "Selecione a data prevista para entrega" }),
   prioridade: z.enum(["baixa", "media", "alta", "urgente"] as const),
@@ -63,8 +88,8 @@ type OrdemFormProps = {
   onSubmit: (values: FormValues & { fotosEntrada: File[], fotosSaida: File[] }) => void;
   isLoading?: boolean;
   defaultValues?: Partial<FormValues>;
-  defaultFotosEntrada?: File[];
-  defaultFotosSaida?: File[];
+  defaultFotosEntrada?: any[];
+  defaultFotosSaida?: any[];
 };
 
 const tiposServico: { value: TipoServico; label: string }[] = [
@@ -83,9 +108,53 @@ export default function OrdemForm({
   defaultFotosSaida = [],
 }: OrdemFormProps) {
   const [servicosDescricoes, setServicosDescricoes] = useState<Record<string, string>>({});
-  const [fotosEntrada, setFotosEntrada] = useState<File[]>(defaultFotosEntrada);
-  const [fotosSaida, setFotosSaida] = useState<File[]>(defaultFotosSaida);
+  const [fotosEntrada, setFotosEntrada] = useState<File[]>([]);
+  const [fotosSaida, setFotosSaida] = useState<File[]>([]);
   const [activeTab, setActiveTab] = useState("dados");
+  const [selectedClienteId, setSelectedClienteId] = useState<string>(defaultValues?.clienteId || "");
+  const [motores, setMotores] = useState<Motor[]>([]);
+  
+  // Converter fotos de base64 para objetos para exibição
+  useEffect(() => {
+    const processDefaultFotos = () => {
+      if (defaultFotosEntrada && defaultFotosEntrada.length > 0) {
+        // As fotos já estão em formato utilizável
+        const processedFotos = defaultFotosEntrada.map((foto: any) => {
+          // Se for um objeto com propriedade data (formato base64)
+          if (foto && typeof foto === 'object' && 'data' in foto) {
+            return foto.data;
+          }
+          // Se já for uma string base64
+          return foto;
+        });
+        setFotosEntrada(processedFotos as any);
+      }
+
+      if (defaultFotosSaida && defaultFotosSaida.length > 0) {
+        const processedFotos = defaultFotosSaida.map((foto: any) => {
+          if (foto && typeof foto === 'object' && 'data' in foto) {
+            return foto.data;
+          }
+          return foto;
+        });
+        setFotosSaida(processedFotos as any);
+      }
+    };
+
+    processDefaultFotos();
+  }, [defaultFotosEntrada, defaultFotosSaida]);
+  
+  // Carregar motores do cliente selecionado
+  useEffect(() => {
+    if (selectedClienteId) {
+      // Em um cenário real, buscaríamos os motores do cliente no backend
+      // Como estamos usando dados mockados, carregamos do objeto MOTORES
+      const clienteMotores = MOTORES[selectedClienteId] || [];
+      setMotores(clienteMotores);
+    } else {
+      setMotores([]);
+    }
+  }, [selectedClienteId]);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -93,6 +162,7 @@ export default function OrdemForm({
       id: defaultValues?.id || "",
       nome: defaultValues?.nome || "",
       clienteId: defaultValues?.clienteId || "",
+      motorId: defaultValues?.motorId || "",
       dataAbertura: defaultValues?.dataAbertura || new Date(),
       dataPrevistaEntrega: defaultValues?.dataPrevistaEntrega || new Date(),
       prioridade: defaultValues?.prioridade || "media",
@@ -100,6 +170,12 @@ export default function OrdemForm({
       servicosDescricoes: defaultValues?.servicosDescricoes || {},
     },
   });
+  
+  useEffect(() => {
+    if (defaultValues?.servicosDescricoes) {
+      setServicosDescricoes(defaultValues.servicosDescricoes);
+    }
+  }, [defaultValues?.servicosDescricoes]);
   
   const handleServicoDescricaoChange = (tipo: string, descricao: string) => {
     setServicosDescricoes(prev => ({
@@ -117,6 +193,11 @@ export default function OrdemForm({
     };
     
     onSubmit(formData);
+  };
+  
+  const handleClienteChange = (clienteId: string) => {
+    setSelectedClienteId(clienteId);
+    form.setValue("motorId", ""); // Resetar o motor selecionado ao mudar de cliente
   };
   
   return (
@@ -180,7 +261,10 @@ export default function OrdemForm({
                 <FormItem>
                   <FormLabel>Cliente</FormLabel>
                   <Select 
-                    onValueChange={field.onChange} 
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      handleClienteChange(value);
+                    }} 
                     defaultValue={field.value}
                   >
                     <FormControl>
@@ -201,6 +285,48 @@ export default function OrdemForm({
                   </Select>
                   <FormDescription>
                     Cliente vinculado à OS
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Campo de seleção de motor */}
+            <FormField
+              control={form.control}
+              name="motorId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Motor</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                    disabled={!selectedClienteId || motores.length === 0}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={
+                          !selectedClienteId 
+                            ? "Selecione um cliente primeiro" 
+                            : motores.length === 0 
+                              ? "Nenhum motor cadastrado para este cliente" 
+                              : "Selecione um motor"
+                        } />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {motores.map((motor) => (
+                        <SelectItem 
+                          key={motor.id} 
+                          value={motor.id}
+                        >
+                          {motor.marca} {motor.modelo} - {motor.numeroSerie} ({motor.ano})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Motor do cliente a ser retificado
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

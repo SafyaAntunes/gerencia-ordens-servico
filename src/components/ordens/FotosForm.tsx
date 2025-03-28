@@ -1,15 +1,15 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileUpload } from "@/components/ui/file-upload";
 import { Separator } from "@/components/ui/separator";
 import { Camera, Upload } from "lucide-react";
 
 interface FotosFormProps {
-  fotosEntrada: File[];
-  fotosSaida: File[];
-  onChangeFotosEntrada: (fotos: File[]) => void;
-  onChangeFotosSaida: (fotos: File[]) => void;
+  fotosEntrada: any[]; // Pode ser File ou string base64
+  fotosSaida: any[]; // Pode ser File ou string base64
+  onChangeFotosEntrada: (fotos: any[]) => void;
+  onChangeFotosSaida: (fotos: any[]) => void;
 }
 
 export default function FotosForm({

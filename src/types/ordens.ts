@@ -70,6 +70,7 @@ export type OrdemServico = {
   id: string;
   nome: string;
   cliente: Cliente;
+  motorId?: string; // Referência ao motor selecionado
   dataAbertura: Date;
   dataPrevistaEntrega: Date;
   prioridade: Prioridade;
@@ -84,6 +85,6 @@ export type OrdemServico = {
     }
   };
   tempoRegistros: TempoRegistro[];
-  fotosEntrada?: FotoBase64[];
-  fotosSaida?: FotoBase64[];
+  fotosEntrada?: FotoBase64[] | any[];
+  fotosSaida?: FotoBase64[] | any[];
 };
