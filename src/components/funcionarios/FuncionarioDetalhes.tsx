@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Funcionario } from "@/types/funcionarios";
 import { Phone, Mail, Wrench, Edit, Save } from "lucide-react";
@@ -35,13 +35,13 @@ export default function FuncionarioDetalhes({
   const [editedFuncionario, setEditedFuncionario] = useState<Funcionario | null>(null);
   const { toast } = useToast();
   
-  // Reset editing state when dialog opens or new funcionario is loaded
-  useEffect(() => {
+  // Reset editing state when dialog closes or new funcionario is loaded
+  useState(() => {
     if (funcionario) {
-      setEditedFuncionario({...funcionario});
+      setEditedFuncionario(funcionario);
       setIsEditing(false);
     }
-  }, [funcionario, isOpen]);
+  });
   
   if (!funcionario) return null;
   

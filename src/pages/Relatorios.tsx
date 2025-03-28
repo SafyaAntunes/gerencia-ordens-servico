@@ -9,12 +9,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, BarChart2, PieChart, Filter } from "lucide-react";
+import { Download, BarChart2, PieChart, LineChart, Filter } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RePieChart, Pie, Cell } from "recharts";
 import { Separator } from "@/components/ui/separator";
-import { OrdemServico } from "@/types/ordens";
 
 interface RelatoriosProps {
   onLogout: () => void;
@@ -29,56 +28,6 @@ const produtividadeMensal = [
   { nome: "Mai", ordens: 56, tempo: 410 },
   { nome: "Jun", ordens: 55, tempo: 400 },
   { nome: "Jul", ordens: 40, tempo: 380 },
-];
-
-// Dados de exemplo para a geração de relatórios baseados em ordens de serviço
-const ordensData: OrdemServico[] = [
-  {
-    id: "OS-2023-001",
-    nome: "Motor Ford Ka 2019",
-    cliente: {
-      id: "1",
-      nome: "Auto Peças Silva",
-      telefone: "(11) 98765-4321",
-      email: "contato@autopecassilva.com.br",
-    },
-    dataAbertura: new Date(2023, 4, 15),
-    dataPrevistaEntrega: new Date(2023, 4, 30),
-    prioridade: "alta",
-    servicos: [
-      { tipo: "bloco", descricao: "Retífica completa do bloco", concluido: false },
-      { tipo: "virabrequim", descricao: "Balanceamento", concluido: false },
-    ],
-    status: "fabricacao",
-    etapasAndamento: {
-      lavagem: { concluido: true, funcionarioId: "1", iniciado: new Date(2023, 4, 16), finalizado: new Date(2023, 4, 16) },
-      inspecao_inicial: { concluido: true, funcionarioId: "2", iniciado: new Date(2023, 4, 17), finalizado: new Date(2023, 4, 18) },
-      retifica: { concluido: false, funcionarioId: "3", iniciado: new Date(2023, 4, 19) },
-    },
-    tempoRegistros: [],
-  },
-  {
-    id: "OS-2023-002",
-    nome: "Cabeçote Fiat Uno",
-    cliente: {
-      id: "2",
-      nome: "Oficina Mecânica Central",
-      telefone: "(11) 3333-4444",
-      email: "oficina@central.com.br",
-    },
-    dataAbertura: new Date(2023, 4, 10),
-    dataPrevistaEntrega: new Date(2023, 4, 25),
-    prioridade: "media",
-    servicos: [
-      { tipo: "cabecote", descricao: "Retífica de válvulas", concluido: false },
-    ],
-    status: "aguardando_aprovacao",
-    etapasAndamento: {
-      lavagem: { concluido: true, funcionarioId: "1", iniciado: new Date(2023, 4, 11), finalizado: new Date(2023, 4, 11) },
-      inspecao_inicial: { concluido: true, funcionarioId: "2", iniciado: new Date(2023, 4, 12), finalizado: new Date(2023, 4, 12) },
-    },
-    tempoRegistros: [],
-  },
 ];
 
 const tiposServicos = [
@@ -139,6 +88,10 @@ export default function Relatorios({ onLogout }: RelatoriosProps) {
             <TabsTrigger value="servicos" className="flex items-center gap-2">
               <PieChart className="h-4 w-4" />
               Serviços
+            </TabsTrigger>
+            <TabsTrigger value="faturamento" className="flex items-center gap-2">
+              <LineChart className="h-4 w-4" />
+              Faturamento
             </TabsTrigger>
           </TabsList>
           
@@ -304,6 +257,61 @@ export default function Relatorios({ onLogout }: RelatoriosProps) {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+          
+          <TabsContent value="faturamento" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Faturamento Total</CardTitle>
+                  <CardDescription>No período selecionado</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">R$ 187.350,00</div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    <span className="text-green-500">↑ 8.3%</span> comparado ao período anterior
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Ticket Médio</CardTitle>
+                  <CardDescription>Valor médio por ordem</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">R$ 3.850,00</div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    <span className="text-green-500">↑ 4.2%</span> comparado ao período anterior
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Ordens em Aberto</CardTitle>
+                  <CardDescription>Valor total</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">R$ 43.750,00</div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    <span className="text-muted-foreground">28 ordens pendentes</span>
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Faturamento por Período</CardTitle>
+                <CardDescription>Análise de valores faturados ao longo do tempo</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-center text-muted-foreground py-16">
+                  Gráfico de faturamento será implementado em breve
+                </p>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

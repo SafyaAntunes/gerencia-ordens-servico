@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import Layout from "@/components/layout/Layout";
 import OrdemForm from "@/components/ordens/OrdemForm";
-import { Prioridade, TipoServico, OrdemServico } from "@/types/ordens";
+import { Prioridade, TipoServico } from "@/types/ordens";
 
 export default function NovaOrdem() {
   const navigate = useNavigate();
@@ -14,11 +14,14 @@ export default function NovaOrdem() {
     setIsSubmitting(true);
     
     try {
+      // Here you would normally call an API to create the order
+      console.log("Creating new order:", values);
+      
       // Generate fake ID for demo purposes (this would come from the backend in a real app)
-      const newId = `OS-${Math.floor(Math.random() * 10000)}-${Math.floor(Math.random() * 100)}`;
+      const newId = Math.floor(Math.random() * 10000).toString();
       
       // Convert form values to order object
-      const newOrder: OrdemServico = {
+      const newOrder = {
         id: newId,
         nome: values.nome,
         cliente: {
@@ -46,19 +49,6 @@ export default function NovaOrdem() {
         },
         tempoRegistros: []
       };
-      
-      // Salvar a nova ordem no localStorage
-      const savedOrdens = localStorage.getItem('sgr-ordens');
-      let ordens = [];
-      
-      if (savedOrdens) {
-        ordens = JSON.parse(savedOrdens);
-        ordens.push(newOrder);
-      } else {
-        ordens = [newOrder];
-      }
-      
-      localStorage.setItem('sgr-ordens', JSON.stringify(ordens));
       
       toast.success("Ordem de serviço criada com sucesso!");
       
