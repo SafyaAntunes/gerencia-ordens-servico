@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, PlusCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { OrdemServico } from "@/types/ordens";
 
@@ -74,7 +74,7 @@ export default function Agenda({ onLogout }: AgendaProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState<"diaria" | "semanal" | "mensal">("semanal");
   const navigate = useNavigate();
-
+  
   // Navegar para semana anterior
   const goToPreviousWeek = () => {
     setCurrentDate(subWeeks(currentDate, 1));
@@ -99,10 +99,6 @@ export default function Agenda({ onLogout }: AgendaProps) {
         entregaDate.getFullYear() === date.getFullYear()
       );
     });
-  };
-  
-  const handleNovaOrdem = () => {
-    navigate("/ordens/nova");
   };
   
   const handleViewDetails = (ordemId: string) => {
@@ -141,10 +137,6 @@ export default function Agenda({ onLogout }: AgendaProps) {
             <Button variant="outline" size="icon" onClick={goToNextWeek}>
               <ChevronRight className="h-4 w-4" />
             </Button>
-            <Button onClick={handleNovaOrdem}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Nova Ordem
-            </Button>
           </div>
         </div>
         
@@ -180,9 +172,6 @@ export default function Agenda({ onLogout }: AgendaProps) {
                     }`}>
                       {format(day, "d", { locale: ptBR })}
                     </span>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleNovaOrdem}>
-                      <PlusCircle className="h-3 w-3" />
-                    </Button>
                   </div>
                   
                   <div className="space-y-1">
