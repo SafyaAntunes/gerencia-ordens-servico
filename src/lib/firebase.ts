@@ -9,7 +9,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyC-_ZHD6Q3MMt-AhD5x3VS1iCGuT_PegOc",
   authDomain: "sgestaoretifica.firebaseapp.com",
   projectId: "sgestaoretifica",
-  storageBucket: "sgestaoretifica.appspot.com",
+  storageBucket: "sgestaoretifica.firebasestorage.app",
   messagingSenderId: "1044361584868",
   appId: "1:1044361584868:web:3a40fdca12a0b5142a8cf1"
 };

@@ -9,7 +9,11 @@ import { collection, addDoc, doc, setDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 
-export default function NovaOrdem() {
+interface NovaOrdemProps {
+  onLogout?: () => void;
+}
+
+export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -89,7 +93,7 @@ export default function NovaOrdem() {
   };
   
   return (
-    <Layout>
+    <Layout onLogout={onLogout}>
       <h1 className="text-2xl font-bold mb-6">Nova Ordem de Serviço</h1>
       
       <OrdemForm 
