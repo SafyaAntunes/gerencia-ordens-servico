@@ -1,6 +1,14 @@
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { LogoutProps } from "@/types/props";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
+import { ChevronLeft } from "lucide-react";
+import { OrdemServico } from "@/types/ordens";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, storage } from "@/lib/firebase";
 
 interface OrdemDetalhesProps extends LogoutProps {}
 
@@ -25,7 +33,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
           
-          // Format dates
           const ordemFormatada: OrdemServico = {
             ...data,
             id: docSnap.id,
@@ -55,19 +62,13 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
     try {
       if (!id) return;
       
-      // Process and upload new images
       const processImages = async (files: File[], folder: string, existingUrls: string[] = []): Promise<string[]> => {
         const imageUrls: string[] = [...existingUrls];
         
         for (const file of files) {
           if (file && file instanceof File) {
-            // Create a reference to the file in Firebase Storage
             const fileRef = ref(storage, `${folder}/${Date.now()}_${file.name}`);
-            
-            // Upload the file
             await uploadBytes(fileRef, file);
-            
-            // Get download URL
             const url = await getDownloadURL(fileRef);
             imageUrls.push(url);
           }
@@ -76,7 +77,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
         return imageUrls;
       };
       
-      // Update ordem object
       const updatedOrder: Partial<OrdemServico> = {
         nome: values.nome,
         cliente: {
@@ -94,7 +94,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
         }))
       };
       
-      // Process new photos if any
       if (values.fotosEntrada && values.fotosEntrada.length > 0) {
         const existingEntradaUrls = ordem?.fotosEntrada?.filter(url => typeof url === 'string') || [];
         const newEntradaUrls = await processImages(
@@ -115,7 +114,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
         updatedOrder.fotosSaida = newSaidaUrls;
       }
       
-      // Update in Firestore
       const orderRef = doc(db, "ordens", id);
       await updateDoc(orderRef, updatedOrder);
       
@@ -129,7 +127,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
     }
   };
 
-  // Prepare data for form
   const prepareFormData = () => {
     if (!ordem) return {};
     

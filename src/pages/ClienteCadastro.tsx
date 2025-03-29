@@ -1,8 +1,72 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage
+} from "@/components/ui/form";
+import { 
+  User, 
+  Car, 
+  Phone, 
+  Mail, 
+  MapPin, 
+  ClipboardList, 
+  AlertCircle, 
+  Save, 
+  PlusCircle, 
+  Trash 
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Cliente, Motor } from "@/types/ordens";
 import { LogoutProps } from "@/types/props";
+
+// Define form schemas
+const clienteFormSchema = z.object({
+  nome: z.string().min(1, "Nome é obrigatório"),
+  telefone: z.string().min(1, "Telefone é obrigatório"),
+  email: z.string().email("Email inválido").min(1, "Email é obrigatório"),
+  endereco: z.string().optional(),
+  cnpj_cpf: z.string().optional(),
+  observacoes: z.string().optional()
+});
+
+const motorFormSchema = z.object({
+  marca: z.string().min(1, "Marca é obrigatória"),
+  modelo: z.string().min(1, "Modelo é obrigatório"),
+  ano: z.string().optional(),
+  numeroSerie: z.string().optional(),
+  cilindradas: z.string().optional(),
+  observacoes: z.string().optional()
+});
+
+// Define form value types
+type ClienteFormValues = z.infer<typeof clienteFormSchema>;
+type MotorFormValues = z.infer<typeof motorFormSchema>;
+
+// Mock clientes for development
+const CLIENTES_MOCK: Cliente[] = [
+  {
+    id: "1",
+    nome: "Cliente Exemplo",
+    telefone: "(11) 99999-9999",
+    email: "exemplo@email.com",
+    motores: []
+  }
+];
 
 interface ClienteCadastroProps extends LogoutProps {}
 
