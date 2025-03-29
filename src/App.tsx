@@ -18,7 +18,7 @@ import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
 import { useEffect, useState } from "react";
 import { auth } from "./lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +38,15 @@ const App = () => {
     
     return () => unsubscribe();
   }, []);
+  
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      // User will be redirected due to the auth state change
+    } catch (error) {
+      console.error("Error signing out: ", error);
+    }
+  };
   
   if (loading) {
     return <div className="flex items-center justify-center h-screen">Carregando...</div>;
@@ -61,47 +70,47 @@ const App = () => {
             
             <Route 
               path="/" 
-              element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <Dashboard onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/ordens" 
-              element={isAuthenticated ? <Ordens /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <Ordens onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/ordens/nova" 
-              element={isAuthenticated ? <NovaOrdem /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <NovaOrdem onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/ordens/:id" 
-              element={isAuthenticated ? <OrdemDetalhes /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <OrdemDetalhes onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/funcionarios" 
-              element={isAuthenticated ? <Funcionarios /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <Funcionarios onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/clientes" 
-              element={isAuthenticated ? <Clientes /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <Clientes onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/clientes/cadastro" 
-              element={isAuthenticated ? <ClienteCadastro /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <ClienteCadastro onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/clientes/editar/:id" 
-              element={isAuthenticated ? <ClienteCadastro /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <ClienteCadastro onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/agenda" 
-              element={isAuthenticated ? <Agenda /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <Agenda onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/relatorios" 
-              element={isAuthenticated ? <Relatorios /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <Relatorios onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/configuracoes" 
-              element={isAuthenticated ? <Configuracoes /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <Configuracoes onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
             />
             
             <Route path="*" element={<NotFound />} />
