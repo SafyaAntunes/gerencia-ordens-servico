@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -175,94 +176,96 @@ const Agenda = ({ onLogout }: AgendaProps) => {
               </div>
               
               <div className="mt-4">
-                <TabsContent value="month" className="mt-0">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={setDate}
-                    className="border rounded-md"
-                    modifiers={{
-                      event: (date) => getEventsByDate(date).length > 0,
-                    }}
-                    modifiersClassNames={{
-                      event: "bg-primary/10 font-medium text-primary",
-                    }}
-                  />
-                </TabsContent>
-                
-                <TabsContent value="day" className="mt-0">
-                  <div className="border rounded-md p-4">
-                    <h3 className="font-medium mb-4">Eventos do dia</h3>
-                    {date && getEventsByDate(date).length > 0 ? (
-                      <div className="space-y-3">
-                        {getEventsByDate(date).map((event) => (
-                          <div 
-                            key={event.id}
-                            className={`p-3 rounded-md border ${getEventColor(event.type)}`}
-                          >
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="font-medium">{event.title}</p>
-                                <p className="text-sm">
-                                  {event.date.toLocaleTimeString('pt-BR', { 
-                                    hour: '2-digit', 
-                                    minute: '2-digit' 
-                                  })}
-                                </p>
+                <Tabs value={view} className="mt-0">
+                  <TabsContent value="month">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={setDate}
+                      className="border rounded-md"
+                      modifiers={{
+                        event: (date) => getEventsByDate(date).length > 0,
+                      }}
+                      modifiersClassNames={{
+                        event: "bg-primary/10 font-medium text-primary",
+                      }}
+                    />
+                  </TabsContent>
+                  
+                  <TabsContent value="day">
+                    <div className="border rounded-md p-4">
+                      <h3 className="font-medium mb-4">Eventos do dia</h3>
+                      {date && getEventsByDate(date).length > 0 ? (
+                        <div className="space-y-3">
+                          {getEventsByDate(date).map((event) => (
+                            <div 
+                              key={event.id}
+                              className={`p-3 rounded-md border ${getEventColor(event.type)}`}
+                            >
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <p className="font-medium">{event.title}</p>
+                                  <p className="text-sm">
+                                    {event.date.toLocaleTimeString('pt-BR', { 
+                                      hour: '2-digit', 
+                                      minute: '2-digit' 
+                                    })}
+                                  </p>
+                                </div>
+                                <Button variant="ghost" size="sm">Detalhes</Button>
                               </div>
-                              <Button variant="ghost" size="sm">Detalhes</Button>
                             </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <CalendarIcon className="mx-auto h-12 w-12 mb-2 opacity-30" />
+                          <p>Nenhum evento para este dia</p>
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="week">
+                    <div className="border rounded-md">
+                      <div className="grid grid-cols-7 gap-px bg-muted">
+                        {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((day) => (
+                          <div key={day} className="bg-background p-2 text-center font-medium">
+                            {day}
                           </div>
                         ))}
                       </div>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <CalendarIcon className="mx-auto h-12 w-12 mb-2 opacity-30" />
-                        <p>Nenhum evento para este dia</p>
+                      <div className="grid grid-cols-7 gap-px bg-muted">
+                        {Array.from({ length: 7 }).map((_, i) => {
+                          const dayDate = new Date(date || new Date());
+                          dayDate.setDate(dayDate.getDate() - dayDate.getDay() + i);
+                          const dayEvents = getEventsByDate(dayDate);
+                          
+                          return (
+                            <div key={i} className="bg-background p-2 min-h-[120px]">
+                              <div className="font-medium text-sm mb-1">
+                                {dayDate.getDate()}
+                              </div>
+                              <div className="space-y-1">
+                                {dayEvents.map((event) => (
+                                  <div 
+                                    key={event.id}
+                                    className={`text-xs p-1 rounded truncate ${getEventColor(event.type)}`}
+                                  >
+                                    {event.date.toLocaleTimeString('pt-BR', { 
+                                      hour: '2-digit', 
+                                      minute: '2-digit' 
+                                    })} - {event.title}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    )}
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="week" className="mt-0">
-                  <div className="border rounded-md">
-                    <div className="grid grid-cols-7 gap-px bg-muted">
-                      {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((day) => (
-                        <div key={day} className="bg-background p-2 text-center font-medium">
-                          {day}
-                        </div>
-                      ))}
                     </div>
-                    <div className="grid grid-cols-7 gap-px bg-muted">
-                      {Array.from({ length: 7 }).map((_, i) => {
-                        const dayDate = new Date(date || new Date());
-                        dayDate.setDate(dayDate.getDate() - dayDate.getDay() + i);
-                        const dayEvents = getEventsByDate(dayDate);
-                        
-                        return (
-                          <div key={i} className="bg-background p-2 min-h-[120px]">
-                            <div className="font-medium text-sm mb-1">
-                              {dayDate.getDate()}
-                            </div>
-                            <div className="space-y-1">
-                              {dayEvents.map((event) => (
-                                <div 
-                                  key={event.id}
-                                  className={`text-xs p-1 rounded truncate ${getEventColor(event.type)}`}
-                                >
-                                  {event.date.toLocaleTimeString('pt-BR', { 
-                                    hour: '2-digit', 
-                                    minute: '2-digit' 
-                                  })} - {event.title}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </TabsContent>
+                  </TabsContent>
+                </Tabs>
               </div>
             </div>
           </CardContent>
