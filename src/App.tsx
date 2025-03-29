@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,15 +19,13 @@ import { useEffect, useState } from "react";
 import { auth } from "./lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useAuth } from "./hooks/useFirebase";
-
-// Adicionar dependência uuid
-<lov-add-dependency>uuid@latest</lov-add-dependency>
+import { v4 as uuidv4 } from "uuid";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutos
-      cacheTime: 1000 * 60 * 30, // 30 minutos
+      gcTime: 1000 * 60 * 30, // 30 minutos (formerly cacheTime)
     },
   },
 });
@@ -38,7 +35,6 @@ interface ProtectedRouteProps {
   minimumPermission?: 'admin' | 'gerente' | 'tecnico' | 'visualizacao';
 }
 
-// Componente para proteger rotas que precisam de autenticação
 const ProtectedRoute = ({ children, minimumPermission = 'visualizacao' }: ProtectedRouteProps) => {
   const { user, loading, funcionario, hasPermission } = useAuth();
   const location = useLocation();
@@ -51,7 +47,6 @@ const ProtectedRoute = ({ children, minimumPermission = 'visualizacao' }: Protec
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
   
-  // Se um nível mínimo de permissão é necessário, verificamos
   if (minimumPermission && funcionario && !hasPermission(minimumPermission)) {
     return <Navigate to="/" replace />;
   }
@@ -69,10 +64,8 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Rota pública */}
             <Route path="/login" element={<Login />} />
             
-            {/* Rotas protegidas */}
             <Route 
               path="/" 
               element={

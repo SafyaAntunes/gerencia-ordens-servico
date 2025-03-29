@@ -274,3 +274,52 @@ export const useImages = () => {
     uploadBase64Image
   };
 };
+
+// Funcionarios hook
+export const useFuncionarios = () => {
+  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch all employees
+  const fetchFuncionarios = async () => {
+    setLoading(true);
+    try {
+      const funcionariosData = await firebaseService.getAllFuncionarios();
+      setFuncionarios(funcionariosData);
+    } catch (error) {
+      toast.error('Erro ao carregar funcionários.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Get a single employee
+  const getFuncionario = async (id: string) => {
+    try {
+      return await firebaseService.getFuncionario(id);
+    } catch (error) {
+      toast.error('Erro ao carregar funcionário.');
+      return null;
+    }
+  };
+
+  // Save an employee
+  const saveFuncionario = async (funcionario: Funcionario) => {
+    try {
+      await firebaseService.saveFuncionario(funcionario);
+      toast.success('Funcionário salvo com sucesso!');
+      return true;
+    } catch (error) {
+      toast.error('Erro ao salvar funcionário.');
+      return false;
+    }
+  };
+
+  return {
+    funcionarios,
+    loading,
+    fetchFuncionarios,
+    getFuncionario,
+    saveFuncionario
+  };
+};

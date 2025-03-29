@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PlusCircle, Filter, Search, Users, CheckCircle2, Shield, Lock } from "lucide-react";
 import Layout from "@/components/layout/Layout";
@@ -66,7 +65,6 @@ const formSchema = z.object({
   senha: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres" }).optional(),
   confirmarSenha: z.string().optional(),
 }).refine((data) => {
-  // Se a senha foi fornecida, confirmarSenha deve ser igual
   if (data.senha) {
     return data.senha === data.confirmarSenha;
   }
@@ -119,8 +117,14 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
     const { confirmarSenha, ...funcionarioData } = values;
     
     const novoFuncionario: Funcionario = {
-      ...funcionarioData,
       id: uuidv4(),
+      nome: funcionarioData.nome,
+      email: funcionarioData.email,
+      telefone: funcionarioData.telefone,
+      especialidades: funcionarioData.especialidades,
+      ativo: funcionarioData.ativo,
+      nivelPermissao: funcionarioData.nivelPermissao,
+      senha: funcionarioData.senha,
     };
     
     const success = await saveFuncionario(novoFuncionario);
