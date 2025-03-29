@@ -10,7 +10,8 @@ import {
   deleteDoc, 
   query, 
   where, 
-  Timestamp 
+  Timestamp,
+  serverTimestamp
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { 
@@ -21,6 +22,7 @@ import {
   updateProfile
 } from "firebase/auth";
 import { OrdemServico, Cliente, Motor } from "@/types/ordens";
+import { Funcionario, NivelPermissao } from "@/types/funcionarios";
 
 // Authentication services
 export const signUp = async (email: string, password: string) => {
@@ -37,6 +39,105 @@ export const signOut = async () => {
 
 export const resetPassword = async (email: string) => {
   return sendPasswordResetEmail(auth, email);
+};
+
+// Funcionario services
+export const saveFuncionario = async (funcionario: Funcionario): Promise<boolean> => {
+  try {
+    const { senha, ...funcionarioData } = funcionario;
+    
+    // Se tem senha, é um novo usuário - criar autenticação
+    if (senha && funcionario.email) {
+      try {
+        // Criar o usuário de autenticação
+        const userCredential = await createUserWithEmailAndPassword(auth, funcionario.email, senha);
+        
+        // Atualizar o nome do perfil
+        await updateProfile(userCredential.user, {
+          displayName: funcionario.nome
+        });
+        
+        // Adicionar UID do usuário ao funcionário
+        funcionarioData.id = userCredential.user.uid;
+      } catch (error: any) {
+        console.error("Erro ao criar usuário de autenticação:", error);
+        
+        // Se o erro for de usuário existente, continuamos, pois pode ser uma edição
+        if (error.code !== "auth/email-already-in-use") {
+          throw error;
+        }
+      }
+    }
+    
+    // Salvar os dados do funcionário (sem a senha) no Firestore
+    await setDoc(doc(db, "funcionarios", funcionarioData.id), {
+      ...funcionarioData,
+      ultimaAtualizacao: serverTimestamp()
+    });
+    
+    return true;
+  } catch (error) {
+    console.error("Erro ao salvar funcionário:", error);
+    throw error;
+  }
+};
+
+export const getFuncionario = async (id: string): Promise<Funcionario | null> => {
+  try {
+    const docRef = doc(db, "funcionarios", id);
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      return docSnap.data() as Funcionario;
+    } else {
+      return null;
+    }
+  } catch (error) {
+    console.error("Erro ao buscar funcionário:", error);
+    throw error;
+  }
+};
+
+export const getAllFuncionarios = async (): Promise<Funcionario[]> => {
+  try {
+    const querySnapshot = await getDocs(collection(db, "funcionarios"));
+    return querySnapshot.docs.map(doc => doc.data() as Funcionario);
+  } catch (error) {
+    console.error("Erro ao buscar funcionários:", error);
+    throw error;
+  }
+};
+
+export const updateFuncionario = async (funcionario: Funcionario): Promise<boolean> => {
+  try {
+    const { senha, ...funcionarioData } = funcionario;
+    
+    // Atualizar os dados do funcionário (sem a senha) no Firestore
+    await updateDoc(doc(db, "funcionarios", funcionarioData.id), {
+      ...funcionarioData,
+      ultimaAtualizacao: serverTimestamp()
+    });
+    
+    return true;
+  } catch (error) {
+    console.error("Erro ao atualizar funcionário:", error);
+    throw error;
+  }
+};
+
+export const deleteFuncionario = async (id: string): Promise<boolean> => {
+  try {
+    // Apenas marca como inativo em vez de excluir
+    await updateDoc(doc(db, "funcionarios", id), {
+      ativo: false,
+      ultimaAtualizacao: serverTimestamp()
+    });
+    
+    return true;
+  } catch (error) {
+    console.error("Erro ao excluir funcionário:", error);
+    throw error;
+  }
 };
 
 // Orders services

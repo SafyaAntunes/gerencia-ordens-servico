@@ -1,13 +1,14 @@
 
-import { Phone, Mail, Wrench } from "lucide-react";
+import { Phone, Mail, Wrench, Shield } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Funcionario } from "@/types/funcionarios";
+import { Funcionario, permissoesLabels } from "@/types/funcionarios";
 import { Separator } from "@/components/ui/separator";
 
 interface FuncionarioCardProps {
   funcionario: Funcionario;
   onClick?: () => void;
+  onEdit?: () => void;
 }
 
 const tipoServicoLabel = {
@@ -18,7 +19,7 @@ const tipoServicoLabel = {
   eixo_comando: "Eixo de Comando"
 };
 
-export default function FuncionarioCard({ funcionario, onClick }: FuncionarioCardProps) {
+export default function FuncionarioCard({ funcionario, onClick, onEdit }: FuncionarioCardProps) {
   // Extrair iniciais do nome para avatar
   const iniciais = funcionario.nome
     .split(" ")
@@ -35,9 +36,10 @@ export default function FuncionarioCard({ funcionario, onClick }: FuncionarioCar
         </div>
         <div>
           <h3 className="font-semibold text-lg">{funcionario.nome}</h3>
-          <p className="text-sm text-muted-foreground">
-            {funcionario.especialidades.length} especialidades
-          </p>
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            <Shield className="h-3.5 w-3.5" />
+            {permissoesLabels[funcionario.nivelPermissao || 'visualizacao']}
+          </div>
         </div>
       </CardHeader>
       
@@ -84,9 +86,16 @@ export default function FuncionarioCard({ funcionario, onClick }: FuncionarioCar
           {funcionario.ativo ? "Ativo" : "Inativo"}
         </span>
         
-        <Button variant="outline" size="sm" onClick={onClick}>
-          Ver detalhes
-        </Button>
+        <div className="flex gap-2">
+          {onEdit && (
+            <Button variant="outline" size="sm" onClick={onEdit}>
+              Editar
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={onClick}>
+            Ver detalhes
+          </Button>
+        </div>
       </CardFooter>
     </Card>
   );

@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { PlusCircle, Filter, Search, Users, CheckCircle2 } from "lucide-react";
+
+import { useState, useEffect } from "react";
+import { PlusCircle, Filter, Search, Users, CheckCircle2, Shield, Lock } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import FuncionarioCard from "@/components/funcionarios/FuncionarioCard";
 import FuncionarioDetalhes from "@/components/funcionarios/FuncionarioDetalhes";
@@ -34,51 +35,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Funcionario } from "@/types/funcionarios";
+import { Funcionario, NivelPermissao, permissoesLabels } from "@/types/funcionarios";
 import { TipoServico } from "@/types/ordens";
-
-const funcionarios: Funcionario[] = [
-  {
-    id: "1",
-    nome: "João Silva",
-    email: "joao.silva@email.com",
-    telefone: "(11) 98765-4321",
-    especialidades: ["bloco", "virabrequim"],
-    ativo: true,
-  },
-  {
-    id: "2",
-    nome: "Maria Oliveira",
-    email: "maria.oliveira@email.com",
-    telefone: "(11) 91234-5678",
-    especialidades: ["cabecote", "biela"],
-    ativo: true,
-  },
-  {
-    id: "3",
-    nome: "Pedro Santos",
-    email: "pedro.santos@email.com",
-    telefone: "(11) 98888-7777",
-    especialidades: ["eixo_comando", "virabrequim", "bloco"],
-    ativo: false,
-  },
-  {
-    id: "4",
-    nome: "Ana Costa",
-    email: "ana.costa@email.com",
-    telefone: "(11) 97777-6666",
-    especialidades: ["cabecote", "biela", "eixo_comando"],
-    ativo: true,
-  },
-  {
-    id: "5",
-    nome: "Roberto Ferreira",
-    email: "roberto.ferreira@email.com",
-    telefone: "(11) 96666-5555",
-    especialidades: ["bloco"],
-    ativo: true,
-  },
-];
+import { useFuncionarios, useAuth } from "@/hooks/useFirebase";
+import { toast } from "sonner";
+import { v4 as uuidv4 } from "uuid";
 
 const tiposServicos = [
   { id: "bloco", label: "Bloco" },
@@ -88,12 +49,31 @@ const tiposServicos = [
   { id: "eixo_comando", label: "Eixo de Comando" },
 ];
 
+const niveisPermissao = [
+  { id: "admin", label: "Administrador" },
+  { id: "gerente", label: "Gerente" },
+  { id: "tecnico", label: "Técnico" },
+  { id: "visualizacao", label: "Visualização" },
+];
+
 const formSchema = z.object({
   nome: z.string().min(2, { message: "Nome deve ter pelo menos 2 caracteres" }),
   email: z.string().email({ message: "E-mail inválido" }),
   telefone: z.string().min(8, { message: "Telefone inválido" }),
   especialidades: z.array(z.string()).min(1, { message: "Selecione pelo menos uma especialidade" }),
   ativo: z.boolean().default(true),
+  nivelPermissao: z.enum(["admin", "gerente", "tecnico", "visualizacao"]).default("visualizacao"),
+  senha: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres" }).optional(),
+  confirmarSenha: z.string().optional(),
+}).refine((data) => {
+  // Se a senha foi fornecida, confirmarSenha deve ser igual
+  if (data.senha) {
+    return data.senha === data.confirmarSenha;
+  }
+  return true;
+}, {
+  message: "As senhas não coincidem",
+  path: ["confirmarSenha"],
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -105,6 +85,21 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
   const [statusFilter, setStatusFilter] = useState<"ativos" | "inativos" | "todos">("todos");
   const [selectedFuncionario, setSelectedFuncionario] = useState<Funcionario | null>(null);
   const [isDetalhesOpen, setIsDetalhesOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [funcionariosLista, setFuncionariosLista] = useState<Funcionario[]>([]);
+  
+  const { funcionarios, loading, fetchFuncionarios, saveFuncionario } = useFuncionarios();
+  const { funcionario: currentUser, hasPermission } = useAuth();
+  
+  useEffect(() => {
+    fetchFuncionarios();
+  }, []);
+  
+  useEffect(() => {
+    if (funcionarios) {
+      setFuncionariosLista(funcionarios);
+    }
+  }, [funcionarios]);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -114,14 +109,27 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
       telefone: "",
       especialidades: [],
       ativo: true,
+      nivelPermissao: "visualizacao",
+      senha: "",
+      confirmarSenha: "",
     },
   });
   
-  const handleCreateFuncionario = (values: FormValues) => {
-    console.log("Novo funcionário:", values);
-    setIsDialogOpen(false);
-    form.reset();
-    // Aqui você adicionaria o novo funcionário ao estado ou enviaria para a API
+  const handleCreateFuncionario = async (values: FormValues) => {
+    const { confirmarSenha, ...funcionarioData } = values;
+    
+    const novoFuncionario: Funcionario = {
+      ...funcionarioData,
+      id: uuidv4(),
+    };
+    
+    const success = await saveFuncionario(novoFuncionario);
+    
+    if (success) {
+      setIsDialogOpen(false);
+      form.reset();
+      fetchFuncionarios();
+    }
   };
   
   const handleViewDetails = (funcionario: Funcionario) => {
@@ -129,7 +137,25 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
     setIsDetalhesOpen(true);
   };
   
-  const filteredFuncionarios = funcionarios.filter((funcionario) => {
+  const handleEditFuncionario = (funcionario: Funcionario) => {
+    setSelectedFuncionario(funcionario);
+    setIsEditing(true);
+    
+    form.reset({
+      nome: funcionario.nome,
+      email: funcionario.email,
+      telefone: funcionario.telefone,
+      especialidades: funcionario.especialidades,
+      ativo: funcionario.ativo,
+      nivelPermissao: funcionario.nivelPermissao || "visualizacao",
+      senha: "",
+      confirmarSenha: "",
+    });
+    
+    setIsDialogOpen(true);
+  };
+  
+  const filteredFuncionarios = funcionariosLista.filter((funcionario) => {
     const matchesSearch = searchTerm === "" ||
       funcionario.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       funcionario.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -146,6 +172,8 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
   
   const funcionariosAtivos = filteredFuncionarios.filter(f => f.ativo);
   const funcionariosInativos = filteredFuncionarios.filter(f => !f.ativo);
+
+  const canManageFuncionarios = currentUser && hasPermission('gerente');
   
   return (
     <Layout onLogout={onLogout}>
@@ -158,10 +186,25 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
             </p>
           </div>
           
-          <Button onClick={() => setIsDialogOpen(true)}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Novo Funcionário
-          </Button>
+          {canManageFuncionarios && (
+            <Button onClick={() => {
+              setIsEditing(false);
+              form.reset({
+                nome: "",
+                email: "",
+                telefone: "",
+                especialidades: [],
+                ativo: true,
+                nivelPermissao: "visualizacao",
+                senha: "",
+                confirmarSenha: "",
+              });
+              setIsDialogOpen(true);
+            }}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Novo Funcionário
+            </Button>
+          )}
         </div>
         
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -239,12 +282,18 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
                 <Users className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium">Nenhum funcionário encontrado</h3>
                 <p className="text-sm text-muted-foreground mt-1 max-w-md">
-                  Não encontramos nenhum funcionário com os filtros selecionados. Tente ajustar os filtros ou adicionar um novo funcionário.
+                  Não encontramos nenhum funcionário com os filtros selecionados. {canManageFuncionarios && "Tente ajustar os filtros ou adicionar um novo funcionário."}
                 </p>
-                <Button className="mt-4" onClick={() => setIsDialogOpen(true)}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Novo Funcionário
-                </Button>
+                {canManageFuncionarios && (
+                  <Button className="mt-4" onClick={() => {
+                    setIsEditing(false);
+                    form.reset();
+                    setIsDialogOpen(true);
+                  }}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Novo Funcionário
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -253,6 +302,7 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
                     key={funcionario.id}
                     funcionario={funcionario}
                     onClick={() => handleViewDetails(funcionario)}
+                    onEdit={canManageFuncionarios ? () => handleEditFuncionario(funcionario) : undefined}
                   />
                 ))}
               </div>
@@ -267,10 +317,16 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
                 <p className="text-sm text-muted-foreground mt-1 max-w-md">
                   Não encontramos nenhum funcionário ativo com os filtros selecionados.
                 </p>
-                <Button className="mt-4" onClick={() => setIsDialogOpen(true)}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Novo Funcionário
-                </Button>
+                {canManageFuncionarios && (
+                  <Button className="mt-4" onClick={() => {
+                    setIsEditing(false);
+                    form.reset();
+                    setIsDialogOpen(true);
+                  }}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Novo Funcionário
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -279,6 +335,7 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
                     key={funcionario.id}
                     funcionario={funcionario}
                     onClick={() => handleViewDetails(funcionario)}
+                    onEdit={canManageFuncionarios ? () => handleEditFuncionario(funcionario) : undefined}
                   />
                 ))}
               </div>
@@ -301,6 +358,7 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
                     key={funcionario.id}
                     funcionario={funcionario}
                     onClick={() => handleViewDetails(funcionario)}
+                    onEdit={canManageFuncionarios ? () => handleEditFuncionario(funcionario) : undefined}
                   />
                 ))}
               </div>
@@ -311,9 +369,9 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
-              <DialogTitle>Novo Funcionário</DialogTitle>
+              <DialogTitle>{isEditing ? "Editar Funcionário" : "Novo Funcionário"}</DialogTitle>
               <DialogDescription>
-                Preencha todos os campos para cadastrar um novo funcionário.
+                Preencha todos os campos para {isEditing ? "atualizar" : "cadastrar"} um funcionário.
               </DialogDescription>
             </DialogHeader>
             
@@ -358,6 +416,39 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
                       <FormControl>
                         <Input type="email" placeholder="email@exemplo.com" {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="nivelPermissao"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nível de Permissão</FormLabel>
+                      <FormDescription className="flex items-center gap-1">
+                        <Shield className="h-3.5 w-3.5" />
+                        Defina o que este funcionário pode fazer no sistema
+                      </FormDescription>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione um nível" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {niveisPermissao.map(nivel => (
+                            <SelectItem key={nivel.id} value={nivel.id}>
+                              {nivel.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -415,6 +506,49 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
                     />
                   </div>
                 </div>
+
+                {!isEditing && (
+                  <div className="space-y-4 rounded-md border border-border p-4">
+                    <div className="flex items-center">
+                      <Lock className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <FormLabel className="text-base">Credenciais de Acesso</FormLabel>
+                    </div>
+                    
+                    <FormDescription className="mt-0">
+                      Defina uma senha para que o funcionário possa acessar o sistema.
+                    </FormDescription>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="senha"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Senha</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="••••••••" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="confirmarSenha"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Confirmar Senha</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="••••••••" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                )}
                 
                 <FormField
                   control={form.control}
@@ -450,7 +584,7 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
                   >
                     Cancelar
                   </Button>
-                  <Button type="submit">Salvar</Button>
+                  <Button type="submit">{isEditing ? "Atualizar" : "Salvar"}</Button>
                 </div>
               </form>
             </Form>

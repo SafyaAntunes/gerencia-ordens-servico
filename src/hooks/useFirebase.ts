@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth } from '@/lib/firebase';
@@ -6,16 +5,31 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { toast } from 'sonner';
 import * as firebaseService from '@/services/firebaseService';
 import { OrdemServico, Cliente, Motor } from '@/types/ordens';
+import { Funcionario, NivelPermissao } from '@/types/funcionarios';
 
 // Authentication hook
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [funcionario, setFuncionario] = useState<Funcionario | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      
+      // Se o usuário estiver logado, buscar seus dados de funcionário
+      if (currentUser) {
+        try {
+          const funcionarioData = await firebaseService.getFuncionario(currentUser.uid);
+          setFuncionario(funcionarioData);
+        } catch (error) {
+          console.error("Erro ao buscar dados do funcionário:", error);
+        }
+      } else {
+        setFuncionario(null);
+      }
+      
       setLoading(false);
     });
 
@@ -27,7 +41,19 @@ export const useAuth = () => {
       await firebaseService.signIn(email, password);
       return true;
     } catch (error: any) {
-      toast.error(error.message || 'Falha ao entrar. Verifique suas credenciais.');
+      let message = 'Falha ao entrar. Verifique suas credenciais.';
+      
+      if (error.code === 'auth/invalid-credential') {
+        message = 'Email ou senha inválidos.';
+      } else if (error.code === 'auth/user-not-found') {
+        message = 'Usuário não encontrado.';
+      } else if (error.code === 'auth/wrong-password') {
+        message = 'Senha incorreta.';
+      } else if (error.code === 'auth/too-many-requests') {
+        message = 'Muitas tentativas de login. Tente novamente mais tarde.';
+      }
+      
+      toast.error(message);
       return false;
     }
   };
@@ -40,8 +66,24 @@ export const useAuth = () => {
       toast.error(error.message || 'Erro ao sair.');
     }
   };
+  
+  const hasPermission = (requiredLevel: NivelPermissao): boolean => {
+    if (!funcionario) return false;
+    
+    const permissionLevels: { [key in NivelPermissao]: number } = {
+      visualizacao: 1,
+      tecnico: 2,
+      gerente: 3,
+      admin: 4
+    };
+    
+    const userLevel = permissionLevels[funcionario.nivelPermissao || 'visualizacao'];
+    const required = permissionLevels[requiredLevel];
+    
+    return userLevel >= required;
+  };
 
-  return { user, loading, login, logout };
+  return { user, funcionario, loading, login, logout, hasPermission };
 };
 
 // Orders hook
