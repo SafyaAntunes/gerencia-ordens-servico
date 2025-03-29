@@ -129,7 +129,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
     if (!id || !ordem || !funcionario) return;
     
     try {
-      const etapasAndamento = { ...ordem.etapasAndamento } || {};
+      const etapasAndamento = { ...(ordem.etapasAndamento || {}) };
       
       etapasAndamento[etapa] = {
         concluido: false,
@@ -160,7 +160,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
     if (!id || !ordem) return;
     
     try {
-      const etapasAndamento = { ...ordem.etapasAndamento } || {};
+      const etapasAndamento = { ...(ordem.etapasAndamento || {}) };
       
       etapasAndamento[etapa] = {
         ...etapasAndamento[etapa],

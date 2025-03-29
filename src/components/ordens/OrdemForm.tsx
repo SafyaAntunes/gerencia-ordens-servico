@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -46,7 +45,6 @@ const CLIENTES = [
   { id: "5", nome: "Transportadora Rodovia" },
 ];
 
-// Motores de exemplo para demonstração
 const MOTORES: Record<string, Motor[]> = {
   "1": [
     { id: "101", marca: "Ford", modelo: "Zetec Rocam 1.0", numeroSerie: "ZR10-123456", ano: "2018" },
@@ -90,6 +88,7 @@ type OrdemFormProps = {
   defaultValues?: Partial<FormValues>;
   defaultFotosEntrada?: any[];
   defaultFotosSaida?: any[];
+  onCancel?: () => void;
 };
 
 const tiposServico: { value: TipoServico; label: string }[] = [
@@ -106,6 +105,7 @@ export default function OrdemForm({
   defaultValues,
   defaultFotosEntrada = [],
   defaultFotosSaida = [],
+  onCancel,
 }: OrdemFormProps) {
   const [servicosDescricoes, setServicosDescricoes] = useState<Record<string, string>>({});
   const [fotosEntrada, setFotosEntrada] = useState<File[]>([]);
@@ -114,17 +114,13 @@ export default function OrdemForm({
   const [selectedClienteId, setSelectedClienteId] = useState<string>(defaultValues?.clienteId || "");
   const [motores, setMotores] = useState<Motor[]>([]);
   
-  // Converter fotos de base64 para objetos para exibição
   useEffect(() => {
     const processDefaultFotos = () => {
       if (defaultFotosEntrada && defaultFotosEntrada.length > 0) {
-        // As fotos já estão em formato utilizável
         const processedFotos = defaultFotosEntrada.map((foto: any) => {
-          // Se for um objeto com propriedade data (formato base64)
           if (foto && typeof foto === 'object' && 'data' in foto) {
             return foto.data;
           }
-          // Se já for uma string base64
           return foto;
         });
         setFotosEntrada(processedFotos as any);
@@ -144,11 +140,8 @@ export default function OrdemForm({
     processDefaultFotos();
   }, [defaultFotosEntrada, defaultFotosSaida]);
   
-  // Carregar motores do cliente selecionado
   useEffect(() => {
     if (selectedClienteId) {
-      // Em um cenário real, buscaríamos os motores do cliente no backend
-      // Como estamos usando dados mockados, carregamos do objeto MOTORES
       const clienteMotores = MOTORES[selectedClienteId] || [];
       setMotores(clienteMotores);
     } else {
@@ -197,7 +190,7 @@ export default function OrdemForm({
   
   const handleClienteChange = (clienteId: string) => {
     setSelectedClienteId(clienteId);
-    form.setValue("motorId", ""); // Resetar o motor selecionado ao mudar de cliente
+    form.setValue("motorId", "");
   };
   
   return (
@@ -291,7 +284,6 @@ export default function OrdemForm({
               )}
             />
 
-            {/* Campo de seleção de motor */}
             <FormField
               control={form.control}
               name="motorId"
@@ -531,7 +523,7 @@ export default function OrdemForm({
           <Button 
             type="button" 
             variant="outline"
-            onClick={() => form.reset()}
+            onClick={onCancel || (() => form.reset())}
           >
             <X className="mr-2 h-4 w-4" />
             Cancelar

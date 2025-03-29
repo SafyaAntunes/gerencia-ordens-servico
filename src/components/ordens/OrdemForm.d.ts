@@ -7,6 +7,7 @@ interface OrdemFormProps {
   defaultValues?: Partial<OrdemServico>;
   defaultFotosEntrada?: any[];
   defaultFotosSaida?: any[];
+  onCancel?: () => void;
 }
 
 declare const OrdemForm: React.FC<OrdemFormProps>;
