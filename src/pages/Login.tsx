@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,8 +12,17 @@ const Login = () => {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Redirecionar para a página inicial se o usuário já estiver logado
+  useEffect(() => {
+    if (user) {
+      const from = location.state?.from?.pathname || "/";
+      navigate(from);
+    }
+  }, [user, navigate, location]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,8 +37,11 @@ const Login = () => {
       const success = await login(identifier, password);
       
       if (success) {
-        navigate("/");
+        const from = location.state?.from?.pathname || "/";
+        navigate(from);
       }
+    } catch (error) {
+      console.error("Erro no login:", error);
     } finally {
       setIsSubmitting(false);
     }

@@ -54,7 +54,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    console.log('Setting up auth state listener');
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      console.log('Auth state changed:', authUser ? 'logged in' : 'logged out');
       setUser(authUser);
       
       if (authUser) {
@@ -71,6 +73,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (emailOrUsername: string, password: string) => {
     try {
+      console.log('Attempting login with:', emailOrUsername);
       // First try direct login with email
       try {
         const userCredential = await signInWithEmailAndPassword(auth, emailOrUsername, password);

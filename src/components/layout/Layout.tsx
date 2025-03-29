@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useLocation, Navigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -15,14 +15,29 @@ export type LayoutProps = {
 export default function Layout({ children }: LayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const { user, logout, loading } = useAuth();
 
-  // Redirect if not authenticated
-  if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+  // Redirecione para login se não estiver autenticado
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/login");
+    }
+  }, [user, loading, navigate]);
+
+  // Se ainda estiver carregando, mostre um indicador de carregamento
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
   }
 
-  // Close sidebar on route change on mobile
+  // Fechar sidebar na mudança de rota em mobile
   useEffect(() => {
     setIsSidebarOpen(false);
   }, [location.pathname]);

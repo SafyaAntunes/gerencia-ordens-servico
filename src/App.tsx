@@ -31,6 +31,7 @@ const queryClient = new QueryClient({
   },
 });
 
+// Componente de rota protegida
 const ProtectedRoute = ({ 
   children, 
   requiredPermission 
@@ -42,7 +43,12 @@ const ProtectedRoute = ({
   const location = useLocation();
 
   if (loading) {
-    return <div className="flex h-screen items-center justify-center">Carregando...</div>;
+    return <div className="flex h-screen items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
+        <p>Carregando...</p>
+      </div>
+    </div>;
   }
 
   if (!user) {
@@ -56,6 +62,7 @@ const ProtectedRoute = ({
   return children;
 };
 
+// Componente para configuração do admin
 const SetupAdmin = () => {
   const { user } = useAuth();
   
@@ -124,9 +131,9 @@ const SetupAdmin = () => {
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
+      <BrowserRouter>
         <TooltipProvider>
-          <BrowserRouter>
+          <AuthProvider>
             <SetupAdmin />
             <Routes>
               <Route path="/login" element={<Login />} />
@@ -201,9 +208,9 @@ const App = () => {
             </Routes>
             <Toaster />
             <Sonner />
-          </BrowserRouter>
+          </AuthProvider>
         </TooltipProvider>
-      </AuthProvider>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 };
