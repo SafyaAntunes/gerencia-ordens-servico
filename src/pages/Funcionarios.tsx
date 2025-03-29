@@ -121,7 +121,7 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
       nome: funcionarioData.nome,
       email: funcionarioData.email,
       telefone: funcionarioData.telefone,
-      especialidades: funcionarioData.especialidades,
+      especialidades: funcionarioData.especialidades as TipoServico[],
       ativo: funcionarioData.ativo,
       nivelPermissao: funcionarioData.nivelPermissao,
       senha: funcionarioData.senha,
