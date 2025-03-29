@@ -1,14 +1,16 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { LogoutProps } from "@/types/props";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner"; // Change to import from sonner instead
 import { ChevronLeft } from "lucide-react";
 import { OrdemServico } from "@/types/ordens";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
+import OrdemForm from "@/components/ordens/OrdemForm";
 
 interface OrdemDetalhesProps extends LogoutProps {}
 
@@ -170,7 +172,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
   }
 
   return (
-    <Layout>
+    <Layout onLogout={onLogout}>
       <div className="mb-6">
         <Button
           variant="outline"
@@ -181,15 +183,15 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
           <ChevronLeft className="mr-2 h-4 w-4" />
           Voltar para listagem
         </Button>
-        <h1 className="text-2xl font-bold">Editar Ordem {ordem.id}</h1>
+        <h1 className="text-2xl font-bold">Editar Ordem {ordem?.id}</h1>
       </div>
       
       <OrdemForm 
         onSubmit={handleSubmit}
         isLoading={isSubmitting}
         defaultValues={prepareFormData()}
-        defaultFotosEntrada={ordem.fotosEntrada || []}
-        defaultFotosSaida={ordem.fotosSaida || []}
+        defaultFotosEntrada={ordem?.fotosEntrada || []}
+        defaultFotosSaida={ordem?.fotosSaida || []}
       />
     </Layout>
   );
