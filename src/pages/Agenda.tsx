@@ -1,213 +1,275 @@
-
 import { useState } from "react";
-import { format, addDays, startOfWeek, addWeeks, subWeeks, isToday, getDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, PlusCircle } from "lucide-react";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { OrdemServico } from "@/types/ordens";
+import { Calendar } from "@/components/ui/calendar";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { LogoutProps } from "@/types/props";
 
-interface AgendaProps {
-  onLogout?: () => void;
-}
+interface AgendaProps extends LogoutProps {}
 
-// Dados de exemplo para a agenda
-const ordens: OrdemServico[] = [
-  {
-    id: "OS-2023-001",
-    nome: "Motor Ford Ka 2019",
-    cliente: {
+const Agenda = ({ onLogout }: AgendaProps) => {
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [view, setView] = useState<"day" | "week" | "month">("month");
+  
+  const events = [
+    {
       id: "1",
-      nome: "Auto Peças Silva",
-      telefone: "(11) 98765-4321",
-      email: "contato@autopecassilva.com.br",
+      title: "Entrega - Motor Ford Ka",
+      date: new Date(2023, 10, 15, 14, 30),
+      type: "entrega",
     },
-    dataAbertura: new Date(2023, 4, 15),
-    dataPrevistaEntrega: new Date(2023, 4, 30),
-    prioridade: "alta",
-    servicos: [
-      { tipo: "bloco", descricao: "Retífica completa do bloco", concluido: false },
-      { tipo: "virabrequim", descricao: "Balanceamento", concluido: false },
-    ],
-    status: "fabricacao",
-    etapasAndamento: {
-      lavagem: { concluido: true, funcionarioId: "1", iniciado: new Date(2023, 4, 16), finalizado: new Date(2023, 4, 16) },
-      inspecao_inicial: { concluido: true, funcionarioId: "2", iniciado: new Date(2023, 4, 17), finalizado: new Date(2023, 4, 18) },
-      retifica: { concluido: false, funcionarioId: "3", iniciado: new Date(2023, 4, 19) },
-    },
-    tempoRegistros: [],
-  },
-  {
-    id: "OS-2023-002",
-    nome: "Cabeçote Fiat Uno",
-    cliente: {
+    {
       id: "2",
-      nome: "Oficina Mecânica Central",
-      telefone: "(11) 3333-4444",
-      email: "oficina@central.com.br",
+      title: "Recebimento - Cabeçote Fiat Uno",
+      date: new Date(2023, 10, 16, 10, 0),
+      type: "recebimento",
     },
-    dataAbertura: new Date(2023, 4, 10),
-    dataPrevistaEntrega: new Date(2023, 4, 25),
-    prioridade: "media",
-    servicos: [
-      { tipo: "cabecote", descricao: "Retífica de válvulas", concluido: false },
-    ],
-    status: "aguardando_aprovacao",
-    etapasAndamento: {
-      lavagem: { concluido: true, funcionarioId: "1", iniciado: new Date(2023, 4, 11), finalizado: new Date(2023, 4, 11) },
-      inspecao_inicial: { concluido: true, funcionarioId: "2", iniciado: new Date(2023, 4, 12), finalizado: new Date(2023, 4, 12) },
+    {
+      id: "3",
+      title: "Manutenção - Equipamento Retífica",
+      date: new Date(2023, 10, 17, 9, 0),
+      type: "manutencao",
     },
-    tempoRegistros: [],
-  },
-];
-
-export default function Agenda({ onLogout }: AgendaProps) {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [currentView, setCurrentView] = useState<"diaria" | "semanal" | "mensal">("semanal");
-  const navigate = useNavigate();
-
-  // Navegar para semana anterior
-  const goToPreviousWeek = () => {
-    setCurrentDate(subWeeks(currentDate, 1));
-  };
-
-  // Navegar para próxima semana
-  const goToNextWeek = () => {
-    setCurrentDate(addWeeks(currentDate, 1));
-  };
-
-  // Configurar os dias da semana
-  const startDate = startOfWeek(currentDate, { weekStartsOn: 0 });
-  const weekDays = [...Array(7)].map((_, i) => addDays(startDate, i));
-
-  // Função auxiliar para obter ordens previstas para o dia
-  const getOrdensForDay = (date: Date) => {
-    return ordens.filter(ordem => {
-      const entregaDate = new Date(ordem.dataPrevistaEntrega);
-      return (
-        entregaDate.getDate() === date.getDate() &&
-        entregaDate.getMonth() === date.getMonth() &&
-        entregaDate.getFullYear() === date.getFullYear()
-      );
-    });
+    {
+      id: "4",
+      title: "Reunião - Equipe Técnica",
+      date: new Date(2023, 10, 18, 15, 0),
+      type: "reuniao",
+    },
+  ];
+  
+  const handlePrevious = () => {
+    if (date) {
+      const newDate = new Date(date);
+      if (view === "day") {
+        newDate.setDate(newDate.getDate() - 1);
+      } else if (view === "week") {
+        newDate.setDate(newDate.getDate() - 7);
+      } else {
+        newDate.setMonth(newDate.getMonth() - 1);
+      }
+      setDate(newDate);
+    }
   };
   
-  const handleNovaOrdem = () => {
-    navigate("/ordens/nova");
+  const handleNext = () => {
+    if (date) {
+      const newDate = new Date(date);
+      if (view === "day") {
+        newDate.setDate(newDate.getDate() + 1);
+      } else if (view === "week") {
+        newDate.setDate(newDate.getDate() + 7);
+      } else {
+        newDate.setMonth(newDate.getMonth() + 1);
+      }
+      setDate(newDate);
+    }
   };
   
-  const handleViewDetails = (ordemId: string) => {
-    navigate(`/ordens/${ordemId}`);
+  const handleToday = () => {
+    setDate(new Date());
   };
-
+  
+  const formatDateRange = () => {
+    if (!date) return "";
+    
+    if (view === "day") {
+      return new Intl.DateTimeFormat('pt-BR', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      }).format(date);
+    } else if (view === "week") {
+      const startOfWeek = new Date(date);
+      startOfWeek.setDate(date.getDate() - date.getDay());
+      
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      
+      const startFormatted = new Intl.DateTimeFormat('pt-BR', { 
+        day: 'numeric', 
+        month: 'short'
+      }).format(startOfWeek);
+      
+      const endFormatted = new Intl.DateTimeFormat('pt-BR', { 
+        day: 'numeric', 
+        month: 'short',
+        year: 'numeric'
+      }).format(endOfWeek);
+      
+      return `${startFormatted} - ${endFormatted}`;
+    } else {
+      return new Intl.DateTimeFormat('pt-BR', { 
+        month: 'long', 
+        year: 'numeric' 
+      }).format(date);
+    }
+  };
+  
+  const getEventsByDate = (day: Date) => {
+    return events.filter(event => 
+      event.date.getDate() === day.getDate() &&
+      event.date.getMonth() === day.getMonth() &&
+      event.date.getFullYear() === day.getFullYear()
+    );
+  };
+  
+  const getEventColor = (type: string) => {
+    switch (type) {
+      case "entrega":
+        return "bg-green-100 text-green-800 border-green-300";
+      case "recebimento":
+        return "bg-blue-100 text-blue-800 border-blue-300";
+      case "manutencao":
+        return "bg-yellow-100 text-yellow-800 border-yellow-300";
+      case "reuniao":
+        return "bg-purple-100 text-purple-800 border-purple-300";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-300";
+    }
+  };
+  
   return (
     <Layout onLogout={onLogout}>
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Agenda</h1>
             <p className="text-muted-foreground">
-              Gerencie as datas de entregas das ordens de serviço
+              Gerencie compromissos, entregas e recebimentos
             </p>
           </div>
           
-          <div className="flex gap-2">
-            <Select 
-              value={currentView}
-              onValueChange={(value) => setCurrentView(value as any)}
-            >
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Visualização" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="diaria">Diária</SelectItem>
-                <SelectItem value="semanal">Semanal</SelectItem>
-                <SelectItem value="mensal">Mensal</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Button variant="outline" size="icon" onClick={goToPreviousWeek}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" onClick={goToNextWeek}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button onClick={handleNovaOrdem}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Nova Ordem
-            </Button>
-          </div>
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Evento
+          </Button>
         </div>
         
         <Card>
-          <CardHeader>
-            <CardTitle>
-              {format(startDate, "MMMM yyyy", { locale: ptBR })}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-7 gap-2">
-              {/* Dias da semana */}
-              {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((day, index) => (
-                <div 
-                  key={`header-${index}`} 
-                  className="text-center font-medium text-sm p-2"
-                >
-                  {day}
+          <CardContent className="p-6">
+            <div className="flex flex-col space-y-4">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="icon" onClick={handlePrevious}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="icon" onClick={handleNext}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" onClick={handleToday}>
+                    Hoje
+                  </Button>
+                  <h2 className="text-xl font-semibold">{formatDateRange()}</h2>
                 </div>
-              ))}
+                
+                <Tabs value={view} onValueChange={(v) => setView(v as "day" | "week" | "month")}>
+                  <TabsList>
+                    <TabsTrigger value="day">Dia</TabsTrigger>
+                    <TabsTrigger value="week">Semana</TabsTrigger>
+                    <TabsTrigger value="month">Mês</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
               
-              {/* Células do calendário */}
-              {weekDays.map((day, index) => (
-                <div
-                  key={`day-${index}`}
-                  className={`min-h-[120px] p-2 border rounded-md ${
-                    isToday(day) ? "bg-primary/10 border-primary" : "border-border"
-                  }`}
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <span className={`text-sm font-medium ${
-                      isToday(day) ? "text-primary" : ""
-                    }`}>
-                      {format(day, "d", { locale: ptBR })}
-                    </span>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleNovaOrdem}>
-                      <PlusCircle className="h-3 w-3" />
-                    </Button>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    {getOrdensForDay(day).map((ordem) => (
-                      <div
-                        key={ordem.id}
-                        className="text-xs p-1 rounded bg-secondary/50 hover:bg-secondary cursor-pointer"
-                        onClick={() => handleViewDetails(ordem.id)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="truncate">{ordem.nome}</span>
-                          <StatusBadge status={ordem.prioridade} size="sm" />
-                        </div>
-                        <span className="text-[10px] text-muted-foreground truncate block">
-                          {ordem.cliente.nome}
-                        </span>
+              <div className="mt-4">
+                <TabsContent value="month" className="mt-0">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={setDate}
+                    className="border rounded-md"
+                    modifiers={{
+                      event: (date) => getEventsByDate(date).length > 0,
+                    }}
+                    modifiersClassNames={{
+                      event: "bg-primary/10 font-medium text-primary",
+                    }}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="day" className="mt-0">
+                  <div className="border rounded-md p-4">
+                    <h3 className="font-medium mb-4">Eventos do dia</h3>
+                    {date && getEventsByDate(date).length > 0 ? (
+                      <div className="space-y-3">
+                        {getEventsByDate(date).map((event) => (
+                          <div 
+                            key={event.id}
+                            className={`p-3 rounded-md border ${getEventColor(event.type)}`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-medium">{event.title}</p>
+                                <p className="text-sm">
+                                  {event.date.toLocaleTimeString('pt-BR', { 
+                                    hour: '2-digit', 
+                                    minute: '2-digit' 
+                                  })}
+                                </p>
+                              </div>
+                              <Button variant="ghost" size="sm">Detalhes</Button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <CalendarIcon className="mx-auto h-12 w-12 mb-2 opacity-30" />
+                        <p>Nenhum evento para este dia</p>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                </TabsContent>
+                
+                <TabsContent value="week" className="mt-0">
+                  <div className="border rounded-md">
+                    <div className="grid grid-cols-7 gap-px bg-muted">
+                      {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((day) => (
+                        <div key={day} className="bg-background p-2 text-center font-medium">
+                          {day}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-7 gap-px bg-muted">
+                      {Array.from({ length: 7 }).map((_, i) => {
+                        const dayDate = new Date(date || new Date());
+                        dayDate.setDate(dayDate.getDate() - dayDate.getDay() + i);
+                        const dayEvents = getEventsByDate(dayDate);
+                        
+                        return (
+                          <div key={i} className="bg-background p-2 min-h-[120px]">
+                            <div className="font-medium text-sm mb-1">
+                              {dayDate.getDate()}
+                            </div>
+                            <div className="space-y-1">
+                              {dayEvents.map((event) => (
+                                <div 
+                                  key={event.id}
+                                  className={`text-xs p-1 rounded truncate ${getEventColor(event.type)}`}
+                                >
+                                  {event.date.toLocaleTimeString('pt-BR', { 
+                                    hour: '2-digit', 
+                                    minute: '2-digit' 
+                                  })} - {event.title}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </TabsContent>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
     </Layout>
   );
-}
+};
+
+export default Agenda;

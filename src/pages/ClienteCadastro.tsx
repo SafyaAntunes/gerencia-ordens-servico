@@ -1,90 +1,12 @@
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Save, Trash, Car, User, Phone, Mail, MapPin, ClipboardList, AlertCircle } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Cliente, Motor } from "@/types/ordens";
-import { useToast } from "@/components/ui/use-toast";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LogoutProps } from "@/types/props";
 
-// Schema para o formulário do cliente
-const clienteFormSchema = z.object({
-  nome: z.string().min(2, "O nome deve ter pelo menos 2 caracteres"),
-  telefone: z.string().min(8, "O telefone deve ter pelo menos 8 caracteres"),
-  email: z.string().email("Email inválido"),
-  endereco: z.string().optional(),
-  cnpj_cpf: z.string().optional(),
-  observacoes: z.string().optional(),
-});
+interface ClienteCadastroProps extends LogoutProps {}
 
-// Schema para o formulário do motor
-const motorFormSchema = z.object({
-  marca: z.string().min(1, "A marca é obrigatória"),
-  modelo: z.string().min(1, "O modelo é obrigatório"),
-  ano: z.string().optional(),
-  numeroSerie: z.string().optional(),
-  cilindradas: z.string().optional(),
-  observacoes: z.string().optional(),
-});
-
-type ClienteFormValues = z.infer<typeof clienteFormSchema>;
-type MotorFormValues = z.infer<typeof motorFormSchema>;
-
-// Lista de clientes mockada (para funcionamento offline)
-const CLIENTES_MOCK: Cliente[] = [
-  {
-    id: "1",
-    nome: "Auto Peças Silva",
-    telefone: "(11) 98765-4321",
-    email: "contato@autopecassilva.com.br",
-    endereco: "Rua das Retíficas, 123 - São Paulo/SP",
-    cnpj_cpf: "12.345.678/0001-90",
-    motores: [
-      {
-        id: "m1",
-        marca: "Volkswagen",
-        modelo: "AP 1.8",
-        ano: "2010",
-        numeroSerie: "AP18123456",
-        cilindradas: "1800",
-      },
-      {
-        id: "m2",
-        marca: "Fiat",
-        modelo: "Fire 1.0",
-        ano: "2015",
-        numeroSerie: "FIRE789456",
-        cilindradas: "1000",
-      }
-    ]
-  },
-];
-
-export default function ClienteCadastro() {
+const ClienteCadastro = ({ onLogout }: ClienteCadastroProps) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -612,4 +534,6 @@ export default function ClienteCadastro() {
       </div>
     </Layout>
   );
-}
+};
+
+export default ClienteCadastro;

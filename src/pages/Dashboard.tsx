@@ -14,8 +14,11 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
+import { LogoutProps } from "@/types/props";
 
-const Dashboard = () => {
+interface DashboardProps extends LogoutProps {}
+
+const Dashboard = ({ onLogout }: DashboardProps) => {
   const navigate = useNavigate();
   
   // Dados de exemplo para métricas

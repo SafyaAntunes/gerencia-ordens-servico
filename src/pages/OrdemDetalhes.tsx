@@ -1,17 +1,10 @@
-
-import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 import Layout from "@/components/layout/Layout";
-import OrdemForm from "@/components/ordens/OrdemForm";
-import { OrdemServico } from "@/types/ordens";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft } from "lucide-react";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
+import { LogoutProps } from "@/types/props";
 
-export default function OrdemDetalhes() {
+interface OrdemDetalhesProps extends LogoutProps {}
+
+const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [ordem, setOrdem] = useState<OrdemServico | null>(null);
@@ -203,4 +196,6 @@ export default function OrdemDetalhes() {
       />
     </Layout>
   );
-}
+};
+
+export default OrdemDetalhes;
