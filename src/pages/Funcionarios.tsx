@@ -89,7 +89,7 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
   const [funcionariosLista, setFuncionariosLista] = useState<Funcionario[]>([]);
   
   const { funcionarios, loading, fetchFuncionarios, saveFuncionario } = useFuncionarios();
-  const { funcionario: currentUser, hasPermission, registerFuncionario } = useAuth();
+  const { funcionario: currentUser, hasPermission } = useAuth();
   
   useEffect(() => {
     fetchFuncionarios();
@@ -116,37 +116,20 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
   });
   
   const handleCreateFuncionario = async (values: FormValues) => {
-    const { confirmarSenha, senha, ...funcionarioData } = values;
-    
-    if (!isEditing && !senha) {
-      toast.error("É necessário definir uma senha para o novo funcionário");
-      return;
-    }
+    const { confirmarSenha, ...funcionarioData } = values;
     
     const novoFuncionario: Funcionario = {
-      id: isEditing && selectedFuncionario ? selectedFuncionario.id : uuidv4(),
+      id: uuidv4(),
       nome: funcionarioData.nome,
       email: funcionarioData.email,
       telefone: funcionarioData.telefone,
       especialidades: funcionarioData.especialidades as TipoServico[],
       ativo: funcionarioData.ativo,
       nivelPermissao: funcionarioData.nivelPermissao,
+      senha: funcionarioData.senha,
     };
     
-    let success;
-    
-    if (isEditing) {
-      // Update existing funcionario
-      success = await saveFuncionario(novoFuncionario);
-    } else {
-      // Create new funcionario with auth
-      if (!senha) {
-        toast.error("Senha é obrigatória para novos funcionários");
-        return;
-      }
-      
-      success = await registerFuncionario(novoFuncionario, senha);
-    }
+    const success = await saveFuncionario(novoFuncionario);
     
     if (success) {
       setIsDialogOpen(false);

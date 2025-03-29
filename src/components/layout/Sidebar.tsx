@@ -15,7 +15,6 @@ import {
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { useAuth } from '@/hooks/useAuth';
 
 type SidebarProps = {
   isOpen: boolean;
@@ -29,24 +28,9 @@ type NavItemProps = {
   to: string;
   badge?: number;
   isCollapsed?: boolean;
-  requiredPermission?: string;
 };
 
-const NavItem = ({ 
-  icon: Icon, 
-  label, 
-  to, 
-  badge, 
-  isCollapsed = false,
-  requiredPermission
-}: NavItemProps) => {
-  const { hasPermission } = useAuth();
-  
-  // Don't render if permission is required but user doesn't have it
-  if (requiredPermission && !hasPermission(requiredPermission)) {
-    return null;
-  }
-  
+const NavItem = ({ icon: Icon, label, to, badge, isCollapsed = false }: NavItemProps) => {
   return (
     <NavLink 
       to={to}
@@ -75,7 +59,6 @@ const NavItem = ({
 
 export default function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const { funcionario } = useAuth();
   
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
@@ -107,62 +90,6 @@ export default function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
   };
 
   const mobileClass = isOpen ? "block lg:hidden" : "hidden";
-  
-  // Create navigation items based on permissions
-  const getNavItems = (isMobile: boolean = false) => (
-    <>
-      <NavItem 
-        icon={LayoutDashboard} 
-        label="Dashboard" 
-        to="/" 
-        isCollapsed={!isMobile && isCollapsed}
-        requiredPermission="gerente"
-      />
-      <NavItem 
-        icon={FileText} 
-        label="Ordens de Serviço" 
-        to="/ordens" 
-        badge={!isMobile && isCollapsed ? undefined : 12}
-        isCollapsed={!isMobile && isCollapsed}
-      />
-      <NavItem 
-        icon={Users} 
-        label="Funcionários" 
-        to="/funcionarios" 
-        isCollapsed={!isMobile && isCollapsed}
-        requiredPermission="gerente"
-      />
-      <NavItem 
-        icon={UserSquare} 
-        label="Clientes" 
-        to="/clientes" 
-        isCollapsed={!isMobile && isCollapsed}
-        requiredPermission="gerente"
-      />
-      <NavItem 
-        icon={Calendar} 
-        label="Agenda" 
-        to="/agenda" 
-        isCollapsed={!isMobile && isCollapsed}
-        requiredPermission="gerente"
-      />
-      <NavItem 
-        icon={BarChart} 
-        label="Relatórios" 
-        to="/relatorios" 
-        isCollapsed={!isMobile && isCollapsed}
-        requiredPermission="gerente"
-      />
-      <Separator className="my-4 bg-sidebar-border" />
-      <NavItem 
-        icon={Settings} 
-        label="Configurações" 
-        to="/configuracoes" 
-        isCollapsed={!isMobile && isCollapsed}
-        requiredPermission="admin"
-      />
-    </>
-  );
   
   return (
     <>
@@ -200,7 +127,14 @@ export default function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
           </div>
           
           <div className="flex-1 px-3 py-2 space-y-1">
-            {getNavItems(true)}
+            <NavItem icon={LayoutDashboard} label="Dashboard" to="/" />
+            <NavItem icon={FileText} label="Ordens de Serviço" to="/ordens" badge={12} />
+            <NavItem icon={Users} label="Funcionários" to="/funcionarios" />
+            <NavItem icon={UserSquare} label="Clientes" to="/clientes" />
+            <NavItem icon={Calendar} label="Agenda" to="/agenda" />
+            <NavItem icon={BarChart} label="Relatórios" to="/relatorios" />
+            <Separator className="my-4 bg-sidebar-border" />
+            <NavItem icon={Settings} label="Configurações" to="/configuracoes" />
           </div>
           
           <div className="p-4 mt-auto">
@@ -240,7 +174,14 @@ export default function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
           </div>
           
           <div className="flex-1 px-3 py-2 space-y-1">
-            {getNavItems()}
+            <NavItem icon={LayoutDashboard} label="Dashboard" to="/" isCollapsed={isCollapsed} />
+            <NavItem icon={FileText} label="Ordens de Serviço" to="/ordens" badge={isCollapsed ? undefined : 12} isCollapsed={isCollapsed} />
+            <NavItem icon={Users} label="Funcionários" to="/funcionarios" isCollapsed={isCollapsed} />
+            <NavItem icon={UserSquare} label="Clientes" to="/clientes" isCollapsed={isCollapsed} />
+            <NavItem icon={Calendar} label="Agenda" to="/agenda" isCollapsed={isCollapsed} />
+            <NavItem icon={BarChart} label="Relatórios" to="/relatorios" isCollapsed={isCollapsed} />
+            <Separator className="my-4 bg-sidebar-border" />
+            <NavItem icon={Settings} label="Configurações" to="/configuracoes" isCollapsed={isCollapsed} />
           </div>
           
           <div className="p-4 mt-auto">

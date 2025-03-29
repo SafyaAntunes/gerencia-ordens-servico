@@ -1,53 +1,27 @@
 
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Toaster } from '@/components/ui/toaster';
-import { useAuth } from '@/hooks/useAuth';
 
 export type LayoutProps = {
   children: React.ReactNode;
   onLogout?: () => void;
 };
 
-export default function Layout({ children }: LayoutProps) {
+export default function Layout({ children, onLogout }: LayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
-  const { user, logout, loading } = useAuth();
 
-  // Redirecione para login se não estiver autenticado
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate("/login");
-    }
-  }, [user, loading, navigate]);
-
-  // Se ainda estiver carregando, mostre um indicador de carregamento
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
-          <p className="text-muted-foreground">Carregando...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Fechar sidebar na mudança de rota em mobile
+  // Close sidebar on route change on mobile
   useEffect(() => {
     setIsSidebarOpen(false);
   }, [location.pathname]);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
-  };
-
-  const handleLogout = () => {
-    logout();
   };
 
   const pageVariants = {
@@ -74,8 +48,8 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar toggleSidebar={toggleSidebar} onLogout={handleLogout} />
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onLogout={handleLogout} />
+      <Navbar toggleSidebar={toggleSidebar} onLogout={onLogout} />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onLogout={onLogout} />
       
       <main className="pt-20 pb-6 px-4 lg:pl-72">
         <AnimatePresence mode="wait">

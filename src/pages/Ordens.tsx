@@ -17,7 +17,6 @@ import {
 import { toast } from "sonner";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { useAuth } from "@/hooks/useAuth";
 
 interface OrdensProps {
   onLogout?: () => void;
@@ -30,7 +29,6 @@ export default function Ordens({ onLogout }: OrdensProps) {
   const [prioridadeFilter, setPrioridadeFilter] = useState("all");
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
   const [loading, setLoading] = useState(true);
-  const { funcionario, hasPermission } = useAuth();
 
   useEffect(() => {
     const fetchOrdens = async () => {
@@ -82,19 +80,15 @@ export default function Ordens({ onLogout }: OrdensProps) {
   const handleVerOrdem = (id: string) => {
     navigate(`/ordens/${id}`);
   };
-  
-  const canCreateOrdem = hasPermission('tecnico');
 
   return (
     <Layout onLogout={onLogout}>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Ordens de Serviço</h1>
-        {canCreateOrdem && (
-          <Button onClick={handleNovaOrdem}>
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Nova Ordem
-          </Button>
-        )}
+        <Button onClick={handleNovaOrdem}>
+          <PlusCircle className="h-4 w-4 mr-2" />
+          Nova Ordem
+        </Button>
       </div>
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-2 mb-6">
