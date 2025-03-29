@@ -234,25 +234,25 @@ export const useClientes = () => {
   };
 };
 
-// Images hook for handling uploads
+// Enhanced Images and Videos hook for handling uploads
 export const useImages = () => {
-  // Upload image and get URL
-  const uploadImage = async (file: File, path: string) => {
+  // Upload file and get URL
+  const uploadFile = async (file: File, path: string) => {
     try {
-      return await firebaseService.uploadImage(file, path);
+      return await firebaseService.uploadFile(file, path);
     } catch (error) {
-      toast.error('Erro ao fazer upload da imagem.');
+      toast.error('Erro ao fazer upload do arquivo.');
       return null;
     }
   };
 
-  // Delete image
-  const deleteImage = async (path: string) => {
+  // Delete file
+  const deleteFile = async (path: string) => {
     try {
-      await firebaseService.deleteImage(path);
+      await firebaseService.deleteFile(path);
       return true;
     } catch (error) {
-      toast.error('Erro ao excluir imagem.');
+      toast.error('Erro ao excluir arquivo.');
       return false;
     }
   };
@@ -261,7 +261,7 @@ export const useImages = () => {
   const uploadBase64Image = async (base64: string, path: string, fileName: string) => {
     try {
       const file = firebaseService.base64ToFile(base64, fileName);
-      return await firebaseService.uploadImage(file, path);
+      return await firebaseService.uploadFile(file, path);
     } catch (error) {
       toast.error('Erro ao fazer upload da imagem.');
       return null;
@@ -269,8 +269,8 @@ export const useImages = () => {
   };
 
   return {
-    uploadImage,
-    deleteImage,
+    uploadFile,
+    deleteFile,
     uploadBase64Image
   };
 };

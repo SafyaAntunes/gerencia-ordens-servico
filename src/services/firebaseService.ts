@@ -181,24 +181,31 @@ export const saveMotor = async (motor: Motor, clienteId: string): Promise<void> 
   }
 };
 
-// Image methods
-export const uploadImage = async (file: File, path: string): Promise<string> => {
+// File upload methods (for both images and videos)
+export const uploadFile = async (file: File, path: string): Promise<string> => {
   try {
-    const storageRef = ref(storage, path);
+    // Determine file type for better organization
+    const fileType = file.type.startsWith('image/') ? 'images' : 
+                   file.type.startsWith('video/') ? 'videos' : 'files';
+                   
+    // Create a path that organizes by file type
+    const filePath = `${path}/${fileType}/${Date.now()}_${file.name}`;
+    
+    const storageRef = ref(storage, filePath);
     await uploadBytes(storageRef, file);
     return getDownloadURL(storageRef);
   } catch (error) {
-    console.error('Erro ao fazer upload da imagem:', error);
+    console.error('Erro ao fazer upload do arquivo:', error);
     throw error;
   }
 };
 
-export const deleteImage = async (path: string): Promise<void> => {
+export const deleteFile = async (path: string): Promise<void> => {
   try {
     const storageRef = ref(storage, path);
     await deleteObject(storageRef);
   } catch (error) {
-    console.error('Erro ao excluir imagem:', error);
+    console.error('Erro ao excluir arquivo:', error);
     throw error;
   }
 };

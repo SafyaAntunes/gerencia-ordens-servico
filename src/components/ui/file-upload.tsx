@@ -1,7 +1,7 @@
 
 import { ChangeEvent, forwardRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ImageIcon, X, Upload } from "lucide-react";
+import { ImageIcon, X, Upload, FileVideo } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FileUploadProps {
@@ -14,9 +14,10 @@ interface FileUploadProps {
 }
 
 const FileUpload = forwardRef<HTMLInputElement, FileUploadProps>(
-  ({ value, onChange, onRemove, accept = "image/*", className, maxSize = 5 }, ref) => {
+  ({ value, onChange, onRemove, accept = "image/*,video/*", className, maxSize = 50 }, ref) => {
     const [preview, setPreview] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [fileType, setFileType] = useState<"image" | "video" | "other">("other");
 
     // Processar o valor para extrair a URL de visualização
     useEffect(() => {
@@ -25,19 +26,37 @@ const FileUpload = forwardRef<HTMLInputElement, FileUploadProps>(
         return;
       }
 
+      const determineFileType = (url: string) => {
+        if (url.match(/\.(jpeg|jpg|gif|png|svg|webp)$/i)) return "image";
+        if (url.match(/\.(mp4|webm|ogg|mov|avi)$/i)) return "video";
+        
+        // Check MIME type if available
+        if (typeof value === 'object' && value.type) {
+          if (value.type.startsWith('image/')) return "image";
+          if (value.type.startsWith('video/')) return "video";
+        }
+        
+        return "other";
+      };
+
       if (typeof value === 'string') {
-        // Se for uma string base64 direta
+        // Se for uma string base64 direta ou URL
         setPreview(value);
+        setFileType(determineFileType(value));
       } else if (value instanceof File) {
         // Se for um arquivo, criar URL de objeto
         const fileUrl = URL.createObjectURL(value);
         setPreview(fileUrl);
+        setFileType(value.type.startsWith('image/') ? "image" : 
+                   value.type.startsWith('video/') ? "video" : "other");
         
         // Limpar URL do objeto quando o componente for desmontado
         return () => URL.revokeObjectURL(fileUrl);
       } else if (value && typeof value === 'object' && 'data' in value) {
         // Se for um objeto com propriedade data (formato { nome, tipo, tamanho, data })
         setPreview(value.data);
+        setFileType(value.tipo?.startsWith('image/') ? "image" : 
+                   value.tipo?.startsWith('video/') ? "video" : "other");
       }
     }, [value]);
 
@@ -56,6 +75,8 @@ const FileUpload = forwardRef<HTMLInputElement, FileUploadProps>(
       // Criar preview
       const fileUrl = URL.createObjectURL(file);
       setPreview(fileUrl);
+      setFileType(file.type.startsWith('image/') ? "image" : 
+                 file.type.startsWith('video/') ? "video" : "other");
       
       if (onChange) {
         onChange(file);
@@ -83,11 +104,23 @@ const FileUpload = forwardRef<HTMLInputElement, FileUploadProps>(
         
         {preview ? (
           <div className="relative rounded-md overflow-hidden border border-border h-48 group">
-            <img
-              src={preview}
-              alt="Preview"
-              className="w-full h-full object-cover"
-            />
+            {fileType === "image" ? (
+              <img
+                src={preview}
+                alt="Preview"
+                className="w-full h-full object-cover"
+              />
+            ) : fileType === "video" ? (
+              <video
+                src={preview}
+                controls
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full bg-muted">
+                <p className="text-sm text-muted-foreground">Arquivo não suportado para preview</p>
+              </div>
+            )}
             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
               <Button
                 type="button"
@@ -122,7 +155,10 @@ const FileUpload = forwardRef<HTMLInputElement, FileUploadProps>(
                     Clique para selecionar
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    SVG, PNG, JPG ou GIF (max. {maxSize}MB)
+                    Imagens e Vídeos (max. {maxSize}MB)
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    SVG, PNG, JPG, GIF, MP4, WEBM
                   </p>
                 </div>
               </>

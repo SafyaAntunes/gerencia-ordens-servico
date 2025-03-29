@@ -55,11 +55,11 @@ export default function FotosForm({
         <TabsList className="grid grid-cols-2 mb-4">
           <TabsTrigger value="entrada" className="flex items-center gap-2">
             <Upload className="h-4 w-4" />
-            Fotos de Entrada
+            Arquivos de Entrada
           </TabsTrigger>
           <TabsTrigger value="saida" className="flex items-center gap-2">
             <Camera className="h-4 w-4" />
-            Fotos de Saída
+            Arquivos de Saída
           </TabsTrigger>
         </TabsList>
         
@@ -70,9 +70,10 @@ export default function FotosForm({
                 key={index}
                 value={foto}
                 onRemove={() => handleRemoveFotoEntrada(index)}
+                accept="image/*,video/*"
               />
             ))}
-            <FileUpload onChange={handleAddFotoEntrada} />
+            <FileUpload onChange={handleAddFotoEntrada} accept="image/*,video/*" />
           </div>
         </TabsContent>
         
@@ -83,9 +84,10 @@ export default function FotosForm({
                 key={index}
                 value={foto}
                 onRemove={() => handleRemoveFotoSaida(index)}
+                accept="image/*,video/*"
               />
             ))}
-            <FileUpload onChange={handleAddFotoSaida} />
+            <FileUpload onChange={handleAddFotoSaida} accept="image/*,video/*" />
           </div>
         </TabsContent>
       </Tabs>
