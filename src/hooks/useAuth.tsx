@@ -23,8 +23,10 @@ type AuthContextType = {
   hasPermission: (minLevel: string) => boolean;
 };
 
+// Create the authentication context
 const AuthContext = createContext<AuthContextType | null>(null);
 
+// Create the AuthProvider component that will wrap our app
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [funcionario, setFuncionario] = useState<Funcionario | null>(null);
@@ -123,12 +125,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         displayName: funcionario.nome
       });
       
-      // Remove senha from funcionario object before storing in Firestore
-      const { senha: _, ...funcionarioData } = funcionario;
-      
       // Store the funcionario data in Firestore
       await setDoc(doc(db, 'funcionarios', user.uid), {
-        ...funcionarioData,
+        ...funcionario,
         id: user.uid
       });
       
@@ -175,6 +174,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
+// Create and export the useAuth hook
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -183,4 +183,5 @@ export const useAuth = () => {
   return context;
 };
 
+// Export the hook as default for backward compatibility
 export default useAuth;
