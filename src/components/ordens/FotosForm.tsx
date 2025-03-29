@@ -40,6 +40,7 @@ export default function FotosForm({
         }
       } catch (error) {
         toast.error("Erro ao processar arquivo");
+        console.error("Erro no upload:", error);
       }
     }
   };
@@ -76,6 +77,7 @@ export default function FotosForm({
         }
       } catch (error) {
         toast.error("Erro ao processar arquivo");
+        console.error("Erro no upload:", error);
       }
     }
   };
