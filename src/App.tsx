@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,9 +18,8 @@ import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
 import { useEffect, useState } from "react";
 import { auth } from "./lib/firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 import { useAuth } from "./hooks/useFirebase";
-import { v4 as uuidv4 } from "uuid";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,12 +30,11 @@ const queryClient = new QueryClient({
   },
 });
 
-interface ProtectedRouteProps {
+// Create a ProtectedRoute component that needs to be inside the Router context
+const ProtectedRouteContent = ({ children, minimumPermission = 'visualizacao' }: {
   children: React.ReactNode;
   minimumPermission?: 'admin' | 'gerente' | 'tecnico' | 'visualizacao';
-}
-
-const ProtectedRoute = ({ children, minimumPermission = 'visualizacao' }: ProtectedRouteProps) => {
+}) => {
   const { user, loading, funcionario, hasPermission } = useAuth();
   const location = useLocation();
   
@@ -54,119 +53,126 @@ const ProtectedRoute = ({ children, minimumPermission = 'visualizacao' }: Protec
   return <>{children}</>;
 };
 
-const App = () => {
+// Create a wrapper for the logout functionality
+const AppContent = () => {
   const { logout } = useAuth();
   
   return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      
+      <Route 
+        path="/" 
+        element={
+          <ProtectedRouteContent>
+            <Dashboard onLogout={() => logout(() => {})} />
+          </ProtectedRouteContent>
+        } 
+      />
+      
+      <Route 
+        path="/ordens" 
+        element={
+          <ProtectedRouteContent>
+            <Ordens onLogout={() => logout(() => {})} />
+          </ProtectedRouteContent>
+        }
+      />
+      
+      <Route 
+        path="/ordens/nova" 
+        element={
+          <ProtectedRouteContent minimumPermission="tecnico">
+            <NovaOrdem onLogout={() => logout(() => {})} />
+          </ProtectedRouteContent>
+        }
+      />
+      
+      <Route 
+        path="/ordens/:id" 
+        element={
+          <ProtectedRouteContent>
+            <OrdemDetalhes onLogout={() => logout(() => {})} />
+          </ProtectedRouteContent>
+        }
+      />
+      
+      <Route 
+        path="/funcionarios" 
+        element={
+          <ProtectedRouteContent>
+            <Funcionarios onLogout={() => logout(() => {})} />
+          </ProtectedRouteContent>
+        }
+      />
+      
+      <Route 
+        path="/clientes" 
+        element={
+          <ProtectedRouteContent>
+            <Clientes onLogout={() => logout(() => {})} />
+          </ProtectedRouteContent>
+        }
+      />
+      
+      <Route 
+        path="/clientes/cadastro" 
+        element={
+          <ProtectedRouteContent minimumPermission="tecnico">
+            <ClienteCadastro onLogout={() => logout(() => {})} />
+          </ProtectedRouteContent>
+        }
+      />
+      
+      <Route 
+        path="/clientes/editar/:id" 
+        element={
+          <ProtectedRouteContent minimumPermission="tecnico">
+            <ClienteCadastro onLogout={() => logout(() => {})} />
+          </ProtectedRouteContent>
+        }
+      />
+      
+      <Route 
+        path="/agenda" 
+        element={
+          <ProtectedRouteContent>
+            <Agenda onLogout={() => logout(() => {})} />
+          </ProtectedRouteContent>
+        }
+      />
+      
+      <Route 
+        path="/relatorios" 
+        element={
+          <ProtectedRouteContent minimumPermission="gerente">
+            <Relatorios onLogout={() => logout(() => {})} />
+          </ProtectedRouteContent>
+        }
+      />
+      
+      <Route 
+        path="/configuracoes" 
+        element={
+          <ProtectedRouteContent minimumPermission="admin">
+            <Configuracoes onLogout={() => logout(() => {})} />
+          </ProtectedRouteContent>
+        }
+      />
+      
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
+
+const App = () => {
+  return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            
-            <Route 
-              path="/" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard onLogout={logout} />
-                </ProtectedRoute>
-              } 
-            />
-            
-            <Route 
-              path="/ordens" 
-              element={
-                <ProtectedRoute>
-                  <Ordens onLogout={logout} />
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route 
-              path="/ordens/nova" 
-              element={
-                <ProtectedRoute minimumPermission="tecnico">
-                  <NovaOrdem onLogout={logout} />
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route 
-              path="/ordens/:id" 
-              element={
-                <ProtectedRoute>
-                  <OrdemDetalhes onLogout={logout} />
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route 
-              path="/funcionarios" 
-              element={
-                <ProtectedRoute>
-                  <Funcionarios onLogout={logout} />
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route 
-              path="/clientes" 
-              element={
-                <ProtectedRoute>
-                  <Clientes onLogout={logout} />
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route 
-              path="/clientes/cadastro" 
-              element={
-                <ProtectedRoute minimumPermission="tecnico">
-                  <ClienteCadastro onLogout={logout} />
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route 
-              path="/clientes/editar/:id" 
-              element={
-                <ProtectedRoute minimumPermission="tecnico">
-                  <ClienteCadastro onLogout={logout} />
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route 
-              path="/agenda" 
-              element={
-                <ProtectedRoute>
-                  <Agenda onLogout={logout} />
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route 
-              path="/relatorios" 
-              element={
-                <ProtectedRoute minimumPermission="gerente">
-                  <Relatorios onLogout={logout} />
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route 
-              path="/configuracoes" 
-              element={
-                <ProtectedRoute minimumPermission="admin">
-                  <Configuracoes onLogout={logout} />
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AppContent />
+          <Toaster />
+          <Sonner />
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

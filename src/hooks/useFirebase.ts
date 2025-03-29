@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { toast } from 'sonner';
@@ -12,8 +11,7 @@ export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [funcionario, setFuncionario] = useState<Funcionario | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-
+  
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
@@ -58,10 +56,12 @@ export const useAuth = () => {
     }
   };
 
-  const logout = async () => {
+  const logout = async (callback?: () => void) => {
     try {
       await firebaseService.signOut();
-      navigate('/login');
+      if (callback) {
+        callback();
+      }
     } catch (error: any) {
       toast.error(error.message || 'Erro ao sair.');
     }
