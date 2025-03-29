@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,32 +17,31 @@ import Agenda from "./pages/Agenda";
 import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
 import { useEffect, useState } from "react";
+import { auth } from "./lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    const auth = localStorage.getItem("sgr-auth");
-    if (auth) {
-      setIsAuthenticated(true);
-    }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+      }
+      setLoading(false);
+    });
+    
+    return () => unsubscribe();
   }, []);
   
-  const handleLogin = (credentials: { email: string; password: string }) => {
-    if (credentials.email && credentials.password) {
-      localStorage.setItem("sgr-auth", "true");
-      setIsAuthenticated(true);
-      return true;
-    }
-    return false;
-  };
-  
-  const handleLogout = () => {
-    localStorage.removeItem("sgr-auth");
-    setIsAuthenticated(false);
-  };
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen">Carregando...</div>;
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -55,7 +55,7 @@ const App = () => {
               element={
                 isAuthenticated ? 
                 <Navigate to="/" replace /> : 
-                <Login onLogin={handleLogin} />
+                <Login />
               } 
             />
             
@@ -77,11 +77,11 @@ const App = () => {
             />
             <Route 
               path="/funcionarios" 
-              element={isAuthenticated ? <Funcionarios onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <Funcionarios /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/clientes" 
-              element={isAuthenticated ? <Clientes onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <Clientes /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/clientes/cadastro" 
@@ -97,11 +97,11 @@ const App = () => {
             />
             <Route 
               path="/relatorios" 
-              element={isAuthenticated ? <Relatorios onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <Relatorios /> : <Navigate to="/login" replace />} 
             />
             <Route 
               path="/configuracoes" 
-              element={isAuthenticated ? <Configuracoes onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
+              element={isAuthenticated ? <Configuracoes /> : <Navigate to="/login" replace />} 
             />
             
             <Route path="*" element={<NotFound />} />

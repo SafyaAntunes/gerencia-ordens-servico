@@ -7,6 +7,9 @@ import OrdemForm from "@/components/ordens/OrdemForm";
 import { OrdemServico } from "@/types/ordens";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, storage } from "@/lib/firebase";
 
 export default function OrdemDetalhes() {
   const { id } = useParams();
@@ -20,144 +23,120 @@ export default function OrdemDetalhes() {
   useEffect(() => {
     if (!id) return;
     
-    // Recuperar ordens do localStorage
-    const ordensArmazenadas = localStorage.getItem('ordens');
-    
-    if (ordensArmazenadas) {
+    const fetchOrdem = async () => {
+      setIsLoading(true);
       try {
-        const ordens: OrdemServico[] = JSON.parse(ordensArmazenadas);
-        const ordemEncontrada = ordens.find(o => o.id === id);
+        const docRef = doc(db, "ordens", id);
+        const docSnap = await getDoc(docRef);
         
-        if (ordemEncontrada) {
-          setOrdem(ordemEncontrada);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
           
-          // Converter as imagens base64 para objetos File ou preparar para exibição
-          if (ordemEncontrada.fotosEntrada && ordemEncontrada.fotosEntrada.length > 0) {
-            // No caso do detalhe, apenas utilizamos diretamente as strings base64
-            console.log("Fotos de entrada encontradas:", ordemEncontrada.fotosEntrada.length);
-          }
+          // Format dates
+          const ordemFormatada: OrdemServico = {
+            ...data,
+            id: docSnap.id,
+            dataAbertura: data.dataAbertura?.toDate() || new Date(),
+            dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
+          } as OrdemServico;
           
-          if (ordemEncontrada.fotosSaida && ordemEncontrada.fotosSaida.length > 0) {
-            console.log("Fotos de saída encontradas:", ordemEncontrada.fotosSaida.length);
-          }
+          setOrdem(ordemFormatada);
         } else {
           toast.error("Ordem não encontrada");
           navigate("/ordens");
         }
       } catch (error) {
-        console.error("Erro ao carregar ordem:", error);
+        console.error("Error fetching order:", error);
         toast.error("Erro ao carregar dados da ordem");
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
     
-    setIsLoading(false);
+    fetchOrdem();
   }, [id, navigate]);
 
-  const handleSubmit = (values: any) => {
+  const handleSubmit = async (values: any) => {
     setIsSubmitting(true);
     
     try {
-      // Processar fotos e converter para base64
-      const processarFotos = async () => {
-        // Processar fotos só se houver arquivos novos do tipo File
-        // A conversão para base64 já foi feita no estado atual
-        
-        // Recuperar ordens do localStorage
-        const ordensArmazenadas = localStorage.getItem('ordens');
-        let ordens: OrdemServico[] = [];
-        
-        if (ordensArmazenadas) {
-          ordens = JSON.parse(ordensArmazenadas);
-        }
-        
-        // Encontrar o índice da ordem atual
-        const index = ordens.findIndex(o => o.id === id);
-        
-        if (index >= 0) {
-          // Atualizar a ordem com os novos valores
-          const updatedOrder: OrdemServico = {
-            ...ordens[index],
-            nome: values.nome,
-            cliente: {
-              ...ordens[index].cliente,
-              id: values.clienteId,
-            },
-            dataAbertura: values.dataAbertura,
-            dataPrevistaEntrega: values.dataPrevistaEntrega,
-            prioridade: values.prioridade,
-            servicos: (values.servicosTipos || []).map((tipo: string) => ({
-              tipo,
-              descricao: values.servicosDescricoes?.[tipo] || "",
-              concluido: false
-            })),
-            motorId: values.motorId // Adiciona o motor selecionado
-          };
-          
-          // Atualizar fotos apenas se houver novas
-          if (values.fotosEntrada && values.fotosEntrada.length > 0) {
-            // Converter novas fotos para base64
-            const fotosEntradaBase64 = await converterFotosParaBase64(values.fotosEntrada);
-            updatedOrder.fotosEntrada = fotosEntradaBase64;
-          }
-          
-          if (values.fotosSaida && values.fotosSaida.length > 0) {
-            // Converter novas fotos para base64
-            const fotosSaidaBase64 = await converterFotosParaBase64(values.fotosSaida);
-            updatedOrder.fotosSaida = fotosSaidaBase64;
-          }
-          
-          // Atualizar a ordem no array
-          ordens[index] = updatedOrder;
-          
-          // Salvar de volta no localStorage
-          localStorage.setItem('ordens', JSON.stringify(ordens));
-          
-          toast.success("Ordem atualizada com sucesso!");
-          
-          // Navegar para a listagem de ordens
-          navigate("/ordens");
-        } else {
-          toast.error("Ordem não encontrada para atualização");
-        }
-        
-        setIsSubmitting(false);
-      };
+      if (!id) return;
       
-      const converterFotosParaBase64 = async (fotos: File[]) => {
-        const fotosBase64 = [];
+      // Process and upload new images
+      const processImages = async (files: File[], folder: string, existingUrls: string[] = []): Promise<string[]> => {
+        const imageUrls: string[] = [...existingUrls];
         
-        for (const foto of fotos) {
-          // Verificar se já é uma string (já convertido) ou um File
-          if (typeof foto === 'string') {
-            fotosBase64.push(foto);
-          } else {
-            const base64 = await new Promise<string>((resolve) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.readAsDataURL(foto);
-            });
+        for (const file of files) {
+          if (file && file instanceof File) {
+            // Create a reference to the file in Firebase Storage
+            const fileRef = ref(storage, `${folder}/${Date.now()}_${file.name}`);
             
-            fotosBase64.push({
-              nome: foto.name,
-              tipo: foto.type,
-              tamanho: foto.size,
-              data: base64
-            });
+            // Upload the file
+            await uploadBytes(fileRef, file);
+            
+            // Get download URL
+            const url = await getDownloadURL(fileRef);
+            imageUrls.push(url);
           }
         }
         
-        return fotosBase64;
+        return imageUrls;
       };
       
-      processarFotos();
+      // Update ordem object
+      const updatedOrder: Partial<OrdemServico> = {
+        nome: values.nome,
+        cliente: {
+          ...ordem?.cliente,
+          id: values.clienteId,
+        },
+        dataAbertura: values.dataAbertura,
+        dataPrevistaEntrega: values.dataPrevistaEntrega,
+        prioridade: values.prioridade,
+        motorId: values.motorId,
+        servicos: (values.servicosTipos || []).map((tipo: string) => ({
+          tipo,
+          descricao: values.servicosDescricoes?.[tipo] || "",
+          concluido: false
+        }))
+      };
+      
+      // Process new photos if any
+      if (values.fotosEntrada && values.fotosEntrada.length > 0) {
+        const existingEntradaUrls = ordem?.fotosEntrada?.filter(url => typeof url === 'string') || [];
+        const newEntradaUrls = await processImages(
+          values.fotosEntrada.filter((f: any) => f instanceof File), 
+          `ordens/${id}/entrada`,
+          existingEntradaUrls
+        );
+        updatedOrder.fotosEntrada = newEntradaUrls;
+      }
+      
+      if (values.fotosSaida && values.fotosSaida.length > 0) {
+        const existingSaidaUrls = ordem?.fotosSaida?.filter(url => typeof url === 'string') || [];
+        const newSaidaUrls = await processImages(
+          values.fotosSaida.filter((f: any) => f instanceof File), 
+          `ordens/${id}/saida`,
+          existingSaidaUrls
+        );
+        updatedOrder.fotosSaida = newSaidaUrls;
+      }
+      
+      // Update in Firestore
+      const orderRef = doc(db, "ordens", id);
+      await updateDoc(orderRef, updatedOrder);
+      
+      toast.success("Ordem atualizada com sucesso!");
+      navigate("/ordens");
     } catch (error) {
-      console.error("Erro ao atualizar ordem:", error);
+      console.error("Error updating order:", error);
       toast.error("Erro ao atualizar ordem de serviço");
+    } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Preparar dados para form
+  // Prepare data for form
   const prepareFormData = () => {
     if (!ordem) return {};
     
@@ -165,7 +144,7 @@ export default function OrdemDetalhes() {
       id: ordem.id,
       nome: ordem.nome,
       clienteId: ordem.cliente?.id || "",
-      motorId: ordem.motorId || "", // Adicionamos o motorId aqui
+      motorId: ordem.motorId || "",
       dataAbertura: ordem.dataAbertura ? new Date(ordem.dataAbertura) : new Date(),
       dataPrevistaEntrega: ordem.dataPrevistaEntrega ? new Date(ordem.dataPrevistaEntrega) : new Date(),
       prioridade: ordem.prioridade || "media",

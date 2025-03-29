@@ -15,6 +15,8 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 interface OrdensProps {
   onLogout?: () => void;
@@ -29,152 +31,40 @@ export default function Ordens({ onLogout }: OrdensProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Carregar ordens do localStorage
-    const carregarOrdens = () => {
+    const fetchOrdens = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        const ordensArmazenadas = localStorage.getItem('ordens');
+        const q = query(collection(db, "ordens"), orderBy("dataAbertura", "desc"));
+        const querySnapshot = await getDocs(q);
         
-        // Se não houver ordens armazenadas, criar dados iniciais de exemplo
-        if (!ordensArmazenadas) {
-          const ordensIniciais: OrdemServico[] = [
-            {
-              id: "1",
-              nome: "Ordem 1",
-              cliente: { 
-                id: "1", 
-                nome: "Cliente A",
-                telefone: "123456789",
-                email: "clientea@exemplo.com"
-              },
-              dataAbertura: new Date(),
-              dataPrevistaEntrega: new Date(),
-              prioridade: "alta",
-              status: "orcamento",
-              servicos: [{ tipo: "bloco", descricao: "Descrição do serviço", concluido: false }],
-              etapasAndamento: {
-                lavagem: { concluido: true },
-                inspecao_inicial: { concluido: false },
-                retifica: { concluido: true },
-                montagem_final: { concluido: false },
-                teste: { concluido: true },
-                inspecao_final: { concluido: false },
-              },
-              tempoRegistros: []
-            },
-            {
-              id: "2",
-              nome: "Ordem 2",
-              cliente: { 
-                id: "2", 
-                nome: "Cliente B",
-                telefone: "987654321",
-                email: "clienteb@exemplo.com"
-              },
-              dataAbertura: new Date(),
-              dataPrevistaEntrega: new Date(),
-              prioridade: "baixa",
-              status: "finalizado",
-              servicos: [{ tipo: "biela", descricao: "Descrição do serviço", concluido: true }],
-              etapasAndamento: {
-                lavagem: { concluido: true },
-                inspecao_inicial: { concluido: true },
-                retifica: { concluido: true },
-                montagem_final: { concluido: true },
-                teste: { concluido: true },
-                inspecao_final: { concluido: true },
-              },
-              tempoRegistros: []
-            },
-            {
-              id: "3",
-              nome: "Ordem 3",
-              cliente: { 
-                id: "3", 
-                nome: "Cliente C",
-                telefone: "555555555",
-                email: "clientec@exemplo.com"
-              },
-              dataAbertura: new Date(),
-              dataPrevistaEntrega: new Date(),
-              prioridade: "media",
-              status: "fabricacao",
-              servicos: [{ tipo: "cabecote", descricao: "Descrição do serviço", concluido: false }],
-              etapasAndamento: {
-                lavagem: { concluido: true },
-                inspecao_inicial: { concluido: true },
-                retifica: { concluido: false },
-                montagem_final: { concluido: false },
-                teste: { concluido: false },
-                inspecao_final: { concluido: false },
-              },
-              tempoRegistros: []
-            },
-          ];
-          
-          // Salvar os dados iniciais
-          localStorage.setItem('ordens', JSON.stringify(ordensIniciais));
-          setOrdens(ordensIniciais);
-        } else {
-          try {
-            // Converter datas para objetos Date
-            const ordensParsed = JSON.parse(ordensArmazenadas);
-            
-            // Validar cada ordem para garantir que tem todos os campos necessários
-            const ordensFormatadas = ordensParsed.map((ordem: any) => {
-              // Verificar se a ordem tem todos os campos necessários
-              if (!ordem || !ordem.id || !ordem.nome) {
-                console.error("Ordem inválida:", ordem);
-                return null;
-              }
-              
-              // Garantir que cliente existe
-              const cliente = ordem.cliente || { 
-                id: "unknown", 
-                nome: "Cliente Desconhecido",
-                telefone: "N/A",
-                email: "N/A"
-              };
-              
-              return {
-                ...ordem,
-                cliente,
-                dataAbertura: new Date(ordem.dataAbertura),
-                dataPrevistaEntrega: new Date(ordem.dataPrevistaEntrega),
-                prioridade: ordem.prioridade || "media",
-                status: ordem.status || "orcamento",
-                servicos: Array.isArray(ordem.servicos) ? ordem.servicos : [],
-                etapasAndamento: ordem.etapasAndamento || {},
-                tempoRegistros: Array.isArray(ordem.tempoRegistros) ? ordem.tempoRegistros : []
-              };
-            }).filter(Boolean); // Remover ordens inválidas (null)
-            
-            setOrdens(ordensFormatadas);
-          } catch (parseError) {
-            console.error("Erro ao analisar ordens do localStorage:", parseError);
-            toast.error("Erro ao carregar ordens. Usando dados padrão.");
-            
-            // Resetar para dados iniciais em caso de erro de análise
-            localStorage.removeItem('ordens');
-            carregarOrdens(); // Tentar carregar novamente (vai criar os dados iniciais)
-          }
-        }
+        const ordensData: OrdemServico[] = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          ordensData.push({
+            ...data,
+            id: doc.id,
+            dataAbertura: data.dataAbertura?.toDate() || new Date(),
+            dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
+          } as OrdemServico);
+        });
+        
+        setOrdens(ordensData);
       } catch (error) {
-        console.error("Erro ao carregar ordens:", error);
-        toast.error("Erro ao carregar ordens");
+        console.error("Error fetching orders:", error);
+        toast.error("Erro ao carregar ordens de serviço.");
       } finally {
         setLoading(false);
       }
     };
     
-    carregarOrdens();
+    fetchOrdens();
   }, []);
 
   const filteredOrdens = ordens.filter((ordem) => {
     if (!ordem) return false; // Skip invalid orders
     
     const searchMatch = 
-      ordem.nome.toLowerCase().includes(search.toLowerCase()) ||
+      (ordem.nome || '').toLowerCase().includes(search.toLowerCase()) ||
       (ordem.cliente?.nome || '').toLowerCase().includes(search.toLowerCase());
     
     const statusMatch = statusFilter === "all" ? true : ordem.status === statusFilter;
