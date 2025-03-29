@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -31,7 +30,6 @@ const queryClient = new QueryClient({
   },
 });
 
-// Protected Route component
 const ProtectedRoute = ({ 
   children, 
   requiredPermission 
@@ -50,7 +48,6 @@ const ProtectedRoute = ({
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Check permission if specified
   if (requiredPermission && !hasPermission(requiredPermission)) {
     return <Navigate to="/ordens" replace />;
   }
@@ -58,7 +55,6 @@ const ProtectedRoute = ({
   return children;
 };
 
-// Setup admin account component
 const SetupAdmin = () => {
   const { user } = useAuth();
   
@@ -68,7 +64,6 @@ const SetupAdmin = () => {
       const adminPassword = 'admin123';
       
       try {
-        // Check if admin account already exists
         const adminDocRef = doc(db, 'admin_setup', 'status');
         const adminDoc = await getDoc(adminDocRef);
         
@@ -77,17 +72,14 @@ const SetupAdmin = () => {
           return;
         }
         
-        // Try to create the admin account
         try {
           const userCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminPassword);
           const adminUser = userCredential.user;
           
-          // Update profile
           await updateProfile(adminUser, {
             displayName: 'Admin'
           });
           
-          // Create admin funcionario document
           await setDoc(doc(db, 'funcionarios', adminUser.uid), {
             id: adminUser.uid,
             nome: 'Admin',
@@ -98,7 +90,6 @@ const SetupAdmin = () => {
             nivelPermissao: 'admin'
           });
           
-          // Mark admin as initialized
           await setDoc(adminDocRef, {
             initialized: true,
             timestamp: new Date()
@@ -107,7 +98,6 @@ const SetupAdmin = () => {
           console.log('Admin account created successfully');
         } catch (error: any) {
           if (error.code === 'auth/email-already-in-use') {
-            // Email already exists, just mark setup as done
             await setDoc(adminDocRef, {
               initialized: true,
               timestamp: new Date()
