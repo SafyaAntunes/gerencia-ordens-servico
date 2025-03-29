@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { PlusCircle, Filter, Search, Users, CheckCircle2, Shield, Lock } from "lucide-react";
 import Layout from "@/components/layout/Layout";
@@ -36,7 +37,8 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Funcionario, NivelPermissao, permissoesLabels } from "@/types/funcionarios";
 import { TipoServico } from "@/types/ordens";
-import { useFuncionarios, useAuth } from "@/hooks/useFirebase";
+import { useFuncionarios } from "@/hooks/useFirebase";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 

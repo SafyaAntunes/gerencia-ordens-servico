@@ -15,6 +15,7 @@ import ClienteCadastro from "./pages/ClienteCadastro";
 import Agenda from "./pages/Agenda";
 import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
+import { useAuth } from "./hooks/useAuth";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,22 +27,28 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+  };
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/ordens" element={<Ordens />} />
-            <Route path="/ordens/nova" element={<NovaOrdem />} />
-            <Route path="/ordens/:id" element={<OrdemDetalhes />} />
-            <Route path="/funcionarios" element={<Funcionarios />} />
-            <Route path="/clientes" element={<Clientes />} />
-            <Route path="/clientes/cadastro" element={<ClienteCadastro />} />
-            <Route path="/clientes/editar/:id" element={<ClienteCadastro />} />
-            <Route path="/agenda" element={<Agenda />} />
-            <Route path="/relatorios" element={<Relatorios />} />
-            <Route path="/configuracoes" element={<Configuracoes />} />
+            <Route path="/" element={<Dashboard onLogout={handleLogout} />} />
+            <Route path="/ordens" element={<Ordens onLogout={handleLogout} />} />
+            <Route path="/ordens/nova" element={<NovaOrdem onLogout={handleLogout} />} />
+            <Route path="/ordens/:id" element={<OrdemDetalhes onLogout={handleLogout} />} />
+            <Route path="/funcionarios" element={<Funcionarios onLogout={handleLogout} />} />
+            <Route path="/clientes" element={<Clientes onLogout={handleLogout} />} />
+            <Route path="/clientes/cadastro" element={<ClienteCadastro onLogout={handleLogout} />} />
+            <Route path="/clientes/editar/:id" element={<ClienteCadastro onLogout={handleLogout} />} />
+            <Route path="/agenda" element={<Agenda onLogout={handleLogout} />} />
+            <Route path="/relatorios" element={<Relatorios onLogout={handleLogout} />} />
+            <Route path="/configuracoes" element={<Configuracoes onLogout={handleLogout} />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Toaster />
