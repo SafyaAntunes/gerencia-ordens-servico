@@ -1,16 +1,16 @@
 
 import { ChangeEvent, forwardRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ImageIcon, X, Upload, FileVideo } from "lucide-react";
+import { X, Upload, FileVideo } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FileUploadProps {
-  value?: File | string | any; // Pode ser File, string base64 ou objeto com data: base64
+  value?: File | string | any; // Pode ser File, string URL ou objeto com data: base64
   onChange?: (file: File | null) => void;
   onRemove?: () => void;
   accept?: string;
   className?: string;
-  maxSize?: number;
+  maxSize?: number; // Em MB
 }
 
 const FileUpload = forwardRef<HTMLInputElement, FileUploadProps>(
@@ -27,8 +27,8 @@ const FileUpload = forwardRef<HTMLInputElement, FileUploadProps>(
       }
 
       const determineFileType = (url: string) => {
-        if (url.match(/\.(jpeg|jpg|gif|png|svg|webp)$/i)) return "image";
-        if (url.match(/\.(mp4|webm|ogg|mov|avi)$/i)) return "video";
+        if (url.match(/\.(jpeg|jpg|gif|png|svg|webp)$/i) || url.includes("image")) return "image";
+        if (url.match(/\.(mp4|webm|ogg|mov|avi)$/i) || url.includes("video")) return "video";
         
         // Check MIME type if available
         if (typeof value === 'object' && value.type) {
@@ -40,7 +40,7 @@ const FileUpload = forwardRef<HTMLInputElement, FileUploadProps>(
       };
 
       if (typeof value === 'string') {
-        // Se for uma string base64 direta ou URL
+        // Se for uma string URL ou base64
         setPreview(value);
         setFileType(determineFileType(value));
       } else if (value instanceof File) {

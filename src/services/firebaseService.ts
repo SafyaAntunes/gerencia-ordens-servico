@@ -1,3 +1,4 @@
+
 import { 
   collection, 
   doc, 
@@ -200,10 +201,21 @@ export const uploadFile = async (file: File, path: string): Promise<string> => {
   }
 };
 
-export const deleteFile = async (path: string): Promise<void> => {
+export const deleteFile = async (url: string): Promise<void> => {
   try {
-    const storageRef = ref(storage, path);
-    await deleteObject(storageRef);
+    // Extract the path from the URL
+    // URLs look like: https://firebasestorage.googleapis.com/v0/b/[bucket]/o/[path]?token=[token]
+    const decodedUrl = decodeURIComponent(url);
+    const startPath = decodedUrl.indexOf('/o/') + 3;
+    const endPath = decodedUrl.indexOf('?');
+    const path = decodedUrl.substring(startPath, endPath !== -1 ? endPath : undefined);
+    
+    if (path) {
+      const storageRef = ref(storage, path);
+      await deleteObject(storageRef);
+    } else {
+      console.warn('Caminho do arquivo não encontrado na URL:', url);
+    }
   } catch (error) {
     console.error('Erro ao excluir arquivo:', error);
     throw error;
@@ -211,15 +223,24 @@ export const deleteFile = async (path: string): Promise<void> => {
 };
 
 export const base64ToFile = (base64: string, fileName: string): File => {
-  const arr = base64.split(',');
-  const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png';
-  const bstr = atob(arr[1]);
-  let n = bstr.length;
-  const u8arr = new Uint8Array(n);
-  while (n--) {
-    u8arr[n] = bstr.charCodeAt(n);
+  if (!base64 || typeof base64 !== 'string') {
+    throw new Error('Dados base64 inválidos');
   }
-  return new File([u8arr], fileName, { type: mime });
+  
+  try {
+    const arr = base64.split(',');
+    const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png';
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], fileName, { type: mime });
+  } catch (error) {
+    console.error('Erro ao converter base64 para arquivo:', error);
+    throw new Error('Falha ao processar imagem');
+  }
 };
 
 // Funcionario methods

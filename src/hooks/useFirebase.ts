@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -236,20 +237,47 @@ export const useClientes = () => {
 
 // Enhanced Images and Videos hook for handling uploads
 export const useImages = () => {
+  const [isUploading, setIsUploading] = useState(false);
+  
   // Upload file and get URL
-  const uploadFile = async (file: File, path: string) => {
+  const uploadFile = async (file: File, path: string): Promise<string | null> => {
+    if (!file) return null;
+    
+    setIsUploading(true);
     try {
-      return await firebaseService.uploadFile(file, path);
+      const url = await firebaseService.uploadFile(file, path);
+      return url;
     } catch (error) {
       toast.error('Erro ao fazer upload do arquivo.');
       return null;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Upload multiple files
+  const uploadFiles = async (files: File[], path: string): Promise<string[]> => {
+    if (!files || !files.length) return [];
+    
+    setIsUploading(true);
+    try {
+      const uploadPromises = files.map(file => firebaseService.uploadFile(file, path));
+      const urls = await Promise.all(uploadPromises);
+      return urls;
+    } catch (error) {
+      toast.error('Erro ao fazer upload dos arquivos.');
+      return [];
+    } finally {
+      setIsUploading(false);
     }
   };
 
   // Delete file
-  const deleteFile = async (path: string) => {
+  const deleteFile = async (url: string): Promise<boolean> => {
+    if (!url) return false;
+    
     try {
-      await firebaseService.deleteFile(path);
+      await firebaseService.deleteFile(url);
       return true;
     } catch (error) {
       toast.error('Erro ao excluir arquivo.');
@@ -258,20 +286,28 @@ export const useImages = () => {
   };
 
   // Upload base64 image
-  const uploadBase64Image = async (base64: string, path: string, fileName: string) => {
+  const uploadBase64Image = async (base64: string, path: string, fileName: string): Promise<string | null> => {
+    if (!base64) return null;
+    
+    setIsUploading(true);
     try {
       const file = firebaseService.base64ToFile(base64, fileName);
-      return await firebaseService.uploadFile(file, path);
+      const url = await firebaseService.uploadFile(file, path);
+      return url;
     } catch (error) {
       toast.error('Erro ao fazer upload da imagem.');
       return null;
+    } finally {
+      setIsUploading(false);
     }
   };
 
   return {
     uploadFile,
+    uploadFiles,
     deleteFile,
-    uploadBase64Image
+    uploadBase64Image,
+    isUploading
   };
 };
 
