@@ -1,9 +1,8 @@
-
 import { useState } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileBarChart, TrendingUp, Clock, CalendarDays, BarChart, Users, ActivitySquare, Tools } from "lucide-react";
+import { FileBarChart, TrendingUp, Clock, CalendarDays, BarChart, Users, ActivitySquare, Wrench } from "lucide-react";
 import { LogoutProps } from "@/types/props";
 import { 
   ResponsiveContainer, 
@@ -21,7 +20,6 @@ import {
 interface RelatoriosProps extends LogoutProps {}
 
 const Relatorios = ({ onLogout }: RelatoriosProps) => {
-  // Dados financeiros
   const dadosMensais = [
     { mes: "Janeiro", receita: 50000, despesas: 30000 },
     { mes: "Fevereiro", receita: 55000, despesas: 32000 },
@@ -37,7 +35,6 @@ const Relatorios = ({ onLogout }: RelatoriosProps) => {
     { ano: 2023, receita: 700000, despesas: 400000 },
   ];
   
-  // Dados de produção
   const servicosPorTipo = [
     { nome: "Bloco", quantidade: 32, percentual: 25 },
     { nome: "Biela", quantidade: 28, percentual: 22 },
@@ -63,7 +60,6 @@ const Relatorios = ({ onLogout }: RelatoriosProps) => {
     { mes: "Junho", ordens: 50, tempo_medio: 1.9 },
   ];
   
-  // Cálculos financeiros
   const calcularLucro = (receita: number, despesas: number) => receita - despesas;
   
   const calcularTotal = (dados: any[], chave: string) => {
@@ -78,14 +74,12 @@ const Relatorios = ({ onLogout }: RelatoriosProps) => {
   const totalDespesasAnuais = calcularTotal(dadosAnuais, "despesas");
   const lucroAnual = calcularLucro(totalReceitasAnuais, totalDespesasAnuais);
   
-  // Cálculos de produção
   const totalServicos = servicosPorTipo.reduce((sum, item) => sum + item.quantidade, 0);
   const totalOrdens = ordensPorStatus.reduce((sum, item) => sum + item.quantidade, 0);
   const totalOrdensFinalizadas = ordensPorStatus.find(item => item.nome === "Finalizado")?.quantidade || 0;
   const totalOrdensEntregues = ordensPorStatus.find(item => item.nome === "Entregue")?.quantidade || 0;
   const taxaFinalizacao = ((totalOrdensFinalizadas + totalOrdensEntregues) / totalOrdens) * 100;
   
-  // Cores para os gráficos
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
   
   return (
@@ -279,7 +273,7 @@ const Relatorios = ({ onLogout }: RelatoriosProps) => {
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center">
-                    <Tools className="h-5 w-5 mr-2 text-muted-foreground" />
+                    <Wrench className="h-5 w-5 mr-2 text-muted-foreground" />
                     <p className="text-2xl font-bold">{totalServicos}</p>
                   </div>
                 </CardContent>
