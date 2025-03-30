@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import Layout from "@/components/layout/Layout";
 import OrdemForm from "@/components/ordens/OrdemForm";
 import { Prioridade, TipoServico, OrdemServico } from "@/types/ordens";
-import { collection, addDoc, doc, setDoc } from "firebase/firestore";
+import { collection, addDoc, doc, setDoc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 
@@ -46,15 +46,30 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
       const fotosEntradaUrls = await processImages(values.fotosEntrada || [], `ordens/${values.id}/entrada`);
       const fotosSaidaUrls = await processImages(values.fotosSaida || [], `ordens/${values.id}/saida`);
       
+      // Fetch client data to get the actual name
+      let clienteNome = "Cliente não encontrado";
+      let clienteTelefone = "";
+      let clienteEmail = "";
+      
+      if (values.clienteId) {
+        const clienteDoc = await getDoc(doc(db, "clientes", values.clienteId));
+        if (clienteDoc.exists()) {
+          const clienteData = clienteDoc.data();
+          clienteNome = clienteData.nome || "Cliente sem nome";
+          clienteTelefone = clienteData.telefone || "";
+          clienteEmail = clienteData.email || "";
+        }
+      }
+      
       // Create new order object
       const newOrder: Partial<OrdemServico> = {
         id: values.id,
         nome: values.nome,
         cliente: {
           id: values.clienteId,
-          nome: "Cliente Pendente", // This will be updated when fetching
-          telefone: "", 
-          email: ""
+          nome: clienteNome,
+          telefone: clienteTelefone, 
+          email: clienteEmail
         },
         motorId: values.motorId,
         dataAbertura: values.dataAbertura,
@@ -99,6 +114,7 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
       <OrdemForm 
         onSubmit={handleSubmit}
         isLoading={isSubmitting}
+        onCancel={() => navigate("/ordens")}
       />
     </Layout>
   );
