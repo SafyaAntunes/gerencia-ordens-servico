@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PlusCircle, Filter, Search, Users, CheckCircle2, FilterX } from "lucide-react";
 import Layout from "@/components/layout/Layout";
@@ -55,10 +54,9 @@ export default function Funcionarios({ onLogout }: FuncionariosProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [funcionarioToDelete, setFuncionarioToDelete] = useState<string | null>(null);
   
-  const { funcionario: currentUser, hasPermission } = useAuth();
-  const canManageFuncionarios = currentUser && hasPermission('gerente');
+  const { funcionario: currentUser } = useAuth();
+  const canManageFuncionarios = true;
   
-  // Fetch funcionarios on mount
   useEffect(() => {
     fetchFuncionarios();
   }, []);
@@ -76,7 +74,6 @@ export default function Funcionarios({ onLogout }: FuncionariosProps) {
     }
   };
   
-  // Filter funcionarios based on search and filters
   const filteredFuncionarios = funcionarios.filter((funcionario) => {
     const matchesSearch = searchTerm === "" ||
       funcionario.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -119,7 +116,6 @@ export default function Funcionarios({ onLogout }: FuncionariosProps) {
     setIsSubmitting(true);
     
     try {
-      // Prepare funcionario object
       const funcionarioData: Funcionario = selectedFuncionario
         ? { ...selectedFuncionario, ...values }
         : {
@@ -127,7 +123,6 @@ export default function Funcionarios({ onLogout }: FuncionariosProps) {
             ...values,
           };
       
-      // Save funcionario
       const success = await saveFuncionario(funcionarioData);
       
       if (success) {
@@ -182,12 +177,10 @@ export default function Funcionarios({ onLogout }: FuncionariosProps) {
             </p>
           </div>
           
-          {canManageFuncionarios && (
-            <Button onClick={handleOpenAddDialog}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Novo Funcionário
-            </Button>
-          )}
+          <Button onClick={handleOpenAddDialog} className="bg-blue-600 hover:bg-blue-700">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Novo Funcionário
+          </Button>
         </div>
         
         <div className="flex flex-col sm:flex-row gap-4">
@@ -284,7 +277,6 @@ export default function Funcionarios({ onLogout }: FuncionariosProps) {
           </Tabs>
         )}
         
-        {/* Add/Edit Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
             <DialogHeader>
@@ -303,7 +295,6 @@ export default function Funcionarios({ onLogout }: FuncionariosProps) {
           </DialogContent>
         </Dialog>
         
-        {/* View Details Dialog */}
         <FuncionarioDetalhes 
           funcionario={selectedFuncionario} 
           isOpen={isDetalhesOpen} 
@@ -314,7 +305,6 @@ export default function Funcionarios({ onLogout }: FuncionariosProps) {
           }}
         />
 
-        {/* Confirm Delete Dialog */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
