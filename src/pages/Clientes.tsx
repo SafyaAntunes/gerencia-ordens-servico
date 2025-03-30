@@ -18,7 +18,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { useForm } from "react-hook-form";
@@ -43,7 +42,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { useClientes } from "@/hooks/useFirebase";
@@ -132,8 +130,13 @@ export default function Clientes({ onLogout }: ClientesProps) {
         };
       }
       
-      await saveCliente(clienteToSave);
-      setIsDialogOpen(false);
+      const success = await saveCliente(clienteToSave);
+      
+      if (success) {
+        toast.success(editingCliente ? "Cliente atualizado com sucesso!" : "Cliente cadastrado com sucesso!");
+        setIsDialogOpen(false);
+        fetchClientes(); // Re-fetch clients to update the list
+      }
     } catch (error) {
       console.error("Erro ao salvar cliente:", error);
       toast.error("Erro ao salvar cliente");
@@ -147,9 +150,20 @@ export default function Clientes({ onLogout }: ClientesProps) {
   
   const handleDelete = async () => {
     if (clienteToDelete) {
-      await deleteCliente(clienteToDelete);
-      setDeleteDialogOpen(false);
-      setClienteToDelete(null);
+      try {
+        const success = await deleteCliente(clienteToDelete);
+        
+        if (success) {
+          toast.success("Cliente excluído com sucesso!");
+          fetchClientes(); // Re-fetch clients to update the list
+        }
+        
+        setDeleteDialogOpen(false);
+        setClienteToDelete(null);
+      } catch (error) {
+        console.error("Erro ao excluir cliente:", error);
+        toast.error("Erro ao excluir cliente");
+      }
     }
   };
 

@@ -43,7 +43,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Funcionario, NivelPermissao, permissoesLabels } from "@/types/funcionarios";
 import { TipoServico } from "@/types/ordens";
