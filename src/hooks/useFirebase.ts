@@ -165,12 +165,42 @@ export const useClientes = () => {
   const saveCliente = async (cliente: Cliente) => {
     try {
       const { id, ...clienteData } = cliente;
-      const clienteRef = id ? doc(db, 'clientes', id) : doc(collection(db, 'clientes'));
-      await setDoc(clienteRef, clienteData, { merge: true });
+      let clienteRef;
+      
+      if (id) {
+        // Update existing client
+        clienteRef = doc(db, 'clientes', id);
+        await updateDoc(clienteRef, clienteData);
+      } else {
+        // Create new client
+        clienteRef = doc(collection(db, 'clientes'));
+        await setDoc(clienteRef, {
+          ...clienteData,
+          dataCriacao: Timestamp.now()
+        });
+      }
+      
       toast.success('Cliente salvo com sucesso!');
+      await fetchClientes(); // Refresh the clients list
       return true;
     } catch (error) {
+      console.error('Erro ao salvar cliente:', error);
       toast.error('Erro ao salvar cliente.');
+      return false;
+    }
+  };
+  
+  // Delete a client
+  const deleteCliente = async (id: string) => {
+    try {
+      const clienteRef = doc(db, 'clientes', id);
+      await deleteDoc(clienteRef);
+      toast.success('Cliente excluído com sucesso!');
+      await fetchClientes(); // Refresh the clients list
+      return true;
+    } catch (error) {
+      console.error('Erro ao excluir cliente:', error);
+      toast.error('Erro ao excluir cliente.');
       return false;
     }
   };
@@ -210,6 +240,7 @@ export const useClientes = () => {
     fetchClientes,
     getCliente,
     saveCliente,
+    deleteCliente,
     getClienteMotores,
     saveMotor
   };
@@ -390,9 +421,19 @@ export const useFuncionarios = () => {
   const saveFuncionario = async (funcionario: Funcionario) => {
     try {
       const { id, senha, nomeUsuario, ...funcionarioData } = funcionario;
-      const funcionarioRef = id 
-        ? doc(db, 'funcionarios', id) 
-        : doc(collection(db, 'funcionarios'));
+      
+      let funcionarioRef;
+      if (id) {
+        funcionarioRef = doc(db, 'funcionarios', id);
+        await updateDoc(funcionarioRef, funcionarioData);
+      } else {
+        funcionarioRef = doc(collection(db, 'funcionarios'));
+        await setDoc(funcionarioRef, {
+          ...funcionarioData,
+          id: funcionarioRef.id,
+          dataCriacao: Timestamp.now()
+        });
+      }
       
       // Se for um novo funcionário e tiver credenciais, criar no authentication
       if (!id && senha && (nomeUsuario || funcionario.email)) {
@@ -418,12 +459,34 @@ export const useFuncionarios = () => {
         }
       }
       
-      // Save the document
-      await setDoc(funcionarioRef, funcionarioData, { merge: true });
-      toast.success('Funcionário salvo com sucesso!');
+      await fetchFuncionarios(); // Refresh the funcionarios list
       return true;
     } catch (error) {
+      console.error('Erro ao salvar funcionário:', error);
       toast.error('Erro ao salvar funcionário.');
+      return false;
+    }
+  };
+  
+  // Delete an employee
+  const deleteFuncionario = async (id: string) => {
+    try {
+      const funcionarioRef = doc(db, 'funcionarios', id);
+      await deleteDoc(funcionarioRef);
+      
+      // Verificar e excluir credenciais do funcionário, se existirem
+      const credenciaisRef = collection(db, 'credenciais_funcionarios');
+      const q = query(credenciaisRef, where('funcionarioId', '==', id));
+      const credenciaisSnapshot = await getDocs(q);
+      
+      const deletePromises = credenciaisSnapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+      
+      await fetchFuncionarios(); // Refresh the funcionarios list
+      return true;
+    } catch (error) {
+      console.error('Erro ao excluir funcionário:', error);
+      toast.error('Erro ao excluir funcionário.');
       return false;
     }
   };
@@ -433,6 +496,7 @@ export const useFuncionarios = () => {
     loading,
     fetchFuncionarios,
     getFuncionario,
-    saveFuncionario
+    saveFuncionario,
+    deleteFuncionario
   };
 };

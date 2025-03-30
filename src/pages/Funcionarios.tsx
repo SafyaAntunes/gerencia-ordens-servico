@@ -34,6 +34,17 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Funcionario, NivelPermissao, permissoesLabels } from "@/types/funcionarios";
 import { TipoServico } from "@/types/ordens";
 import { useFuncionarios } from "@/hooks/useFirebase";
@@ -86,20 +97,15 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
   const [selectedFuncionario, setSelectedFuncionario] = useState<Funcionario | null>(null);
   const [isDetalhesOpen, setIsDetalhesOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [funcionariosLista, setFuncionariosLista] = useState<Funcionario[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [funcionarioToDelete, setFuncionarioToDelete] = useState<string | null>(null);
   
-  const { funcionarios, loading, fetchFuncionarios, saveFuncionario } = useFuncionarios();
+  const { funcionarios, loading, fetchFuncionarios, saveFuncionario, deleteFuncionario } = useFuncionarios();
   const { funcionario: currentUser, hasPermission } = useAuth();
   
   useEffect(() => {
     fetchFuncionarios();
   }, []);
-  
-  useEffect(() => {
-    if (funcionarios) {
-      setFuncionariosLista(funcionarios);
-    }
-  }, [funcionarios]);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -119,24 +125,51 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
   const handleCreateFuncionario = async (values: FormValues) => {
     const { confirmarSenha, ...funcionarioData } = values;
     
-    const novoFuncionario: Funcionario = {
-      id: uuidv4(),
-      nome: funcionarioData.nome,
-      email: funcionarioData.email,
-      telefone: funcionarioData.telefone,
-      especialidades: funcionarioData.especialidades as TipoServico[],
-      ativo: funcionarioData.ativo,
-      nivelPermissao: funcionarioData.nivelPermissao,
-      senha: funcionarioData.senha,
-      nomeUsuario: funcionarioData.nomeUsuario,
-    };
-    
-    const success = await saveFuncionario(novoFuncionario);
-    
-    if (success) {
-      setIsDialogOpen(false);
-      form.reset();
-      fetchFuncionarios();
+    try {
+      if (isEditing && selectedFuncionario) {
+        const updatedFuncionario: Funcionario = {
+          ...selectedFuncionario,
+          nome: funcionarioData.nome,
+          email: funcionarioData.email,
+          telefone: funcionarioData.telefone,
+          especialidades: funcionarioData.especialidades as TipoServico[],
+          ativo: funcionarioData.ativo,
+          nivelPermissao: funcionarioData.nivelPermissao,
+        };
+        
+        const success = await saveFuncionario(updatedFuncionario);
+        
+        if (success) {
+          toast.success("Funcionário atualizado com sucesso!");
+          setIsDialogOpen(false);
+          form.reset();
+          fetchFuncionarios();
+        }
+      } else {
+        const novoFuncionario: Funcionario = {
+          id: uuidv4(),
+          nome: funcionarioData.nome,
+          email: funcionarioData.email,
+          telefone: funcionarioData.telefone,
+          especialidades: funcionarioData.especialidades as TipoServico[],
+          ativo: funcionarioData.ativo,
+          nivelPermissao: funcionarioData.nivelPermissao,
+          senha: funcionarioData.senha,
+          nomeUsuario: funcionarioData.nomeUsuario,
+        };
+        
+        const success = await saveFuncionario(novoFuncionario);
+        
+        if (success) {
+          toast.success("Funcionário criado com sucesso!");
+          setIsDialogOpen(false);
+          form.reset();
+          fetchFuncionarios();
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao salvar funcionário:", error);
+      toast.error("Erro ao salvar funcionário");
     }
   };
   
@@ -163,8 +196,42 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
     
     setIsDialogOpen(true);
   };
+
+  const handleDeleteConfirm = async () => {
+    if (funcionarioToDelete) {
+      try {
+        await deleteFuncionario(funcionarioToDelete);
+        toast.success("Funcionário excluído com sucesso!");
+        fetchFuncionarios();
+      } catch (error) {
+        console.error("Erro ao excluir funcionário:", error);
+        toast.error("Erro ao excluir funcionário");
+      } finally {
+        setDeleteDialogOpen(false);
+        setFuncionarioToDelete(null);
+      }
+    }
+  };
   
-  const filteredFuncionarios = funcionariosLista.filter((funcionario) => {
+  const handleDeleteFuncionario = (id: string) => {
+    setFuncionarioToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+  
+  const handleUpdateFuncionario = async (funcionario: Funcionario) => {
+    try {
+      const success = await saveFuncionario(funcionario);
+      if (success) {
+        toast.success("Funcionário atualizado com sucesso!");
+        fetchFuncionarios();
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar funcionário:", error);
+      toast.error("Erro ao atualizar funcionário");
+    }
+  };
+  
+  const filteredFuncionarios = funcionarios.filter((funcionario) => {
     const matchesSearch = searchTerm === "" ||
       funcionario.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       funcionario.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -313,6 +380,7 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
                     funcionario={funcionario}
                     onClick={() => handleViewDetails(funcionario)}
                     onEdit={canManageFuncionarios ? () => handleEditFuncionario(funcionario) : undefined}
+                    onDelete={canManageFuncionarios ? () => handleDeleteFuncionario(funcionario.id) : undefined}
                   />
                 ))}
               </div>
@@ -346,6 +414,7 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
                     funcionario={funcionario}
                     onClick={() => handleViewDetails(funcionario)}
                     onEdit={canManageFuncionarios ? () => handleEditFuncionario(funcionario) : undefined}
+                    onDelete={canManageFuncionarios ? () => handleDeleteFuncionario(funcionario.id) : undefined}
                   />
                 ))}
               </div>
@@ -369,6 +438,7 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
                     funcionario={funcionario}
                     onClick={() => handleViewDetails(funcionario)}
                     onEdit={canManageFuncionarios ? () => handleEditFuncionario(funcionario) : undefined}
+                    onDelete={canManageFuncionarios ? () => handleDeleteFuncionario(funcionario.id) : undefined}
                   />
                 ))}
               </div>
@@ -620,8 +690,26 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
         <FuncionarioDetalhes 
           funcionario={selectedFuncionario} 
           isOpen={isDetalhesOpen} 
-          onClose={() => setIsDetalhesOpen(false)} 
+          onClose={() => setIsDetalhesOpen(false)}
+          onSave={handleUpdateFuncionario}
         />
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir Funcionário</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir este funcionário? Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   );

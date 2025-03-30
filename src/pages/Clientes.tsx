@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -45,72 +45,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
-
-// Dados de exemplo
-const CLIENTES: Cliente[] = [
-  {
-    id: "1",
-    nome: "Auto Peças Silva",
-    telefone: "(11) 98765-4321",
-    email: "contato@autopecassilva.com.br",
-    endereco: "Rua das Retíficas, 123 - São Paulo/SP",
-    cnpj_cpf: "12.345.678/0001-90",
-    motores: [
-      {
-        id: "m1",
-        marca: "Volkswagen",
-        modelo: "AP 1.8",
-        ano: "2010",
-        numeroSerie: "AP18123456",
-        cilindradas: "1800",
-      },
-      {
-        id: "m2",
-        marca: "Fiat",
-        modelo: "Fire 1.0",
-        ano: "2015",
-        numeroSerie: "FIRE789456",
-        cilindradas: "1000",
-      }
-    ]
-  },
-  {
-    id: "2",
-    nome: "Oficina Mecânica Central",
-    telefone: "(11) 3333-4444",
-    email: "oficina@central.com.br",
-  },
-  {
-    id: "3",
-    nome: "Concessionária Motors",
-    telefone: "(11) 9999-0000",
-    email: "pecas@motors.com.br",
-    motores: [
-      {
-        id: "m3",
-        marca: "Toyota",
-        modelo: "Corolla 2.0",
-        ano: "2019",
-        numeroSerie: "CRL2019123",
-        cilindradas: "2000",
-      }
-    ]
-  },
-  {
-    id: "4",
-    nome: "Autoelétrica Express",
-    telefone: "(11) 7777-8888",
-    email: "atendimento@express.com.br",
-  },
-  {
-    id: "5",
-    nome: "Transportadora Rodovia",
-    telefone: "(11) 5555-6666",
-    email: "manutencao@rodovia.com.br",
-  },
-];
+import { useClientes } from "@/hooks/useFirebase";
+import { toast } from "sonner";
 
 // Schema para o formulário de cliente
 const clienteFormSchema = z.object({
@@ -126,12 +63,18 @@ interface ClientesProps {
 }
 
 export default function Clientes({ onLogout }: ClientesProps) {
-  const [clientes, setClientes] = useState<Cliente[]>(CLIENTES);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
-  const { toast } = useToast();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [clienteToDelete, setClienteToDelete] = useState<string | null>(null);
   const navigate = useNavigate();
+  
+  const { clientes, loading, fetchClientes, saveCliente, deleteCliente } = useClientes();
+  
+  useEffect(() => {
+    fetchClientes();
+  }, []);
 
   const form = useForm<ClienteFormValues>({
     resolver: zodResolver(clienteFormSchema),
@@ -143,9 +86,9 @@ export default function Clientes({ onLogout }: ClientesProps) {
   });
 
   const filteredClientes = clientes.filter((cliente) =>
-    cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cliente.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cliente.telefone.includes(searchTerm)
+    cliente.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cliente.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cliente.telefone?.includes(searchTerm)
   );
 
   const handleOpenDialog = (cliente?: Cliente) => {
@@ -153,8 +96,8 @@ export default function Clientes({ onLogout }: ClientesProps) {
       setEditingCliente(cliente);
       form.reset({
         nome: cliente.nome,
-        telefone: cliente.telefone,
-        email: cliente.email,
+        telefone: cliente.telefone || "",
+        email: cliente.email || "",
       });
     } else {
       setEditingCliente(null);
@@ -167,45 +110,47 @@ export default function Clientes({ onLogout }: ClientesProps) {
     setIsDialogOpen(true);
   };
 
-  const handleSubmit = (values: ClienteFormValues) => {
-    if (editingCliente) {
-      // Atualizar cliente existente
-      setClientes(clientes.map(c => 
-        c.id === editingCliente.id ? { 
-          ...c, 
+  const handleSubmit = async (values: ClienteFormValues) => {
+    try {
+      let clienteToSave: Cliente;
+      
+      if (editingCliente) {
+        // Atualizar cliente existente
+        clienteToSave = { 
+          ...editingCliente, 
           nome: values.nome,
           telefone: values.telefone,
           email: values.email
-        } : c
-      ));
-      toast({
-        title: "Cliente atualizado",
-        description: `O cliente ${values.nome} foi atualizado com sucesso.`,
-      });
-    } else {
-      // Adicionar novo cliente
-      const newCliente: Cliente = {
-        id: `${Date.now()}`, // Gera um ID baseado no timestamp atual
-        nome: values.nome,
-        telefone: values.telefone,
-        email: values.email,
-      };
-      setClientes([...clientes, newCliente]);
-      toast({
-        title: "Cliente adicionado",
-        description: `O cliente ${values.nome} foi adicionado com sucesso.`,
-      });
+        };
+      } else {
+        // Adicionar novo cliente
+        clienteToSave = {
+          id: "", // ID será atribuído pelo Firestore
+          nome: values.nome,
+          telefone: values.telefone,
+          email: values.email,
+        };
+      }
+      
+      await saveCliente(clienteToSave);
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error("Erro ao salvar cliente:", error);
+      toast.error("Erro ao salvar cliente");
     }
-    setIsDialogOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    setClientes(clientes.filter(c => c.id !== id));
-    toast({
-      title: "Cliente removido",
-      description: "O cliente foi removido com sucesso.",
-      variant: "destructive",
-    });
+  const handleOpenDeleteDialog = (id: string) => {
+    setClienteToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+  
+  const handleDelete = async () => {
+    if (clienteToDelete) {
+      await deleteCliente(clienteToDelete);
+      setDeleteDialogOpen(false);
+      setClienteToDelete(null);
+    }
   };
 
   // Funções para navegação
@@ -252,7 +197,11 @@ export default function Clientes({ onLogout }: ClientesProps) {
           )}
         </div>
         
-        {filteredClientes.length === 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : filteredClientes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <Users className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium">Nenhum cliente encontrado</h3>
@@ -292,46 +241,37 @@ export default function Clientes({ onLogout }: ClientesProps) {
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{cliente.telefone}</span>
+                    <span>{cliente.telefone || "Não informado"}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span>{cliente.email}</span>
+                    <span>{cliente.email || "Não informado"}</span>
                   </div>
                 </CardContent>
                 <CardFooter className="flex justify-end gap-2">
                   <Button 
                     variant="ghost" 
                     size="icon"
-                    onClick={() => handleEditCliente(cliente.id)}
+                    onClick={() => handleOpenDialog(cliente)}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
                   
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <Trash className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Tem certeza que deseja excluir o cliente "{cliente.nome}"? Esta ação não pode ser desfeita.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction 
-                          onClick={() => handleDelete(cliente.id)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          Excluir
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => handleOpenDeleteDialog(cliente.id)}
+                  >
+                    <Trash className="h-4 w-4 text-destructive" />
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleEditCliente(cliente.id)}
+                  >
+                    Ver detalhes
+                  </Button>
                 </CardFooter>
               </Card>
             ))}
@@ -417,6 +357,26 @@ export default function Clientes({ onLogout }: ClientesProps) {
           </Form>
         </DialogContent>
       </Dialog>
+      
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 }

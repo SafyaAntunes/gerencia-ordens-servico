@@ -1,5 +1,5 @@
 
-import { Phone, Mail, Wrench, Shield } from "lucide-react";
+import { Phone, Mail, Wrench, Shield, Trash, Edit } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Funcionario, permissoesLabels } from "@/types/funcionarios";
@@ -9,6 +9,7 @@ interface FuncionarioCardProps {
   funcionario: Funcionario;
   onClick?: () => void;
   onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 const tipoServicoLabel = {
@@ -19,7 +20,7 @@ const tipoServicoLabel = {
   eixo_comando: "Eixo de Comando"
 };
 
-export default function FuncionarioCard({ funcionario, onClick, onEdit }: FuncionarioCardProps) {
+export default function FuncionarioCard({ funcionario, onClick, onEdit, onDelete }: FuncionarioCardProps) {
   // Extrair iniciais do nome para avatar
   const iniciais = funcionario.nome
     .split(" ")
@@ -88,8 +89,13 @@ export default function FuncionarioCard({ funcionario, onClick, onEdit }: Funcio
         
         <div className="flex gap-2">
           {onEdit && (
-            <Button variant="outline" size="sm" onClick={onEdit}>
-              Editar
+            <Button variant="ghost" size="sm" onClick={onEdit}>
+              <Edit className="h-4 w-4" />
+            </Button>
+          )}
+          {onDelete && (
+            <Button variant="ghost" size="sm" onClick={onDelete}>
+              <Trash className="h-4 w-4 text-destructive" />
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={onClick}>

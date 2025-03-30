@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Funcionario } from "@/types/funcionarios";
 import { Phone, Mail, Wrench, Edit, Save } from "lucide-react";
@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface FuncionarioDetalhesProps {
   funcionario: Funcionario | null;
@@ -33,15 +33,14 @@ export default function FuncionarioDetalhes({
 }: FuncionarioDetalhesProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedFuncionario, setEditedFuncionario] = useState<Funcionario | null>(null);
-  const { toast } = useToast();
   
   // Reset editing state when dialog closes or new funcionario is loaded
-  useState(() => {
+  useEffect(() => {
     if (funcionario) {
       setEditedFuncionario(funcionario);
       setIsEditing(false);
     }
-  });
+  }, [funcionario, isOpen]);
   
   if (!funcionario) return null;
   
@@ -58,10 +57,7 @@ export default function FuncionarioDetalhes({
       // Save changes
       if (onSave) {
         onSave(editedFuncionario);
-        toast({
-          title: "Funcionário atualizado",
-          description: "As alterações foram salvas com sucesso.",
-        });
+        toast.success("Funcionário atualizado com sucesso!");
       }
     }
     setIsEditing(!isEditing);
