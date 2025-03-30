@@ -2,26 +2,19 @@
 import { Phone, Mail, Wrench, Shield, Trash, Edit, Eye } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Funcionario, permissoesLabels } from "@/types/funcionarios";
+import { Funcionario, permissoesLabels, tipoServicoLabels } from "@/types/funcionarios";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 
 interface FuncionarioCardProps {
   funcionario: Funcionario;
-  onClick?: () => void;
-  onEdit?: () => void;
-  onDelete?: () => void;
+  onView: (funcionario: Funcionario) => void;
+  onEdit: (funcionario: Funcionario) => void;
+  onDelete: (id: string) => void;
 }
 
-const tipoServicoLabel = {
-  bloco: "Bloco",
-  biela: "Biela",
-  cabecote: "Cabeçote",
-  virabrequim: "Virabrequim",
-  eixo_comando: "Eixo de Comando"
-};
-
-export default function FuncionarioCard({ funcionario, onClick, onEdit, onDelete }: FuncionarioCardProps) {
-  // Extrair iniciais do nome para avatar
+export default function FuncionarioCard({ funcionario, onView, onEdit, onDelete }: FuncionarioCardProps) {
+  // Extract initials for the avatar
   const iniciais = funcionario.nome
     .split(" ")
     .map(n => n[0])
@@ -30,48 +23,51 @@ export default function FuncionarioCard({ funcionario, onClick, onEdit, onDelete
     .toUpperCase();
     
   return (
-    <Card className="card-hover overflow-hidden border-border">
-      <CardHeader className="flex flex-row items-center gap-4 pb-2">
-        <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center text-primary text-lg font-medium">
-          {iniciais}
-        </div>
-        <div>
-          <h3 className="font-semibold text-lg">{funcionario.nome}</h3>
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-            <Shield className="h-3.5 w-3.5" />
-            {permissoesLabels[funcionario.nivelPermissao || 'visualizacao']}
+    <Card className="overflow-hidden transition-all duration-200 hover:shadow-md border-border h-full flex flex-col">
+      <CardHeader className="pb-2">
+        <div className="flex items-center gap-4">
+          <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center text-primary text-lg font-medium">
+            {iniciais}
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-lg line-clamp-1">{funcionario.nome}</h3>
+            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <Shield className="h-3.5 w-3.5" />
+              {permissoesLabels[funcionario.nivelPermissao || 'visualizacao']}
+            </div>
           </div>
         </div>
       </CardHeader>
       
-      <CardContent className="pb-3">
-        <div className="space-y-2">
+      <CardContent className="pb-3 flex-1">
+        <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm">
-            <Phone className="h-4 w-4 text-muted-foreground" />
-            <span>{funcionario.telefone}</span>
+            <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="truncate">{funcionario.telefone || "Não informado"}</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm">
-            <Mail className="h-4 w-4 text-muted-foreground" />
-            <span>{funcionario.email}</span>
+            <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="truncate">{funcionario.email || "Não informado"}</span>
           </div>
-        </div>
         
-        <div className="mt-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Wrench className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Especialidades</span>
-          </div>
-          
-          <div className="flex flex-wrap gap-1.5">
-            {funcionario.especialidades.map((especialidade) => (
-              <span 
-                key={especialidade}
-                className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground"
-              >
-                {tipoServicoLabel[especialidade]}
-              </span>
-            ))}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Wrench className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Especialidades</span>
+            </div>
+            
+            <div className="flex flex-wrap gap-1.5">
+              {funcionario.especialidades.map((especialidade) => (
+                <Badge 
+                  key={especialidade}
+                  variant="secondary"
+                  className="text-xs"
+                >
+                  {tipoServicoLabels[especialidade]}
+                </Badge>
+              ))}
+            </div>
           </div>
         </div>
       </CardContent>
@@ -79,28 +75,24 @@ export default function FuncionarioCard({ funcionario, onClick, onEdit, onDelete
       <Separator />
       
       <CardFooter className="pt-3 flex justify-between">
-        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-          funcionario.ativo 
-            ? "bg-green-100 text-green-800" 
-            : "bg-red-100 text-red-800"
-        }`}>
+        <Badge
+          className={funcionario.ativo 
+            ? "bg-green-100 text-green-800 hover:bg-green-100 hover:text-green-800" 
+            : "bg-red-100 text-red-800 hover:bg-red-100 hover:text-red-800"}
+        >
           {funcionario.ativo ? "Ativo" : "Inativo"}
-        </span>
+        </Badge>
         
         <div className="flex gap-2">
-          {onEdit && (
-            <Button variant="outline" size="sm" onClick={onEdit} className="h-8">
-              <Edit className="h-4 w-4 mr-1" />
-              Editar
-            </Button>
-          )}
-          {onDelete && (
-            <Button variant="destructive" size="sm" onClick={onDelete} className="h-8">
-              <Trash className="h-4 w-4 mr-1" />
-              Excluir
-            </Button>
-          )}
-          <Button variant="default" size="sm" onClick={onClick} className="h-8">
+          <Button variant="ghost" size="icon" onClick={() => onEdit(funcionario)}>
+            <Edit className="h-4 w-4" />
+          </Button>
+          
+          <Button variant="ghost" size="icon" onClick={() => onDelete(funcionario.id)}>
+            <Trash className="h-4 w-4 text-destructive" />
+          </Button>
+          
+          <Button variant="outline" size="sm" onClick={() => onView(funcionario)}>
             <Eye className="h-4 w-4 mr-1" />
             Detalhes
           </Button>
