@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PlusCircle, Filter, Search, Users, CheckCircle2, Shield, Lock } from "lucide-react";
 import Layout from "@/components/layout/Layout";
@@ -66,6 +65,7 @@ const formSchema = z.object({
   nivelPermissao: z.enum(["admin", "gerente", "tecnico", "visualizacao"]).default("visualizacao"),
   senha: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres" }).optional(),
   confirmarSenha: z.string().optional(),
+  nomeUsuario: z.string().min(3, { message: "Nome de usuário deve ter pelo menos 3 caracteres" }).optional(),
 }).refine((data) => {
   if (data.senha) {
     return data.senha === data.confirmarSenha;
@@ -112,6 +112,7 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
       nivelPermissao: "visualizacao",
       senha: "",
       confirmarSenha: "",
+      nomeUsuario: "",
     },
   });
   
@@ -127,6 +128,7 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
       ativo: funcionarioData.ativo,
       nivelPermissao: funcionarioData.nivelPermissao,
       senha: funcionarioData.senha,
+      nomeUsuario: funcionarioData.nomeUsuario,
     };
     
     const success = await saveFuncionario(novoFuncionario);
@@ -156,6 +158,7 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
       nivelPermissao: funcionario.nivelPermissao || "visualizacao",
       senha: "",
       confirmarSenha: "",
+      nomeUsuario: "",
     });
     
     setIsDialogOpen(true);
@@ -204,6 +207,7 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
                 nivelPermissao: "visualizacao",
                 senha: "",
                 confirmarSenha: "",
+                nomeUsuario: "",
               });
               setIsDialogOpen(true);
             }}>
@@ -521,8 +525,24 @@ const Funcionarios = ({ onLogout }: { onLogout?: () => void }) => {
                     </div>
                     
                     <FormDescription className="mt-0">
-                      Defina uma senha para que o funcionário possa acessar o sistema.
+                      Defina uma senha e um nome de usuário para que o funcionário possa acessar o sistema.
                     </FormDescription>
+                    
+                    <div className="grid grid-cols-1 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="nomeUsuario"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nome de Usuário</FormLabel>
+                            <FormControl>
+                              <Input placeholder="nome.sobrenome" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField

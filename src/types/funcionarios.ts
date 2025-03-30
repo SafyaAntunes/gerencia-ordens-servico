@@ -12,6 +12,7 @@ export type Funcionario = {
   ativo: boolean;
   nivelPermissao?: NivelPermissao;
   senha?: string; // Armazenada apenas temporariamente para criação de usuário
+  nomeUsuario?: string; // Nome de usuário para login
 };
 
 export const permissoesLabels: Record<NivelPermissao, string> = {
@@ -20,4 +21,3 @@ export const permissoesLabels: Record<NivelPermissao, string> = {
   tecnico: 'Técnico',
   visualizacao: 'Visualização'
 };
-

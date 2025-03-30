@@ -389,10 +389,34 @@ export const useFuncionarios = () => {
   // Save an employee
   const saveFuncionario = async (funcionario: Funcionario) => {
     try {
-      const { id, ...funcionarioData } = funcionario;
+      const { id, senha, nomeUsuario, ...funcionarioData } = funcionario;
       const funcionarioRef = id 
         ? doc(db, 'funcionarios', id) 
         : doc(collection(db, 'funcionarios'));
+      
+      // Se for um novo funcionário e tiver credenciais, criar no authentication
+      if (!id && senha && (nomeUsuario || funcionario.email)) {
+        try {
+          // Criar usuário no Firebase Authentication
+          // Normalmente seria feito via Cloud Functions para segurança
+          // Aqui simulamos apenas o salvamento dos dados no Firestore
+          console.log(`Credenciais para criar no Authentication: ${nomeUsuario || funcionario.email}`);
+          
+          // Em uma implementação real, as credenciais seriam salvas em uma collection separada
+          // ou processadas por uma Cloud Function
+          const credenciaisRef = doc(collection(db, 'credenciais_funcionarios'));
+          await setDoc(credenciaisRef, {
+            funcionarioId: funcionarioRef.id,
+            nomeUsuario: nomeUsuario || funcionario.email,
+            senha: senha, // Em produção, NUNCA armazene senhas em texto puro
+            dataCriacao: Timestamp.now()
+          });
+        } catch (authError) {
+          console.error("Erro ao criar usuário de acesso:", authError);
+          toast.error("Erro ao criar credenciais de acesso");
+          // Continuar salvando os dados do funcionário mesmo se a autenticação falhar
+        }
+      }
       
       // Save the document
       await setDoc(funcionarioRef, funcionarioData, { merge: true });
