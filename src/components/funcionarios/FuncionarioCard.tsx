@@ -1,5 +1,5 @@
 
-import { Phone, Mail, Wrench, Shield, Trash, Edit } from "lucide-react";
+import { Phone, Mail, Wrench, Shield, Trash, Edit, Eye } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Funcionario, permissoesLabels } from "@/types/funcionarios";
@@ -30,7 +30,7 @@ export default function FuncionarioCard({ funcionario, onClick, onEdit, onDelete
     .toUpperCase();
     
   return (
-    <Card className="card-hover overflow-hidden">
+    <Card className="card-hover overflow-hidden border-border">
       <CardHeader className="flex flex-row items-center gap-4 pb-2">
         <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center text-primary text-lg font-medium">
           {iniciais}
@@ -89,17 +89,20 @@ export default function FuncionarioCard({ funcionario, onClick, onEdit, onDelete
         
         <div className="flex gap-2">
           {onEdit && (
-            <Button variant="ghost" size="sm" onClick={onEdit}>
-              <Edit className="h-4 w-4" />
+            <Button variant="outline" size="sm" onClick={onEdit} className="h-8">
+              <Edit className="h-4 w-4 mr-1" />
+              Editar
             </Button>
           )}
           {onDelete && (
-            <Button variant="ghost" size="sm" onClick={onDelete}>
-              <Trash className="h-4 w-4 text-destructive" />
+            <Button variant="destructive" size="sm" onClick={onDelete} className="h-8">
+              <Trash className="h-4 w-4 mr-1" />
+              Excluir
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={onClick}>
-            Ver detalhes
+          <Button variant="default" size="sm" onClick={onClick} className="h-8">
+            <Eye className="h-4 w-4 mr-1" />
+            Detalhes
           </Button>
         </div>
       </CardFooter>
