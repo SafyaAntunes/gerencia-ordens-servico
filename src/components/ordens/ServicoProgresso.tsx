@@ -1,134 +1,253 @@
-
 import { useState } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { FormLabel } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
-import { Servico, TipoServico } from "@/types/ordens";
-import OrdemCronometro from "./OrdemCronometro";
-
-// Mapear nomes de serviços para exibição
-const SERVICO_NOMES: Record<TipoServico, string> = {
-  bloco: "Bloco",
-  biela: "Biela",
-  cabecote: "Cabeçote",
-  virabrequim: "Virabrequim",
-  eixo_comando: "Eixo de Comando",
-  montagem: "Montagem"
-};
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { CheckCircle2, Clock, Play, Pause, StopCircle, RotateCcw } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { formatTime } from "@/utils/timerUtils";
+import { notifyTimerStarted, notifyTimerPaused, notifyTimerResumed, notifyTimerFinished } from "@/utils/timerNotifications";
+import { EtapaOS, SubAtividade, TipoServico } from "@/types/ordens";
 
 interface ServicoProgressoProps {
-  ordemId: string;
-  funcionarioId: string;
-  funcionarioNome?: string;
-  servico: Servico;
-  onSubatividadeChange: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
-  onServicoStatusChange: (servicoTipo: TipoServico, concluido: boolean) => void;
+  etapa: EtapaOS;
+  tipoServico?: TipoServico;
+  subatividades?: SubAtividade[];
+  onComplete: () => void;
+  onSubatividadeToggle?: (index: number) => void;
+  className?: string;
 }
 
 export default function ServicoProgresso({
-  ordemId,
-  funcionarioId,
-  funcionarioNome,
-  servico,
-  onSubatividadeChange,
-  onServicoStatusChange
+  etapa,
+  tipoServico,
+  subatividades = [],
+  onComplete,
+  onSubatividadeToggle,
+  className,
 }: ServicoProgressoProps) {
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  
-  // Calcular o progresso baseado nas subatividades
-  const totalSubatividades = servico.subatividades?.length || 0;
-  const concluidasCount = servico.subatividades?.filter(sub => sub.selecionada).length || 0;
-  const progressoPercentual = totalSubatividades > 0 
-    ? Math.round((concluidasCount / totalSubatividades) * 100)
-    : 0;
+  const [isRunning, setIsRunning] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [intervalId, setIntervalId] = useState<number | null>(null);
+
+  const allCompleted = subatividades.length > 0 && subatividades.every(item => item.concluida);
+
+  const startTimer = () => {
+    if (isRunning) return;
     
-  // Verificar se está 100% completo
-  const isCompleted = totalSubatividades > 0 && concluidasCount === totalSubatividades;
-  
-  const handleSubatividadeChange = (subatividadeId: string, checked: boolean) => {
-    onSubatividadeChange(servico.tipo, subatividadeId, checked);
+    const now = Date.now();
+    setStartTime(now - elapsedTime);
+    setIsRunning(true);
+    setIsPaused(false);
     
-    // Verificar se todas as subatividades estão concluídas após a mudança
-    const novoTotal = servico.subatividades?.length || 0;
-    const novoConcluidas = servico.subatividades?.filter(sub => {
-      if (sub.id === subatividadeId) {
-        return checked;
-      }
-      return sub.selecionada;
-    }).length || 0;
+    const id = window.setInterval(() => {
+      setElapsedTime(Date.now() - now + elapsedTime);
+    }, 1000);
     
-    if (novoConcluidas === novoTotal && novoTotal > 0) {
-      onServicoStatusChange(servico.tipo, true);
-    } else if (servico.concluido) {
-      onServicoStatusChange(servico.tipo, false);
-    }
+    setIntervalId(id);
+    notifyTimerStarted(etapa, tipoServico);
   };
-  
+
+  const pauseTimer = () => {
+    if (intervalId !== null) {
+      clearInterval(intervalId);
+      setIntervalId(null);
+    }
+    setIsRunning(false);
+    setIsPaused(true);
+    notifyTimerPaused();
+  };
+
+  const resumeTimer = () => {
+    if (isRunning) return;
+    
+    const now = Date.now();
+    setStartTime(now - elapsedTime);
+    setIsRunning(true);
+    setIsPaused(false);
+    
+    const id = window.setInterval(() => {
+      setElapsedTime(Date.now() - now + elapsedTime);
+    }, 1000);
+    
+    setIntervalId(id);
+    notifyTimerResumed();
+  };
+
+  const stopTimer = () => {
+    if (intervalId !== null) {
+      clearInterval(intervalId);
+      setIntervalId(null);
+    }
+    
+    setIsRunning(false);
+    setIsPaused(false);
+    notifyTimerFinished(elapsedTime);
+    onComplete();
+  };
+
+  const resetTimer = () => {
+    if (intervalId !== null) {
+      clearInterval(intervalId);
+      setIntervalId(null);
+    }
+    
+    setIsRunning(false);
+    setIsPaused(false);
+    setElapsedTime(0);
+    setStartTime(null);
+  };
+
   return (
-    <Card className="mb-4">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
+    <Card className={cn("w-full", className)}>
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-center">
+          <h3 className="font-medium text-lg">Progresso da Atividade</h3>
           <div className="flex items-center gap-2">
-            <CardTitle>{SERVICO_NOMES[servico.tipo]}</CardTitle>
-            <Badge variant={servico.concluido ? "success" : "outline"}>
-              {servico.concluido ? "Concluído" : "Em andamento"}
-            </Badge>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span className="font-mono text-sm">
+              {formatTime(elapsedTime)}
+            </span>
           </div>
-          <Badge variant="outline" className="text-sm">
-            {progressoPercentual}% completo
-          </Badge>
         </div>
-        {servico.descricao && (
-          <p className="text-sm text-muted-foreground mt-1">{servico.descricao}</p>
-        )}
       </CardHeader>
       
-      <CardContent>
-        {/* Cronômetro do serviço */}
-        <div className="mb-4">
-          <OrdemCronometro
-            ordemId={ordemId}
-            funcionarioId={funcionarioId}
-            funcionarioNome={funcionarioNome}
-            etapa="retifica"
-            tipoServico={servico.tipo}
-            isEtapaConcluida={servico.concluido}
-            onStart={() => setIsTimerRunning(true)}
-            onFinish={() => {
-              setIsTimerRunning(false);
-              if (isCompleted) {
-                onServicoStatusChange(servico.tipo, true);
-              }
-            }}
-          />
-        </div>
-        
-        <div className="mt-4">
-          <h4 className="text-sm font-medium mb-3">Atividades a realizar:</h4>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {servico.subatividades?.map((subatividade) => (
-              <div key={subatividade.id} className="flex items-center space-x-2">
-                <Checkbox 
-                  id={`subatividade-${subatividade.id}`}
-                  checked={subatividade.selecionada}
-                  disabled={isTimerRunning && !subatividade.selecionada}
-                  onCheckedChange={(checked) => 
-                    handleSubatividadeChange(subatividade.id, checked === true)
-                  }
-                />
-                <FormLabel 
-                  htmlFor={`subatividade-${subatividade.id}`}
-                  className={`text-sm font-normal cursor-pointer ${subatividade.selecionada ? 'line-through text-muted-foreground' : ''}`}
+      {subatividades.length > 0 && (
+        <>
+          <Separator />
+          <CardContent className="pt-4">
+            <div className="space-y-3">
+              {subatividades.map((subatividade, index) => (
+                <div 
+                  key={index}
+                  className="flex items-center justify-between"
+                  onClick={() => onSubatividadeToggle?.(index)}
                 >
-                  {subatividade.nome}
-                </FormLabel>
-              </div>
-            ))}
+                  <div className="flex items-center gap-2 cursor-pointer">
+                    <div 
+                      className={cn(
+                        "h-5 w-5 rounded-full border flex items-center justify-center",
+                        subatividade.concluida 
+                          ? "border-green-500 bg-green-500/10" 
+                          : "border-muted"
+                      )}
+                    >
+                      {subatividade.concluida && (
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      )}
+                    </div>
+                    <Badge 
+                      variant={subatividade.concluida ? "outline" : "outline"}
+                      className={subatividade.concluida ? "text-green-600 border-green-600" : "text-muted-foreground"}
+                    >
+                      {subatividade.nome}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </>
+      )}
+      
+      <CardFooter className="pt-2 flex justify-between">
+        <TooltipProvider>
+          <div className="flex gap-2">
+            {!isRunning && !isPaused && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={startTimer}
+                    disabled={allCompleted}
+                  >
+                    <Play className="h-4 w-4 mr-1" />
+                    Iniciar
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Iniciar cronômetro</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            
+            {isRunning && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={pauseTimer}
+                  >
+                    <Pause className="h-4 w-4 mr-1" />
+                    Pausar
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Pausar cronômetro</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            
+            {isPaused && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={resumeTimer}
+                  >
+                    <Play className="h-4 w-4 mr-1" />
+                    Continuar
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Continuar cronômetro</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            
+            {(isRunning || isPaused) && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={resetTimer}
+                  >
+                    <RotateCcw className="h-4 w-4 mr-1" />
+                    Reiniciar
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Reiniciar cronômetro</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </div>
-        </div>
-      </CardContent>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="default" 
+                size="sm" 
+                onClick={stopTimer}
+                disabled={!isRunning && !isPaused && elapsedTime === 0}
+              >
+                <StopCircle className="h-4 w-4 mr-1" />
+                Concluir
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Marcar como concluído</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </CardFooter>
     </Card>
   );
 }

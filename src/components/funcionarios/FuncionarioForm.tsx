@@ -1,15 +1,13 @@
-
 import { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Funcionario, NivelPermissao, permissoesLabels } from "@/types/funcionarios";
+import { Funcionario, NivelPermissao, permissoesLabels, tipoServicoLabels } from "@/types/funcionarios";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { tipoServicoLabels } from "@/types/funcionarios";
 import { Shield, Wrench, Lock } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 

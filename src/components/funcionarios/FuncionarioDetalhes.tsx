@@ -118,7 +118,7 @@ export default function FuncionarioDetalhes({
             <div className="flex flex-wrap gap-2">
               {funcionario.especialidades.map((especialidade) => (
                 <Badge key={especialidade} variant="secondary">
-                  {tipoServicoLabels[especialidade]}
+                  {tipoServicoLabels[especialidade as keyof typeof tipoServicoLabels]}
                 </Badge>
               ))}
             </div>

@@ -27,9 +27,13 @@ export const getFuncionarios = async (): Promise<Funcionario[]> => {
     
     return snapshot.docs.map(doc => {
       const data = doc.data();
+      // Provide default values for required fields
       return {
         id: doc.id,
         ...data,
+        nome: data.nome || '',
+        especialidades: data.especialidades || [],
+        nivelPermissao: data.nivelPermissao || 'visualizacao',
         dataCriacao: data.dataCriacao ? data.dataCriacao.toDate() : null
       } as Funcionario;
     });
@@ -53,6 +57,9 @@ export const getFuncionario = async (id: string): Promise<Funcionario | null> =>
     return {
       id: funcionarioDoc.id,
       ...data,
+      nome: data.nome || '',
+      especialidades: data.especialidades || [],
+      nivelPermissao: data.nivelPermissao || 'visualizacao',
       dataCriacao: data.dataCriacao ? data.dataCriacao.toDate() : null
     } as Funcionario;
   } catch (error) {

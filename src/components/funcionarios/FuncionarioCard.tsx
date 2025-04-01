@@ -1,4 +1,3 @@
-
 import { Phone, Mail, Wrench, Shield, Trash, Edit, Eye } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -64,7 +63,7 @@ export default function FuncionarioCard({ funcionario, onView, onEdit, onDelete 
                   variant="secondary"
                   className="text-xs"
                 >
-                  {tipoServicoLabels[especialidade]}
+                  {tipoServicoLabels[especialidade as keyof typeof tipoServicoLabels]}
                 </Badge>
               ))}
             </div>

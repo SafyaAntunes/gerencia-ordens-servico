@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { auth } from '@/lib/firebase';
 import { User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { toast } from 'sonner';
-import { Funcionario } from '@/types/funcionarios';
+import { Funcionario, NivelPermissao } from '@/types/funcionarios';
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -25,7 +25,7 @@ export const useAuth = () => {
           telefone: '',
           especialidades: [],
           ativo: true,
-          nivelPermissao: 'admin'
+          nivelPermissao: 'admin' as NivelPermissao
         });
       } else {
         setFuncionario(null);
