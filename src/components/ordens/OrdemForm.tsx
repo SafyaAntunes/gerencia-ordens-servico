@@ -171,6 +171,23 @@ export default function OrdemForm({
   const [selectedClienteId, setSelectedClienteId] = useState<string>(defaultValues?.clienteId || "");
   const [motores, setMotores] = useState<Motor[]>([]);
   
+  // Initialize the form first before we use it
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      id: defaultValues?.id || "",
+      nome: defaultValues?.nome || "",
+      clienteId: defaultValues?.clienteId || "",
+      motorId: defaultValues?.motorId || "",
+      dataAbertura: defaultValues?.dataAbertura || new Date(),
+      dataPrevistaEntrega: defaultValues?.dataPrevistaEntrega || new Date(),
+      prioridade: defaultValues?.prioridade || "media",
+      servicosTipos: defaultValues?.servicosTipos || [],
+      servicosDescricoes: defaultValues?.servicosDescricoes || {},
+      servicosSubatividades: defaultValues?.servicosSubatividades || {},
+    },
+  });
+  
   useEffect(() => {
     const processDefaultFotos = () => {
       if (defaultFotosEntrada && defaultFotosEntrada.length > 0) {
@@ -248,23 +265,7 @@ export default function OrdemForm({
         });
       }
     });
-  }, [form?.watch("servicosTipos")]);
-  
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      id: defaultValues?.id || "",
-      nome: defaultValues?.nome || "",
-      clienteId: defaultValues?.clienteId || "",
-      motorId: defaultValues?.motorId || "",
-      dataAbertura: defaultValues?.dataAbertura || new Date(),
-      dataPrevistaEntrega: defaultValues?.dataPrevistaEntrega || new Date(),
-      prioridade: defaultValues?.prioridade || "media",
-      servicosTipos: defaultValues?.servicosTipos || [],
-      servicosDescricoes: defaultValues?.servicosDescricoes || {},
-      servicosSubatividades: defaultValues?.servicosSubatividades || {},
-    },
-  });
+  }, [form.watch("servicosTipos")]);
   
   const handleServicoDescricaoChange = (tipo: string, descricao: string) => {
     setServicosDescricoes(prev => ({
