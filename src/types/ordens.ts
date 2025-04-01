@@ -27,10 +27,17 @@ export type TipoServico =
   | 'virabrequim' 
   | 'eixo_comando';
 
+export type SubAtividade = {
+  id: string;
+  nome: string;
+  selecionada: boolean;
+};
+
 export type Servico = {
   tipo: TipoServico;
   descricao: string;
   concluido: boolean;
+  subatividades?: SubAtividade[];
 };
 
 export type StatusOS = 

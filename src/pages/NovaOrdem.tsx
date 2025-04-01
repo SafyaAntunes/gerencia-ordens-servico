@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import Layout from "@/components/layout/Layout";
 import OrdemForm from "@/components/ordens/OrdemForm";
-import { Prioridade, TipoServico, OrdemServico } from "@/types/ordens";
+import { Prioridade, TipoServico, OrdemServico, SubAtividade } from "@/types/ordens";
 import { collection, addDoc, doc, setDoc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
@@ -79,7 +79,8 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         servicos: (values.servicosTipos || []).map((tipo: TipoServico) => ({
           tipo,
           descricao: values.servicosDescricoes?.[tipo] || "",
-          concluido: false
+          concluido: false,
+          subatividades: values.servicosSubatividades?.[tipo] || []
         })),
         etapasAndamento: {
           lavagem: { concluido: false },

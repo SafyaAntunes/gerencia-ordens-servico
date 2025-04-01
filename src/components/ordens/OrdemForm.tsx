@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -33,9 +34,63 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { Prioridade, TipoServico, Motor } from "@/types/ordens";
+import { Prioridade, TipoServico, Motor, SubAtividade } from "@/types/ordens";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FotosForm from "./FotosForm";
+import ServicoSubatividades from "./ServicoSubatividades";
+import { v4 as uuidv4 } from "uuid";
+
+// Define all subatividades for each tipo de serviço
+const SUBATIVIDADES: Record<TipoServico, string[]> = {
+  bloco: [
+    'RETÍFICA DE CILINDRO',
+    'ENCAMISAR',
+    'BRUNIR',
+    'RETIFICAR MANCAL',
+    'LAVAGEM QUÍMICA',
+    'RETIFICA DE FAZE',
+    'SERVIÇO DE SOLDA',
+    'MEDIR MANCAL',
+    'EXTRAIR PRISIONEIRO',
+    'RETÍFICA DE ROSCA'
+  ],
+  cabecote: [
+    'DESCARBONIZAR',
+    'SERVIÇO DE SOLDA',
+    'RETÍFICA FACE',
+    'MUDAR GUIA',
+    'MUDAR SEDE',
+    'RETÍFICA DE SEDE',
+    'RETÍFICA DE VÁLVULAS',
+    'ESMERILHAR',
+    'CALIBRAR VÁLVULAS',
+    'DESMONTAR',
+    'MONTAR VÁLVULAR',
+    'FACE LATERAL',
+    'EXTRAIR PRISIONEIRO',
+    'RECUPERAR ROSCA',
+    'RETÍFICA MANCAL DE COMANDO',
+    'TESTE DE TRINCA',
+    'TESTADO',
+    'TESTAR MOLAS'
+  ],
+  virabrequim: [
+    'RETÍFICA BB-BC',
+    'POLIR',
+    'DESEMPENAR',
+    'TESTE DE TRINCA'
+  ],
+  eixo_comando: [
+    'RETIFICAR',
+    'POLIR'
+  ],
+  biela: [
+    'RETIFICA BUCHA DE BIELA',
+    'RETIFICA DE AÇO DE BIELA',
+    'MUDAR PISTÃO',
+    'MEDIR AÇO DE BIELA'
+  ]
+};
 
 const CLIENTES = [
   { id: "1", nome: "Auto Peças Silva" },
@@ -78,6 +133,7 @@ const formSchema = z.object({
   prioridade: z.enum(["baixa", "media", "alta", "urgente"] as const),
   servicosTipos: z.array(z.string()).optional(),
   servicosDescricoes: z.record(z.string()).optional(),
+  servicosSubatividades: z.record(z.array(z.any())).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -108,6 +164,7 @@ export default function OrdemForm({
   onCancel,
 }: OrdemFormProps) {
   const [servicosDescricoes, setServicosDescricoes] = useState<Record<string, string>>({});
+  const [servicosSubatividades, setServicosSubatividades] = useState<Record<string, SubAtividade[]>>({});
   const [fotosEntrada, setFotosEntrada] = useState<File[]>([]);
   const [fotosSaida, setFotosSaida] = useState<File[]>([]);
   const [activeTab, setActiveTab] = useState("dados");
@@ -149,6 +206,50 @@ export default function OrdemForm({
     }
   }, [selectedClienteId]);
   
+  useEffect(() => {
+    // Initialize servicosSubatividades with default values if they exist
+    if (defaultValues?.servicosSubatividades) {
+      setServicosSubatividades(defaultValues.servicosSubatividades);
+    }
+    
+    if (defaultValues?.servicosDescricoes) {
+      setServicosDescricoes(defaultValues.servicosDescricoes);
+    }
+  }, [defaultValues?.servicosSubatividades, defaultValues?.servicosDescricoes]);
+  
+  // Initialize subactivities for a service type when selected
+  useEffect(() => {
+    const tiposList = form.watch("servicosTipos") || [];
+    
+    // For each service type, create subactivities if they don't exist yet
+    tiposList.forEach((tipo) => {
+      if (!servicosSubatividades[tipo]) {
+        const subatividadesList = SUBATIVIDADES[tipo as TipoServico] || [];
+        const initialSubatividades = subatividadesList.map(nome => ({
+          id: uuidv4(),
+          nome,
+          selecionada: false
+        }));
+        
+        setServicosSubatividades(prev => ({
+          ...prev,
+          [tipo]: initialSubatividades
+        }));
+      }
+    });
+    
+    // Remove subatividades for unselected service types
+    Object.keys(servicosSubatividades).forEach((tipo) => {
+      if (!tiposList.includes(tipo)) {
+        setServicosSubatividades(prev => {
+          const newState = { ...prev };
+          delete newState[tipo];
+          return newState;
+        });
+      }
+    });
+  }, [form?.watch("servicosTipos")]);
+  
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -161,14 +262,9 @@ export default function OrdemForm({
       prioridade: defaultValues?.prioridade || "media",
       servicosTipos: defaultValues?.servicosTipos || [],
       servicosDescricoes: defaultValues?.servicosDescricoes || {},
+      servicosSubatividades: defaultValues?.servicosSubatividades || {},
     },
   });
-  
-  useEffect(() => {
-    if (defaultValues?.servicosDescricoes) {
-      setServicosDescricoes(defaultValues.servicosDescricoes);
-    }
-  }, [defaultValues?.servicosDescricoes]);
   
   const handleServicoDescricaoChange = (tipo: string, descricao: string) => {
     setServicosDescricoes(prev => ({
@@ -177,10 +273,18 @@ export default function OrdemForm({
     }));
   };
   
+  const handleSubatividadesChange = (tipo: TipoServico, subatividades: SubAtividade[]) => {
+    setServicosSubatividades(prev => ({
+      ...prev,
+      [tipo]: subatividades
+    }));
+  };
+  
   const handleFormSubmit = (values: FormValues) => {
     const formData = {
       ...values,
       servicosDescricoes,
+      servicosSubatividades,
       fotosEntrada,
       fotosSaida
     };
@@ -483,16 +587,29 @@ export default function OrdemForm({
                                   </div>
                                   
                                   {field.value?.includes(tipo.value) && (
-                                    <div className="ml-6">
-                                      <Textarea
-                                        placeholder={`Descreva o serviço de ${tipo.label.toLowerCase()}...`}
-                                        value={servicosDescricoes[tipo.value] || ""}
-                                        onChange={(e) => 
-                                          handleServicoDescricaoChange(tipo.value, e.target.value)
-                                        }
-                                        className="resize-none"
-                                      />
-                                    </div>
+                                    <>
+                                      <div className="ml-6">
+                                        <Textarea
+                                          placeholder={`Descreva o serviço de ${tipo.label.toLowerCase()}...`}
+                                          value={servicosDescricoes[tipo.value] || ""}
+                                          onChange={(e) => 
+                                            handleServicoDescricaoChange(tipo.value, e.target.value)
+                                          }
+                                          className="resize-none"
+                                        />
+                                      </div>
+                                      
+                                      {/* Subatividades */}
+                                      {servicosSubatividades[tipo.value] && (
+                                        <ServicoSubatividades
+                                          tipo={tipo.value}
+                                          subatividades={servicosSubatividades[tipo.value]}
+                                          onSubatividadesChange={(subatividades) => 
+                                            handleSubatividadesChange(tipo.value, subatividades)
+                                          }
+                                        />
+                                      )}
+                                    </>
                                   )}
                                 </FormItem>
                               );
