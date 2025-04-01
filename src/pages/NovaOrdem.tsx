@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import Layout from "@/components/layout/Layout";
@@ -16,6 +16,7 @@ interface NovaOrdemProps {
 export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedServices, setSelectedServices] = useState<TipoServico[]>([]);
   
   const handleSubmit = async (values: any) => {
     setIsSubmitting(true);

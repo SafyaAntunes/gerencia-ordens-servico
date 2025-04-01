@@ -26,7 +26,8 @@ export type TipoServico =
   | 'cabecote' 
   | 'virabrequim' 
   | 'eixo_comando'
-  | 'montagem';
+  | 'montagem'
+  | 'dinamometro';
 
 export type SubAtividade = {
   id: string;
