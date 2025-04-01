@@ -352,7 +352,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full mb-6">
             <TabsTrigger value="detalhes" className="flex-1">Detalhes</TabsTrigger>
-            <TabsTrigger value="etapas" className="flex-1">Etapas e Cronômetro</TabsTrigger>
+            <TabsTrigger value="etapas" className="flex-1">Progresso</TabsTrigger>
             <TabsTrigger value="fotos" className="flex-1">Fotos</TabsTrigger>
           </TabsList>
           
@@ -483,7 +483,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
           </TabsContent>
           
           <TabsContent value="etapas" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="flex flex-col gap-6">
               {etapasOrdenadas.map((etapa) => {
                 const etapaInfo = ordem.etapasAndamento?.[etapa];
                 const isConcluida = etapaInfo?.concluido === true;
@@ -532,7 +532,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
                           <p className="text-muted-foreground mb-4">Etapa não iniciada.</p>
                           <Button 
                             onClick={() => handleEtapaStart(etapa)}
-                            className="bg-blue-600 hover:bg-blue-700"
+                            className="bg-green-500 hover:bg-green-600"
                           >
                             <Clock className="mr-2 h-4 w-4" />
                             Iniciar Etapa

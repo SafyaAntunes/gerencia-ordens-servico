@@ -26,7 +26,7 @@ export default function TimerControls({
       {!isRunning && (
         <Button
           onClick={onStart}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+          className="w-full bg-green-500 hover:bg-green-600 text-white"
           disabled={!usarCronometro && !onStart}
         >
           <Play className="mr-2 h-4 w-4" /> Iniciar
@@ -36,8 +36,7 @@ export default function TimerControls({
       {isRunning && !isPaused && (
         <Button
           onClick={onPause}
-          variant="outline"
-          className="w-full"
+          className="w-full bg-yellow-500 hover:bg-yellow-600 text-white"
           disabled={!usarCronometro && !onPause}
         >
           <Pause className="mr-2 h-4 w-4" /> Pausar
@@ -47,8 +46,7 @@ export default function TimerControls({
       {isRunning && isPaused && (
         <Button
           onClick={onResume}
-          variant="outline"
-          className="w-full"
+          className="w-full bg-green-500 hover:bg-green-600 text-white"
           disabled={!usarCronometro && !onResume}
         >
           <Play className="mr-2 h-4 w-4" /> Retomar
