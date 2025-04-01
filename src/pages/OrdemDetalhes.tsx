@@ -41,10 +41,16 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
   const { funcionario } = useAuth();
   
   const statusLabels: Record<StatusOS, string> = {
+    lavagem: "Lavagem",
+    inspecao_inicial: "Inspeção Inicial",
     orcamento: "Orçamento",
     aguardando_aprovacao: "Aguardando Aprovação",
-    fabricacao: "Fabricação",
-    espera_cliente: "Aguardando Cliente",
+    retifica: "Retífica",
+    aguardando_peca_cliente: "Aguardando Peça (Cliente)",
+    aguardando_peca_interno: "Aguardando Peça (Interno)",
+    montagem: "Montagem",
+    dinamometro: "Dinamômetro",
+    inspecao_final: "Inspeção Final",
     finalizado: "Finalizado",
     entregue: "Entregue"
   };
@@ -362,10 +368,16 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
                         <SelectValue placeholder="Selecione o status" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="lavagem">Lavagem</SelectItem>
+                        <SelectItem value="inspecao_inicial">Inspeção Inicial</SelectItem>
                         <SelectItem value="orcamento">Orçamento</SelectItem>
                         <SelectItem value="aguardando_aprovacao">Aguardando Aprovação</SelectItem>
-                        <SelectItem value="fabricacao">Fabricação</SelectItem>
-                        <SelectItem value="espera_cliente">Aguardando Cliente</SelectItem>
+                        <SelectItem value="retifica">Retífica</SelectItem>
+                        <SelectItem value="aguardando_peca_cliente">Aguardando Peça (Cliente)</SelectItem>
+                        <SelectItem value="aguardando_peca_interno">Aguardando Peça (Interno)</SelectItem>
+                        <SelectItem value="montagem">Montagem</SelectItem>
+                        <SelectItem value="dinamometro">Dinamômetro</SelectItem>
+                        <SelectItem value="inspecao_final">Inspeção Final</SelectItem>
                         <SelectItem value="finalizado">Finalizado</SelectItem>
                         <SelectItem value="entregue">Entregue</SelectItem>
                       </SelectContent>

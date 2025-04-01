@@ -42,19 +42,25 @@ export type Servico = {
 };
 
 export type StatusOS = 
-  | 'orcamento' 
-  | 'aguardando_aprovacao' 
-  | 'fabricacao' 
-  | 'espera_cliente' 
-  | 'finalizado' 
+  | 'lavagem'
+  | 'inspecao_inicial'
+  | 'orcamento'
+  | 'aguardando_aprovacao'
+  | 'retifica'
+  | 'aguardando_peca_cliente'
+  | 'aguardando_peca_interno'
+  | 'montagem'
+  | 'dinamometro'
+  | 'inspecao_final'
+  | 'finalizado'
   | 'entregue';
 
 export type EtapaOS = 
   | 'lavagem' 
   | 'inspecao_inicial' 
   | 'retifica' 
-  | 'montagem_final' 
-  | 'teste' 
+  | 'montagem' 
+  | 'dinamometro' 
   | 'inspecao_final';
 
 export type Prioridade = 'baixa' | 'media' | 'alta' | 'urgente';
