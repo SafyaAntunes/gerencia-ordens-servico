@@ -5,7 +5,7 @@ import { LogoutProps } from "@/types/props";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ChevronLeft, Edit, ClipboardCheck } from "lucide-react";
-import { OrdemServico, StatusOS, TipoServico } from "@/types/ordens";
+import { OrdemServico, StatusOS, TipoServico, SubAtividade } from "@/types/ordens";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
@@ -103,7 +103,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
     }
   };
 
-  const handleSubatividadeChange = async (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => {
+  const handleSubatividadeToggle = async (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => {
     if (!id || !ordem) return;
     
     try {
@@ -450,7 +450,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
                       <ServicoTracker
                         key={`${servico.tipo}-${i}`}
                         servico={servico}
-                        onSubatividadeChange={handleSubatividadeChange}
+                        onSubatividadeToggle={handleSubatividadeToggle}
                         onServicoStatusChange={handleServicoStatusChange}
                       />
                     ))}

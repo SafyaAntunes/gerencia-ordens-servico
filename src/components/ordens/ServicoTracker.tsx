@@ -96,7 +96,7 @@ export default function ServicoTracker({
                   {formatServicoTipo(servico.tipo)}
                 </h3>
                 {servico.concluido && (
-                  <Badge variant="success" className="ml-2">Concluído</Badge>
+                  <Badge variant="secondary" className="ml-2 bg-green-500 text-white">Concluído</Badge>
                 )}
               </div>
               <div className="flex items-center gap-2">
