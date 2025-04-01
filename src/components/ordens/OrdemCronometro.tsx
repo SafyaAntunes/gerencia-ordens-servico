@@ -1,5 +1,5 @@
 
-import { Clock } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EtapaOS, TipoServico } from "@/types/ordens";
 import { formatTime } from "@/utils/timerUtils";
@@ -23,7 +23,7 @@ export interface OrdemCronometroProps {
 export default function OrdemCronometro({
   ordemId,
   funcionarioId,
-  funcionarioNome = "João Silva", // Valor padrão para demonstração
+  funcionarioNome,
   etapa,
   tipoServico,
   onStart,
@@ -61,13 +61,22 @@ export default function OrdemCronometro({
   
   return (
     <div className="w-full">
-      {/* Funcionário responsável */}
-      <div className="mb-2 text-sm">{funcionarioNome}</div>
+      {/* Nome da etapa e tempo em destaque */}
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-xl font-bold">{formatTime(displayTime)}</h3>
+      </div>
       
-      {/* Tempo no formato hh:mm:ss */}
-      <div className="text-right font-mono text-4xl font-bold mb-3">
+      {/* Tempo em formato menor abaixo do principal */}
+      <div className="mb-3 text-lg">
         {formatTime(displayTime)}
       </div>
+      
+      {/* Nome do funcionário */}
+      {funcionarioNome && (
+        <div className="mb-4 text-base">
+          {funcionarioNome}
+        </div>
+      )}
       
       <TimerControls
         isRunning={isRunning}
@@ -80,11 +89,12 @@ export default function OrdemCronometro({
       />
       
       {/* Opção de usar cronômetro */}
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-2 mt-2">
         <Checkbox 
           id={`usar-cronometro-${ordemId}-${etapa}`}
           checked={usarCronometro}
           onCheckedChange={handleCronometroChange}
+          className="text-green-500 border-green-500"
         />
         <label 
           htmlFor={`usar-cronometro-${ordemId}-${etapa}`}

@@ -20,11 +20,11 @@ import {
   SelectTrigger, 
   SelectValue
 } from "@/components/ui/select";
-import OrdemCronometro from "@/components/ordens/OrdemCronometro";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
+import EtapaCard from "@/components/ordens/EtapaCard";
 
 interface OrdemDetalhesProps extends LogoutProps {}
 
@@ -352,7 +352,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full mb-6">
             <TabsTrigger value="detalhes" className="flex-1">Detalhes</TabsTrigger>
-            <TabsTrigger value="etapas" className="flex-1">Progresso</TabsTrigger>
+            <TabsTrigger value="progresso" className="flex-1">Progresso</TabsTrigger>
             <TabsTrigger value="fotos" className="flex-1">Fotos</TabsTrigger>
           </TabsList>
           
@@ -482,65 +482,26 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
             </div>
           </TabsContent>
           
-          <TabsContent value="etapas" className="space-y-6">
-            <div className="flex flex-col gap-6">
+          <TabsContent value="progresso" className="space-y-4">
+            <div className="flex flex-col gap-4">
               {etapasOrdenadas.map((etapa) => {
                 const etapaInfo = ordem.etapasAndamento?.[etapa];
                 const isConcluida = etapaInfo?.concluido === true;
                 const isIniciada = !!etapaInfo?.iniciado;
                 
                 return (
-                  <Card key={etapa} className={isConcluida ? "border-green-500/50" : ""}>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="flex justify-between items-center">
-                        <span>{etapasLabels[etapa]}</span>
-                        {isConcluida && (
-                          <Badge variant="outline" className="bg-green-500 text-white">
-                            Concluída
-                          </Badge>
-                        )}
-                        {!isConcluida && isIniciada && (
-                          <Badge variant="outline" className="bg-blue-500 text-white">
-                            Em andamento
-                          </Badge>
-                        )}
-                      </CardTitle>
-                    </CardHeader>
-                    
-                    <CardContent>
-                      {isConcluida ? (
-                        <OrdemCronometro
-                          ordemId={ordem.id}
-                          funcionarioId={etapaInfo.funcionarioId || ""}
-                          funcionarioNome={etapaInfo.funcionarioNome || "Não atribuído"}
-                          etapa={etapa}
-                          isEtapaConcluida={true}
-                        />
-                      ) : isIniciada ? (
-                        <OrdemCronometro
-                          ordemId={ordem.id}
-                          funcionarioId={etapaInfo.funcionarioId || ""}
-                          funcionarioNome={etapaInfo.funcionarioNome || "Não atribuído"}
-                          etapa={etapa}
-                          onStart={() => {}}
-                          onPause={() => {}}
-                          onResume={() => {}}
-                          onFinish={(tempoTotal) => handleEtapaFinish(etapa, tempoTotal)}
-                        />
-                      ) : (
-                        <div className="text-center py-4">
-                          <p className="text-muted-foreground mb-4">Etapa não iniciada.</p>
-                          <Button 
-                            onClick={() => handleEtapaStart(etapa)}
-                            className="bg-green-500 hover:bg-green-600"
-                          >
-                            <Clock className="mr-2 h-4 w-4" />
-                            Iniciar Etapa
-                          </Button>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                  <EtapaCard
+                    key={etapa}
+                    ordemId={ordem.id}
+                    etapa={etapa}
+                    etapaNome={etapasLabels[etapa]}
+                    funcionarioId={etapaInfo?.funcionarioId || funcionario?.id || ""}
+                    funcionarioNome={etapaInfo?.funcionarioNome || funcionario?.nome}
+                    isConcluida={isConcluida}
+                    isIniciada={isIniciada}
+                    onStart={() => handleEtapaStart(etapa)}
+                    onFinish={(tempoTotal) => handleEtapaFinish(etapa, tempoTotal)}
+                  />
                 );
               })}
             </div>
