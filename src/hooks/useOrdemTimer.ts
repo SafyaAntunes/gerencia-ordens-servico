@@ -2,29 +2,14 @@
 import { useState, useEffect } from "react";
 import { generateTimerStorageKey } from "@/utils/timerUtils";
 import { EtapaOS, TipoServico } from "@/types/ordens";
-import { toast } from "sonner";
-
-interface UseOrdemTimerProps {
-  ordemId: string;
-  etapa: EtapaOS;
-  tipoServico?: TipoServico;
-  onStart?: () => void;
-  onPause?: () => void;
-  onResume?: () => void;
-  onFinish?: (tempoTotal: number) => void;
-  isEtapaConcluida?: boolean;
-}
-
-interface TimerState {
-  isRunning: boolean;
-  isPaused: boolean;
-  startTime: number | null;
-  pauseTime: number | null;
-  totalPausedTime: number;
-  elapsedTime: number;
-  totalSavedTime: number;
-  usarCronometro: boolean;
-}
+import { UseOrdemTimerProps, UseOrdemTimerResult, TimerState } from "@/types/timer";
+import { loadTimerData, saveTimerData } from "@/utils/timerStorage";
+import { 
+  notifyTimerStarted,
+  notifyTimerPaused,
+  notifyTimerResumed,
+  notifyTimerFinished
+} from "@/utils/timerNotifications";
 
 export function useOrdemTimer({
   ordemId,
@@ -35,7 +20,7 @@ export function useOrdemTimer({
   onResume,
   onFinish,
   isEtapaConcluida = false,
-}: UseOrdemTimerProps) {
+}: UseOrdemTimerProps): UseOrdemTimerResult {
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
@@ -50,56 +35,52 @@ export function useOrdemTimer({
   
   // Load saved time from localStorage
   useEffect(() => {
-    const savedData = localStorage.getItem(storageKey);
+    const savedData = loadTimerData(ordemId, etapa as EtapaOS, tipoServico as TipoServico);
     
     if (savedData) {
-      try {
-        const data = JSON.parse(savedData);
-        
-        // If the etapa is completed, just show the total saved time
-        if (isEtapaConcluida) {
-          setTotalSavedTime(data.totalTime || 0);
-          return;
-        }
-        
-        if (data.isRunning) {
-          setIsRunning(true);
-          setIsPaused(data.isPaused);
-          setStartTime(data.startTime);
-          setTotalPausedTime(data.totalPausedTime);
-          setTotalSavedTime(data.totalTime || 0);
-          
-          if (data.isPaused) {
-            setPauseTime(data.pauseTime);
-          }
-        } else if (data.totalTime > 0) {
-          setTotalSavedTime(data.totalTime);
-        }
-        
-        setUsarCronometro(data.usarCronometro !== undefined ? data.usarCronometro : true);
-      } catch (error) {
-        console.error("Erro ao carregar dados do cronômetro:", error);
+      // If the etapa is completed, just show the total saved time
+      if (isEtapaConcluida) {
+        setTotalSavedTime(savedData.totalTime || 0);
+        return;
       }
+      
+      if (savedData.isRunning) {
+        setIsRunning(true);
+        setIsPaused(savedData.isPaused);
+        setStartTime(savedData.startTime);
+        setTotalPausedTime(savedData.totalPausedTime);
+        setTotalSavedTime(savedData.totalTime || 0);
+        
+        if (savedData.isPaused) {
+          setPauseTime(savedData.pauseTime);
+        }
+      } else if (savedData.totalTime > 0) {
+        setTotalSavedTime(savedData.totalTime);
+      }
+      
+      setUsarCronometro(savedData.usarCronometro !== undefined ? savedData.usarCronometro : true);
     }
-  }, [ordemId, etapa, tipoServico, isEtapaConcluida, storageKey]);
+  }, [ordemId, etapa, tipoServico, isEtapaConcluida]);
   
   // Save state to localStorage
   useEffect(() => {
     if (isRunning || totalSavedTime > 0) {
-      const dataToSave = {
+      const dataToSave: TimerState = {
         isRunning,
         isPaused,
         startTime,
         pauseTime,
         totalPausedTime,
+        elapsedTime,
         totalTime: totalSavedTime + (isRunning ? elapsedTime : 0),
         usarCronometro
       };
       
-      localStorage.setItem(storageKey, JSON.stringify(dataToSave));
+      saveTimerData(ordemId, etapa as EtapaOS, tipoServico as TipoServico, dataToSave);
     }
-  }, [isRunning, isPaused, startTime, pauseTime, totalPausedTime, elapsedTime, totalSavedTime, usarCronometro, storageKey]);
+  }, [isRunning, isPaused, startTime, pauseTime, totalPausedTime, elapsedTime, totalSavedTime, usarCronometro, ordemId, etapa, tipoServico]);
   
+  // Update timer at regular intervals
   useEffect(() => {
     let interval: number | null = null;
     
@@ -127,9 +108,7 @@ export function useOrdemTimer({
     setStartTime(Date.now());
     onStart?.();
     
-    toast.success("Cronômetro iniciado", {
-      description: `Medindo tempo para ${etapa}${tipoServico ? ` (${tipoServico})` : ''}`,
-    });
+    notifyTimerStarted(etapa as EtapaOS, tipoServico as TipoServico);
   };
   
   const handlePause = () => {
@@ -142,9 +121,7 @@ export function useOrdemTimer({
     setPauseTime(Date.now());
     onPause?.();
     
-    toast.success("Cronômetro pausado", {
-      description: "O tempo não está sendo contabilizado",
-    });
+    notifyTimerPaused();
   };
   
   const handleResume = () => {
@@ -161,9 +138,7 @@ export function useOrdemTimer({
     setPauseTime(null);
     onResume?.();
     
-    toast.success("Cronômetro retomado", {
-      description: "Continuando a medição de tempo",
-    });
+    notifyTimerResumed();
   };
   
   const handleFinish = () => {
@@ -179,9 +154,7 @@ export function useOrdemTimer({
     const totalTime = totalSavedTime + finalTime;
     setTotalSavedTime(totalTime);
     
-    toast.success("Cronômetro finalizado", {
-      description: `Tempo total: ${totalTime}`,
-    });
+    notifyTimerFinished(totalTime);
     
     onFinish?.(totalTime);
     
@@ -191,29 +164,36 @@ export function useOrdemTimer({
     setElapsedTime(0);
     
     // Save total time to localStorage
-    localStorage.setItem(storageKey, JSON.stringify({
+    const dataToSave: TimerState = {
       isRunning: false,
       isPaused: false,
-      totalTime: totalTime,
+      startTime: null,
+      pauseTime: null,
+      totalPausedTime: 0,
+      elapsedTime: 0,
+      totalTime,
       usarCronometro
-    }));
+    };
+    
+    saveTimerData(ordemId, etapa as EtapaOS, tipoServico as TipoServico, dataToSave);
   };
 
   const handleCronometroChange = (checked: boolean) => {
     setUsarCronometro(checked);
     
-    // Salve a preferência no localStorage
-    const dataToSave = {
+    // Save preference to localStorage
+    const dataToSave: TimerState = {
       isRunning,
       isPaused,
       startTime,
       pauseTime,
       totalPausedTime,
+      elapsedTime,
       totalTime: totalSavedTime + (isRunning ? elapsedTime : 0),
       usarCronometro: checked
     };
     
-    localStorage.setItem(storageKey, JSON.stringify(dataToSave));
+    saveTimerData(ordemId, etapa as EtapaOS, tipoServico as TipoServico, dataToSave);
   };
   
   // Calculate total time (saved + current if running)
