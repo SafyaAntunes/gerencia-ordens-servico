@@ -55,6 +55,7 @@ export type TempoRegistro = {
   inicio: Date;
   fim?: Date;
   funcionarioId: string;
+  funcionarioNome?: string;
   etapa: EtapaOS;
   pausas: { inicio: Date; fim?: Date }[];
 };
@@ -80,6 +81,7 @@ export type OrdemServico = {
     [key in EtapaOS]?: {
       concluido: boolean;
       funcionarioId?: string;
+      funcionarioNome?: string;
       iniciado?: Date;
       finalizado?: Date;
     }

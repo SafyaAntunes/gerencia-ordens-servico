@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -134,6 +133,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
       etapasAndamento[etapa] = {
         concluido: false,
         funcionarioId: funcionario.id,
+        funcionarioNome: funcionario.nome,
         iniciado: new Date(),
       };
       
@@ -515,34 +515,18 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
                     
                     <CardContent>
                       {isConcluida ? (
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm text-muted-foreground">
-                              Finalizado em: {etapaInfo.finalizado && 
-                                format(new Date(etapaInfo.finalizado), "dd/MM/yyyy HH:mm", { locale: ptBR })
-                              }
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center space-x-2">
-                            <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm text-muted-foreground">
-                              Por: {etapaInfo.funcionarioId || "Não registrado"}
-                            </span>
-                          </div>
-                          
-                          <OrdemCronometro
-                            ordemId={ordem.id}
-                            funcionarioId={etapaInfo.funcionarioId || funcionario?.id || ""}
-                            etapa={etapa}
-                            isEtapaConcluida={true}
-                          />
-                        </div>
+                        <OrdemCronometro
+                          ordemId={ordem.id}
+                          funcionarioId={etapaInfo.funcionarioId || ""}
+                          funcionarioNome={etapaInfo.funcionarioNome || "Não atribuído"}
+                          etapa={etapa}
+                          isEtapaConcluida={true}
+                        />
                       ) : isIniciada ? (
                         <OrdemCronometro
                           ordemId={ordem.id}
-                          funcionarioId={etapaInfo.funcionarioId || funcionario?.id || ""}
+                          funcionarioId={etapaInfo.funcionarioId || ""}
+                          funcionarioNome={etapaInfo.funcionarioNome || "Não atribuído"}
                           etapa={etapa}
                           onStart={() => {}}
                           onPause={() => {}}
@@ -552,7 +536,10 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
                       ) : (
                         <div className="text-center py-4">
                           <p className="text-muted-foreground mb-4">Etapa não iniciada.</p>
-                          <Button onClick={() => handleEtapaStart(etapa)}>
+                          <Button 
+                            onClick={() => handleEtapaStart(etapa)}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
                             <Clock className="mr-2 h-4 w-4" />
                             Iniciar Etapa
                           </Button>

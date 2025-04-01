@@ -1,16 +1,18 @@
 
 import { useState, useEffect } from "react";
-import { Play, Pause, StopCircle, Clock, Timer } from "lucide-react";
+import { Play, Pause, StopCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { EtapaOS, TipoServico } from "@/types/ordens";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export interface OrdemCronometroProps {
   ordemId: string;
   funcionarioId: string;
+  funcionarioNome?: string;
   etapa: EtapaOS;
   tipoServico?: TipoServico;
   onStart?: () => void;
@@ -31,6 +33,7 @@ const tipoServicoLabel: Record<string, string> = {
 export default function OrdemCronometro({
   ordemId,
   funcionarioId,
+  funcionarioNome = "João Silva", // Valor padrão para demonstração
   etapa,
   tipoServico,
   onStart,
@@ -46,6 +49,7 @@ export default function OrdemCronometro({
   const [totalPausedTime, setTotalPausedTime] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [totalSavedTime, setTotalSavedTime] = useState(0);
+  const [usarCronometro, setUsarCronometro] = useState(true);
   const { toast } = useToast();
   
   // Generate a unique key for localStorage
@@ -78,6 +82,8 @@ export default function OrdemCronometro({
         } else if (data.totalTime > 0) {
           setTotalSavedTime(data.totalTime);
         }
+        
+        setUsarCronometro(data.usarCronometro !== undefined ? data.usarCronometro : true);
       } catch (error) {
         console.error("Erro ao carregar dados do cronômetro:", error);
       }
@@ -94,16 +100,17 @@ export default function OrdemCronometro({
         pauseTime,
         totalPausedTime,
         totalTime: totalSavedTime + (isRunning ? elapsedTime : 0),
+        usarCronometro
       };
       
       localStorage.setItem(storageKey, JSON.stringify(dataToSave));
     }
-  }, [isRunning, isPaused, startTime, pauseTime, totalPausedTime, elapsedTime, totalSavedTime, storageKey]);
+  }, [isRunning, isPaused, startTime, pauseTime, totalPausedTime, elapsedTime, totalSavedTime, usarCronometro, storageKey]);
   
   useEffect(() => {
     let interval: number | null = null;
     
-    if (isRunning && !isPaused) {
+    if (isRunning && !isPaused && usarCronometro) {
       interval = window.setInterval(() => {
         const now = Date.now();
         const timeElapsed = now - (startTime || 0) - totalPausedTime;
@@ -114,7 +121,7 @@ export default function OrdemCronometro({
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isRunning, isPaused, startTime, totalPausedTime]);
+  }, [isRunning, isPaused, startTime, totalPausedTime, usarCronometro]);
   
   const formatTime = (milliseconds: number) => {
     const totalSeconds = Math.floor(milliseconds / 1000);
@@ -130,6 +137,11 @@ export default function OrdemCronometro({
   };
   
   const handleStart = () => {
+    if (!usarCronometro) {
+      onStart?.();
+      return;
+    }
+    
     setIsRunning(true);
     setIsPaused(false);
     setStartTime(Date.now());
@@ -142,6 +154,11 @@ export default function OrdemCronometro({
   };
   
   const handlePause = () => {
+    if (!usarCronometro) {
+      onPause?.();
+      return;
+    }
+    
     setIsPaused(true);
     setPauseTime(Date.now());
     onPause?.();
@@ -153,6 +170,11 @@ export default function OrdemCronometro({
   };
   
   const handleResume = () => {
+    if (!usarCronometro) {
+      onResume?.();
+      return;
+    }
+    
     if (pauseTime) {
       const pauseDuration = Date.now() - pauseTime;
       setTotalPausedTime(prev => prev + pauseDuration);
@@ -168,6 +190,11 @@ export default function OrdemCronometro({
   };
   
   const handleFinish = () => {
+    if (!usarCronometro) {
+      onFinish?.(0);
+      return;
+    }
+    
     setIsRunning(false);
     setIsPaused(false);
     const finalTime = elapsedTime;
@@ -192,7 +219,25 @@ export default function OrdemCronometro({
       isRunning: false,
       isPaused: false,
       totalTime: totalTime,
+      usarCronometro
     }));
+  };
+
+  const handleCronometroChange = (checked: boolean) => {
+    setUsarCronometro(checked);
+    
+    // Salve a preferência no localStorage
+    const dataToSave = {
+      isRunning,
+      isPaused,
+      startTime,
+      pauseTime,
+      totalPausedTime,
+      totalTime: totalSavedTime + (isRunning ? elapsedTime : 0),
+      usarCronometro: checked
+    };
+    
+    localStorage.setItem(storageKey, JSON.stringify(dataToSave));
   };
   
   // Calculate total time (saved + current if running)
@@ -201,134 +246,82 @@ export default function OrdemCronometro({
   // If the stage is completed, just show the saved time without controls
   if (isEtapaConcluida) {
     return (
-      <Card className="overflow-hidden border border-border/50 bg-white/50 backdrop-blur-sm animate-fade-in">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex justify-between items-center">
-            <span>Tempo Registrado</span>
-            {tipoServico && (
-              <Badge variant="outline">{tipoServicoLabel[tipoServico]}</Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
-        
-        <CardContent className="text-center py-4">
-          <div className="inline-flex items-center justify-center p-4 rounded-full bg-primary/5 mb-3">
-            <Clock className="h-10 w-10 text-green-500" />
-          </div>
-          
-          <div className="font-mono text-4xl font-bold">
-            {formatTime(totalSavedTime)}
-          </div>
-          
-          <p className="text-sm mt-2 text-green-600 font-medium">
-            Etapa concluída
-          </p>
-        </CardContent>
-      </Card>
+      <div className="w-full">
+        <div className="text-right font-mono text-2xl font-bold">
+          {formatTime(totalSavedTime)}
+        </div>
+      </div>
     );
   }
   
   return (
-    <Card className="overflow-hidden border border-border/50 bg-white/50 backdrop-blur-sm animate-fade-in">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base flex justify-between items-center">
-          <span>Controle de Tempo</span>
-          {tipoServico && (
-            <Badge variant="outline">{tipoServicoLabel[tipoServico]}</Badge>
-          )}
-        </CardTitle>
-      </CardHeader>
+    <div className="w-full">
+      {/* Funcionário responsável */}
+      <div className="mb-2 text-sm">{funcionarioNome}</div>
       
-      <CardContent className="text-center py-4">
-        <div className="inline-flex items-center justify-center p-4 rounded-full bg-primary/5 mb-3">
-          <Timer className="h-10 w-10 text-primary" />
-        </div>
-        
-        <div className="font-mono text-4xl font-bold">
-          {formatTime(displayTime)}
-        </div>
-        
-        <p className="text-sm mt-2 text-muted-foreground">
-          {isRunning 
-            ? isPaused 
-              ? "Cronômetro pausado" 
-              : "Cronômetro rodando" 
-            : "Cronômetro parado"}
-        </p>
-        
-        {totalSavedTime > 0 && (
-          <div className="mt-3 bg-muted/50 rounded-md p-2">
-            <p className="text-sm font-medium text-primary">
-              Tempo acumulado: {formatTime(totalSavedTime)}
-            </p>
-            
-            {isRunning && !isPaused && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Tempo atual: {formatTime(elapsedTime)}
-              </p>
-            )}
-          </div>
-        )}
-      </CardContent>
+      {/* Tempo no formato hh:mm:ss */}
+      <div className="text-right font-mono text-4xl font-bold mb-3">
+        {formatTime(displayTime)}
+      </div>
       
-      <Separator />
-      
-      <CardFooter className="flex justify-between p-4 bg-muted/20">
+      <div className="flex gap-2 mb-3">
         {!isRunning && (
           <Button
             onClick={handleStart}
-            className="w-full"
-            variant="default"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+            disabled={!usarCronometro && !onStart}
           >
-            <Play className="mr-2 h-4 w-4" />
-            Iniciar
+            <Play className="mr-2 h-4 w-4" /> Iniciar
           </Button>
         )}
         
         {isRunning && !isPaused && (
-          <>
-            <Button
-              onClick={handlePause}
-              variant="outline"
-              className="flex-1 mr-2"
-            >
-              <Pause className="mr-2 h-4 w-4" />
-              Pausar
-            </Button>
-            
-            <Button
-              onClick={handleFinish}
-              variant="default"
-              className="flex-1"
-            >
-              <StopCircle className="mr-2 h-4 w-4" />
-              Finalizar
-            </Button>
-          </>
+          <Button
+            onClick={handlePause}
+            variant="outline"
+            className="w-full"
+            disabled={!usarCronometro && !onPause}
+          >
+            <Pause className="mr-2 h-4 w-4" /> Pausar
+          </Button>
         )}
         
         {isRunning && isPaused && (
-          <>
-            <Button
-              onClick={handleResume}
-              variant="outline"
-              className="flex-1 mr-2"
-            >
-              <Play className="mr-2 h-4 w-4" />
-              Retomar
-            </Button>
-            
-            <Button
-              onClick={handleFinish}
-              variant="default"
-              className="flex-1"
-            >
-              <StopCircle className="mr-2 h-4 w-4" />
-              Finalizar
-            </Button>
-          </>
+          <Button
+            onClick={handleResume}
+            variant="outline"
+            className="w-full"
+            disabled={!usarCronometro && !onResume}
+          >
+            <Play className="mr-2 h-4 w-4" /> Retomar
+          </Button>
         )}
-      </CardFooter>
-    </Card>
+        
+        {isRunning && (
+          <Button
+            onClick={handleFinish}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+            disabled={!usarCronometro && !onFinish}
+          >
+            <StopCircle className="mr-2 h-4 w-4" /> Terminar
+          </Button>
+        )}
+      </div>
+      
+      {/* Opção de usar cronômetro */}
+      <div className="flex items-center space-x-2">
+        <Checkbox 
+          id={`usar-cronometro-${ordemId}-${etapa}`}
+          checked={usarCronometro}
+          onCheckedChange={handleCronometroChange}
+        />
+        <label 
+          htmlFor={`usar-cronometro-${ordemId}-${etapa}`}
+          className="text-sm font-medium leading-none cursor-pointer"
+        >
+          Usar cronômetro
+        </label>
+      </div>
+    </div>
   );
 }
