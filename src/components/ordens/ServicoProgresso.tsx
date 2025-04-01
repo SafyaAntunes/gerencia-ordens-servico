@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,7 +34,7 @@ export default function ServicoProgresso({
   const [startTime, setStartTime] = useState<number | null>(null);
   const [intervalId, setIntervalId] = useState<number | null>(null);
 
-  const allCompleted = subatividades.length > 0 && subatividades.every(item => item.concluida);
+  const allCompleted = subatividades.length > 0 && subatividades.every(item => item.selecionada);
 
   const startTimer = () => {
     if (isRunning) return;
@@ -130,18 +131,18 @@ export default function ServicoProgresso({
                     <div 
                       className={cn(
                         "h-5 w-5 rounded-full border flex items-center justify-center",
-                        subatividade.concluida 
+                        subatividade.selecionada 
                           ? "border-green-500 bg-green-500/10" 
                           : "border-muted"
                       )}
                     >
-                      {subatividade.concluida && (
+                      {subatividade.selecionada && (
                         <CheckCircle2 className="h-4 w-4 text-green-500" />
                       )}
                     </div>
                     <Badge 
-                      variant={subatividade.concluida ? "outline" : "outline"}
-                      className={subatividade.concluida ? "text-green-600 border-green-600" : "text-muted-foreground"}
+                      variant="outline"
+                      className={subatividade.selecionada ? "text-green-600 border-green-600" : "text-muted-foreground"}
                     >
                       {subatividade.nome}
                     </Badge>

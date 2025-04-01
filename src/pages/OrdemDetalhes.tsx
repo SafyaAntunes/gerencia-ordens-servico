@@ -1,12 +1,11 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { LogoutProps } from "@/types/props";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ChevronLeft, Edit, Clock, ClipboardCheck } from "lucide-react";
-import { OrdemServico, StatusOS, EtapaOS, TipoServico, SubAtividade, Servico } from "@/types/ordens";
+import { ChevronLeft, Edit, ClipboardCheck } from "lucide-react";
+import { OrdemServico, StatusOS, TipoServico } from "@/types/ordens";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
@@ -25,8 +24,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
-import EtapaCard from "@/components/ordens/EtapaCard";
-import ServicoProgresso from "@/components/ordens/ServicoProgresso";
+import ServicoTracker from "@/components/ordens/ServicoTracker";
 
 interface OrdemDetalhesProps extends LogoutProps {}
 
@@ -50,24 +48,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
     finalizado: "Finalizado",
     entregue: "Entregue"
   };
-
-  const etapasLabels: Record<EtapaOS, string> = {
-    lavagem: "Lavagem",
-    inspecao_inicial: "Inspeção Inicial",
-    retifica: "Retífica",
-    montagem_final: "Montagem Final",
-    teste: "Teste",
-    inspecao_final: "Inspeção Final"
-  };
-
-  const etapasOrdenadas: EtapaOS[] = [
-    'lavagem',
-    'inspecao_inicial',
-    'retifica',
-    'montagem_final',
-    'teste',
-    'inspecao_final'
-  ];
 
   useEffect(() => {
     if (!id) return;
@@ -120,75 +100,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
     } catch (error) {
       console.error("Error updating status:", error);
       toast.error("Erro ao atualizar status");
-    }
-  };
-
-  const handleEtapaStart = async (etapa: EtapaOS) => {
-    if (!id || !ordem || !funcionario) return;
-    
-    try {
-      const etapasAndamento = { ...(ordem.etapasAndamento || {}) };
-      
-      etapasAndamento[etapa] = {
-        concluido: false,
-        funcionarioId: funcionario.id,
-        funcionarioNome: funcionario.nome,
-        iniciado: new Date(),
-      };
-      
-      const orderRef = doc(db, "ordens", id);
-      await updateDoc(orderRef, { 
-        etapasAndamento,
-        status: 'fabricacao' // Atualiza para fabricação se iniciar uma etapa
-      });
-      
-      setOrdem({
-        ...ordem,
-        etapasAndamento,
-        status: 'fabricacao'
-      });
-      
-      toast.success(`Etapa ${etapasLabels[etapa]} iniciada`);
-    } catch (error) {
-      console.error("Error starting etapa:", error);
-      toast.error("Erro ao iniciar etapa");
-    }
-  };
-
-  const handleEtapaFinish = async (etapa: EtapaOS, tempoTotal: number) => {
-    if (!id || !ordem) return;
-    
-    try {
-      const etapasAndamento = { ...(ordem.etapasAndamento || {}) };
-      
-      etapasAndamento[etapa] = {
-        ...etapasAndamento[etapa],
-        concluido: true,
-        finalizado: new Date(),
-      };
-      
-      const todasConcluidas = etapasOrdenadas.every(e => 
-        etapasAndamento[e]?.concluido === true
-      );
-      
-      const novoStatus = todasConcluidas ? 'finalizado' : ordem.status;
-      
-      const orderRef = doc(db, "ordens", id);
-      await updateDoc(orderRef, { 
-        etapasAndamento,
-        status: novoStatus
-      });
-      
-      setOrdem({
-        ...ordem,
-        etapasAndamento,
-        status: novoStatus
-      });
-      
-      toast.success(`Etapa ${etapasLabels[etapa]} finalizada`);
-    } catch (error) {
-      console.error("Error finishing etapa:", error);
-      toast.error("Erro ao finalizar etapa");
     }
   };
 
@@ -420,8 +331,10 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full mb-6">
             <TabsTrigger value="detalhes" className="flex-1">Detalhes</TabsTrigger>
-            <TabsTrigger value="progresso" className="flex-1">Progresso</TabsTrigger>
-            <TabsTrigger value="servicos" className="flex-1">Serviços</TabsTrigger>
+            <TabsTrigger value="tracker" className="flex-1">
+              <ClipboardCheck className="h-4 w-4 mr-2" />
+              Tracker
+            </TabsTrigger>
             <TabsTrigger value="fotos" className="flex-1">Fotos</TabsTrigger>
           </TabsList>
           
@@ -525,45 +438,17 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
             </div>
           </TabsContent>
           
-          <TabsContent value="progresso" className="space-y-4">
-            <div className="flex flex-col gap-4">
-              {etapasOrdenadas.map((etapa) => {
-                const etapaInfo = ordem.etapasAndamento?.[etapa];
-                const isConcluida = etapaInfo?.concluido === true;
-                const isIniciada = !!etapaInfo?.iniciado;
-                
-                return (
-                  <EtapaCard
-                    key={etapa}
-                    ordemId={ordem.id}
-                    etapa={etapa}
-                    etapaNome={etapasLabels[etapa]}
-                    funcionarioId={etapaInfo?.funcionarioId || funcionario?.id || ""}
-                    funcionarioNome={etapaInfo?.funcionarioNome || funcionario?.nome}
-                    isConcluida={isConcluida}
-                    isIniciada={isIniciada}
-                    onStart={() => handleEtapaStart(etapa)}
-                    onFinish={(tempoTotal) => handleEtapaFinish(etapa, tempoTotal)}
-                  />
-                );
-              })}
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="servicos" className="space-y-6">
+          <TabsContent value="tracker" className="space-y-4">
             <Card className="mb-4">
               <CardHeader>
-                <CardTitle>Serviços a Realizar</CardTitle>
+                <CardTitle>Acompanhamento dos Serviços</CardTitle>
               </CardHeader>
               <CardContent>
                 {ordem.servicos?.length ? (
                   <div className="flex flex-col gap-4">
                     {ordem.servicos.map((servico, i) => (
-                      <ServicoProgresso
+                      <ServicoTracker
                         key={`${servico.tipo}-${i}`}
-                        ordemId={ordem.id}
-                        funcionarioId={funcionario?.id || ""}
-                        funcionarioNome={funcionario?.nome}
                         servico={servico}
                         onSubatividadeChange={handleSubatividadeChange}
                         onServicoStatusChange={handleServicoStatusChange}
