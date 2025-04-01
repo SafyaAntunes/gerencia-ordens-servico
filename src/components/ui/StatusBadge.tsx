@@ -30,10 +30,6 @@ export function StatusBadge({ status, size = "md", className }: StatusBadgeProps
     if (status === "alta") return { label: "Alta", color: "bg-amber-100 text-amber-800" };
     if (status === "urgente") return { label: "Urgente", color: "bg-red-100 text-red-800" };
     
-    // Etapas (mantidas para compatibilidade)
-    if (status === "inspecao_inicial") return { label: "Inspeção Inicial", color: "bg-indigo-100 text-indigo-800" };
-    if (status === "retifica") return { label: "Retífica", color: "bg-purple-100 text-purple-800" };
-    
     // Fallback
     return { label: "Desconhecido", color: "bg-gray-100 text-gray-800" };
   };
