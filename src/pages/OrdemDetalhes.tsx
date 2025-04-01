@@ -40,7 +40,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
   const [isEditando, setIsEditando] = useState(false);
   const { funcionario } = useAuth();
   
-  // Define status labels para exibição amigável
   const statusLabels: Record<StatusOS, string> = {
     orcamento: "Orçamento",
     aguardando_aprovacao: "Aguardando Aprovação",
@@ -50,7 +49,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
     entregue: "Entregue"
   };
 
-  // Define etapas labels para exibição amigável
   const etapasLabels: Record<EtapaOS, string> = {
     lavagem: "Lavagem",
     inspecao_inicial: "Inspeção Inicial",
@@ -60,7 +58,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
     inspecao_final: "Inspeção Final"
   };
 
-  // Lista ordenada das etapas para exibição sequencial
   const etapasOrdenadas: EtapaOS[] = [
     'lavagem',
     'inspecao_inicial',
@@ -168,12 +165,10 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
         finalizado: new Date(),
       };
       
-      // Verifica se todas as etapas foram concluídas
       const todasConcluidas = etapasOrdenadas.every(e => 
         etapasAndamento[e]?.concluido === true
       );
       
-      // Atualiza status para finalizado se todas etapas concluídas
       const novoStatus = todasConcluidas ? 'finalizado' : ordem.status;
       
       const orderRef = doc(db, "ordens", id);
@@ -256,7 +251,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
       const orderRef = doc(db, "ordens", id);
       await updateDoc(orderRef, updatedOrder);
       
-      // Atualiza o estado local com os dados atualizados
       setOrdem(prev => {
         if (!prev) return null;
         return { ...prev, ...updatedOrder } as OrdemServico;

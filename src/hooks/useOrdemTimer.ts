@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { generateTimerStorageKey } from "@/utils/timerUtils";
 import { EtapaOS, TipoServico } from "@/types/ordens";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface UseOrdemTimerProps {
   ordemId: string;
@@ -44,7 +44,6 @@ export function useOrdemTimer({
   const [elapsedTime, setElapsedTime] = useState(0);
   const [totalSavedTime, setTotalSavedTime] = useState(0);
   const [usarCronometro, setUsarCronometro] = useState(true);
-  const { toast } = useToast();
   
   // Generate a unique key for localStorage
   const storageKey = generateTimerStorageKey(ordemId, etapa, tipoServico);
@@ -128,8 +127,7 @@ export function useOrdemTimer({
     setStartTime(Date.now());
     onStart?.();
     
-    toast({
-      title: "Cronômetro iniciado",
+    toast.success("Cronômetro iniciado", {
       description: `Medindo tempo para ${etapa}${tipoServico ? ` (${tipoServico})` : ''}`,
     });
   };
@@ -144,8 +142,7 @@ export function useOrdemTimer({
     setPauseTime(Date.now());
     onPause?.();
     
-    toast({
-      title: "Cronômetro pausado",
+    toast.success("Cronômetro pausado", {
       description: "O tempo não está sendo contabilizado",
     });
   };
@@ -164,8 +161,7 @@ export function useOrdemTimer({
     setPauseTime(null);
     onResume?.();
     
-    toast({
-      title: "Cronômetro retomado",
+    toast.success("Cronômetro retomado", {
       description: "Continuando a medição de tempo",
     });
   };
@@ -183,8 +179,7 @@ export function useOrdemTimer({
     const totalTime = totalSavedTime + finalTime;
     setTotalSavedTime(totalTime);
     
-    toast({
-      title: "Cronômetro finalizado",
+    toast.success("Cronômetro finalizado", {
       description: `Tempo total: ${totalTime}`,
     });
     
