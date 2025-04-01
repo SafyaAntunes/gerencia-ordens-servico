@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -104,6 +103,11 @@ const SUBATIVIDADES: Record<TipoServico, string[]> = {
     'TOTAL',
     'PARCIAL',
     'IN-LOCO'
+  ],
+  dinamometro: [
+    'POTÊNCIA',
+    'TORQUE',
+    'CONSUMO'
   ]
 };
 
@@ -169,6 +173,7 @@ const tiposServico: { value: TipoServico; label: string }[] = [
   { value: "virabrequim", label: "Virabrequim" },
   { value: "eixo_comando", label: "Eixo de Comando" },
   { value: "montagem", label: "Montagem" },
+  { value: "dinamometro", label: "Dinamômetro" },
 ];
 
 export default function OrdemForm({ 
@@ -190,7 +195,6 @@ export default function OrdemForm({
   const [isSubmittingCliente, setIsSubmittingCliente] = useState(false);
   const [clientes, setClientes] = useState(CLIENTES);
   
-  // Initialize the form first before we use it
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -243,7 +247,6 @@ export default function OrdemForm({
   }, [selectedClienteId]);
   
   useEffect(() => {
-    // Initialize servicosSubatividades with default values if they exist
     if (defaultValues?.servicosSubatividades) {
       setServicosSubatividades(defaultValues.servicosSubatividades);
     }
@@ -253,11 +256,9 @@ export default function OrdemForm({
     }
   }, [defaultValues?.servicosSubatividades, defaultValues?.servicosDescricoes]);
   
-  // Initialize subactivities for a service type when selected
   useEffect(() => {
     const tiposList = form.watch("servicosTipos") || [];
     
-    // For each service type, create subactivities if they don't exist yet
     tiposList.forEach((tipo) => {
       if (!servicosSubatividades[tipo]) {
         const subatividadesList = SUBATIVIDADES[tipo as TipoServico] || [];
@@ -274,7 +275,6 @@ export default function OrdemForm({
       }
     });
     
-    // Remove subatividades for unselected service types
     Object.keys(servicosSubatividades).forEach((tipo) => {
       if (!tiposList.includes(tipo)) {
         setServicosSubatividades(prev => {
@@ -321,9 +321,8 @@ export default function OrdemForm({
     setIsSubmittingCliente(true);
     
     try {
-      // Create a new cliente
       const novoCliente = {
-        id: "",  // Will be set by the saveCliente function
+        id: "",
         nome: data.nome,
         telefone: data.telefone,
         email: data.email || "",
@@ -335,16 +334,13 @@ export default function OrdemForm({
       if (success) {
         toast.success("Cliente cadastrado com sucesso!");
         
-        // Generate a temporary ID if needed
         const novoClienteId = novoCliente.id || `temp-${Date.now()}`;
         
-        // Add the new client to the dropdown
         setClientes(prev => [
           ...prev, 
           { id: novoClienteId, nome: novoCliente.nome }
         ]);
         
-        // Select the new client
         setSelectedClienteId(novoClienteId);
         form.setValue("clienteId", novoClienteId);
         
@@ -672,7 +668,6 @@ export default function OrdemForm({
                                         />
                                       </div>
                                       
-                                      {/* Subatividades */}
                                       {servicosSubatividades[tipo.value] && (
                                         <ServicoSubatividades
                                           tipo={tipo.value}
@@ -733,7 +728,6 @@ export default function OrdemForm({
         </div>
       </form>
       
-      {/* Dialog for creating a new client */}
       <Dialog open={isNovoClienteOpen} onOpenChange={setIsNovoClienteOpen}>
         <DialogContent>
           <DialogHeader>

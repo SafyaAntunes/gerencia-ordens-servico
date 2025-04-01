@@ -1,4 +1,3 @@
-
 export interface Funcionario {
   id: string;
   nome: string;
@@ -17,7 +16,6 @@ export interface Funcionario {
   foto?: string;
   nomeUsuario?: string;
   senha?: string;
-  // Additional properties needed by components
   especialidades: string[];
   nivelPermissao: NivelPermissao;
   dataCriacao?: Date;
@@ -44,7 +42,8 @@ export const tipoServicoLabels: Record<TipoServico, string> = {
   cabecote: 'Cabeçote',
   virabrequim: 'Virabrequim',
   eixo_comando: 'Eixo de Comando',
-  montagem: 'Montagem'
+  montagem: 'Montagem',
+  dinamometro: 'Dinamômetro'
 };
 
 export interface FuncionarioPermissoes {

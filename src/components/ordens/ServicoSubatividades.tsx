@@ -57,6 +57,11 @@ const SUBATIVIDADES: Record<TipoServico, string[]> = {
     'TOTAL',
     'PARCIAL',
     'IN-LOCO'
+  ],
+  dinamometro: [
+    'POTÊNCIA',
+    'TORQUE',
+    'CONSUMO'
   ]
 };
 

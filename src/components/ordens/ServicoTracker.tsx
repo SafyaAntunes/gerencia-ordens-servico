@@ -46,7 +46,8 @@ export default function ServicoTracker({
       cabecote: "Cabeçote",
       virabrequim: "Virabrequim",
       eixo_comando: "Eixo de Comando",
-      montagem: "Montagem"
+      montagem: "Montagem",
+      dinamometro: "Dinamômetro"
     };
     return labels[tipo] || tipo;
   };
