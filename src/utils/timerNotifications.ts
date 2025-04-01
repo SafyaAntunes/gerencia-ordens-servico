@@ -8,8 +8,8 @@ const etapaNomes: Record<EtapaOS, string> = {
   lavagem: "Lavagem",
   inspecao_inicial: "Inspeção Inicial",
   retifica: "Retífica",
-  montagem_final: "Montagem Final",
-  teste: "Teste",
+  montagem: "Montagem",
+  dinamometro: "Dinamômetro",
   inspecao_final: "Inspeção Final"
 };
 

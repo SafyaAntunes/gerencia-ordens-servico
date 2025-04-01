@@ -1,3 +1,4 @@
+
 import {
   FileText,
   Clock,
@@ -55,7 +56,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       id: "OS-2023-089",
       nome: "Motor Ford Ka 2019",
       cliente: "Auto Peças Silva",
-      status: "fabricacao" as const,
+      status: "retifica" as const,
       prioridade: "alta" as const,
     },
     {
@@ -242,7 +243,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
                         </thead>
                         <tbody>
                           {osRecentes
-                            .filter(os => ['orcamento', 'aguardando_aprovacao', 'fabricacao', 'espera_cliente'].includes(os.status))
+                            .filter(os => ['orcamento', 'aguardando_aprovacao', 'retifica'].includes(os.status))
                             .map((os) => (
                               <tr key={os.id} className="border-b transition-colors hover:bg-muted/50">
                                 <td className="p-4 font-medium">{os.id}</td>
