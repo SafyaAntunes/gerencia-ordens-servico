@@ -5,7 +5,7 @@ import { LogoutProps } from "@/types/props";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ChevronLeft, Edit, ClipboardCheck } from "lucide-react";
-import { OrdemServico, StatusOS, TipoServico, SubAtividade } from "@/types/ordens";
+import { OrdemServico, StatusOS, TipoServico, SubAtividade, EtapaOS } from "@/types/ordens";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
@@ -41,18 +41,22 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
   const { funcionario } = useAuth();
   
   const statusLabels: Record<StatusOS, string> = {
-    lavagem: "Lavagem",
-    inspecao_inicial: "Inspeção Inicial",
     orcamento: "Orçamento",
     aguardando_aprovacao: "Aguardando Aprovação",
     retifica: "Retífica",
     aguardando_peca_cliente: "Aguardando Peça (Cliente)",
     aguardando_peca_interno: "Aguardando Peça (Interno)",
-    montagem: "Montagem",
-    dinamometro: "Dinamômetro",
-    inspecao_final: "Inspeção Final",
     finalizado: "Finalizado",
     entregue: "Entregue"
+  };
+
+  const etapasLabels: Record<EtapaOS, string> = {
+    lavagem: "Lavagem",
+    inspecao_inicial: "Inspeção Inicial",
+    retifica: "Retífica",
+    montagem: "Montagem",
+    dinamometro: "Dinamômetro",
+    inspecao_final: "Inspeção Final"
   };
 
   useEffect(() => {
@@ -354,7 +358,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
                   <div className="flex justify-between items-center">
                     <span className="font-medium">Status atual:</span>
                     <Badge variant="outline" className="text-base">
-                      {statusLabels[ordem.status] || "Não definido"}
+                      {statusLabels[ordem.status as StatusOS] || "Não definido"}
                     </Badge>
                   </div>
                   
@@ -368,16 +372,11 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
                         <SelectValue placeholder="Selecione o status" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="lavagem">Lavagem</SelectItem>
-                        <SelectItem value="inspecao_inicial">Inspeção Inicial</SelectItem>
                         <SelectItem value="orcamento">Orçamento</SelectItem>
                         <SelectItem value="aguardando_aprovacao">Aguardando Aprovação</SelectItem>
                         <SelectItem value="retifica">Retífica</SelectItem>
                         <SelectItem value="aguardando_peca_cliente">Aguardando Peça (Cliente)</SelectItem>
                         <SelectItem value="aguardando_peca_interno">Aguardando Peça (Interno)</SelectItem>
-                        <SelectItem value="montagem">Montagem</SelectItem>
-                        <SelectItem value="dinamometro">Dinamômetro</SelectItem>
-                        <SelectItem value="inspecao_final">Inspeção Final</SelectItem>
                         <SelectItem value="finalizado">Finalizado</SelectItem>
                         <SelectItem value="entregue">Entregue</SelectItem>
                       </SelectContent>
