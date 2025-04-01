@@ -1,38 +1,54 @@
 
+import { EtapaOS, TipoServico } from "@/types/ordens";
 import { TimerState } from "@/types/timer";
 import { generateTimerStorageKey } from "./timerUtils";
-import { EtapaOS, TipoServico } from "@/types/ordens";
 
-/**
- * Load timer data from localStorage
- */
+// Save timer state to localStorage
+export const saveTimerData = (
+  ordemId: string, 
+  etapa: EtapaOS, 
+  tipoServico: TipoServico | undefined, 
+  state: TimerState
+): void => {
+  try {
+    const key = generateTimerStorageKey(ordemId, etapa, tipoServico);
+    localStorage.setItem(key, JSON.stringify(state));
+  } catch (error) {
+    console.error("Error saving timer data:", error);
+  }
+};
+
+// Load timer state from localStorage
 export const loadTimerData = (
-  ordemId: string,
-  etapa: EtapaOS,
+  ordemId: string, 
+  etapa: EtapaOS, 
   tipoServico?: TipoServico
 ): TimerState | null => {
-  const storageKey = generateTimerStorageKey(ordemId, etapa, tipoServico);
-  const savedData = localStorage.getItem(storageKey);
-  
-  if (!savedData) return null;
-  
   try {
-    return JSON.parse(savedData) as TimerState;
+    const key = generateTimerStorageKey(ordemId, etapa, tipoServico);
+    const data = localStorage.getItem(key);
+    
+    if (data) {
+      return JSON.parse(data) as TimerState;
+    }
+    
+    return null;
   } catch (error) {
-    console.error("Erro ao carregar dados do cronômetro:", error);
+    console.error("Error loading timer data:", error);
     return null;
   }
 };
 
-/**
- * Save timer data to localStorage
- */
-export const saveTimerData = (
-  ordemId: string,
-  etapa: EtapaOS,
-  tipoServico: TipoServico | undefined,
-  timerState: TimerState
+// Clear timer data from localStorage
+export const clearTimerData = (
+  ordemId: string, 
+  etapa: EtapaOS, 
+  tipoServico?: TipoServico
 ): void => {
-  const storageKey = generateTimerStorageKey(ordemId, etapa, tipoServico);
-  localStorage.setItem(storageKey, JSON.stringify(timerState));
+  try {
+    const key = generateTimerStorageKey(ordemId, etapa, tipoServico);
+    localStorage.removeItem(key);
+  } catch (error) {
+    console.error("Error clearing timer data:", error);
+  }
 };

@@ -97,7 +97,7 @@ export default function ServicoSubatividades({
             />
             <FormLabel 
               htmlFor={`subatividade-${subatividade.id}`}
-              className="text-sm font-normal cursor-pointer"
+              className="text-sm text-muted-foreground font-normal cursor-pointer"
             >
               {subatividade.nome}
             </FormLabel>

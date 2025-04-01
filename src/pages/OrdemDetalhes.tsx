@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -5,7 +6,7 @@ import { LogoutProps } from "@/types/props";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ChevronLeft, Edit, Clock, ClipboardCheck } from "lucide-react";
-import { OrdemServico, StatusOS, EtapaOS } from "@/types/ordens";
+import { OrdemServico, StatusOS, EtapaOS, TipoServico, SubAtividade, Servico } from "@/types/ordens";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
@@ -25,6 +26,7 @@ import { ptBR } from "date-fns/locale";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import EtapaCard from "@/components/ordens/EtapaCard";
+import ServicoProgresso from "@/components/ordens/ServicoProgresso";
 
 interface OrdemDetalhesProps extends LogoutProps {}
 
@@ -190,6 +192,65 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
     }
   };
 
+  const handleSubatividadeChange = async (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => {
+    if (!id || !ordem) return;
+    
+    try {
+      const servicos = ordem.servicos.map(servico => {
+        if (servico.tipo === servicoTipo && servico.subatividades) {
+          const subatividades = servico.subatividades.map(sub => {
+            if (sub.id === subatividadeId) {
+              return { ...sub, selecionada: checked };
+            }
+            return sub;
+          });
+          
+          return { ...servico, subatividades };
+        }
+        return servico;
+      });
+      
+      const orderRef = doc(db, "ordens", id);
+      await updateDoc(orderRef, { servicos });
+      
+      setOrdem({
+        ...ordem,
+        servicos
+      });
+    } catch (error) {
+      console.error("Error updating subatividade:", error);
+      toast.error("Erro ao atualizar subatividade");
+    }
+  };
+  
+  const handleServicoStatusChange = async (servicoTipo: TipoServico, concluido: boolean) => {
+    if (!id || !ordem) return;
+    
+    try {
+      const servicos = ordem.servicos.map(servico => {
+        if (servico.tipo === servicoTipo) {
+          return { ...servico, concluido };
+        }
+        return servico;
+      });
+      
+      const orderRef = doc(db, "ordens", id);
+      await updateDoc(orderRef, { servicos });
+      
+      setOrdem({
+        ...ordem,
+        servicos
+      });
+      
+      if (concluido) {
+        toast.success(`Serviço ${servicoTipo} concluído`);
+      }
+    } catch (error) {
+      console.error("Error updating servico status:", error);
+      toast.error("Erro ao atualizar status do serviço");
+    }
+  };
+
   const handleSubmit = async (values: any) => {
     setIsSubmitting(true);
     
@@ -224,7 +285,8 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
         servicos: (values.servicosTipos || []).map((tipo: string) => ({
           tipo,
           descricao: values.servicosDescricoes?.[tipo] || "",
-          concluido: false
+          concluido: false,
+          subatividades: values.servicosSubatividades?.[tipo] || []
         }))
       };
       
@@ -281,7 +343,13 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
       servicosDescricoes: ordem.servicos?.reduce((acc, s) => {
         acc[s.tipo] = s.descricao;
         return acc;
-      }, {} as Record<string, string>) || {}
+      }, {} as Record<string, string>) || {},
+      servicosSubatividades: ordem.servicos?.reduce((acc, s) => {
+        if (s.subatividades) {
+          acc[s.tipo] = s.subatividades;
+        }
+        return acc;
+      }, {} as Record<string, SubAtividade[]>) || {}
     };
   };
 
@@ -353,6 +421,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
           <TabsList className="w-full mb-6">
             <TabsTrigger value="detalhes" className="flex-1">Detalhes</TabsTrigger>
             <TabsTrigger value="progresso" className="flex-1">Progresso</TabsTrigger>
+            <TabsTrigger value="servicos" className="flex-1">Serviços</TabsTrigger>
             <TabsTrigger value="fotos" className="flex-1">Fotos</TabsTrigger>
           </TabsList>
           
@@ -453,32 +522,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
                   )}
                 </CardContent>
               </Card>
-              
-              <Card className="md:col-span-2">
-                <CardHeader>
-                  <CardTitle>Serviços a Realizar</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {ordem.servicos?.length ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {ordem.servicos.map((servico, i) => (
-                        <div key={i} className="border rounded-md p-4">
-                          <p className="font-medium mb-1">
-                            {servico.tipo === 'bloco' && 'Bloco'}
-                            {servico.tipo === 'biela' && 'Biela'}
-                            {servico.tipo === 'cabecote' && 'Cabeçote'}
-                            {servico.tipo === 'virabrequim' && 'Virabrequim'}
-                            {servico.tipo === 'eixo_comando' && 'Eixo de Comando'}
-                          </p>
-                          <p className="text-sm text-muted-foreground">{servico.descricao || "Sem descrição"}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">Nenhum serviço cadastrado.</p>
-                  )}
-                </CardContent>
-              </Card>
             </div>
           </TabsContent>
           
@@ -505,6 +548,33 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
                 );
               })}
             </div>
+          </TabsContent>
+          
+          <TabsContent value="servicos" className="space-y-6">
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle>Serviços a Realizar</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {ordem.servicos?.length ? (
+                  <div className="flex flex-col gap-4">
+                    {ordem.servicos.map((servico, i) => (
+                      <ServicoProgresso
+                        key={`${servico.tipo}-${i}`}
+                        ordemId={ordem.id}
+                        funcionarioId={funcionario?.id || ""}
+                        funcionarioNome={funcionario?.nome}
+                        servico={servico}
+                        onSubatividadeChange={handleSubatividadeChange}
+                        onServicoStatusChange={handleServicoStatusChange}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">Nenhum serviço cadastrado.</p>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
           
           <TabsContent value="fotos" className="space-y-6">

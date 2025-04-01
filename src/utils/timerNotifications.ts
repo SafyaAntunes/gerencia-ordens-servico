@@ -1,39 +1,46 @@
 
 import { toast } from "sonner";
 import { EtapaOS, TipoServico } from "@/types/ordens";
+import { formatTime } from "./timerUtils";
 
-/**
- * Show toast notification when timer is started
- */
+// Mapear para nomes amigáveis
+const etapaNomes: Record<EtapaOS, string> = {
+  lavagem: "Lavagem",
+  inspecao_inicial: "Inspeção Inicial",
+  retifica: "Retífica",
+  montagem_final: "Montagem Final",
+  teste: "Teste",
+  inspecao_final: "Inspeção Final"
+};
+
+const servicoNomes: Record<TipoServico, string> = {
+  bloco: "Bloco",
+  biela: "Biela",
+  cabecote: "Cabeçote",
+  virabrequim: "Virabrequim",
+  eixo_comando: "Eixo de Comando",
+  montagem: "Montagem"
+};
+
 export const notifyTimerStarted = (etapa: EtapaOS, tipoServico?: TipoServico) => {
-  toast.success("Cronômetro iniciado", {
-    description: `Medindo tempo para ${etapa}${tipoServico ? ` (${tipoServico})` : ''}`,
-  });
+  const etapaNome = etapaNomes[etapa] || etapa;
+  const servicoNome = tipoServico ? servicoNomes[tipoServico] || tipoServico : null;
+  
+  if (servicoNome) {
+    toast.success(`Cronômetro iniciado: ${servicoNome}`);
+  } else {
+    toast.success(`Cronômetro iniciado: ${etapaNome}`);
+  }
 };
 
-/**
- * Show toast notification when timer is paused
- */
 export const notifyTimerPaused = () => {
-  toast.success("Cronômetro pausado", {
-    description: "O tempo não está sendo contabilizado",
-  });
+  toast.info("Cronômetro pausado");
 };
 
-/**
- * Show toast notification when timer is resumed
- */
 export const notifyTimerResumed = () => {
-  toast.success("Cronômetro retomado", {
-    description: "Continuando a medição de tempo",
-  });
+  toast.info("Cronômetro retomado");
 };
 
-/**
- * Show toast notification when timer is finished
- */
-export const notifyTimerFinished = (totalTime: number) => {
-  toast.success("Cronômetro finalizado", {
-    description: `Tempo total: ${totalTime}`,
-  });
+export const notifyTimerFinished = (tempoTotal: number) => {
+  toast.success(`Concluído! Tempo total: ${formatTime(tempoTotal)}`);
 };
