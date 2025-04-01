@@ -1,4 +1,3 @@
-
 export type Cliente = {
   id: string;
   nome: string;
@@ -43,16 +42,11 @@ export type Servico = {
 };
 
 export type StatusOS = 
-  | 'lavagem'
-  | 'inspecao_inicial'
   | 'orcamento'
   | 'aguardando_aprovacao'
   | 'retifica'
   | 'aguardando_peca_cliente'
   | 'aguardando_peca_interno'
-  | 'montagem'
-  | 'dinamometro'
-  | 'inspecao_final'
   | 'finalizado'
   | 'entregue';
 
