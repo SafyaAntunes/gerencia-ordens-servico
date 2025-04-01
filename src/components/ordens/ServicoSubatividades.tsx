@@ -52,6 +52,11 @@ const SUBATIVIDADES: Record<TipoServico, string[]> = {
     'RETIFICA DE AÇO DE BIELA',
     'MUDAR PISTÃO',
     'MEDIR AÇO DE BIELA'
+  ],
+  montagem: [
+    'TOTAL',
+    'PARCIAL',
+    'IN-LOCO'
   ]
 };
 

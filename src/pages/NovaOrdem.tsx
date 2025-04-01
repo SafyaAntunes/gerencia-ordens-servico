@@ -83,12 +83,12 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
           subatividades: values.servicosSubatividades?.[tipo] || []
         })),
         etapasAndamento: {
-          lavagem: { concluido: false },
-          inspecao_inicial: { concluido: false },
-          retifica: { concluido: false },
-          montagem_final: { concluido: false },
-          teste: { concluido: false },
-          inspecao_final: { concluido: false },
+          lavagem: { concluido: false, usarCronometro: true },
+          inspecao_inicial: { concluido: false, usarCronometro: true },
+          retifica: { concluido: false, usarCronometro: true },
+          montagem_final: { concluido: false, usarCronometro: true },
+          teste: { concluido: false, usarCronometro: true },
+          inspecao_final: { concluido: false, usarCronometro: true },
         },
         tempoRegistros: [],
         fotosEntrada: fotosEntradaUrls,

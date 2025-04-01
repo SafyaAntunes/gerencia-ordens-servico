@@ -25,7 +25,8 @@ export type TipoServico =
   | 'biela' 
   | 'cabecote' 
   | 'virabrequim' 
-  | 'eixo_comando';
+  | 'eixo_comando'
+  | 'montagem';
 
 export type SubAtividade = {
   id: string;
@@ -91,6 +92,7 @@ export type OrdemServico = {
       funcionarioNome?: string;
       iniciado?: Date;
       finalizado?: Date;
+      usarCronometro?: boolean;
     }
   };
   tempoRegistros: TempoRegistro[];

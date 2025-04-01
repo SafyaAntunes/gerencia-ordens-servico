@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Check, Plus, X, Camera } from "lucide-react";
+import { CalendarIcon, Check, Plus, X, Camera, UserPlus, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -29,6 +29,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -38,7 +45,10 @@ import { Prioridade, TipoServico, Motor, SubAtividade } from "@/types/ordens";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FotosForm from "./FotosForm";
 import ServicoSubatividades from "./ServicoSubatividades";
+import ClienteForm from "@/components/clientes/ClienteForm";
 import { v4 as uuidv4 } from "uuid";
+import { saveCliente } from "@/services/clienteService";
+import { toast } from "sonner";
 
 // Define all subatividades for each tipo de serviço
 const SUBATIVIDADES: Record<TipoServico, string[]> = {
@@ -89,6 +99,11 @@ const SUBATIVIDADES: Record<TipoServico, string[]> = {
     'RETIFICA DE AÇO DE BIELA',
     'MUDAR PISTÃO',
     'MEDIR AÇO DE BIELA'
+  ],
+  montagem: [
+    'TOTAL',
+    'PARCIAL',
+    'IN-LOCO'
   ]
 };
 
@@ -153,6 +168,7 @@ const tiposServico: { value: TipoServico; label: string }[] = [
   { value: "cabecote", label: "Cabeçote" },
   { value: "virabrequim", label: "Virabrequim" },
   { value: "eixo_comando", label: "Eixo de Comando" },
+  { value: "montagem", label: "Montagem" },
 ];
 
 export default function OrdemForm({ 
@@ -170,6 +186,9 @@ export default function OrdemForm({
   const [activeTab, setActiveTab] = useState("dados");
   const [selectedClienteId, setSelectedClienteId] = useState<string>(defaultValues?.clienteId || "");
   const [motores, setMotores] = useState<Motor[]>([]);
+  const [isNovoClienteOpen, setIsNovoClienteOpen] = useState(false);
+  const [isSubmittingCliente, setIsSubmittingCliente] = useState(false);
+  const [clientes, setClientes] = useState(CLIENTES);
   
   // Initialize the form first before we use it
   const form = useForm<FormValues>({
@@ -298,6 +317,47 @@ export default function OrdemForm({
     form.setValue("motorId", "");
   };
   
+  const handleNovoClienteSubmit = async (data: any) => {
+    setIsSubmittingCliente(true);
+    
+    try {
+      // Create a new cliente
+      const novoCliente = {
+        id: "",  // Will be set by the saveCliente function
+        nome: data.nome,
+        telefone: data.telefone,
+        email: data.email || "",
+        observacoes: data.observacoes || "",
+      };
+      
+      const success = await saveCliente(novoCliente);
+      
+      if (success) {
+        toast.success("Cliente cadastrado com sucesso!");
+        
+        // Generate a temporary ID if needed
+        const novoClienteId = novoCliente.id || `temp-${Date.now()}`;
+        
+        // Add the new client to the dropdown
+        setClientes(prev => [
+          ...prev, 
+          { id: novoClienteId, nome: novoCliente.nome }
+        ]);
+        
+        // Select the new client
+        setSelectedClienteId(novoClienteId);
+        form.setValue("clienteId", novoClienteId);
+        
+        setIsNovoClienteOpen(false);
+      }
+    } catch (error) {
+      console.error('Error creating client:', error);
+      toast.error('Erro ao cadastrar cliente');
+    } finally {
+      setIsSubmittingCliente(false);
+    }
+  };
+  
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
@@ -357,7 +417,19 @@ export default function OrdemForm({
               name="clienteId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Cliente</FormLabel>
+                  <FormLabel className="flex items-center justify-between">
+                    <span>Cliente</span>
+                    <Button 
+                      type="button"
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setIsNovoClienteOpen(true)}
+                      className="h-8"
+                    >
+                      <UserPlus className="h-4 w-4 mr-1" />
+                      Novo Cliente
+                    </Button>
+                  </FormLabel>
                   <Select 
                     onValueChange={(value) => {
                       field.onChange(value);
@@ -371,7 +443,7 @@ export default function OrdemForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {CLIENTES.map((cliente) => (
+                      {clientes.map((cliente) => (
                         <SelectItem 
                           key={cliente.id} 
                           value={cliente.id}
@@ -660,6 +732,24 @@ export default function OrdemForm({
           </Button>
         </div>
       </form>
+      
+      {/* Dialog for creating a new client */}
+      <Dialog open={isNovoClienteOpen} onOpenChange={setIsNovoClienteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Novo Cliente</DialogTitle>
+            <DialogDescription>
+              Cadastre um novo cliente para esta ordem de serviço.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <ClienteForm
+            onSubmit={handleNovoClienteSubmit}
+            onCancel={() => setIsNovoClienteOpen(false)}
+            isSubmitting={isSubmittingCliente}
+          />
+        </DialogContent>
+      </Dialog>
     </Form>
   );
 }

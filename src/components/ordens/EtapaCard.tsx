@@ -1,8 +1,12 @@
 
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { EtapaOS } from "@/types/ordens";
 import OrdemCronometro from "./OrdemCronometro";
 import { formatTime } from "@/utils/timerUtils";
+import { FormLabel } from "../ui/form";
+import { Switch } from "../ui/switch";
 
 interface EtapaCardProps {
   ordemId: string;
@@ -12,8 +16,11 @@ interface EtapaCardProps {
   funcionarioNome?: string;
   isConcluida: boolean;
   isIniciada: boolean;
+  usarCronometro?: boolean;
   onStart: () => void;
   onFinish: (tempoTotal: number) => void;
+  onToggleCronometro?: (usarCronometro: boolean) => void;
+  onCompleteWithoutTimer?: () => void;
 }
 
 export default function EtapaCard({
@@ -24,13 +31,28 @@ export default function EtapaCard({
   funcionarioNome,
   isConcluida,
   isIniciada,
+  usarCronometro = true,
   onStart,
-  onFinish
+  onFinish,
+  onToggleCronometro,
+  onCompleteWithoutTimer
 }: EtapaCardProps) {
   return (
     <Card className={`p-6 ${isConcluida ? "border-green-500/50" : ""} mb-4`}>
-      <div className="flex justify-between items-center mb-2">
+      <div className="flex justify-between items-center mb-4">
         <h3 className="text-xl font-semibold">{etapaNome}</h3>
+        {!isConcluida && onToggleCronometro && (
+          <div className="flex items-center space-x-2">
+            <Switch
+              id={`usar-cronometro-${etapa}`}
+              checked={usarCronometro}
+              onCheckedChange={onToggleCronometro}
+            />
+            <FormLabel htmlFor={`usar-cronometro-${etapa}`} className="cursor-pointer">
+              Usar cronômetro
+            </FormLabel>
+          </div>
+        )}
       </div>
       
       {isConcluida ? (
@@ -52,6 +74,18 @@ export default function EtapaCard({
           onResume={() => {}}
           onFinish={(tempoTotal) => onFinish(tempoTotal)}
         />
+      ) : !usarCronometro ? (
+        <div className="flex items-center justify-center py-4">
+          <Checkbox 
+            id={`concluir-sem-timer-${etapa}`}
+            checked={false}
+            onCheckedChange={() => onCompleteWithoutTimer && onCompleteWithoutTimer()}
+            className="mr-2"
+          />
+          <FormLabel htmlFor={`concluir-sem-timer-${etapa}`} className="cursor-pointer">
+            Marcar como concluído
+          </FormLabel>
+        </div>
       ) : (
         <div className="text-center py-4">
           <OrdemCronometro
