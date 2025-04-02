@@ -83,7 +83,8 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
           funcionarioId: funcionario.id,
           funcionarioNome: funcionario.nome,
           iniciado: new Date(),
-          usarCronometro: true
+          usarCronometro: true,
+          pausas: []
         }
       };
 
@@ -322,7 +323,8 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
           funcionarioNome: funcionario?.nome,
           iniciado: new Date(),
           finalizado: new Date(),
-          usarCronometro: false
+          usarCronometro: false,
+          pausas: []
         }
       };
 

@@ -77,6 +77,12 @@ export type FotoBase64 = {
   data: string;
 };
 
+export type PausaRegistro = {
+  inicio: number;
+  fim?: number;
+  motivo?: string;
+};
+
 export type OrdemServico = {
   id: string;
   nome: string;
@@ -96,6 +102,7 @@ export type OrdemServico = {
       iniciado?: Date;
       finalizado?: Date;
       usarCronometro?: boolean;
+      pausas?: PausaRegistro[];
     }
   };
   tempoRegistros: TempoRegistro[];

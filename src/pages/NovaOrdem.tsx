@@ -98,7 +98,11 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
       // Inicializar etapasAndamento
       const etapasAndamento: any = {};
       etapas.forEach(etapa => {
-        etapasAndamento[etapa] = { concluido: false, usarCronometro: true };
+        etapasAndamento[etapa] = { 
+          concluido: false, 
+          usarCronometro: true,
+          pausas: []
+        };
       });
 
       // Create new order object
