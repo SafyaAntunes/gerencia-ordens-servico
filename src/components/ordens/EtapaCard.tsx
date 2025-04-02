@@ -63,7 +63,7 @@ export default function EtapaCard({
             <Switch
               id={`usar-cronometro-${etapa}`}
               checked={usarCronometro}
-              onCheckedChange={onToggleCronometro}
+              onCheckedChange={(checked) => onToggleCronometro(checked)}
             />
             <Label htmlFor={`usar-cronometro-${etapa}`} className="cursor-pointer">
               Usar cronômetro
