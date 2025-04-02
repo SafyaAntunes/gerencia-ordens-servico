@@ -63,11 +63,8 @@ export default function EtapaCard({
             <Switch
               id={`usar-cronometro-${etapa}`}
               checked={usarCronometro}
-              onCheckedChange={(checked) => onToggleCronometro(checked)}
+              onCheckedChange={(checked: boolean) => onToggleCronometro(checked)}
             />
-            <Label htmlFor={`usar-cronometro-${etapa}`} className="cursor-pointer">
-              Usar cronômetro
-            </Label>
           </div>
         )}
       </div>
@@ -80,15 +77,18 @@ export default function EtapaCard({
             <ServicoTracker
               key={`${servico.tipo}-${i}`}
               servico={servico}
+              ordemId={ordemId}
+              funcionarioId={funcionarioId}
+              funcionarioNome={funcionarioNome}
               onSubatividadeToggle={
                 onSubatividadeToggle ? 
                   (subId, checked) => onSubatividadeToggle(servico.tipo, subId, checked) : 
-                  undefined
+                  () => {}
               }
               onServicoStatusChange={
                 onServicoStatusChange ? 
                   (checked) => onServicoStatusChange(servico.tipo, checked) : 
-                  undefined
+                  () => {}
               }
             />
           ))}
@@ -119,7 +119,7 @@ export default function EtapaCard({
           <Checkbox 
             id={`concluir-sem-timer-${etapa}`}
             checked={false}
-            onCheckedChange={() => onCompleteWithoutTimer && onCompleteWithoutTimer()}
+            onCheckedChange={(checked: boolean) => onCompleteWithoutTimer && onCompleteWithoutTimer()}
             className="mr-2"
           />
           <Label htmlFor={`concluir-sem-timer-${etapa}`} className="cursor-pointer">

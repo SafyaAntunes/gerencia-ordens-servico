@@ -33,6 +33,7 @@ export type SubAtividade = {
   id: string;
   nome: string;
   selecionada: boolean;
+  concluida?: boolean;
 };
 
 export type Servico = {

@@ -1,42 +1,66 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, Clock } from "lucide-react";
+import { CheckCircle2, Clock, Play, Pause, StopCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatTime } from "@/utils/timerUtils";
 import { Servico, SubAtividade, TipoServico } from "@/types/ordens";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import PausaDialog from "./PausaDialog";
+import { useOrdemTimer } from "@/hooks/useOrdemTimer";
 
 interface ServicoTrackerProps {
   servico: Servico;
-  onSubatividadeToggle: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
-  onServicoStatusChange: (servicoTipo: TipoServico, concluido: boolean) => void;
+  ordemId: string;
+  funcionarioId: string;
+  funcionarioNome?: string;
+  onSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
+  onServicoStatusChange: (concluido: boolean) => void;
   className?: string;
 }
 
 export default function ServicoTracker({
   servico,
+  ordemId,
+  funcionarioId,
+  funcionarioNome,
   onSubatividadeToggle,
   onServicoStatusChange,
   className,
 }: ServicoTrackerProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [elapsedTime, setElapsedTime] = useState(0);
-  const [isRunning, setIsRunning] = useState(false);
-  const [intervalId, setIntervalId] = useState<number | null>(null);
+  const [pausaDialogOpen, setPausaDialogOpen] = useState(false);
+  
+  const {
+    isRunning,
+    isPaused,
+    usarCronometro,
+    displayTime,
+    handleStart,
+    handlePause,
+    handleResume,
+    handleFinish
+  } = useOrdemTimer({
+    ordemId,
+    etapa: 'retifica',
+    tipoServico: servico.tipo,
+    onFinish: () => onServicoStatusChange(true),
+    isEtapaConcluida: servico.concluido
+  });
 
-  // Calculate progress percentage
-  const totalSubatividades = servico.subatividades?.length || 0;
-  const completedSubatividades = servico.subatividades?.filter(item => item.selecionada).length || 0;
+  // Filtramos apenas as subatividades selecionadas durante a criação da OS
+  const subatividadesFiltradas = servico.subatividades?.filter(item => item.selecionada) || [];
+  
+  // Calculate progress percentage apenas das selecionadas
+  const totalSubatividades = subatividadesFiltradas.length || 0;
+  const completedSubatividades = subatividadesFiltradas.filter(item => item.concluida).length || 0;
   const progressPercentage = totalSubatividades > 0 
     ? Math.round((completedSubatividades / totalSubatividades) * 100)
     : 0;
-
-  const allCompleted = totalSubatividades > 0 && completedSubatividades === totalSubatividades;
 
   // Format the service type for display
   const formatServicoTipo = (tipo: TipoServico): string => {
@@ -54,40 +78,21 @@ export default function ServicoTracker({
 
   // Toggle a subatividade
   const handleSubatividadeToggle = (subatividade: SubAtividade) => {
-    onSubatividadeToggle(servico.tipo, subatividade.id, !subatividade.selecionada);
+    onSubatividadeToggle(subatividade.id, !subatividade.concluida);
+  };
+  
+  const handlePauseClick = () => {
+    setPausaDialogOpen(true);
+  };
+  
+  const handlePausaConfirm = (motivo: string) => {
+    handlePause(motivo);
+    setPausaDialogOpen(false);
   };
 
-  // Complete the service
-  const handleComplete = () => {
-    if (intervalId) {
-      clearInterval(intervalId);
-      setIntervalId(null);
-      setIsRunning(false);
-    }
-    onServicoStatusChange(servico.tipo, true);
+  const handlePausaCancel = () => {
+    setPausaDialogOpen(false);
   };
-
-  // Start or stop timer
-  const toggleTimer = () => {
-    if (isRunning) {
-      // Stop timer
-      if (intervalId) {
-        clearInterval(intervalId);
-        setIntervalId(null);
-      }
-      setIsRunning(false);
-    } else {
-      // Start timer
-      const id = window.setInterval(() => {
-        setElapsedTime(prev => prev + 1000);
-      }, 1000);
-      setIntervalId(id);
-      setIsRunning(true);
-    }
-  };
-
-  // Filtramos apenas as subatividades selecionadas durante a criação da OS
-  const subatividadesFiltradas = servico.subatividades?.filter(item => item.selecionada) || [];
 
   return (
     <Card className={cn("w-full", className)}>
@@ -106,7 +111,7 @@ export default function ServicoTracker({
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <span className="font-mono text-sm">
-                  {formatTime(elapsedTime)}
+                  {formatTime(displayTime)}
                 </span>
               </div>
             </div>
@@ -141,18 +146,18 @@ export default function ServicoTracker({
                         <div 
                           className={cn(
                             "h-5 w-5 rounded-full border flex items-center justify-center",
-                            subatividade.selecionada 
+                            subatividade.concluida 
                               ? "border-green-500 bg-green-500/10" 
                               : "border-muted"
                           )}
                         >
-                          {subatividade.selecionada && (
+                          {subatividade.concluida && (
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
                           )}
                         </div>
                         <Badge 
                           variant="outline"
-                          className={subatividade.selecionada ? "text-green-600 border-green-600" : "text-muted-foreground"}
+                          className={subatividade.concluida ? "text-green-600 border-green-600" : "text-muted-foreground"}
                         >
                           {subatividade.nome}
                         </Badge>
@@ -164,31 +169,57 @@ export default function ServicoTracker({
             </>
           )}
           
-          <CardFooter className="pt-2 flex justify-between">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={toggleTimer}
-              disabled={servico.concluido}
-            >
-              {isRunning ? (
-                <>
-                  <Clock className="h-4 w-4 mr-1" />
-                  Pausar Timer
-                </>
-              ) : (
-                <>
-                  <Clock className="h-4 w-4 mr-1" />
+          <CardContent className="py-3">
+            <div className="flex space-x-2 my-2">
+              {!isRunning && !isPaused && !servico.concluido && (
+                <Button
+                  onClick={handleStart}
+                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
+                >
+                  <Play className="h-4 w-4 mr-1" />
                   Iniciar Timer
-                </>
+                </Button>
               )}
-            </Button>
-            
+              
+              {isRunning && !isPaused && (
+                <Button
+                  onClick={handlePauseClick}
+                  className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-white"
+                >
+                  <Pause className="h-4 w-4 mr-1" />
+                  Pausar
+                </Button>
+              )}
+              
+              {isPaused && (
+                <Button
+                  onClick={handleResume}
+                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
+                >
+                  <Play className="h-4 w-4 mr-1" />
+                  Retomar
+                </Button>
+              )}
+              
+              {(isRunning || isPaused) && (
+                <Button
+                  onClick={handleFinish}
+                  className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+                >
+                  <StopCircle className="h-4 w-4 mr-1" />
+                  Terminar
+                </Button>
+              )}
+            </div>
+          </CardContent>
+          
+          <CardFooter className="pt-2 pb-4">
             <Button 
               variant="default" 
               size="sm" 
-              onClick={handleComplete}
+              onClick={() => onServicoStatusChange(true)}
               disabled={servico.concluido}
+              className="w-full"
             >
               <CheckCircle2 className="h-4 w-4 mr-1" />
               Marcar Concluído
@@ -196,6 +227,12 @@ export default function ServicoTracker({
           </CardFooter>
         </CollapsibleContent>
       </Collapsible>
+      
+      <PausaDialog 
+        isOpen={pausaDialogOpen}
+        onClose={handlePausaCancel}
+        onConfirm={handlePausaConfirm}
+      />
     </Card>
   );
 }

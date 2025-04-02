@@ -366,7 +366,7 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
         if (servico.tipo === servicoTipo && servico.subatividades) {
           const subatividades = servico.subatividades.map(sub => {
             if (sub.id === subatividadeId) {
-              return { ...sub, selecionada: checked };
+              return { ...sub, concluida: checked };
             }
             return sub;
           });
@@ -395,9 +395,20 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
     if (!ordem.id) return;
     
     try {
+      // Atualiza o status do serviço
       const servicos = ordem.servicos.map(servico => {
         if (servico.tipo === servicoTipo) {
-          return { ...servico, concluido };
+          // Ao marcar serviço como concluído, também marca todas as subatividades
+          const subatividades = servico.subatividades?.map(sub => ({
+            ...sub,
+            concluida: concluido ? true : sub.concluida
+          }));
+          
+          return { 
+            ...servico, 
+            concluido,
+            subatividades: subatividades || servico.subatividades
+          };
         }
         return servico;
       });
