@@ -53,12 +53,16 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
       let clienteEmail = "";
       
       if (values.clienteId) {
-        const clienteDoc = await getDoc(doc(db, "clientes", values.clienteId));
-        if (clienteDoc.exists()) {
-          const clienteData = clienteDoc.data();
-          clienteNome = clienteData.nome || "Cliente sem nome";
-          clienteTelefone = clienteData.telefone || "";
-          clienteEmail = clienteData.email || "";
+        try {
+          const clienteDoc = await getDoc(doc(db, "clientes", values.clienteId));
+          if (clienteDoc.exists()) {
+            const clienteData = clienteDoc.data();
+            clienteNome = clienteData.nome || "Cliente sem nome";
+            clienteTelefone = clienteData.telefone || "";
+            clienteEmail = clienteData.email || "";
+          }
+        } catch (clientError) {
+          console.error("Erro ao buscar dados do cliente:", clientError);
         }
       }
       
@@ -93,7 +97,8 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         },
         tempoRegistros: [],
         fotosEntrada: fotosEntradaUrls,
-        fotosSaida: fotosSaidaUrls
+        fotosSaida: fotosSaidaUrls,
+        progressoEtapas: 0 // Inicializa com 0% de progresso
       };
       
       // Save to Firestore with custom ID

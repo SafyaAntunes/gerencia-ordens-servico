@@ -29,6 +29,7 @@ export function useOrdemTimer({
   const [elapsedTime, setElapsedTime] = useState(0);
   const [totalSavedTime, setTotalSavedTime] = useState(0);
   const [usarCronometro, setUsarCronometro] = useState(true);
+  const [pausas, setPausas] = useState<{ inicio: number; fim?: number; motivo?: string }[]>([]);
   
   // Generate a unique key for localStorage
   const storageKey = generateTimerStorageKey(ordemId, etapa, tipoServico);
@@ -59,6 +60,7 @@ export function useOrdemTimer({
       }
       
       setUsarCronometro(savedData.usarCronometro !== undefined ? savedData.usarCronometro : true);
+      setPausas(savedData.pausas || []);
     }
   }, [ordemId, etapa, tipoServico, isEtapaConcluida]);
   
@@ -73,12 +75,13 @@ export function useOrdemTimer({
         totalPausedTime,
         elapsedTime,
         totalTime: totalSavedTime + (isRunning ? elapsedTime : 0),
-        usarCronometro
+        usarCronometro,
+        pausas
       };
       
       saveTimerData(ordemId, etapa as EtapaOS, tipoServico as TipoServico, dataToSave);
     }
-  }, [isRunning, isPaused, startTime, pauseTime, totalPausedTime, elapsedTime, totalSavedTime, usarCronometro, ordemId, etapa, tipoServico]);
+  }, [isRunning, isPaused, startTime, pauseTime, totalPausedTime, elapsedTime, totalSavedTime, usarCronometro, pausas, ordemId, etapa, tipoServico]);
   
   // Update timer at regular intervals
   useEffect(() => {
@@ -111,15 +114,26 @@ export function useOrdemTimer({
     notifyTimerStarted(etapa as EtapaOS, tipoServico as TipoServico);
   };
   
-  const handlePause = () => {
+  const handlePause = (motivo?: string) => {
     if (!usarCronometro) {
       onPause?.();
       return;
     }
     
+    const now = Date.now();
+    
     setIsPaused(true);
-    setPauseTime(Date.now());
-    onPause?.();
+    setPauseTime(now);
+    
+    // Registra a pausa
+    const novaPausa = {
+      inicio: now,
+      motivo
+    };
+    
+    setPausas(prev => [...prev, novaPausa]);
+    
+    onPause?.(motivo);
     
     notifyTimerPaused();
   };
@@ -130,10 +144,26 @@ export function useOrdemTimer({
       return;
     }
     
+    const now = Date.now();
+    
     if (pauseTime) {
-      const pauseDuration = Date.now() - pauseTime;
+      const pauseDuration = now - pauseTime;
       setTotalPausedTime(prev => prev + pauseDuration);
+      
+      // Atualiza o fim da última pausa
+      setPausas(prev => {
+        const novasPausas = [...prev];
+        if (novasPausas.length > 0) {
+          const ultimaPausa = novasPausas[novasPausas.length - 1];
+          novasPausas[novasPausas.length - 1] = {
+            ...ultimaPausa,
+            fim: now
+          };
+        }
+        return novasPausas;
+      });
     }
+    
     setIsPaused(false);
     setPauseTime(null);
     onResume?.();
@@ -172,7 +202,8 @@ export function useOrdemTimer({
       totalPausedTime: 0,
       elapsedTime: 0,
       totalTime,
-      usarCronometro
+      usarCronometro,
+      pausas
     };
     
     saveTimerData(ordemId, etapa as EtapaOS, tipoServico as TipoServico, dataToSave);
@@ -190,7 +221,8 @@ export function useOrdemTimer({
       totalPausedTime,
       elapsedTime,
       totalTime: totalSavedTime + (isRunning ? elapsedTime : 0),
-      usarCronometro: checked
+      usarCronometro: checked,
+      pausas
     };
     
     saveTimerData(ordemId, etapa as EtapaOS, tipoServico as TipoServico, dataToSave);
@@ -209,6 +241,7 @@ export function useOrdemTimer({
     handlePause,
     handleResume,
     handleFinish,
-    handleCronometroChange
+    handleCronometroChange,
+    pausas
   };
 }

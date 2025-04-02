@@ -8,6 +8,11 @@ export interface TimerState {
   elapsedTime: number;
   totalTime: number;
   usarCronometro: boolean;
+  pausas?: {
+    inicio: number;
+    fim?: number;
+    motivo?: string;
+  }[];
 }
 
 export interface UseOrdemTimerProps {
@@ -15,7 +20,7 @@ export interface UseOrdemTimerProps {
   etapa: string;
   tipoServico?: string;
   onStart?: () => void;
-  onPause?: () => void;
+  onPause?: (motivo?: string) => void;
   onResume?: () => void;
   onFinish?: (tempoTotal: number) => void;
   isEtapaConcluida?: boolean;
@@ -28,8 +33,13 @@ export interface UseOrdemTimerResult {
   displayTime: number;
   totalSavedTime: number;
   handleStart: () => void;
-  handlePause: () => void;
+  handlePause: (motivo?: string) => void;
   handleResume: () => void;
   handleFinish: () => void;
   handleCronometroChange: (checked: boolean) => void;
+  pausas: {
+    inicio: number;
+    fim?: number;
+    motivo?: string;
+  }[];
 }

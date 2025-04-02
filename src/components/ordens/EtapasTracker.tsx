@@ -24,7 +24,7 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
   useEffect(() => {
     let novasEtapas: EtapaOS[] = ["lavagem", "inspecao_inicial"];
     
-    // Adiciona etapa de retífica
+    // Adiciona etapa de retífica se tiver algum serviço de retífica
     if (ordem.servicos?.some(s => 
       ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo))) {
       novasEtapas.push("retifica");
@@ -101,6 +101,16 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
       console.error("Erro ao iniciar etapa:", error);
       toast.error("Erro ao iniciar etapa");
     }
+  };
+
+  const handlePausarEtapa = async (etapa: EtapaOS, motivo?: string) => {
+    // Implementação opcional para registrar pausa na etapa
+    console.log(`Etapa ${etapa} pausada. Motivo: ${motivo}`);
+  };
+
+  const handleRetomarEtapa = async (etapa: EtapaOS) => {
+    // Implementação opcional para registrar retomada da etapa
+    console.log(`Etapa ${etapa} retomada`);
   };
 
   const handleFinalizarEtapa = async (etapa: EtapaOS, tempoTotal?: number) => {
@@ -276,6 +286,8 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
                 isIniciada={isIniciada}
                 usarCronometro={usarCronometro}
                 onStart={() => handleIniciarEtapa(etapa)}
+                onPause={(motivo) => handlePausarEtapa(etapa, motivo)}
+                onResume={() => handleRetomarEtapa(etapa)}
                 onFinish={(tempoTotal) => handleFinalizarEtapa(etapa, tempoTotal)}
                 onToggleCronometro={(usarCrono) => handleToggleCronometro(etapa, usarCrono)}
                 onCompleteWithoutTimer={() => handleCompleteWithoutTimer(etapa)}

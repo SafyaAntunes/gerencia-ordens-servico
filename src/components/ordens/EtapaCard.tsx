@@ -18,6 +18,8 @@ interface EtapaCardProps {
   isIniciada: boolean;
   usarCronometro?: boolean;
   onStart: () => void;
+  onPause?: (motivo?: string) => void;
+  onResume?: () => void;
   onFinish: (tempoTotal: number) => void;
   onToggleCronometro?: (usarCronometro: boolean) => void;
   onCompleteWithoutTimer?: () => void;
@@ -33,6 +35,8 @@ export default function EtapaCard({
   isIniciada,
   usarCronometro = true,
   onStart,
+  onPause,
+  onResume,
   onFinish,
   onToggleCronometro,
   onCompleteWithoutTimer
@@ -70,8 +74,8 @@ export default function EtapaCard({
           funcionarioNome={funcionarioNome}
           etapa={etapa}
           onStart={() => {}}
-          onPause={() => {}}
-          onResume={() => {}}
+          onPause={onPause}
+          onResume={onResume}
           onFinish={(tempoTotal) => onFinish(tempoTotal)}
         />
       ) : !usarCronometro ? (
@@ -94,8 +98,8 @@ export default function EtapaCard({
             funcionarioNome={funcionarioNome || ""}
             etapa={etapa}
             onStart={onStart}
-            onPause={() => {}}
-            onResume={() => {}}
+            onPause={onPause}
+            onResume={onResume}
             onFinish={() => {}}
           />
         </div>
