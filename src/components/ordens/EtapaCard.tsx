@@ -2,11 +2,13 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { EtapaOS } from "@/types/ordens";
+import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
 import OrdemCronometro from "./OrdemCronometro";
 import { formatTime } from "@/utils/timerUtils";
 import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
+import ServicoTracker from "./ServicoTracker";
+import { Badge } from "../ui/badge";
 
 interface EtapaCardProps {
   ordemId: string;
@@ -17,12 +19,15 @@ interface EtapaCardProps {
   isConcluida: boolean;
   isIniciada: boolean;
   usarCronometro?: boolean;
+  servicos?: Servico[];
   onStart: () => void;
   onPause?: (motivo?: string) => void;
   onResume?: () => void;
   onFinish: (tempoTotal: number) => void;
   onToggleCronometro?: (usarCronometro: boolean) => void;
   onCompleteWithoutTimer?: () => void;
+  onSubatividadeToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
+  onServicoStatusChange?: (servicoTipo: TipoServico, concluido: boolean) => void;
 }
 
 export default function EtapaCard({
@@ -34,13 +39,21 @@ export default function EtapaCard({
   isConcluida,
   isIniciada,
   usarCronometro = true,
+  servicos = [],
   onStart,
   onPause,
   onResume,
   onFinish,
   onToggleCronometro,
-  onCompleteWithoutTimer
+  onCompleteWithoutTimer,
+  onSubatividadeToggle,
+  onServicoStatusChange
 }: EtapaCardProps) {
+  // Filter only retifica services if etapa is retifica
+  const retificaServicos = etapa === 'retifica' ? servicos.filter(servico => 
+    ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo)
+  ) : [];
+
   return (
     <Card className={`p-6 ${isConcluida ? "border-green-500/50" : ""} mb-4`}>
       <div className="flex justify-between items-center mb-4">
@@ -58,6 +71,29 @@ export default function EtapaCard({
           </div>
         )}
       </div>
+      
+      {/* Show service trackers inside retifica etapa */}
+      {etapa === 'retifica' && retificaServicos.length > 0 && (
+        <div className="mb-6 space-y-4">
+          <h4 className="text-md font-medium">Serviços de Retífica</h4>
+          {retificaServicos.map((servico, i) => (
+            <ServicoTracker
+              key={`${servico.tipo}-${i}`}
+              servico={servico}
+              onSubatividadeToggle={
+                onSubatividadeToggle ? 
+                  (subId, checked) => onSubatividadeToggle(servico.tipo, subId, checked) : 
+                  undefined
+              }
+              onServicoStatusChange={
+                onServicoStatusChange ? 
+                  (checked) => onServicoStatusChange(servico.tipo, checked) : 
+                  undefined
+              }
+            />
+          ))}
+        </div>
+      )}
       
       {isConcluida ? (
         <OrdemCronometro

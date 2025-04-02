@@ -35,6 +35,10 @@ export default function ServicoProgresso({
   const [intervalId, setIntervalId] = useState<number | null>(null);
 
   const allCompleted = subatividades.length > 0 && subatividades.every(item => item.selecionada);
+  
+  // Calculate progress based only on selected subactivities
+  const selectedSubatividades = subatividades.filter(sub => sub !== null);
+  const completedSubatividades = selectedSubatividades.filter(sub => sub.selecionada);
 
   const startTimer = () => {
     if (isRunning) return;
@@ -120,6 +124,12 @@ export default function ServicoProgresso({
         <>
           <Separator />
           <CardContent className="pt-4">
+            <div className="flex justify-between text-sm text-muted-foreground mb-2">
+              <span>Subatividades</span>
+              <span>
+                {completedSubatividades.length} de {selectedSubatividades.length} concluídas
+              </span>
+            </div>
             <div className="space-y-3">
               {subatividades.map((subatividade, index) => (
                 <div 

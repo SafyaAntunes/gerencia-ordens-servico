@@ -358,6 +358,69 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
     }
   };
 
+  const handleSubatividadeToggle = async (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => {
+    if (!ordem.id) return;
+    
+    try {
+      const servicos = ordem.servicos.map(servico => {
+        if (servico.tipo === servicoTipo && servico.subatividades) {
+          const subatividades = servico.subatividades.map(sub => {
+            if (sub.id === subatividadeId) {
+              return { ...sub, selecionada: checked };
+            }
+            return sub;
+          });
+          
+          return { ...servico, subatividades };
+        }
+        return servico;
+      });
+      
+      const orderRef = doc(db, "ordens", ordem.id);
+      await updateDoc(orderRef, { servicos });
+      
+      const ordemAtualizada = {
+        ...ordem,
+        servicos
+      };
+      
+      onOrdemUpdate(ordemAtualizada);
+    } catch (error) {
+      console.error("Erro ao atualizar subatividade:", error);
+      toast.error("Erro ao atualizar subatividade");
+    }
+  };
+  
+  const handleServicoStatusChange = async (servicoTipo: TipoServico, concluido: boolean) => {
+    if (!ordem.id) return;
+    
+    try {
+      const servicos = ordem.servicos.map(servico => {
+        if (servico.tipo === servicoTipo) {
+          return { ...servico, concluido };
+        }
+        return servico;
+      });
+      
+      const orderRef = doc(db, "ordens", ordem.id);
+      await updateDoc(orderRef, { servicos });
+      
+      const ordemAtualizada = {
+        ...ordem,
+        servicos
+      };
+      
+      onOrdemUpdate(ordemAtualizada);
+      
+      if (concluido) {
+        toast.success(`Serviço ${servicoTipo} concluído`);
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar status do serviço:", error);
+      toast.error("Erro ao atualizar status do serviço");
+    }
+  };
+
   if (etapas.length === 0) {
     return <div className="text-center py-8 text-muted-foreground">Carregando etapas...</div>;
   }
@@ -393,12 +456,19 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
                 isConcluida={isConcluida}
                 isIniciada={isIniciada}
                 usarCronometro={usarCronometro}
+                servicos={ordem.servicos}
                 onStart={() => handleIniciarEtapa(etapa)}
                 onPause={(motivo) => handlePausarEtapa(etapa, motivo)}
                 onResume={() => handleRetomarEtapa(etapa)}
                 onFinish={(tempoTotal) => handleFinalizarEtapa(etapa, tempoTotal)}
                 onToggleCronometro={(usarCrono) => handleToggleCronometro(etapa, usarCrono)}
                 onCompleteWithoutTimer={() => handleCompleteWithoutTimer(etapa)}
+                onSubatividadeToggle={(servicoTipo, subId, checked) => 
+                  handleSubatividadeToggle(servicoTipo, subId, checked)
+                }
+                onServicoStatusChange={(servicoTipo, concluido) => 
+                  handleServicoStatusChange(servicoTipo, concluido)
+                }
               />
             );
           })}
