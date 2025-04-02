@@ -15,8 +15,8 @@ import { useOrdemTimer } from "@/hooks/useOrdemTimer";
 
 interface ServicoTrackerProps {
   servico: Servico;
-  ordemId: string;
-  funcionarioId: string;
+  ordemId?: string;
+  funcionarioId?: string;
   funcionarioNome?: string;
   onSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
   onServicoStatusChange: (concluido: boolean) => void;
@@ -25,8 +25,8 @@ interface ServicoTrackerProps {
 
 export default function ServicoTracker({
   servico,
-  ordemId,
-  funcionarioId,
+  ordemId = "",
+  funcionarioId = "",
   funcionarioNome,
   onSubatividadeToggle,
   onServicoStatusChange,

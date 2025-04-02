@@ -63,7 +63,7 @@ export default function EtapaCard({
             <Switch
               id={`usar-cronometro-${etapa}`}
               checked={usarCronometro}
-              onCheckedChange={(checked: boolean) => onToggleCronometro(checked)}
+              onCheckedChange={(checked) => onToggleCronometro(checked)}
             />
           </div>
         )}
@@ -119,7 +119,7 @@ export default function EtapaCard({
           <Checkbox 
             id={`concluir-sem-timer-${etapa}`}
             checked={false}
-            onCheckedChange={(checked: boolean) => onCompleteWithoutTimer && onCompleteWithoutTimer()}
+            onCheckedChange={(checked) => onCompleteWithoutTimer && onCompleteWithoutTimer()}
             className="mr-2"
           />
           <Label htmlFor={`concluir-sem-timer-${etapa}`} className="cursor-pointer">

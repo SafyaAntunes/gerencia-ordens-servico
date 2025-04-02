@@ -471,8 +471,15 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
                       <ServicoTracker
                         key={`${servico.tipo}-${i}`}
                         servico={servico}
-                        onSubatividadeToggle={handleSubatividadeToggle}
-                        onServicoStatusChange={handleServicoStatusChange}
+                        ordemId={ordem.id}
+                        funcionarioId={funcionario?.id || ""}
+                        funcionarioNome={funcionario?.nome}
+                        onSubatividadeToggle={(subId, checked) => 
+                          handleSubatividadeToggle(servico.tipo, subId, checked)
+                        }
+                        onServicoStatusChange={(concluido) => 
+                          handleServicoStatusChange(servico.tipo, concluido)
+                        }
                       />
                     ))}
                   </div>
