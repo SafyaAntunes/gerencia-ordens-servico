@@ -5,7 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { EtapaOS } from "@/types/ordens";
 import OrdemCronometro from "./OrdemCronometro";
 import { formatTime } from "@/utils/timerUtils";
-import { FormLabel } from "../ui/form";
+import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
 
 interface EtapaCardProps {
@@ -48,9 +48,9 @@ export default function EtapaCard({
               checked={usarCronometro}
               onCheckedChange={onToggleCronometro}
             />
-            <FormLabel htmlFor={`usar-cronometro-${etapa}`} className="cursor-pointer">
+            <Label htmlFor={`usar-cronometro-${etapa}`} className="cursor-pointer">
               Usar cronômetro
-            </FormLabel>
+            </Label>
           </div>
         )}
       </div>
@@ -82,9 +82,9 @@ export default function EtapaCard({
             onCheckedChange={() => onCompleteWithoutTimer && onCompleteWithoutTimer()}
             className="mr-2"
           />
-          <FormLabel htmlFor={`concluir-sem-timer-${etapa}`} className="cursor-pointer">
+          <Label htmlFor={`concluir-sem-timer-${etapa}`} className="cursor-pointer">
             Marcar como concluído
-          </FormLabel>
+          </Label>
         </div>
       ) : (
         <div className="text-center py-4">
