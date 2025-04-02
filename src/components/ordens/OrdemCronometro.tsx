@@ -7,6 +7,7 @@ import { formatTime } from "@/utils/timerUtils";
 import { useOrdemTimer } from "@/hooks/useOrdemTimer";
 import CompletedTimer from "./CompletedTimer";
 import TimerControls from "./TimerControls";
+import { Button } from "@/components/ui/button";
 
 export interface OrdemCronometroProps {
   ordemId: string;
@@ -89,6 +90,17 @@ export default function OrdemCronometro({
         onResume={handleResume}
         onFinish={handleFinish}
       />
+      
+      {/* Botão para marcar como concluído */}
+      {!isRunning && !isPaused && onFinish && (
+        <Button 
+          onClick={() => onFinish(totalSavedTime)}
+          className="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white"
+        >
+          <CheckCircle2 className="h-4 w-4 mr-1" />
+          Marcar Concluído
+        </Button>
+      )}
       
       {/* Opção de usar cronômetro - mantemos o checkbox mas sem texto */}
       <div className="flex items-center mt-2">

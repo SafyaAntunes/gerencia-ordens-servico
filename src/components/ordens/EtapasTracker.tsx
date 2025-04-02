@@ -1,4 +1,3 @@
-
 import { EtapaOS, OrdemServico, TipoServico } from "@/types/ordens";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { useEffect, useState } from "react";
@@ -48,14 +47,7 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
     setEtapas(novasEtapas);
     
     // Calcula o progresso inicial
-    const etapasConcluidas = novasEtapas.filter(etapa => 
-      ordem.etapasAndamento?.[etapa]?.concluido
-    ).length;
-    
-    const percentualProgresso = novasEtapas.length > 0 ? 
-      Math.round((etapasConcluidas / novasEtapas.length) * 100) : 0;
-    
-    setProgresso(percentualProgresso);
+    calcularEAtualizarProgresso(ordem.etapasAndamento || {}, novasEtapas);
     
   }, [ordem.servicos, ordem.etapasAndamento]);
 
@@ -66,6 +58,18 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
     montagem: "Montagem",
     dinamometro: "Dinamômetro",
     inspecao_final: "Inspeção Final"
+  };
+  
+  const calcularEAtualizarProgresso = (etapasAndamento: any, etapasLista: EtapaOS[]) => {
+    const etapasConcluidas = etapasLista.filter(etapa => 
+      etapasAndamento?.[etapa]?.concluido
+    ).length;
+    
+    const percentualProgresso = etapasLista.length > 0 ? 
+      Math.round((etapasConcluidas / etapasLista.length) * 100) : 0;
+    
+    setProgresso(percentualProgresso);
+    return percentualProgresso / 100; // Retorna como decimal para o Firebase (0 a 1)
   };
 
   const handleIniciarEtapa = async (etapa: EtapaOS) => {
@@ -98,15 +102,11 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
       };
 
       // Recalcula o progresso
-      const etapasConcluidas = etapas.filter(e => 
-        ordemAtualizada.etapasAndamento?.[e]?.concluido
-      ).length;
-      const novoProgresso = etapas.length > 0 ? 
-        etapasConcluidas / etapas.length : 0;
+      const novoProgressoDecimal = calcularEAtualizarProgresso(etapasAndamento, etapas);
       
       // Atualiza o progresso
-      await updateDoc(orderRef, { progressoEtapas: novoProgresso });
-      ordemAtualizada.progressoEtapas = novoProgresso;
+      await updateDoc(orderRef, { progressoEtapas: novoProgressoDecimal });
+      ordemAtualizada.progressoEtapas = novoProgressoDecimal;
 
       onOrdemUpdate(ordemAtualizada);
       toast.success(`Etapa de ${etapasLabels[etapa]} iniciada`);
@@ -229,14 +229,6 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
         }
       };
 
-      // Calcula o novo progresso
-      const etapasConcluidas = etapas.filter(e => 
-        (e === etapa) || ordem.etapasAndamento?.[e]?.concluido
-      ).length;
-      
-      const novoProgresso = etapas.length > 0 ? 
-        etapasConcluidas / etapas.length : 0;
-
       // Se houver tempo registrado, armazena nos registros de tempo
       let tempoRegistros = [...(ordem.tempoRegistros || [])];
       
@@ -251,11 +243,14 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
         });
       }
 
+      // Calcula o novo progresso
+      const novoProgressoDecimal = calcularEAtualizarProgresso(etapasAndamento, etapas);
+
       const orderRef = doc(db, "ordens", ordem.id);
       await updateDoc(orderRef, { 
         etapasAndamento,
         tempoRegistros,
-        progressoEtapas: novoProgresso
+        progressoEtapas: novoProgressoDecimal
       });
 
       // Atualiza o estado local
@@ -263,24 +258,15 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
         ...ordem,
         etapasAndamento,
         tempoRegistros,
-        progressoEtapas: novoProgresso
+        progressoEtapas: novoProgressoDecimal
       };
 
       onOrdemUpdate(ordemAtualizada);
-      setProgresso(Math.round(novoProgresso * 100));
       toast.success(`Etapa de ${etapasLabels[etapa]} concluída`);
     } catch (error) {
       console.error("Erro ao finalizar etapa:", error);
       toast.error("Erro ao finalizar etapa");
     }
-  };
-
-  const calcularProgresso = (etapasAndamento: any, etapasLista: EtapaOS[]): number => {
-    const etapasConcluidas = etapasLista.filter(etapa => 
-      etapasAndamento?.[etapa]?.concluido
-    ).length;
-    
-    return etapasLista.length > 0 ? etapasConcluidas / etapasLista.length : 0;
   };
 
   const handleToggleCronometro = async (etapa: EtapaOS, usarCronometro: boolean) => {
@@ -329,28 +315,22 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
       };
 
       // Calcula o novo progresso
-      const etapasConcluidas = etapas.filter(e => 
-        (e === etapa) || ordem.etapasAndamento?.[e]?.concluido
-      ).length;
-      
-      const novoProgresso = etapas.length > 0 ? 
-        etapasConcluidas / etapas.length : 0;
+      const novoProgressoDecimal = calcularEAtualizarProgresso(etapasAndamento, etapas);
 
       const orderRef = doc(db, "ordens", ordem.id);
       await updateDoc(orderRef, { 
         etapasAndamento,
-        progressoEtapas: novoProgresso
+        progressoEtapas: novoProgressoDecimal
       });
 
       // Atualiza o estado local
       const ordemAtualizada = {
         ...ordem,
         etapasAndamento,
-        progressoEtapas: novoProgresso
+        progressoEtapas: novoProgressoDecimal
       };
 
       onOrdemUpdate(ordemAtualizada);
-      setProgresso(Math.round(novoProgresso * 100));
       toast.success(`Etapa de ${etapasLabels[etapa]} concluída`);
     } catch (error) {
       console.error("Erro ao concluir etapa sem cronômetro:", error);
