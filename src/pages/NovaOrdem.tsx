@@ -66,6 +66,41 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         }
       }
       
+      // Preparar serviços apenas para os tipos selecionados
+      const servicos = (values.servicosTipos || []).map((tipo: TipoServico) => ({
+        tipo,
+        descricao: values.servicosDescricoes?.[tipo] || "",
+        concluido: false,
+        subatividades: values.servicosSubatividades?.[tipo] || []
+      }));
+
+      // Determinar etapas com base nos serviços selecionados
+      let etapas = ["lavagem", "inspecao_inicial"];
+      
+      // Adiciona etapa de retífica se tiver algum serviço de retífica
+      if (servicos.some(s => ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo))) {
+        etapas.push("retifica");
+      }
+      
+      // Verifica se montagem está selecionada
+      if (servicos.some(s => s.tipo === "montagem")) {
+        etapas.push("montagem");
+      }
+      
+      // Verifica se dinamômetro está selecionado
+      if (servicos.some(s => s.tipo === "dinamometro")) {
+        etapas.push("dinamometro");
+      }
+      
+      // Sempre adiciona inspeção final
+      etapas.push("inspecao_final");
+
+      // Inicializar etapasAndamento
+      const etapasAndamento: any = {};
+      etapas.forEach(etapa => {
+        etapasAndamento[etapa] = { concluido: false, usarCronometro: true };
+      });
+
       // Create new order object
       const newOrder: Partial<OrdemServico> = {
         id: values.id,
@@ -81,20 +116,8 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         dataPrevistaEntrega: values.dataPrevistaEntrega,
         prioridade: values.prioridade as Prioridade,
         status: "orcamento",
-        servicos: (values.servicosTipos || []).map((tipo: TipoServico) => ({
-          tipo,
-          descricao: values.servicosDescricoes?.[tipo] || "",
-          concluido: false,
-          subatividades: values.servicosSubatividades?.[tipo] || []
-        })),
-        etapasAndamento: {
-          lavagem: { concluido: false, usarCronometro: true },
-          inspecao_inicial: { concluido: false, usarCronometro: true },
-          retifica: { concluido: false, usarCronometro: true },
-          montagem: { concluido: false, usarCronometro: true },
-          dinamometro: { concluido: false, usarCronometro: true },
-          inspecao_final: { concluido: false, usarCronometro: true },
-        },
+        servicos,
+        etapasAndamento,
         tempoRegistros: [],
         fotosEntrada: fotosEntradaUrls,
         fotosSaida: fotosSaidaUrls,

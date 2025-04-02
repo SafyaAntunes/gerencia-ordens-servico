@@ -52,7 +52,9 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
       ordem.etapasAndamento?.[etapa]?.concluido
     ).length;
     
-    const percentualProgresso = Math.round((etapasConcluidas / novasEtapas.length) * 100);
+    const percentualProgresso = novasEtapas.length > 0 ? 
+      Math.round((etapasConcluidas / novasEtapas.length) * 100) : 0;
+    
     setProgresso(percentualProgresso);
     
   }, [ordem.servicos, ordem.etapasAndamento]);
@@ -92,8 +94,18 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
       const ordemAtualizada = {
         ...ordem,
         etapasAndamento,
-        progressoEtapas: calcularProgresso(etapasAndamento, etapas)
       };
+
+      // Recalcula o progresso
+      const etapasConcluidas = etapas.filter(e => 
+        ordemAtualizada.etapasAndamento?.[e]?.concluido
+      ).length;
+      const novoProgresso = etapas.length > 0 ? 
+        etapasConcluidas / etapas.length : 0;
+      
+      // Atualiza o progresso
+      await updateDoc(orderRef, { progressoEtapas: novoProgresso });
+      ordemAtualizada.progressoEtapas = novoProgresso;
 
       onOrdemUpdate(ordemAtualizada);
       toast.success(`Etapa de ${etapasLabels[etapa]} iniciada`);
@@ -104,13 +116,97 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
   };
 
   const handlePausarEtapa = async (etapa: EtapaOS, motivo?: string) => {
-    // Implementação opcional para registrar pausa na etapa
-    console.log(`Etapa ${etapa} pausada. Motivo: ${motivo}`);
+    if (!funcionario?.id) {
+      toast.error("É necessário estar logado para pausar uma etapa");
+      return;
+    }
+
+    try {
+      const etapaAtual = ordem.etapasAndamento?.[etapa];
+      if (!etapaAtual) return;
+      
+      // Pega pausas existentes ou inicializa array vazio
+      const pausasExistentes = etapaAtual.pausas || [];
+      
+      // Adiciona nova pausa
+      const novaPausa = {
+        inicio: new Date().getTime(),
+        motivo
+      };
+      
+      const pausasAtualizadas = [...pausasExistentes, novaPausa];
+      
+      // Atualiza o estado da etapa no Firebase
+      const etapasAndamento = {
+        ...ordem.etapasAndamento,
+        [etapa]: {
+          ...etapaAtual,
+          pausas: pausasAtualizadas
+        }
+      };
+      
+      const orderRef = doc(db, "ordens", ordem.id);
+      await updateDoc(orderRef, { etapasAndamento });
+      
+      // Atualiza o estado local
+      const ordemAtualizada = {
+        ...ordem,
+        etapasAndamento
+      };
+      
+      onOrdemUpdate(ordemAtualizada);
+      toast.success(`Etapa de ${etapasLabels[etapa]} pausada`);
+    } catch (error) {
+      console.error("Erro ao pausar etapa:", error);
+      toast.error("Erro ao pausar etapa");
+    }
   };
 
   const handleRetomarEtapa = async (etapa: EtapaOS) => {
-    // Implementação opcional para registrar retomada da etapa
-    console.log(`Etapa ${etapa} retomada`);
+    if (!funcionario?.id) {
+      toast.error("É necessário estar logado para retomar uma etapa");
+      return;
+    }
+    
+    try {
+      const etapaAtual = ordem.etapasAndamento?.[etapa];
+      if (!etapaAtual || !etapaAtual.pausas || etapaAtual.pausas.length === 0) return;
+      
+      // Pega todas as pausas e finaliza a última
+      const pausas = [...etapaAtual.pausas];
+      const ultimaPausa = pausas[pausas.length - 1];
+      
+      if (!ultimaPausa.fim) {
+        pausas[pausas.length - 1] = {
+          ...ultimaPausa,
+          fim: new Date().getTime()
+        };
+      }
+      
+      // Atualiza o estado da etapa no Firebase
+      const etapasAndamento = {
+        ...ordem.etapasAndamento,
+        [etapa]: {
+          ...etapaAtual,
+          pausas
+        }
+      };
+      
+      const orderRef = doc(db, "ordens", ordem.id);
+      await updateDoc(orderRef, { etapasAndamento });
+      
+      // Atualiza o estado local
+      const ordemAtualizada = {
+        ...ordem,
+        etapasAndamento
+      };
+      
+      onOrdemUpdate(ordemAtualizada);
+      toast.success(`Etapa de ${etapasLabels[etapa]} retomada`);
+    } catch (error) {
+      console.error("Erro ao retomar etapa:", error);
+      toast.error("Erro ao retomar etapa");
+    }
   };
 
   const handleFinalizarEtapa = async (etapa: EtapaOS, tempoTotal?: number) => {
@@ -133,7 +229,12 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
       };
 
       // Calcula o novo progresso
-      const novoProgresso = calcularProgresso(etapasAndamento, etapas);
+      const etapasConcluidas = etapas.filter(e => 
+        (e === etapa) || ordem.etapasAndamento?.[e]?.concluido
+      ).length;
+      
+      const novoProgresso = etapas.length > 0 ? 
+        etapasConcluidas / etapas.length : 0;
 
       // Se houver tempo registrado, armazena nos registros de tempo
       let tempoRegistros = [...(ordem.tempoRegistros || [])];
@@ -226,7 +327,12 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
       };
 
       // Calcula o novo progresso
-      const novoProgresso = calcularProgresso(etapasAndamento, etapas);
+      const etapasConcluidas = etapas.filter(e => 
+        (e === etapa) || ordem.etapasAndamento?.[e]?.concluido
+      ).length;
+      
+      const novoProgresso = etapas.length > 0 ? 
+        etapasConcluidas / etapas.length : 0;
 
       const orderRef = doc(db, "ordens", ordem.id);
       await updateDoc(orderRef, { 

@@ -8,7 +8,7 @@ export interface TimerState {
   elapsedTime: number;
   totalTime: number;
   usarCronometro: boolean;
-  pausas?: {
+  pausas: {
     inicio: number;
     fim?: number;
     motivo?: string;

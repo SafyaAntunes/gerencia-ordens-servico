@@ -86,6 +86,9 @@ export default function ServicoTracker({
     }
   };
 
+  // Filtramos apenas as subatividades selecionadas durante a criação da OS
+  const subatividadesFiltradas = servico.subatividades?.filter(item => item.selecionada) || [];
+
   return (
     <Card className={cn("w-full", className)}>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -123,12 +126,12 @@ export default function ServicoTracker({
             </CardContent>
           )}
           
-          {servico.subatividades && servico.subatividades.length > 0 && (
+          {subatividadesFiltradas.length > 0 && (
             <>
               <Separator />
               <CardContent className="pt-4">
                 <div className="space-y-3">
-                  {servico.subatividades.map((subatividade) => (
+                  {subatividadesFiltradas.map((subatividade) => (
                     <div 
                       key={subatividade.id}
                       className="flex items-center justify-between"

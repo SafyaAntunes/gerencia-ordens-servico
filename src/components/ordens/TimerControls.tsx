@@ -41,12 +41,13 @@ export default function TimerControls({
   return (
     <>
       <div className="flex space-x-2 my-3">
-        {!isRunning && (
+        {!isRunning && !isPaused && (
           <Button
             onClick={onStart}
             className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
-            disabled={!usarCronometro && !onStart}
+            disabled={!usarCronometro}
           >
+            <Play className="h-4 w-4 mr-1" />
             Iniciar
           </Button>
         )}
@@ -55,28 +56,30 @@ export default function TimerControls({
           <Button
             onClick={handlePauseClick}
             className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-white"
-            disabled={!usarCronometro && !onPause}
+            disabled={!usarCronometro}
           >
+            <Pause className="h-4 w-4 mr-1" />
             Pausar
           </Button>
         )}
         
-        {isRunning && isPaused && (
+        {isPaused && (
           <Button
             onClick={onResume}
             className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
-            disabled={!usarCronometro && !onResume}
+            disabled={!usarCronometro}
           >
+            <Play className="h-4 w-4 mr-1" />
             Retomar
           </Button>
         )}
         
-        {isRunning && (
+        {(isRunning || isPaused) && (
           <Button
             onClick={onFinish}
             className="flex-1 bg-red-500 hover:bg-red-600 text-white"
-            disabled={!usarCronometro && !onFinish}
           >
+            <StopCircle className="h-4 w-4 mr-1" />
             Terminar
           </Button>
         )}
