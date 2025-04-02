@@ -5,7 +5,7 @@ import Layout from "@/components/layout/Layout";
 import OrdemCard from "@/components/ordens/OrdemCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Search, Filter } from "lucide-react";
+import { PlusCircle, Search, Filter, BarChart } from "lucide-react";
 import { OrdemServico, StatusOS, Prioridade } from "@/types/ordens";
 import { 
   Select, 
@@ -27,6 +27,7 @@ export default function Ordens({ onLogout }: OrdensProps) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [prioridadeFilter, setPrioridadeFilter] = useState("all");
+  const [progressoFilter, setProgressoFilter] = useState("all");
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -40,11 +41,43 @@ export default function Ordens({ onLogout }: OrdensProps) {
         const ordensData: OrdemServico[] = [];
         querySnapshot.forEach((doc) => {
           const data = doc.data();
+          
+          // Calculando progresso para cada ordem se não existir
+          let progressoEtapas = data.progressoEtapas;
+          
+          if (progressoEtapas === undefined) {
+            // Determina etapas baseado nos serviços
+            let etapas = ["lavagem", "inspecao_inicial"];
+            
+            if (data.servicos?.some((s: any) => 
+              ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo))) {
+              etapas.push("retifica");
+            }
+            
+            if (data.servicos?.some((s: any) => s.tipo === "montagem")) {
+              etapas.push("montagem");
+            }
+            
+            if (data.servicos?.some((s: any) => s.tipo === "dinamometro")) {
+              etapas.push("dinamometro");
+            }
+            
+            etapas.push("inspecao_final");
+            
+            const etapasAndamento = data.etapasAndamento || {};
+            const etapasConcluidas = etapas.filter(etapa => 
+              etapasAndamento[etapa]?.concluido
+            ).length;
+            
+            progressoEtapas = etapasConcluidas / etapas.length;
+          }
+          
           ordensData.push({
             ...data,
             id: doc.id,
             dataAbertura: data.dataAbertura?.toDate() || new Date(),
             dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
+            progressoEtapas: progressoEtapas
           } as OrdemServico);
         });
         
@@ -69,8 +102,29 @@ export default function Ordens({ onLogout }: OrdensProps) {
     
     const statusMatch = statusFilter === "all" ? true : ordem.status === statusFilter;
     const prioridadeMatch = prioridadeFilter === "all" ? true : ordem.prioridade === prioridadeFilter;
+    
+    // Filtro de progresso
+    let progressoMatch = true;
+    const progresso = ordem.progressoEtapas !== undefined ? ordem.progressoEtapas * 100 : 0;
+    
+    switch (progressoFilter) {
+      case "nao_iniciado":
+        progressoMatch = progresso === 0;
+        break;
+      case "em_andamento":
+        progressoMatch = progresso > 0 && progresso < 100;
+        break;
+      case "quase_concluido":
+        progressoMatch = progresso >= 75 && progresso < 100;
+        break;
+      case "concluido":
+        progressoMatch = progresso === 100;
+        break;
+      default:
+        progressoMatch = true;
+    }
 
-    return searchMatch && statusMatch && prioridadeMatch;
+    return searchMatch && statusMatch && prioridadeMatch && progressoMatch;
   });
 
   const handleNovaOrdem = () => {
@@ -91,7 +145,7 @@ export default function Ordens({ onLogout }: OrdensProps) {
         </Button>
       </div>
 
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-2 mb-6">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-6">
         <div className="flex items-center space-x-2">
           <Input
             type="search"
@@ -105,31 +159,50 @@ export default function Ordens({ onLogout }: OrdensProps) {
         <div className="flex items-center space-x-2">
           <Filter className="h-5 w-5 text-muted-foreground mr-2" />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="Filtrar por status" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os status</SelectItem>
               <SelectItem value="orcamento">Orçamento</SelectItem>
               <SelectItem value="aguardando_aprovacao">Aguardando Aprovação</SelectItem>
-              <SelectItem value="fabricacao">Fabricação</SelectItem>
-              <SelectItem value="espera_cliente">Aguardando Cliente</SelectItem>
+              <SelectItem value="retifica">Retífica</SelectItem>
+              <SelectItem value="aguardando_peca_cliente">Aguardando Peça (Cliente)</SelectItem>
+              <SelectItem value="aguardando_peca_interno">Aguardando Peça (Interno)</SelectItem>
               <SelectItem value="finalizado">Finalizado</SelectItem>
               <SelectItem value="entregue">Entregue</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={prioridadeFilter} onValueChange={setPrioridadeFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filtrar por prioridade" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as prioridades</SelectItem>
-              <SelectItem value="alta">Alta</SelectItem>
-              <SelectItem value="media">Média</SelectItem>
-              <SelectItem value="baixa">Baixa</SelectItem>
-              <SelectItem value="urgente">Urgente</SelectItem>
-            </SelectContent>
-          </Select>
+        </div>
+        
+        <div className="flex items-center space-x-2 col-span-1 md:col-span-2 lg:col-span-1">
+          <div className="flex items-center space-x-2 w-full">
+            <Select value={prioridadeFilter} onValueChange={setPrioridadeFilter}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Filtrar por prioridade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as prioridades</SelectItem>
+                <SelectItem value="alta">Alta</SelectItem>
+                <SelectItem value="media">Média</SelectItem>
+                <SelectItem value="baixa">Baixa</SelectItem>
+                <SelectItem value="urgente">Urgente</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={progressoFilter} onValueChange={setProgressoFilter}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Filtrar por progresso" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os progressos</SelectItem>
+                <SelectItem value="nao_iniciado">Não iniciado (0%)</SelectItem>
+                <SelectItem value="em_andamento">Em andamento</SelectItem>
+                <SelectItem value="quase_concluido">Quase concluído (≥75%)</SelectItem>
+                <SelectItem value="concluido">Concluído (100%)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -150,6 +223,13 @@ export default function Ordens({ onLogout }: OrdensProps) {
           ))}
         </div>
       )}
+      
+      <div className="mt-6 flex justify-end">
+        <Button variant="outline" onClick={() => navigate('/relatorios')} className="flex items-center gap-2">
+          <BarChart className="h-4 w-4" />
+          Ver relatórios de progresso
+        </Button>
+      </div>
     </Layout>
   );
 }

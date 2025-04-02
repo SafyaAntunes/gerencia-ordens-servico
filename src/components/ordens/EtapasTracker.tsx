@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
+import { Progress } from "../ui/progress";
 
 interface EtapasTrackerProps {
   ordem: OrdemServico;
@@ -16,6 +17,7 @@ interface EtapasTrackerProps {
 
 export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerProps) {
   const [etapas, setEtapas] = useState<EtapaOS[]>([]);
+  const [progresso, setProgresso] = useState(0);
   const { funcionario } = useAuth();
 
   // Determina as etapas baseadas nos serviços selecionados
@@ -44,7 +46,16 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
     novasEtapas.push("inspecao_final");
     
     setEtapas(novasEtapas);
-  }, [ordem.servicos]);
+    
+    // Calcula o progresso inicial
+    const etapasConcluidas = novasEtapas.filter(etapa => 
+      ordem.etapasAndamento?.[etapa]?.concluido
+    ).length;
+    
+    const percentualProgresso = Math.round((etapasConcluidas / novasEtapas.length) * 100);
+    setProgresso(percentualProgresso);
+    
+  }, [ordem.servicos, ordem.etapasAndamento]);
 
   const etapasLabels: Record<EtapaOS, string> = {
     lavagem: "Lavagem",
@@ -80,7 +91,8 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
       // Atualiza o estado local
       const ordemAtualizada = {
         ...ordem,
-        etapasAndamento
+        etapasAndamento,
+        progressoEtapas: calcularProgresso(etapasAndamento, etapas)
       };
 
       onOrdemUpdate(ordemAtualizada);
@@ -110,6 +122,9 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
         }
       };
 
+      // Calcula o novo progresso
+      const novoProgresso = calcularProgresso(etapasAndamento, etapas);
+
       // Se houver tempo registrado, armazena nos registros de tempo
       let tempoRegistros = [...(ordem.tempoRegistros || [])];
       
@@ -127,22 +142,33 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
       const orderRef = doc(db, "ordens", ordem.id);
       await updateDoc(orderRef, { 
         etapasAndamento,
-        tempoRegistros
+        tempoRegistros,
+        progressoEtapas: novoProgresso
       });
 
       // Atualiza o estado local
       const ordemAtualizada = {
         ...ordem,
         etapasAndamento,
-        tempoRegistros
+        tempoRegistros,
+        progressoEtapas: novoProgresso
       };
 
       onOrdemUpdate(ordemAtualizada);
+      setProgresso(Math.round(novoProgresso * 100));
       toast.success(`Etapa de ${etapasLabels[etapa]} concluída`);
     } catch (error) {
       console.error("Erro ao finalizar etapa:", error);
       toast.error("Erro ao finalizar etapa");
     }
+  };
+
+  const calcularProgresso = (etapasAndamento: any, etapasLista: EtapaOS[]): number => {
+    const etapasConcluidas = etapasLista.filter(etapa => 
+      etapasAndamento?.[etapa]?.concluido
+    ).length;
+    
+    return etapasLista.length > 0 ? etapasConcluidas / etapasLista.length : 0;
   };
 
   const handleToggleCronometro = async (etapa: EtapaOS, usarCronometro: boolean) => {
@@ -189,16 +215,24 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
         }
       };
 
+      // Calcula o novo progresso
+      const novoProgresso = calcularProgresso(etapasAndamento, etapas);
+
       const orderRef = doc(db, "ordens", ordem.id);
-      await updateDoc(orderRef, { etapasAndamento });
+      await updateDoc(orderRef, { 
+        etapasAndamento,
+        progressoEtapas: novoProgresso
+      });
 
       // Atualiza o estado local
       const ordemAtualizada = {
         ...ordem,
-        etapasAndamento
+        etapasAndamento,
+        progressoEtapas: novoProgresso
       };
 
       onOrdemUpdate(ordemAtualizada);
+      setProgresso(Math.round(novoProgresso * 100));
       toast.success(`Etapa de ${etapasLabels[etapa]} concluída`);
     } catch (error) {
       console.error("Erro ao concluir etapa sem cronômetro:", error);
@@ -214,6 +248,13 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
     <Card className="mb-4">
       <CardHeader>
         <CardTitle>Acompanhamento das Etapas</CardTitle>
+        <div className="mt-4">
+          <div className="flex justify-between items-center mb-1.5">
+            <span className="text-sm font-medium">Progresso Geral</span>
+            <span className="text-sm text-muted-foreground">{progresso}%</span>
+          </div>
+          <Progress value={progresso} className="h-2" />
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">

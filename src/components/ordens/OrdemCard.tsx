@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { OrdemServico } from "@/types/ordens";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 
 // Lista de motores conhecidos para exibição
 const MOTORES_DISPLAY: Record<string, string> = {
@@ -42,14 +43,41 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
   // Identificar o motor selecionado se houver
   const motorInfo = ordem.motorId ? MOTORES_DISPLAY[ordem.motorId] || "Motor #" + ordem.motorId : null;
   
-  // Contador das etapas concluídas
-  const totalEtapas = 6; // Número total de etapas
-  const etapasConcluidas = Object.values(ordem.etapasAndamento || {}).filter(
-    (etapa) => etapa?.concluido
-  ).length;
+  // Contador das etapas concluídas e cálculo do progresso
+  let progresso = 0;
   
-  // Cálculo do progresso
-  const progresso = Math.round((etapasConcluidas / totalEtapas) * 100);
+  // Se tiver progresso já calculado, usa o valor armazenado
+  if (ordem.progressoEtapas !== undefined) {
+    progresso = Math.round(ordem.progressoEtapas * 100);
+  } else {
+    // Calcula o progresso com base nas etapas concluídas
+    let etapas = ["lavagem", "inspecao_inicial"];
+    
+    // Adiciona retífica se tiver serviços relacionados
+    if (ordem.servicos?.some(s => 
+      ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo))) {
+      etapas.push("retifica");
+    }
+    
+    // Adiciona montagem se selecionada
+    if (ordem.servicos?.some(s => s.tipo === "montagem")) {
+      etapas.push("montagem");
+    }
+    
+    // Adiciona dinamômetro se selecionado
+    if (ordem.servicos?.some(s => s.tipo === "dinamometro")) {
+      etapas.push("dinamometro");
+    }
+    
+    // Adiciona inspeção final
+    etapas.push("inspecao_final");
+    
+    const etapasConcluidas = etapas.filter(etapa => 
+      ordem.etapasAndamento?.[etapa]?.concluido
+    ).length;
+    
+    progresso = Math.round((etapasConcluidas / etapas.length) * 100);
+  }
   
   const handleNavigateToDetail = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -112,12 +140,7 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
             <span className="text-sm font-medium">Progresso</span>
             <span className="text-xs text-muted-foreground">{progresso}%</span>
           </div>
-          <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-primary rounded-full transition-all duration-500"
-              style={{ width: `${progresso}%` }}
-            />
-          </div>
+          <Progress value={progresso} className="h-2" />
         </div>
         
         <div className="mt-3">
@@ -139,6 +162,8 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
               {servico.tipo === 'cabecote' && 'Cabeçote'}
               {servico.tipo === 'virabrequim' && 'Virabrequim'}
               {servico.tipo === 'eixo_comando' && 'Eixo de Comando'}
+              {servico.tipo === 'montagem' && 'Montagem'}
+              {servico.tipo === 'dinamometro' && 'Dinamômetro'}
             </span>
           ))}
         </div>

@@ -87,6 +87,7 @@ export type OrdemServico = {
   prioridade: Prioridade;
   servicos: Servico[];
   status: StatusOS;
+  progressoEtapas?: number; // Valor entre 0 e 1 representando o percentual de conclusão
   etapasAndamento: {
     [key in EtapaOS]?: {
       concluido: boolean;
