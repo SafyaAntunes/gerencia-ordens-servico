@@ -90,20 +90,14 @@ export default function OrdemCronometro({
         onFinish={handleFinish}
       />
       
-      {/* Opção de usar cronômetro */}
-      <div className="flex items-center space-x-2 mt-2">
+      {/* Opção de usar cronômetro - mantemos o checkbox mas sem texto */}
+      <div className="flex items-center mt-2">
         <Checkbox 
           id={`usar-cronometro-${ordemId}-${etapa}`}
           checked={usarCronometro}
           onCheckedChange={handleCronometroChange}
           className="text-green-500 border-green-500"
         />
-        <label 
-          htmlFor={`usar-cronometro-${ordemId}-${etapa}`}
-          className="text-sm font-medium leading-none cursor-pointer"
-        >
-          Usar cronômetro
-        </label>
       </div>
       
       {/* Lista de pausas */}

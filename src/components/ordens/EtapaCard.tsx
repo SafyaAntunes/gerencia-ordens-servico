@@ -59,7 +59,7 @@ export default function EtapaCard({
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xl font-semibold">{etapaNome}</h3>
         {!isConcluida && onToggleCronometro && (
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center">
             <Switch
               id={`usar-cronometro-${etapa}`}
               checked={usarCronometro}
@@ -87,7 +87,7 @@ export default function EtapaCard({
               }
               onServicoStatusChange={
                 onServicoStatusChange ? 
-                  (checked) => onServicoStatusChange(servico.tipo, checked) : 
+                  (concluido) => onServicoStatusChange(servico.tipo, concluido) : 
                   () => {}
               }
             />
@@ -119,7 +119,7 @@ export default function EtapaCard({
           <Checkbox 
             id={`concluir-sem-timer-${etapa}`}
             checked={false}
-            onCheckedChange={(checked) => onCompleteWithoutTimer && onCompleteWithoutTimer()}
+            onCheckedChange={() => onCompleteWithoutTimer && onCompleteWithoutTimer()}
             className="mr-2"
           />
           <Label htmlFor={`concluir-sem-timer-${etapa}`} className="cursor-pointer">

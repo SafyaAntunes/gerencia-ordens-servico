@@ -219,7 +219,7 @@ export default function ServicoTracker({
               size="sm" 
               onClick={() => onServicoStatusChange(true)}
               disabled={servico.concluido}
-              className="w-full"
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white"
             >
               <CheckCircle2 className="h-4 w-4 mr-1" />
               Marcar Concluído
