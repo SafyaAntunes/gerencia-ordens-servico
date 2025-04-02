@@ -25,6 +25,7 @@ import { ptBR } from "date-fns/locale";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import ServicoTracker from "@/components/ordens/ServicoTracker";
+import EtapasTracker from "@/components/ordens/EtapasTracker";
 
 interface OrdemDetalhesProps extends LogoutProps {}
 
@@ -274,6 +275,10 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
     };
   };
 
+  const handleOrdemUpdate = (ordemAtualizada: OrdemServico) => {
+    setOrdem(ordemAtualizada);
+  };
+
   if (isLoading) {
     return (
       <Layout>
@@ -450,6 +455,11 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
           </TabsContent>
           
           <TabsContent value="tracker" className="space-y-4">
+            <EtapasTracker
+              ordem={ordem}
+              onOrdemUpdate={handleOrdemUpdate}
+            />
+            
             <Card className="mb-4">
               <CardHeader>
                 <CardTitle>Acompanhamento dos Serviços</CardTitle>
