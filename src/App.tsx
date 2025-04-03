@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import Ordens from "./pages/Ordens";
 import NovaOrdem from "./pages/NovaOrdem";
@@ -19,8 +19,12 @@ import Login from "./pages/Login";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 
 // Authentication guard component
-const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+const PrivateRoute = ({ children, requiredPermission = "visualizacao" }: { 
+  children: React.ReactNode;
+  requiredPermission?: string;
+}) => {
+  const { user, loading, hasPermission, canAccessRoute } = useAuth();
+  const location = useLocation();
   
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
@@ -28,6 +32,16 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+  
+  // Check if user has permission for this specific route
+  if (!canAccessRoute(location.pathname)) {
+    return <Navigate to="/" replace />;
+  }
+  
+  // Check if user has the required permission level
+  if (!hasPermission(requiredPermission)) {
+    return <Navigate to="/" replace />;
   }
   
   return <>{children}</>;
@@ -43,12 +57,12 @@ const queryClient = new QueryClient({
 });
 
 const AppRoutes = () => {
-  const { logout } = useAuth();
-
+  const { logout, funcionario } = useAuth();
+  
   const handleLogout = () => {
     logout();
   };
-
+  
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
@@ -60,61 +74,61 @@ const AppRoutes = () => {
       } />
       
       <Route path="/ordens" element={
-        <PrivateRoute>
+        <PrivateRoute requiredPermission="tecnico">
           <Ordens onLogout={handleLogout} />
         </PrivateRoute>
       } />
       
       <Route path="/ordens/nova" element={
-        <PrivateRoute>
+        <PrivateRoute requiredPermission="gerente">
           <NovaOrdem onLogout={handleLogout} />
         </PrivateRoute>
       } />
       
       <Route path="/ordens/:id" element={
-        <PrivateRoute>
+        <PrivateRoute requiredPermission="tecnico">
           <OrdemDetalhes onLogout={handleLogout} />
         </PrivateRoute>
       } />
       
       <Route path="/funcionarios" element={
-        <PrivateRoute>
+        <PrivateRoute requiredPermission="tecnico">
           <Funcionarios onLogout={handleLogout} />
         </PrivateRoute>
       } />
       
       <Route path="/clientes" element={
-        <PrivateRoute>
+        <PrivateRoute requiredPermission="gerente">
           <Clientes onLogout={handleLogout} />
         </PrivateRoute>
       } />
       
       <Route path="/clientes/cadastro" element={
-        <PrivateRoute>
+        <PrivateRoute requiredPermission="gerente">
           <ClienteCadastro onLogout={handleLogout} />
         </PrivateRoute>
       } />
       
       <Route path="/clientes/editar/:id" element={
-        <PrivateRoute>
+        <PrivateRoute requiredPermission="gerente">
           <ClienteCadastro onLogout={handleLogout} />
         </PrivateRoute>
       } />
       
       <Route path="/agenda" element={
-        <PrivateRoute>
+        <PrivateRoute requiredPermission="gerente">
           <Agenda onLogout={handleLogout} />
         </PrivateRoute>
       } />
       
       <Route path="/relatorios" element={
-        <PrivateRoute>
+        <PrivateRoute requiredPermission="gerente">
           <Relatorios onLogout={handleLogout} />
         </PrivateRoute>
       } />
       
       <Route path="/configuracoes" element={
-        <PrivateRoute>
+        <PrivateRoute requiredPermission="admin">
           <Configuracoes onLogout={handleLogout} />
         </PrivateRoute>
       } />

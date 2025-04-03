@@ -4,7 +4,7 @@ import { auth } from '@/lib/firebase';
 import { User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { toast } from 'sonner';
 import { Funcionario, NivelPermissao } from '@/types/funcionarios';
-import { loginUser, getUserData, registerUser } from '@/services/authService';
+import { loginUser, getUserData, registerUser, getFuncionarioByEmail } from '@/services/authService';
 
 // Define the shape of our auth context
 type AuthContextType = {
@@ -15,6 +15,7 @@ type AuthContextType = {
   logout: () => Promise<void>;
   register: (email: string, password: string) => Promise<boolean>;
   hasPermission: (minLevel: string) => boolean;
+  canAccessRoute: (route: string) => boolean;
 };
 
 // Create the context
@@ -37,16 +38,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser as User);
         
-        // Set funcionario data
-        setFuncionario({
-          id: parsedUser.uid || parsedUser.email,
-          nome: parsedUser.displayName || 'Usuário',
-          email: parsedUser.email || '',
-          telefone: '',
-          especialidades: [],
-          ativo: true,
-          nivelPermissao: parsedUser.role === 'admin' ? 'admin' as NivelPermissao : 'visualizacao' as NivelPermissao
-        });
+        // Try to load funcionario data if it exists
+        const loadStoredFuncionario = async () => {
+          if (parsedUser.funcionarioId) {
+            // This is a funcionario user
+            const funcionarioData = await getFuncionarioByEmail(parsedUser.email);
+            if (funcionarioData) {
+              setFuncionario(funcionarioData);
+            } else {
+              // Set basic funcionario info based on stored user
+              setFuncionario({
+                id: parsedUser.funcionarioId,
+                nome: parsedUser.displayName || 'Usuário',
+                email: parsedUser.email || '',
+                telefone: '',
+                especialidades: parsedUser.especialidades || [],
+                ativo: true,
+                nivelPermissao: parsedUser.role as NivelPermissao
+              });
+            }
+          } else if (parsedUser.role === 'admin') {
+            // Admin user
+            setFuncionario({
+              id: 'admin',
+              nome: 'Administrador',
+              email: parsedUser.email || '',
+              telefone: '',
+              especialidades: [],
+              ativo: true,
+              nivelPermissao: 'admin' as NivelPermissao
+            });
+          }
+        };
+        
+        loadStoredFuncionario();
       } catch (error) {
         console.error('Error parsing stored user:', error);
         localStorage.removeItem('sgr_user');
@@ -115,6 +140,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             displayName: 'Administrador',
             role: 'admin'
           };
+          
+          // Set funcionario for admin
+          setFuncionario({
+            id: 'admin',
+            nome: 'Administrador',
+            email: 'admin@sgr.com',
+            telefone: '',
+            especialidades: [],
+            ativo: true,
+            nivelPermissao: 'admin' as NivelPermissao
+          });
         } else {
           // For regular users - get data from Firestore
           userData = await getUserData(email);
@@ -124,31 +160,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return false;
           }
           
-          userData = {
-            uid: email,
-            email: email,
-            displayName: userData.nome || 'Usuário',
-            role: userData.role || 'user'
-          };
+          // Check if this user is linked to a funcionario
+          const funcionarioData = await getFuncionarioByEmail(email);
+          
+          if (funcionarioData) {
+            setFuncionario(funcionarioData);
+            
+            // Set user data
+            userData = {
+              uid: userData.funcionarioId || email,
+              email: email,
+              displayName: funcionarioData.nome,
+              role: funcionarioData.nivelPermissao,
+              funcionarioId: funcionarioData.id,
+              especialidades: funcionarioData.especialidades
+            };
+          } else {
+            // Regular user without funcionario association
+            userData = {
+              uid: email,
+              email: email,
+              displayName: userData.displayName || 'Usuário',
+              role: userData.role || 'user'
+            };
+            
+            // Set basic funcionario for non-funcionario users
+            setFuncionario({
+              id: email,
+              nome: userData.displayName || 'Usuário',
+              email: email,
+              telefone: '',
+              especialidades: [],
+              ativo: true,
+              nivelPermissao: userData.role as NivelPermissao || 'visualizacao'
+            });
+          }
         }
         
         // Set the user state
         setUser(userData as User);
         
-        // Set the funcionario state
-        setFuncionario({
-          id: userData.uid,
-          nome: userData.displayName || 'Usuário',
-          email: userData.email,
-          telefone: '',
-          especialidades: [],
-          ativo: true,
-          nivelPermissao: userData.role === 'admin' ? 'admin' as NivelPermissao : 'visualizacao' as NivelPermissao
-        });
-        
         // Store in localStorage for persistence
         localStorage.setItem('sgr_user', JSON.stringify(userData));
-        console.log("User stored in localStorage");
+        console.log("User stored in localStorage:", userData);
         
         return true;
       } else {
@@ -193,6 +247,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return userLevel >= requiredLevel;
   };
 
+  const canAccessRoute = (route: string) => {
+    if (!user || !funcionario) return false;
+    
+    // Admin and manager can access everything
+    if (['admin', 'gerente'].includes(funcionario.nivelPermissao)) {
+      return true;
+    }
+    
+    // For technicians (tecnico), restrict access to specific routes
+    if (funcionario.nivelPermissao === 'tecnico') {
+      const allowedRoutes = [
+        '/', // Dashboard
+        '/ordens', // Orders
+        '/funcionarios', // Only for viewing their own profile
+      ];
+      
+      return allowedRoutes.some(allowedRoute => route.startsWith(allowedRoute));
+    }
+    
+    // For view-only users, even more restrictions
+    if (funcionario.nivelPermissao === 'visualizacao') {
+      const allowedRoutes = [
+        '/', // Dashboard only
+      ];
+      
+      return allowedRoutes.some(allowedRoute => route.startsWith(allowedRoute));
+    }
+    
+    return false;
+  };
+
   const value = {
     user,
     funcionario,
@@ -201,6 +286,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     logout,
     register,
     hasPermission,
+    canAccessRoute,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

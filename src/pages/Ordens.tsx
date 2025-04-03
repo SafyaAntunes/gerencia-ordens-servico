@@ -17,6 +17,8 @@ import {
 import { toast } from "sonner";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { useAuth } from "@/hooks/useAuth";
+import { getOrdensByFuncionarioEspecialidades } from "@/services/funcionarioService";
 
 interface OrdensProps {
   onLogout?: () => void;
@@ -24,62 +26,72 @@ interface OrdensProps {
 
 export default function Ordens({ onLogout }: OrdensProps) {
   const navigate = useNavigate();
+  const { funcionario } = useAuth();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [prioridadeFilter, setPrioridadeFilter] = useState("all");
   const [progressoFilter, setProgressoFilter] = useState("all");
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
   const [loading, setLoading] = useState(true);
+  const isTecnico = funcionario?.nivelPermissao === 'tecnico';
 
   useEffect(() => {
     const fetchOrdens = async () => {
       setLoading(true);
       try {
-        const q = query(collection(db, "ordens"), orderBy("dataAbertura", "desc"));
-        const querySnapshot = await getDocs(q);
+        let ordensData: OrdemServico[] = [];
         
-        const ordensData: OrdemServico[] = [];
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
+        if (isTecnico && funcionario?.especialidades?.length) {
+          // Fetch orders filtered by technician's specialties
+          const especialidadesOrdens = await getOrdensByFuncionarioEspecialidades(funcionario.especialidades);
+          ordensData = especialidadesOrdens as OrdemServico[];
+        } else {
+          // For admins and managers, fetch all orders
+          const q = query(collection(db, "ordens"), orderBy("dataAbertura", "desc"));
+          const querySnapshot = await getDocs(q);
           
-          // Calculando progresso para cada ordem se não existir
-          let progressoEtapas = data.progressoEtapas;
-          
-          if (progressoEtapas === undefined) {
-            // Determina etapas baseado nos serviços
-            let etapas = ["lavagem", "inspecao_inicial"];
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
             
-            if (data.servicos?.some((s: any) => 
-              ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo))) {
-              etapas.push("retifica");
+            // Calculando progresso para cada ordem se não existir
+            let progressoEtapas = data.progressoEtapas;
+            
+            if (progressoEtapas === undefined) {
+              // Determina etapas baseado nos serviços
+              let etapas = ["lavagem", "inspecao_inicial"];
+              
+              if (data.servicos?.some((s: any) => 
+                ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo))) {
+                etapas.push("retifica");
+              }
+              
+              if (data.servicos?.some((s: any) => s.tipo === "montagem")) {
+                etapas.push("montagem");
+              }
+              
+              if (data.servicos?.some((s: any) => s.tipo === "dinamometro")) {
+                etapas.push("dinamometro");
+              }
+              
+              etapas.push("inspecao_final");
+              
+              const etapasAndamento = data.etapasAndamento || {};
+              const etapasConcluidas = etapas.filter(etapa => 
+                etapasAndamento[etapa]?.concluido
+              ).length;
+              
+              progressoEtapas = etapasConcluidas / etapas.length;
             }
             
-            if (data.servicos?.some((s: any) => s.tipo === "montagem")) {
-              etapas.push("montagem");
-            }
-            
-            if (data.servicos?.some((s: any) => s.tipo === "dinamometro")) {
-              etapas.push("dinamometro");
-            }
-            
-            etapas.push("inspecao_final");
-            
-            const etapasAndamento = data.etapasAndamento || {};
-            const etapasConcluidas = etapas.filter(etapa => 
-              etapasAndamento[etapa]?.concluido
-            ).length;
-            
-            progressoEtapas = etapasConcluidas / etapas.length;
-          }
-          
-          ordensData.push({
-            ...data,
-            id: doc.id,
-            dataAbertura: data.dataAbertura?.toDate() || new Date(),
-            dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
-            progressoEtapas: progressoEtapas
-          } as OrdemServico);
-        });
+            ordensData.push({
+              ...data,
+              id: doc.id,
+              dataAbertura: data.dataAbertura?.toDate() || new Date(),
+              dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
+              progressoEtapas: progressoEtapas
+            } as OrdemServico);
+          });
+        }
         
         setOrdens(ordensData);
       } catch (error) {
@@ -91,7 +103,7 @@ export default function Ordens({ onLogout }: OrdensProps) {
     };
     
     fetchOrdens();
-  }, []);
+  }, [isTecnico, funcionario]);
 
   const filteredOrdens = ordens.filter((ordem) => {
     if (!ordem) return false; // Skip invalid orders
@@ -138,11 +150,18 @@ export default function Ordens({ onLogout }: OrdensProps) {
   return (
     <Layout onLogout={onLogout}>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Ordens de Serviço</h1>
-        <Button onClick={handleNovaOrdem}>
-          <PlusCircle className="h-4 w-4 mr-2" />
-          Nova Ordem
-        </Button>
+        <h1 className="text-2xl font-bold">
+          {isTecnico 
+            ? `Ordens de Serviço - Minhas Especialidades`
+            : 'Ordens de Serviço'}
+        </h1>
+        
+        {!isTecnico && (
+          <Button onClick={handleNovaOrdem}>
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Nova Ordem
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-6">
@@ -210,7 +229,9 @@ export default function Ordens({ onLogout }: OrdensProps) {
         <div className="text-center py-8">Carregando ordens...</div>
       ) : filteredOrdens.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          Nenhuma ordem encontrada com os filtros selecionados.
+          {isTecnico 
+            ? "Nenhuma ordem encontrada para suas especialidades."
+            : "Nenhuma ordem encontrada com os filtros selecionados."}
         </div>
       ) : (
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
@@ -225,10 +246,12 @@ export default function Ordens({ onLogout }: OrdensProps) {
       )}
       
       <div className="mt-6 flex justify-end">
-        <Button variant="outline" onClick={() => navigate('/relatorios')} className="flex items-center gap-2">
-          <BarChart className="h-4 w-4" />
-          Ver relatórios de progresso
-        </Button>
+        {!isTecnico && (
+          <Button variant="outline" onClick={() => navigate('/relatorios')} className="flex items-center gap-2">
+            <BarChart className="h-4 w-4" />
+            Ver relatórios de progresso
+          </Button>
+        )}
       </div>
     </Layout>
   );

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -42,6 +43,7 @@ interface FuncionarioFormProps {
 
 export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSubmitting }: FuncionarioFormProps) {
   const isEditing = !!initialData?.id;
+  const [showCredentials, setShowCredentials] = useState(!isEditing || false);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -54,7 +56,7 @@ export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSub
       nivelPermissao: (initialData?.nivelPermissao as NivelPermissao) || "visualizacao",
       senha: "",
       confirmarSenha: "",
-      nomeUsuario: "",
+      nomeUsuario: initialData?.nomeUsuario || "",
     },
   });
 
@@ -192,30 +194,47 @@ export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSub
           </div>
         </div>
 
-        {!isEditing && (
+        {!isEditing || showCredentials ? (
           <div className="space-y-4 rounded-md border border-border p-4">
-            <div className="flex items-center gap-2">
-              <Lock className="h-4 w-4 text-muted-foreground" />
-              <FormLabel className="text-base m-0">Credenciais de Acesso</FormLabel>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-muted-foreground" />
+                <FormLabel className="text-base m-0">Credenciais de Acesso</FormLabel>
+              </div>
+              
+              {isEditing && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowCredentials(!showCredentials)}
+                >
+                  {showCredentials ? "Cancelar" : "Alterar senha"}
+                </Button>
+              )}
             </div>
             
             <p className="text-sm text-muted-foreground mt-0">
-              Defina uma senha e um nome de usuário para que o funcionário possa acessar o sistema.
+              {isEditing 
+                ? "Defina uma nova senha para este funcionário." 
+                : "Defina uma senha e um nome de usuário para que o funcionário possa acessar o sistema."}
             </p>
             
-            <FormField
-              control={form.control}
-              name="nomeUsuario"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome de Usuário</FormLabel>
-                  <FormControl>
-                    <Input placeholder="nome.sobrenome" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {!isEditing && (
+              <FormField
+                control={form.control}
+                name="nomeUsuario"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome de Usuário</FormLabel>
+                    <FormControl>
+                      <Input placeholder="nome.sobrenome" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
@@ -247,7 +266,7 @@ export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSub
               />
             </div>
           </div>
-        )}
+        ) : null }
         
         <FormField
           control={form.control}

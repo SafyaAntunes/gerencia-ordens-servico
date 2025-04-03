@@ -1,12 +1,14 @@
+
 import { db } from '@/lib/firebase';
-import { collection, doc, setDoc, getDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, getDoc, query, where, getDocs } from 'firebase/firestore';
 import { toast } from 'sonner';
+import { Funcionario } from '@/types/funcionarios';
 
 // Create a reference to the users collection
 const usersCollection = collection(db, 'users');
 
 // Function to register a new user
-export async function registerUser(email: string, password: string): Promise<boolean> {
+export async function registerUser(email: string, password: string, funcionarioId?: string, nivelPermissao?: string): Promise<boolean> {
   try {
     // For security reasons, we shouldn't store plain-text passwords
     // In a production app, you would use Firebase Auth directly or a server-side function with proper hashing
@@ -17,7 +19,8 @@ export async function registerUser(email: string, password: string): Promise<boo
     await setDoc(userDoc, { 
       email, 
       password: hashedPassword,
-      role: 'user',
+      role: nivelPermissao || 'user',
+      funcionarioId,
       createdAt: new Date().toISOString()
     });
     
@@ -64,11 +67,54 @@ export async function getUserData(email: string) {
     const userSnap = await getDoc(userDoc);
     
     if (userSnap.exists()) {
-      return userSnap.data();
+      const userData = userSnap.data();
+      
+      // If this user is linked to a funcionario, fetch the funcionario data
+      if (userData.funcionarioId) {
+        const funcionarioDoc = doc(db, 'funcionarios', userData.funcionarioId);
+        const funcionarioSnap = await getDoc(funcionarioDoc);
+        
+        if (funcionarioSnap.exists()) {
+          userData.funcionarioData = funcionarioSnap.data();
+        }
+      }
+      
+      return userData;
     }
     return null;
   } catch (error) {
     console.error('Erro ao buscar dados do usuário:', error);
+    return null;
+  }
+}
+
+// Function to get a funcionario by email
+export async function getFuncionarioByEmail(email: string): Promise<Funcionario | null> {
+  try {
+    // First check if there's a user with this email
+    const q = query(usersCollection, where("email", "==", email));
+    const usersSnapshot = await getDocs(q);
+    
+    if (!usersSnapshot.empty) {
+      const userData = usersSnapshot.docs[0].data();
+      
+      // If this user is linked to a funcionario, fetch the funcionario data
+      if (userData.funcionarioId) {
+        const funcionarioDoc = doc(db, 'funcionarios', userData.funcionarioId);
+        const funcionarioSnap = await getDoc(funcionarioDoc);
+        
+        if (funcionarioSnap.exists()) {
+          return {
+            ...funcionarioSnap.data(),
+            id: funcionarioSnap.id
+          } as Funcionario;
+        }
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Erro ao buscar funcionário por email:', error);
     return null;
   }
 }

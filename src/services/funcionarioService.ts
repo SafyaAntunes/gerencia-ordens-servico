@@ -17,6 +17,7 @@ import {
   DocumentData
 } from 'firebase/firestore';
 import { toast } from 'sonner';
+import { registerUser } from './authService';
 
 const COLLECTION = 'funcionarios';
 
@@ -82,8 +83,29 @@ export const saveFuncionario = async (funcionario: Funcionario): Promise<boolean
         ...funcionarioData,
         updatedAt: serverTimestamp()
       });
+      
+      // If there's a credentials update for an existing funcionario, we update the user
+      if (senha && funcionario.email) {
+        // Check if the user already exists, otherwise create it
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where("funcionarioId", "==", funcionario.id));
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty && senha) {
+          // Create new user
+          await registerUser(funcionario.email, senha, funcionario.id, funcionario.nivelPermissao);
+        } else if (!querySnapshot.empty && senha) {
+          // Update existing user - in a real app, this would use Firebase Auth or a secure backend
+          const userDoc = querySnapshot.docs[0].ref;
+          await updateDoc(userDoc, {
+            password: btoa(senha),
+            role: funcionario.nivelPermissao,
+            updatedAt: serverTimestamp()
+          });
+        }
+      }
     } else {
-      // Create
+      // Create new funcionario
       docRef = doc(collection(db, COLLECTION));
       await setDoc(docRef, {
         ...funcionarioData,
@@ -91,18 +113,9 @@ export const saveFuncionario = async (funcionario: Funcionario): Promise<boolean
         dataCriacao: serverTimestamp()
       });
       
-      // Handle user credentials if provided
-      if (senha && (nomeUsuario || funcionario.email)) {
-        // In a real app, you'd use Firebase Auth or a backend function
-        // Here we're just simulating by storing in a separate collection
-        const credentialsRef = doc(collection(db, 'funcionario_credenciais'));
-        await setDoc(credentialsRef, {
-          funcionarioId: docRef.id,
-          nomeUsuario: nomeUsuario || funcionario.email,
-          email: funcionario.email,
-          senha: senha, // In production, NEVER store plain text passwords
-          createdAt: serverTimestamp()
-        });
+      // If credentials were provided, create user account
+      if (senha && funcionario.email) {
+        await registerUser(funcionario.email, senha, docRef.id, funcionario.nivelPermissao);
       }
     }
     
@@ -120,7 +133,7 @@ export const deleteFuncionario = async (id: string): Promise<boolean> => {
     await deleteDoc(funcionarioRef);
     
     // Also delete associated credentials if they exist
-    const credentialsRef = collection(db, 'funcionario_credenciais');
+    const credentialsRef = collection(db, 'users');
     const q = query(credentialsRef, where('funcionarioId', '==', id));
     const credentialsSnapshot = await getDocs(q);
     
@@ -132,5 +145,35 @@ export const deleteFuncionario = async (id: string): Promise<boolean> => {
     console.error('Error deleting funcionario:', error);
     toast.error('Erro ao excluir funcionário');
     return false;
+  }
+};
+
+// Get orders for a specific employee based on their specialties
+export const getOrdensByFuncionarioEspecialidades = async (especialidades: string[]): Promise<any[]> => {
+  try {
+    if (!especialidades || especialidades.length === 0) {
+      return [];
+    }
+    
+    const ordensRef = collection(db, 'ordens');
+    const snapshot = await getDocs(ordensRef);
+    
+    // Filter orders that match any of the employee's specialties
+    return snapshot.docs
+      .map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        dataAbertura: doc.data().dataAbertura?.toDate() || new Date(),
+        dataPrevistaEntrega: doc.data().dataPrevistaEntrega?.toDate() || new Date(),
+      }))
+      .filter(ordem => {
+        // Check if any service in the order matches the employee's specialties
+        if (!ordem.servicos) return false;
+        return ordem.servicos.some((servico: any) => especialidades.includes(servico.tipo));
+      });
+  } catch (error) {
+    console.error('Error fetching orders for funcionario:', error);
+    toast.error('Erro ao carregar ordens de serviço');
+    return [];
   }
 };
