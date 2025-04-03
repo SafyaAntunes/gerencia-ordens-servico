@@ -194,48 +194,46 @@ export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSub
           </div>
         </div>
 
-        {!isEditing || showCredentials ? (
-          <div className="space-y-4 rounded-md border border-border p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Lock className="h-4 w-4 text-muted-foreground" />
-                <FormLabel className="text-base m-0">Credenciais de Acesso</FormLabel>
-              </div>
-              
-              {isEditing && (
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setShowCredentials(!showCredentials)}
-                >
-                  {showCredentials ? "Cancelar" : "Alterar senha"}
-                </Button>
-              )}
+        <div className="space-y-4 rounded-md border border-border p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Lock className="h-4 w-4 text-muted-foreground" />
+              <FormLabel className="text-base m-0">Credenciais de Acesso</FormLabel>
             </div>
             
-            <p className="text-sm text-muted-foreground mt-0">
-              {isEditing 
-                ? "Defina uma nova senha para este funcionário." 
-                : "Defina uma senha e um nome de usuário para que o funcionário possa acessar o sistema."}
-            </p>
-            
-            {!isEditing && (
-              <FormField
-                control={form.control}
-                name="nomeUsuario"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome de Usuário</FormLabel>
-                    <FormControl>
-                      <Input placeholder="nome.sobrenome" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {isEditing && !showCredentials && (
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowCredentials(true)}
+              >
+                Alterar credenciais
+              </Button>
             )}
-            
+          </div>
+          
+          <p className="text-sm text-muted-foreground mt-0">
+            {isEditing 
+              ? "Defina um nome de usuário e uma nova senha para este funcionário." 
+              : "Defina uma senha e um nome de usuário para que o funcionário possa acessar o sistema."}
+          </p>
+          
+          <FormField
+            control={form.control}
+            name="nomeUsuario"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nome de Usuário</FormLabel>
+                <FormControl>
+                  <Input placeholder="nome.sobrenome" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          {(!isEditing || showCredentials) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -265,8 +263,8 @@ export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSub
                 )}
               />
             </div>
-          </div>
-        ) : null }
+          )}
+        </div>
         
         <FormField
           control={form.control}

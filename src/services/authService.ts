@@ -1,3 +1,4 @@
+
 import { db } from '@/lib/firebase';
 import { collection, doc, setDoc, getDoc, query, where, getDocs } from 'firebase/firestore';
 import { toast } from 'sonner';
@@ -9,6 +10,8 @@ const usersCollection = collection(db, 'users');
 // Function to register a new user
 export async function registerUser(email: string, password: string, funcionarioId?: string, nivelPermissao?: string): Promise<boolean> {
   try {
+    console.log('Registrando novo usuário:', email, 'com ID de funcionário:', funcionarioId);
+    
     // For security reasons, we shouldn't store plain-text passwords
     // In a production app, you would use Firebase Auth directly or a server-side function with proper hashing
     // This is a simplified version for the demo
@@ -24,6 +27,7 @@ export async function registerUser(email: string, password: string, funcionarioI
       createdAt: new Date().toISOString()
     });
     
+    console.log('Usuário registrado com sucesso!');
     toast.success('Usuário registrado com sucesso!');
     return true;
   } catch (error) {
@@ -40,6 +44,7 @@ export async function loginUser(identifier: string, password: string): Promise<b
     
     // Special case for admin user (keeping the hardcoded admin for demo purposes)
     if (identifier === 'admin@sgr.com' && password === 'adm123') {
+      console.log('Login bem-sucedido como admin');
       return true;
     }
     
@@ -47,6 +52,7 @@ export async function loginUser(identifier: string, password: string): Promise<b
     let userQuery;
     if (identifier.includes('@')) {
       // Login with email
+      console.log('Tentando login com email:', identifier);
       const userDoc = doc(usersCollection, identifier);
       const userSnap = await getDoc(userDoc);
       
@@ -55,11 +61,13 @@ export async function loginUser(identifier: string, password: string): Promise<b
         const hashedPassword = btoa(password);
         
         if (userData.password === hashedPassword) {
+          console.log('Login bem-sucedido com email');
           return true;
         }
       }
     } else {
       // Login with username
+      console.log('Tentando login com nome de usuário:', identifier);
       const q = query(usersCollection, where("nomeUsuario", "==", identifier));
       const querySnapshot = await getDocs(q);
       
@@ -68,11 +76,13 @@ export async function loginUser(identifier: string, password: string): Promise<b
         const hashedPassword = btoa(password);
         
         if (userData.password === hashedPassword) {
+          console.log('Login bem-sucedido com nome de usuário');
           return true;
         }
       }
     }
 
+    console.log('Login falhou: credenciais inválidas');
     return false;
   } catch (error) {
     console.error('Erro ao fazer login:', error);
@@ -129,15 +139,19 @@ export async function getFuncionarioByIdentifier(identifier: string): Promise<Fu
     
     if (identifier.includes('@')) {
       // Check by email
+      console.log('Buscando funcionário por email:', identifier);
       const userDoc = doc(usersCollection, identifier);
       const userSnap = await getDoc(userDoc);
       if (userSnap.exists()) {
         const userData = userSnap.data();
+        console.log('Usuário encontrado, funcionarioId:', userData.funcionarioId);
+        
         if (userData.funcionarioId) {
           const funcionarioDoc = doc(db, 'funcionarios', userData.funcionarioId);
           const funcionarioSnap = await getDoc(funcionarioDoc);
           
           if (funcionarioSnap.exists()) {
+            console.log('Funcionário encontrado');
             return {
               ...funcionarioSnap.data(),
               id: funcionarioSnap.id
@@ -147,11 +161,13 @@ export async function getFuncionarioByIdentifier(identifier: string): Promise<Fu
       }
     } else {
       // Check by username
+      console.log('Buscando funcionário por nome de usuário:', identifier);
       const q = query(usersCollection, where("nomeUsuario", "==", identifier));
       usersSnapshot = await getDocs(q);
       
       if (!usersSnapshot.empty) {
         const userData = usersSnapshot.docs[0].data();
+        console.log('Usuário encontrado, funcionarioId:', userData.funcionarioId);
         
         // If this user is linked to a funcionario, fetch the funcionario data
         if (userData.funcionarioId) {
@@ -159,6 +175,7 @@ export async function getFuncionarioByIdentifier(identifier: string): Promise<Fu
           const funcionarioSnap = await getDoc(funcionarioDoc);
           
           if (funcionarioSnap.exists()) {
+            console.log('Funcionário encontrado');
             return {
               ...funcionarioSnap.data(),
               id: funcionarioSnap.id
@@ -168,6 +185,7 @@ export async function getFuncionarioByIdentifier(identifier: string): Promise<Fu
       }
     }
     
+    console.log('Nenhum funcionário encontrado para o identificador:', identifier);
     return null;
   } catch (error) {
     console.error('Erro ao buscar funcionário:', error);

@@ -1,3 +1,4 @@
+
 import { db } from '@/lib/firebase';
 import { Funcionario } from '@/types/funcionarios';
 import { 
@@ -34,7 +35,8 @@ export const getFuncionarios = async (): Promise<Funcionario[]> => {
         nome: data.nome || '',
         especialidades: data.especialidades || [],
         nivelPermissao: data.nivelPermissao || 'visualizacao',
-        dataCriacao: data.dataCriacao ? data.dataCriacao.toDate() : null
+        dataCriacao: data.dataCriacao ? data.dataCriacao.toDate() : null,
+        nomeUsuario: data.nomeUsuario || ''
       } as Funcionario;
     });
   } catch (error) {
@@ -60,7 +62,8 @@ export const getFuncionario = async (id: string): Promise<Funcionario | null> =>
       nome: data.nome || '',
       especialidades: data.especialidades || [],
       nivelPermissao: data.nivelPermissao || 'visualizacao',
-      dataCriacao: data.dataCriacao ? data.dataCriacao.toDate() : null
+      dataCriacao: data.dataCriacao ? data.dataCriacao.toDate() : null,
+      nomeUsuario: data.nomeUsuario || ''
     } as Funcionario;
   } catch (error) {
     console.error('Error fetching funcionario:', error);
@@ -75,53 +78,82 @@ export const saveFuncionario = async (funcionario: Funcionario): Promise<boolean
     
     const { senha, nomeUsuario, ...funcionarioData } = funcionario;
     
+    // Se tiver um ID, atualiza o funcionário existente
     if (funcionario.id) {
       docRef = doc(db, COLLECTION, funcionario.id);
+      
+      // Salva os dados do funcionário (exceto senha)
       await updateDoc(docRef, {
         ...funcionarioData,
         updatedAt: serverTimestamp()
       });
       
-      if (senha && funcionario.email) {
+      console.log('Atualizando funcionário:', funcionario.id);
+      console.log('Dados atualizados:', funcionarioData);
+      
+      // Se tiver email e senha, atualiza ou cria as credenciais do usuário
+      if (funcionario.email) {
         const usersRef = collection(db, 'users');
         const q = query(usersRef, where("funcionarioId", "==", funcionario.id));
         const querySnapshot = await getDocs(q);
         
-        if (querySnapshot.empty && senha) {
-          await registerUser(funcionario.email, senha, funcionario.id, funcionario.nivelPermissao);
-          
-          if (nomeUsuario) {
-            const userDoc = doc(usersRef, funcionario.email);
-            await updateDoc(userDoc, {
-              nomeUsuario: nomeUsuario
-            });
+        if (querySnapshot.empty) {
+          // Se não existir usuário para este funcionário, cria um novo
+          if (senha) {
+            const registeredSuccess = await registerUser(funcionario.email, senha, funcionario.id, funcionario.nivelPermissao);
+            console.log('Criando novo usuário para funcionário existente:', registeredSuccess);
+            
+            if (registeredSuccess && nomeUsuario) {
+              const userDoc = doc(usersRef, funcionario.email);
+              await updateDoc(userDoc, {
+                nomeUsuario: nomeUsuario
+              });
+              console.log('Nome de usuário atualizado:', nomeUsuario);
+            }
           }
-        } else if (!querySnapshot.empty && senha) {
-          const userDoc = querySnapshot.docs[0].ref;
-          await updateDoc(userDoc, {
-            password: btoa(senha),
-            role: funcionario.nivelPermissao,
-            updatedAt: serverTimestamp(),
-            nomeUsuario: nomeUsuario || funcionario.email?.split('@')[0]
-          });
+        } else {
+          // Se já existir usuário, só atualiza se tiver senha ou nome de usuário
+          if (senha || nomeUsuario) {
+            const userDoc = querySnapshot.docs[0].ref;
+            const updateData: Record<string, any> = {
+              role: funcionario.nivelPermissao,
+              updatedAt: serverTimestamp()
+            };
+            
+            if (senha) {
+              updateData.password = btoa(senha);
+            }
+            
+            if (nomeUsuario) {
+              updateData.nomeUsuario = nomeUsuario;
+            }
+            
+            await updateDoc(userDoc, updateData);
+            console.log('Credenciais atualizadas para usuário existente');
+          }
         }
       }
     } else {
+      // Cria um novo funcionário
       docRef = doc(collection(db, COLLECTION));
       await setDoc(docRef, {
         ...funcionarioData,
         id: docRef.id,
-        dataCriacao: serverTimestamp()
+        dataCriacao: serverTimestamp(),
+        nomeUsuario: nomeUsuario || ''
       });
       
-      if (senha && funcionario.email) {
-        await registerUser(funcionario.email, senha, docRef.id, funcionario.nivelPermissao);
+      // Se tiver email e senha, cria as credenciais do usuário
+      if (funcionario.email && senha) {
+        const registeredSuccess = await registerUser(funcionario.email, senha, docRef.id, funcionario.nivelPermissao);
+        console.log('Novo usuário criado:', registeredSuccess);
         
-        if (nomeUsuario) {
+        if (registeredSuccess && nomeUsuario) {
           const userDoc = doc(collection(db, 'users'), funcionario.email);
           await updateDoc(userDoc, {
             nomeUsuario: nomeUsuario
           });
+          console.log('Nome de usuário definido:', nomeUsuario);
         }
       }
     }
