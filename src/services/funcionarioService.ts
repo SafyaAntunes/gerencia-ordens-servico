@@ -1,4 +1,3 @@
-
 import { db } from '@/lib/firebase';
 import { Funcionario } from '@/types/funcionarios';
 import { 
@@ -18,6 +17,7 @@ import {
 } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { registerUser } from './authService';
+import { OrdemServico } from '@/types/ordens';
 
 const COLLECTION = 'funcionarios';
 
@@ -28,7 +28,6 @@ export const getFuncionarios = async (): Promise<Funcionario[]> => {
     
     return snapshot.docs.map(doc => {
       const data = doc.data();
-      // Provide default values for required fields
       return {
         id: doc.id,
         ...data,
@@ -77,25 +76,20 @@ export const saveFuncionario = async (funcionario: Funcionario): Promise<boolean
     const { senha, nomeUsuario, ...funcionarioData } = funcionario;
     
     if (funcionario.id) {
-      // Update
       docRef = doc(db, COLLECTION, funcionario.id);
       await updateDoc(docRef, {
         ...funcionarioData,
         updatedAt: serverTimestamp()
       });
       
-      // If there's a credentials update for an existing funcionario, we update the user
       if (senha && funcionario.email) {
-        // Check if the user already exists, otherwise create it
         const usersRef = collection(db, 'users');
         const q = query(usersRef, where("funcionarioId", "==", funcionario.id));
         const querySnapshot = await getDocs(q);
         
         if (querySnapshot.empty && senha) {
-          // Create new user
           await registerUser(funcionario.email, senha, funcionario.id, funcionario.nivelPermissao);
         } else if (!querySnapshot.empty && senha) {
-          // Update existing user - in a real app, this would use Firebase Auth or a secure backend
           const userDoc = querySnapshot.docs[0].ref;
           await updateDoc(userDoc, {
             password: btoa(senha),
@@ -105,7 +99,6 @@ export const saveFuncionario = async (funcionario: Funcionario): Promise<boolean
         }
       }
     } else {
-      // Create new funcionario
       docRef = doc(collection(db, COLLECTION));
       await setDoc(docRef, {
         ...funcionarioData,
@@ -113,7 +106,6 @@ export const saveFuncionario = async (funcionario: Funcionario): Promise<boolean
         dataCriacao: serverTimestamp()
       });
       
-      // If credentials were provided, create user account
       if (senha && funcionario.email) {
         await registerUser(funcionario.email, senha, docRef.id, funcionario.nivelPermissao);
       }
@@ -132,7 +124,6 @@ export const deleteFuncionario = async (id: string): Promise<boolean> => {
     const funcionarioRef = doc(db, COLLECTION, id);
     await deleteDoc(funcionarioRef);
     
-    // Also delete associated credentials if they exist
     const credentialsRef = collection(db, 'users');
     const q = query(credentialsRef, where('funcionarioId', '==', id));
     const credentialsSnapshot = await getDocs(q);
@@ -148,8 +139,7 @@ export const deleteFuncionario = async (id: string): Promise<boolean> => {
   }
 };
 
-// Get orders for a specific employee based on their specialties
-export const getOrdensByFuncionarioEspecialidades = async (especialidades: string[]): Promise<any[]> => {
+export const getOrdensByFuncionarioEspecialidades = async (especialidades: string[]): Promise<OrdemServico[]> => {
   try {
     if (!especialidades || especialidades.length === 0) {
       return [];
@@ -158,17 +148,25 @@ export const getOrdensByFuncionarioEspecialidades = async (especialidades: strin
     const ordensRef = collection(db, 'ordens');
     const snapshot = await getDocs(ordensRef);
     
-    // Filter orders that match any of the employee's specialties
     return snapshot.docs
-      .map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        dataAbertura: doc.data().dataAbertura?.toDate() || new Date(),
-        dataPrevistaEntrega: doc.data().dataPrevistaEntrega?.toDate() || new Date(),
-      }))
+      .map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          dataAbertura: data.dataAbertura?.toDate() || new Date(),
+          dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
+          servicos: data.servicos || [],
+          nome: data.nome || '',
+          cliente: data.cliente || {},
+          status: data.status || 'orcamento',
+          prioridade: data.prioridade || 'media',
+          etapasAndamento: data.etapasAndamento || {},
+          tempoRegistros: data.tempoRegistros || [],
+        } as OrdemServico;
+      })
       .filter(ordem => {
-        // Check if any service in the order matches the employee's specialties
-        if (!ordem.servicos) return false;
+        if (!ordem.servicos || !Array.isArray(ordem.servicos)) return false;
         return ordem.servicos.some((servico: any) => especialidades.includes(servico.tipo));
       });
   } catch (error) {
