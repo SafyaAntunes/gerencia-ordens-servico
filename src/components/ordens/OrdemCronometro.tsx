@@ -92,7 +92,7 @@ export default function OrdemCronometro({
       />
       
       {/* Botão para marcar como concluído */}
-      {!isRunning && !isPaused && onFinish && (
+      {onFinish && (
         <Button 
           onClick={() => onFinish(totalSavedTime)}
           className="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white"
@@ -102,7 +102,7 @@ export default function OrdemCronometro({
         </Button>
       )}
       
-      {/* Opção de usar cronômetro - mantemos o checkbox mas sem texto */}
+      {/* Opção de usar cronômetro - checkbox sem texto */}
       <div className="flex items-center mt-2">
         <Checkbox 
           id={`usar-cronometro-${ordemId}-${etapa}`}

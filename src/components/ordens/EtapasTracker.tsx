@@ -1,3 +1,4 @@
+
 import { EtapaOS, OrdemServico, TipoServico } from "@/types/ordens";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { useEffect, useState } from "react";
@@ -47,7 +48,8 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
     setEtapas(novasEtapas);
     
     // Calcula o progresso inicial
-    calcularEAtualizarProgresso(ordem.etapasAndamento || {}, novasEtapas);
+    const percentual = calcularEAtualizarProgresso(ordem.etapasAndamento || {}, novasEtapas);
+    setProgresso(percentual);
     
   }, [ordem.servicos, ordem.etapasAndamento]);
 
@@ -69,7 +71,7 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
       Math.round((etapasConcluidas / etapasLista.length) * 100) : 0;
     
     setProgresso(percentualProgresso);
-    return percentualProgresso / 100; // Retorna como decimal para o Firebase (0 a 1)
+    return percentualProgresso;
   };
 
   const handleIniciarEtapa = async (etapa: EtapaOS) => {
@@ -102,7 +104,8 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
       };
 
       // Recalcula o progresso
-      const novoProgressoDecimal = calcularEAtualizarProgresso(etapasAndamento, etapas);
+      const percentualProgresso = calcularEAtualizarProgresso(etapasAndamento, etapas);
+      const novoProgressoDecimal = percentualProgresso / 100;
       
       // Atualiza o progresso
       await updateDoc(orderRef, { progressoEtapas: novoProgressoDecimal });
@@ -243,8 +246,9 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
         });
       }
 
-      // Calcula o novo progresso
-      const novoProgressoDecimal = calcularEAtualizarProgresso(etapasAndamento, etapas);
+      // Calcula o novo progresso percentual
+      const percentualProgresso = calcularEAtualizarProgresso(etapasAndamento, etapas);
+      const novoProgressoDecimal = percentualProgresso / 100;
 
       const orderRef = doc(db, "ordens", ordem.id);
       await updateDoc(orderRef, { 
@@ -315,7 +319,8 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
       };
 
       // Calcula o novo progresso
-      const novoProgressoDecimal = calcularEAtualizarProgresso(etapasAndamento, etapas);
+      const percentualProgresso = calcularEAtualizarProgresso(etapasAndamento, etapas);
+      const novoProgressoDecimal = percentualProgresso / 100;
 
       const orderRef = doc(db, "ordens", ordem.id);
       await updateDoc(orderRef, { 

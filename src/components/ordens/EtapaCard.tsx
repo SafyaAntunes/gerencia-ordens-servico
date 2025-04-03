@@ -109,10 +109,9 @@ export default function EtapaCard({
           funcionarioId={funcionarioId}
           funcionarioNome={funcionarioNome}
           etapa={etapa}
-          onStart={() => {}}
           onPause={onPause}
           onResume={onResume}
-          onFinish={(tempoTotal) => onFinish(tempoTotal)}
+          onFinish={onFinish}
         />
       ) : !usarCronometro ? (
         <div className="flex items-center justify-center py-4">
@@ -136,7 +135,7 @@ export default function EtapaCard({
             onStart={onStart}
             onPause={onPause}
             onResume={onResume}
-            onFinish={() => {}}
+            onFinish={onFinish}
           />
         </div>
       )}
