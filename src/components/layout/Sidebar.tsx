@@ -9,7 +9,6 @@ import {
   BarChart, 
   Calendar,
   ChevronRight,
-  LogOut,
   UserSquare
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -20,7 +19,6 @@ import { useAuth } from '@/hooks/useAuth';
 type SidebarProps = {
   isOpen: boolean;
   onClose: () => void;
-  onLogout?: () => void;
 };
 
 type NavItemProps = {
@@ -58,18 +56,12 @@ const NavItem = ({ icon: Icon, label, to, badge, isCollapsed = false }: NavItemP
   );
 };
 
-export default function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { funcionario, hasPermission } = useAuth();
   
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
-  };
-  
-  const handleLogout = () => {
-    if (onLogout) {
-      onLogout();
-    }
   };
   
   const sidebarVariants = {
@@ -137,7 +129,10 @@ export default function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
           
           <div className="flex-1 px-3 py-2 space-y-1">
             <NavItem icon={LayoutDashboard} label="Dashboard" to="/" />
-            <NavItem icon={FileText} label="Ordens de Serviço" to="/ordens" badge={12} />
+            
+            {hasPermission('tecnico') && (
+              <NavItem icon={FileText} label="Ordens de Serviço" to="/ordens" badge={12} />
+            )}
             
             {showFuncionariosMenu && (
               <NavItem icon={Users} label="Funcionários" to="/funcionarios" />
@@ -160,13 +155,6 @@ export default function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
             {showConfiguracoesMenu && (
               <NavItem icon={Settings} label="Configurações" to="/configuracoes" />
             )}
-          </div>
-          
-          <div className="p-4 mt-auto">
-            <Button variant="ghost" className="w-full justify-start text-sidebar-foreground" onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
-            </Button>
           </div>
         </div>
       </motion.aside>
@@ -200,7 +188,10 @@ export default function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
           
           <div className="flex-1 px-3 py-2 space-y-1">
             <NavItem icon={LayoutDashboard} label="Dashboard" to="/" isCollapsed={isCollapsed} />
-            <NavItem icon={FileText} label="Ordens de Serviço" to="/ordens" badge={isCollapsed ? undefined : 12} isCollapsed={isCollapsed} />
+            
+            {hasPermission('tecnico') && (
+              <NavItem icon={FileText} label="Ordens de Serviço" to="/ordens" badge={isCollapsed ? undefined : 12} isCollapsed={isCollapsed} />
+            )}
             
             {showFuncionariosMenu && (
               <NavItem icon={Users} label="Funcionários" to="/funcionarios" isCollapsed={isCollapsed} />
@@ -222,20 +213,6 @@ export default function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
             
             {showConfiguracoesMenu && (
               <NavItem icon={Settings} label="Configurações" to="/configuracoes" isCollapsed={isCollapsed} />
-            )}
-          </div>
-          
-          <div className="p-4 mt-auto">
-            {!isCollapsed && (
-              <Button variant="ghost" className="w-full justify-start text-sidebar-foreground" onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Sair
-              </Button>
-            )}
-            {isCollapsed && (
-              <Button variant="ghost" size="icon" className="mx-auto text-sidebar-foreground" onClick={handleLogout}>
-                <LogOut className="h-4 w-4" />
-              </Button>
             )}
           </div>
         </div>

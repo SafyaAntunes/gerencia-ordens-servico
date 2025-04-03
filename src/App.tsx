@@ -23,7 +23,7 @@ const PrivateRoute = ({ children, requiredPermission = "visualizacao" }: {
   children: React.ReactNode;
   requiredPermission?: string;
 }) => {
-  const { user, loading, hasPermission, canAccessRoute } = useAuth();
+  const { user, loading, hasPermission, canAccessRoute, funcionario } = useAuth();
   const location = useLocation();
   
   if (loading) {
@@ -32,6 +32,13 @@ const PrivateRoute = ({ children, requiredPermission = "visualizacao" }: {
   
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+  
+  // Special case: If this is the funcionario's own profile page, allow access
+  if (location.pathname.includes('/funcionarios/editar/') && 
+      funcionario && 
+      location.pathname.includes(funcionario.id)) {
+    return <>{children}</>;
   }
   
   // Check if user has permission for this specific route
@@ -92,7 +99,13 @@ const AppRoutes = () => {
       } />
       
       <Route path="/funcionarios" element={
-        <PrivateRoute requiredPermission="tecnico">
+        <PrivateRoute requiredPermission="gerente">
+          <Funcionarios onLogout={handleLogout} />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/funcionarios/editar/:id" element={
+        <PrivateRoute requiredPermission="visualizacao">
           <Funcionarios onLogout={handleLogout} />
         </PrivateRoute>
       } />

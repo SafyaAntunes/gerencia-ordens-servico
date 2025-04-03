@@ -1,4 +1,3 @@
-
 import { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { auth } from '@/lib/firebase';
 import { User, onAuthStateChanged, signOut } from 'firebase/auth';
@@ -105,7 +104,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
-  // Register a new user
   const register = async (email: string, password: string): Promise<boolean> => {
     try {
       const success = await registerUser(email, password);
@@ -257,24 +255,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return true;
     }
     
-    // For technicians (tecnico), restrict access to specific routes
+    // For technicians (tecnico)
     if (funcionario.nivelPermissao === 'tecnico') {
+      // Allow access to profile editing if it's their own profile
+      if (route.startsWith('/funcionarios/editar/') && route.includes(funcionario.id)) {
+        return true;
+      }
+
       const allowedRoutes = [
         '/', // Dashboard
-        '/ordens', // Orders
-        '/funcionarios', // Only for viewing their own profile
+        '/ordens', // Orders list
+        '/ordens/', // Single order details (all routes that start with /ordens/)
       ];
       
-      return allowedRoutes.some(allowedRoute => route.startsWith(allowedRoute));
+      return allowedRoutes.some(allowedRoute => 
+        route === allowedRoute || 
+        (allowedRoute.endsWith('/') && route.startsWith(allowedRoute))
+      );
     }
     
-    // For view-only users, even more restrictions
+    // For view-only users
     if (funcionario.nivelPermissao === 'visualizacao') {
+      // Allow access to profile editing if it's their own profile
+      if (route.startsWith('/funcionarios/editar/') && route.includes(funcionario.id)) {
+        return true;
+      }
+
       const allowedRoutes = [
         '/', // Dashboard only
       ];
       
-      return allowedRoutes.some(allowedRoute => route.startsWith(allowedRoute));
+      return allowedRoutes.some(allowedRoute => route === allowedRoute);
     }
     
     return false;

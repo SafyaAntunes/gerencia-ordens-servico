@@ -49,7 +49,7 @@ export default function Layout({ children, onLogout }: LayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       <Navbar toggleSidebar={toggleSidebar} onLogout={onLogout} />
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onLogout={onLogout} />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       
       <main className="pt-20 pb-6 px-4 lg:pl-72">
         <AnimatePresence mode="wait">

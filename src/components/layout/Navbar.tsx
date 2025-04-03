@@ -1,5 +1,5 @@
 
-import { Menu, Search, Bell, Settings, LogOut } from "lucide-react";
+import { Menu, Bell, Settings, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,6 +10,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 interface NavbarProps {
   toggleSidebar: () => void;
@@ -17,6 +19,34 @@ interface NavbarProps {
 }
 
 export default function Navbar({ toggleSidebar, onLogout }: NavbarProps) {
+  const { user, funcionario, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    if (onLogout) {
+      onLogout();
+    } else {
+      logout();
+    }
+  };
+
+  const getInitials = () => {
+    if (funcionario?.nome) {
+      const nameParts = funcionario.nome.split(' ');
+      if (nameParts.length > 1) {
+        return `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase();
+      }
+      return funcionario.nome.substring(0, 2).toUpperCase();
+    }
+    return 'US';
+  };
+
+  const handleEditProfile = () => {
+    if (funcionario) {
+      navigate(`/funcionarios/editar/${funcionario.id}`);
+    }
+  };
+
   return (
     <header className="fixed top-0 left-0 right-0 h-16 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-30">
       <div className="flex h-16 items-center px-4 lg:px-6">
@@ -33,19 +63,25 @@ export default function Navbar({ toggleSidebar, onLogout }: NavbarProps) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src="" alt="Usuario" />
-                  <AvatarFallback>AU</AvatarFallback>
+                  <AvatarImage src="" alt={funcionario?.nome || 'Usuário'} />
+                  <AvatarFallback>{getInitials()}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+              <DropdownMenuLabel>{funcionario?.nome || user?.email || 'Usuário'}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Configurações</span>
+              <DropdownMenuItem onClick={handleEditProfile}>
+                <User className="mr-2 h-4 w-4" />
+                <span>Meu Perfil</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onLogout}>
+              {funcionario?.nivelPermissao === 'admin' && (
+                <DropdownMenuItem onClick={() => navigate('/configuracoes')}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Configurações</span>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Sair</span>
               </DropdownMenuItem>
