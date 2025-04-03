@@ -16,7 +16,7 @@ import Agenda from "./pages/Agenda";
 import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
 import Login from "./pages/Login";
-import { useAuth } from "./hooks/useAuth";
+import { AuthProvider, useAuth } from "./hooks/useAuth";
 
 // Authentication guard component
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
@@ -42,7 +42,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => {
+const AppRoutes = () => {
   const { logout } = useAuth();
 
   const handleLogout = () => {
@@ -50,82 +50,90 @@ const App = () => {
   };
 
   return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      
+      <Route path="/" element={
+        <PrivateRoute>
+          <Dashboard onLogout={handleLogout} />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/ordens" element={
+        <PrivateRoute>
+          <Ordens onLogout={handleLogout} />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/ordens/nova" element={
+        <PrivateRoute>
+          <NovaOrdem onLogout={handleLogout} />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/ordens/:id" element={
+        <PrivateRoute>
+          <OrdemDetalhes onLogout={handleLogout} />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/funcionarios" element={
+        <PrivateRoute>
+          <Funcionarios onLogout={handleLogout} />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/clientes" element={
+        <PrivateRoute>
+          <Clientes onLogout={handleLogout} />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/clientes/cadastro" element={
+        <PrivateRoute>
+          <ClienteCadastro onLogout={handleLogout} />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/clientes/editar/:id" element={
+        <PrivateRoute>
+          <ClienteCadastro onLogout={handleLogout} />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/agenda" element={
+        <PrivateRoute>
+          <Agenda onLogout={handleLogout} />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/relatorios" element={
+        <PrivateRoute>
+          <Relatorios onLogout={handleLogout} />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/configuracoes" element={
+        <PrivateRoute>
+          <Configuracoes onLogout={handleLogout} />
+        </PrivateRoute>
+      } />
+      
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
+
+const App = () => {
+  return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            
-            <Route path="/" element={
-              <PrivateRoute>
-                <Dashboard onLogout={handleLogout} />
-              </PrivateRoute>
-            } />
-            
-            <Route path="/ordens" element={
-              <PrivateRoute>
-                <Ordens onLogout={handleLogout} />
-              </PrivateRoute>
-            } />
-            
-            <Route path="/ordens/nova" element={
-              <PrivateRoute>
-                <NovaOrdem onLogout={handleLogout} />
-              </PrivateRoute>
-            } />
-            
-            <Route path="/ordens/:id" element={
-              <PrivateRoute>
-                <OrdemDetalhes onLogout={handleLogout} />
-              </PrivateRoute>
-            } />
-            
-            <Route path="/funcionarios" element={
-              <PrivateRoute>
-                <Funcionarios onLogout={handleLogout} />
-              </PrivateRoute>
-            } />
-            
-            <Route path="/clientes" element={
-              <PrivateRoute>
-                <Clientes onLogout={handleLogout} />
-              </PrivateRoute>
-            } />
-            
-            <Route path="/clientes/cadastro" element={
-              <PrivateRoute>
-                <ClienteCadastro onLogout={handleLogout} />
-              </PrivateRoute>
-            } />
-            
-            <Route path="/clientes/editar/:id" element={
-              <PrivateRoute>
-                <ClienteCadastro onLogout={handleLogout} />
-              </PrivateRoute>
-            } />
-            
-            <Route path="/agenda" element={
-              <PrivateRoute>
-                <Agenda onLogout={handleLogout} />
-              </PrivateRoute>
-            } />
-            
-            <Route path="/relatorios" element={
-              <PrivateRoute>
-                <Relatorios onLogout={handleLogout} />
-              </PrivateRoute>
-            } />
-            
-            <Route path="/configuracoes" element={
-              <PrivateRoute>
-                <Configuracoes onLogout={handleLogout} />
-              </PrivateRoute>
-            } />
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <Toaster />
-          <Sonner />
+          <AuthProvider>
+            <AppRoutes />
+            <Toaster />
+            <Sonner />
+          </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

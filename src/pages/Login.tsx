@@ -16,10 +16,12 @@ const Login = () => {
   const { user, login } = useAuth();
   const navigate = useNavigate();
   
-  // Add useEffect to check if user is already logged in
+  // Check if user is already logged in
   useEffect(() => {
+    console.log("Login page - checking auth state:", user);
     if (user) {
-      navigate("/");
+      console.log("User is logged in, redirecting to dashboard");
+      navigate("/", { replace: true });
     }
   }, [user, navigate]);
 
@@ -27,11 +29,24 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    try {
+    // Default admin credentials shortcut
+    if (email === "admin@sgr.com" && password === "adm123") {
+      // Immediately navigate without waiting for state updates
       const success = await login(email, password);
       if (success) {
         toast.success("Login realizado com sucesso!");
-        navigate("/");
+        window.location.href = "/"; // Force a full page navigation
+      }
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const success = await login(email, password);
+      
+      if (success) {
+        toast.success("Login realizado com sucesso!");
+        navigate("/", { replace: true });
       } else {
         toast.error("Credenciais inválidas. Por favor, tente novamente.");
       }
