@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { auth } from '@/lib/firebase';
-import { User, onAuthStateChanged, signOut } from 'firebase/auth';
+import { User, onAuthStateChanged, signOut, signInWithEmailAndPassword } from 'firebase/auth';
 import { toast } from 'sonner';
 import { Funcionario, NivelPermissao } from '@/types/funcionarios';
 
@@ -35,8 +34,55 @@ export const useAuth = () => {
     return () => unsubscribe();
   }, []);
 
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      // For demo purposes - hardcoded admin credentials
+      if (email === 'admin@sgr.com' && password === 'adm123') {
+        // Create a mock user for the admin
+        const adminUser = {
+          uid: 'admin-uid',
+          email: 'admin@sgr.com',
+          displayName: 'Administrador',
+        };
+        
+        // Set the user state directly
+        setUser(adminUser as User);
+        
+        // Set the funcionario state
+        setFuncionario({
+          id: adminUser.uid,
+          nome: adminUser.displayName || 'Administrador',
+          email: adminUser.email || 'admin@sgr.com',
+          telefone: '',
+          especialidades: [],
+          ativo: true,
+          nivelPermissao: 'admin' as NivelPermissao
+        });
+        
+        // Simulate successful login
+        return true;
+      } else {
+        // If not using hardcoded admin, try Firebase authentication
+        await signInWithEmailAndPassword(auth, email, password);
+        return true;
+      }
+    } catch (error) {
+      console.error('Erro ao fazer login:', error);
+      return false;
+    }
+  };
+
   const logout = async () => {
     try {
+      // If we're using the mock admin user, just clear the state
+      if (user?.email === 'admin@sgr.com') {
+        setUser(null);
+        setFuncionario(null);
+        toast.success('Logout realizado com sucesso!');
+        return;
+      }
+      
+      // Otherwise use Firebase signOut
       await signOut(auth);
       toast.success('Logout realizado com sucesso!');
     } catch (error) {
@@ -67,6 +113,7 @@ export const useAuth = () => {
     loading,
     logout,
     hasPermission,
+    login,
   };
 };
 
