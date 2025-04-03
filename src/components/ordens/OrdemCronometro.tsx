@@ -91,7 +91,7 @@ export default function OrdemCronometro({
         onFinish={handleFinish}
       />
       
-      {/* Botão para marcar como concluído */}
+      {/* Botão para marcar como concluído - sempre visível */}
       {onFinish && (
         <Button 
           onClick={() => onFinish(totalSavedTime)}
@@ -102,8 +102,8 @@ export default function OrdemCronometro({
         </Button>
       )}
       
-      {/* Opção de usar cronômetro - checkbox sem texto */}
-      <div className="flex items-center mt-2">
+      {/* Checkbox escondido mas mantendo a funcionalidade */}
+      <div className="hidden">
         <Checkbox 
           id={`usar-cronometro-${ordemId}-${etapa}`}
           checked={usarCronometro}

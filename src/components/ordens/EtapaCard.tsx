@@ -58,15 +58,17 @@ export default function EtapaCard({
     <Card className={`p-6 ${isConcluida ? "border-green-500/50" : ""} mb-4`}>
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xl font-semibold">{etapaNome}</h3>
-        {!isConcluida && onToggleCronometro && (
-          <div className="flex items-center">
+        
+        {/* Removendo o switch da interface, mas mantendo a funcionalidade na implementação */}
+        <div className="hidden">
+          {!isConcluida && onToggleCronometro && (
             <Switch
               id={`usar-cronometro-${etapa}`}
               checked={usarCronometro}
               onCheckedChange={(checked) => onToggleCronometro(checked)}
             />
-          </div>
-        )}
+          )}
+        </div>
       </div>
       
       {/* Show service trackers inside retifica etapa */}
@@ -115,15 +117,12 @@ export default function EtapaCard({
         />
       ) : !usarCronometro ? (
         <div className="flex items-center justify-center py-4">
-          <Checkbox 
-            id={`concluir-sem-timer-${etapa}`}
-            checked={false}
-            onCheckedChange={() => onCompleteWithoutTimer && onCompleteWithoutTimer()}
-            className="mr-2"
-          />
-          <Label htmlFor={`concluir-sem-timer-${etapa}`} className="cursor-pointer">
+          <Button
+            onClick={() => onCompleteWithoutTimer && onCompleteWithoutTimer()}
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+          >
             Marcar como concluído
-          </Label>
+          </Button>
         </div>
       ) : (
         <div className="text-center py-4">
