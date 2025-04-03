@@ -12,6 +12,8 @@ import { Servico, SubAtividade, TipoServico } from "@/types/ordens";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import PausaDialog from "./PausaDialog";
 import { useOrdemTimer } from "@/hooks/useOrdemTimer";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 interface ServicoTrackerProps {
   servico: Servico;
@@ -34,6 +36,7 @@ export default function ServicoTracker({
 }: ServicoTrackerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [pausaDialogOpen, setPausaDialogOpen] = useState(false);
+  const { funcionario } = useAuth();
   
   const {
     isRunning,
@@ -92,6 +95,15 @@ export default function ServicoTracker({
 
   const handlePausaCancel = () => {
     setPausaDialogOpen(false);
+  };
+  
+  const handleMarcarConcluido = () => {
+    if (!funcionario?.id) {
+      toast.error("É necessário estar logado para finalizar um serviço");
+      return;
+    }
+    
+    onServicoStatusChange(true);
   };
 
   return (
@@ -217,7 +229,7 @@ export default function ServicoTracker({
             <Button 
               variant="default" 
               size="sm" 
-              onClick={() => onServicoStatusChange(true)}
+              onClick={handleMarcarConcluido}
               disabled={servico.concluido}
               className="w-full bg-blue-500 hover:bg-blue-600 text-white"
             >

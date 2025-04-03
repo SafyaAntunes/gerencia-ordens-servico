@@ -5,9 +5,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { EtapaOS, TipoServico } from "@/types/ordens";
 import { formatTime } from "@/utils/timerUtils";
 import { useOrdemTimer } from "@/hooks/useOrdemTimer";
+import { useAuth } from "@/hooks/useAuth";
 import CompletedTimer from "./CompletedTimer";
 import TimerControls from "./TimerControls";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export interface OrdemCronometroProps {
   ordemId: string;
@@ -34,6 +36,8 @@ export default function OrdemCronometro({
   onFinish,
   isEtapaConcluida = false,
 }: OrdemCronometroProps) {
+  const { funcionario } = useAuth();
+  
   const {
     isRunning,
     isPaused,
@@ -56,6 +60,18 @@ export default function OrdemCronometro({
     onFinish,
     isEtapaConcluida
   });
+  
+  const handleFinalizarClick = () => {
+    // Verificar se o usuário está autenticado antes de finalizar a etapa
+    if (!funcionario?.id) {
+      toast.error("É necessário estar logado para finalizar uma etapa");
+      return;
+    }
+    
+    if (onFinish) {
+      onFinish(totalSavedTime);
+    }
+  };
   
   // If the stage is completed, just show the saved time without controls
   if (isEtapaConcluida) {
@@ -94,7 +110,7 @@ export default function OrdemCronometro({
       {/* Botão para marcar como concluído - sempre visível */}
       {onFinish && (
         <Button 
-          onClick={() => onFinish(totalSavedTime)}
+          onClick={handleFinalizarClick}
           className="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white"
         >
           <CheckCircle2 className="h-4 w-4 mr-1" />

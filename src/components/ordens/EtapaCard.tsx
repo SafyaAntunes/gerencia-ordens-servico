@@ -9,6 +9,9 @@ import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
 import ServicoTracker from "./ServicoTracker";
 import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 interface EtapaCardProps {
   ordemId: string;
@@ -49,10 +52,23 @@ export default function EtapaCard({
   onSubatividadeToggle,
   onServicoStatusChange
 }: EtapaCardProps) {
+  const { funcionario } = useAuth();
+  
   // Filter only retifica services if etapa is retifica
   const retificaServicos = etapa === 'retifica' ? servicos.filter(servico => 
     ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo)
   ) : [];
+  
+  const handleCompleteWithoutTimer = () => {
+    if (!funcionario?.id) {
+      toast.error("É necessário estar logado para finalizar uma etapa");
+      return;
+    }
+    
+    if (onCompleteWithoutTimer) {
+      onCompleteWithoutTimer();
+    }
+  };
 
   return (
     <Card className={`p-6 ${isConcluida ? "border-green-500/50" : ""} mb-4`}>
@@ -118,7 +134,7 @@ export default function EtapaCard({
       ) : !usarCronometro ? (
         <div className="flex items-center justify-center py-4">
           <Button
-            onClick={() => onCompleteWithoutTimer && onCompleteWithoutTimer()}
+            onClick={handleCompleteWithoutTimer}
             className="w-full bg-blue-500 hover:bg-blue-600 text-white"
           >
             Marcar como concluído
