@@ -89,12 +89,20 @@ export const saveFuncionario = async (funcionario: Funcionario): Promise<boolean
         
         if (querySnapshot.empty && senha) {
           await registerUser(funcionario.email, senha, funcionario.id, funcionario.nivelPermissao);
+          
+          if (nomeUsuario) {
+            const userDoc = doc(usersRef, funcionario.email);
+            await updateDoc(userDoc, {
+              nomeUsuario: nomeUsuario
+            });
+          }
         } else if (!querySnapshot.empty && senha) {
           const userDoc = querySnapshot.docs[0].ref;
           await updateDoc(userDoc, {
             password: btoa(senha),
             role: funcionario.nivelPermissao,
-            updatedAt: serverTimestamp()
+            updatedAt: serverTimestamp(),
+            nomeUsuario: nomeUsuario || funcionario.email?.split('@')[0]
           });
         }
       }
@@ -108,6 +116,13 @@ export const saveFuncionario = async (funcionario: Funcionario): Promise<boolean
       
       if (senha && funcionario.email) {
         await registerUser(funcionario.email, senha, docRef.id, funcionario.nivelPermissao);
+        
+        if (nomeUsuario) {
+          const userDoc = doc(collection(db, 'users'), funcionario.email);
+          await updateDoc(userDoc, {
+            nomeUsuario: nomeUsuario
+          });
+        }
       }
     }
     

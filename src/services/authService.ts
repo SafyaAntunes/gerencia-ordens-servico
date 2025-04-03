@@ -1,4 +1,3 @@
-
 import { db } from '@/lib/firebase';
 import { collection, doc, setDoc, getDoc, query, where, getDocs } from 'firebase/firestore';
 import { toast } from 'sonner';
@@ -21,6 +20,7 @@ export async function registerUser(email: string, password: string, funcionarioI
       password: hashedPassword,
       role: nivelPermissao || 'user',
       funcionarioId,
+      nomeUsuario: email.split('@')[0], // Default username based on email
       createdAt: new Date().toISOString()
     });
     
@@ -33,23 +33,43 @@ export async function registerUser(email: string, password: string, funcionarioI
   }
 }
 
-// Function to authenticate a user
-export async function loginUser(email: string, password: string): Promise<boolean> {
+// Function to authenticate a user by email or username
+export async function loginUser(identifier: string, password: string): Promise<boolean> {
   try {
+    console.log('Tentando login com:', identifier);
+    
     // Special case for admin user (keeping the hardcoded admin for demo purposes)
-    if (email === 'admin@sgr.com' && password === 'adm123') {
+    if (identifier === 'admin@sgr.com' && password === 'adm123') {
       return true;
     }
     
-    const userDoc = doc(usersCollection, email);
-    const userSnap = await getDoc(userDoc);
-
-    if (userSnap.exists()) {
-      const userData = userSnap.data();
-      const hashedPassword = btoa(password); // Basic encoding (NOT secure for production)
+    // Check if the identifier contains @ (email) or not (username)
+    let userQuery;
+    if (identifier.includes('@')) {
+      // Login with email
+      const userDoc = doc(usersCollection, identifier);
+      const userSnap = await getDoc(userDoc);
       
-      if (userData.password === hashedPassword) {
-        return true;
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        const hashedPassword = btoa(password);
+        
+        if (userData.password === hashedPassword) {
+          return true;
+        }
+      }
+    } else {
+      // Login with username
+      const q = query(usersCollection, where("nomeUsuario", "==", identifier));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const userData = querySnapshot.docs[0].data();
+        const hashedPassword = btoa(password);
+        
+        if (userData.password === hashedPassword) {
+          return true;
+        }
       }
     }
 
@@ -60,15 +80,29 @@ export async function loginUser(email: string, password: string): Promise<boolea
   }
 }
 
-// Function to get user data
-export async function getUserData(email: string) {
+// Function to get user data by email or username
+export async function getUserData(identifier: string) {
   try {
-    const userDoc = doc(usersCollection, email);
-    const userSnap = await getDoc(userDoc);
+    let userSnap;
+    let userData;
     
-    if (userSnap.exists()) {
-      const userData = userSnap.data();
-      
+    if (identifier.includes('@')) {
+      // Get by email
+      const userDoc = doc(usersCollection, identifier);
+      userSnap = await getDoc(userDoc);
+      if (userSnap.exists()) {
+        userData = userSnap.data();
+      }
+    } else {
+      // Get by username
+      const q = query(usersCollection, where("nomeUsuario", "==", identifier));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        userData = querySnapshot.docs[0].data();
+      }
+    }
+    
+    if (userData) {
       // If this user is linked to a funcionario, fetch the funcionario data
       if (userData.funcionarioId) {
         const funcionarioDoc = doc(db, 'funcionarios', userData.funcionarioId);
@@ -88,33 +122,55 @@ export async function getUserData(email: string) {
   }
 }
 
-// Function to get a funcionario by email
-export async function getFuncionarioByEmail(email: string): Promise<Funcionario | null> {
+// Function to get a funcionario by email or username
+export async function getFuncionarioByIdentifier(identifier: string): Promise<Funcionario | null> {
   try {
-    // First check if there's a user with this email
-    const q = query(usersCollection, where("email", "==", email));
-    const usersSnapshot = await getDocs(q);
+    let usersSnapshot;
     
-    if (!usersSnapshot.empty) {
-      const userData = usersSnapshot.docs[0].data();
+    if (identifier.includes('@')) {
+      // Check by email
+      const userDoc = doc(usersCollection, identifier);
+      const userSnap = await getDoc(userDoc);
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        if (userData.funcionarioId) {
+          const funcionarioDoc = doc(db, 'funcionarios', userData.funcionarioId);
+          const funcionarioSnap = await getDoc(funcionarioDoc);
+          
+          if (funcionarioSnap.exists()) {
+            return {
+              ...funcionarioSnap.data(),
+              id: funcionarioSnap.id
+            } as Funcionario;
+          }
+        }
+      }
+    } else {
+      // Check by username
+      const q = query(usersCollection, where("nomeUsuario", "==", identifier));
+      usersSnapshot = await getDocs(q);
       
-      // If this user is linked to a funcionario, fetch the funcionario data
-      if (userData.funcionarioId) {
-        const funcionarioDoc = doc(db, 'funcionarios', userData.funcionarioId);
-        const funcionarioSnap = await getDoc(funcionarioDoc);
+      if (!usersSnapshot.empty) {
+        const userData = usersSnapshot.docs[0].data();
         
-        if (funcionarioSnap.exists()) {
-          return {
-            ...funcionarioSnap.data(),
-            id: funcionarioSnap.id
-          } as Funcionario;
+        // If this user is linked to a funcionario, fetch the funcionario data
+        if (userData.funcionarioId) {
+          const funcionarioDoc = doc(db, 'funcionarios', userData.funcionarioId);
+          const funcionarioSnap = await getDoc(funcionarioDoc);
+          
+          if (funcionarioSnap.exists()) {
+            return {
+              ...funcionarioSnap.data(),
+              id: funcionarioSnap.id
+            } as Funcionario;
+          }
         }
       }
     }
     
     return null;
   } catch (error) {
-    console.error('Erro ao buscar funcionário por email:', error);
+    console.error('Erro ao buscar funcionário:', error);
     return null;
   }
 }

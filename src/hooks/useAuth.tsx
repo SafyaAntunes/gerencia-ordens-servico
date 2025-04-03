@@ -4,14 +4,14 @@ import { auth } from '@/lib/firebase';
 import { User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { toast } from 'sonner';
 import { Funcionario, NivelPermissao } from '@/types/funcionarios';
-import { loginUser, getUserData, registerUser, getFuncionarioByEmail } from '@/services/authService';
+import { loginUser, getUserData, registerUser, getFuncionarioByIdentifier } from '@/services/authService';
 
 // Define the shape of our auth context
 type AuthContextType = {
   user: User | null;
   funcionario: Funcionario | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (identifier: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   register: (email: string, password: string) => Promise<boolean>;
   hasPermission: (minLevel: string) => boolean;
@@ -42,7 +42,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const loadStoredFuncionario = async () => {
           if (parsedUser.funcionarioId) {
             // This is a funcionario user
-            const funcionarioData = await getFuncionarioByEmail(parsedUser.email);
+            const funcionarioData = await getFuncionarioByIdentifier(parsedUser.email || parsedUser.nomeUsuario);
             if (funcionarioData) {
               setFuncionario(funcionarioData);
             } else {
@@ -123,17 +123,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (identifier: string, password: string): Promise<boolean> => {
     try {
-      console.log("Login attempt for:", email);
+      console.log("Login attempt for:", identifier);
       
-      const success = await loginUser(email, password);
+      const success = await loginUser(identifier, password);
       
       if (success) {
         let userData;
         
         // For admin user - use hardcoded data
-        if (email === 'admin@sgr.com') {
+        if (identifier === 'admin@sgr.com') {
           userData = {
             uid: 'admin-uid',
             email: 'admin@sgr.com',
@@ -153,7 +153,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           });
         } else {
           // For regular users - get data from Firestore
-          userData = await getUserData(email);
+          userData = await getUserData(identifier);
           
           if (!userData) {
             toast.error('Erro ao buscar dados do usuário.');
@@ -161,15 +161,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
           
           // Check if this user is linked to a funcionario
-          const funcionarioData = await getFuncionarioByEmail(email);
+          const funcionarioData = await getFuncionarioByIdentifier(identifier);
           
           if (funcionarioData) {
             setFuncionario(funcionarioData);
             
             // Set user data
             userData = {
-              uid: userData.funcionarioId || email,
-              email: email,
+              uid: userData.funcionarioId || identifier,
+              email: userData.email,
+              nomeUsuario: userData.nomeUsuario,
               displayName: funcionarioData.nome,
               role: funcionarioData.nivelPermissao,
               funcionarioId: funcionarioData.id,
@@ -178,17 +179,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           } else {
             // Regular user without funcionario association
             userData = {
-              uid: email,
-              email: email,
+              uid: userData.email || identifier,
+              email: userData.email,
+              nomeUsuario: userData.nomeUsuario,
               displayName: userData.displayName || 'Usuário',
               role: userData.role || 'user'
             };
             
             // Set basic funcionario for non-funcionario users
             setFuncionario({
-              id: email,
+              id: userData.email || identifier,
               nome: userData.displayName || 'Usuário',
-              email: email,
+              email: userData.email || '',
               telefone: '',
               especialidades: [],
               ativo: true,

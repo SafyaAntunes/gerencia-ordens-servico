@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { Lock, User } from "lucide-react";
 
 const Login = () => {
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { user, login } = useAuth();
@@ -30,8 +30,8 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      console.log("Attempting login with:", email);
-      const success = await login(email, password);
+      console.log("Attempting login with:", identifier);
+      const success = await login(identifier, password);
       
       if (success) {
         toast.success("Login realizado com sucesso!");
@@ -61,15 +61,15 @@ const Login = () => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
+              <Label htmlFor="identifier">E-mail ou Nome de Usuário</Label>
               <div className="relative">
                 <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="email"
-                  placeholder="admin@sgr.com"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="identifier"
+                  placeholder="email@sgr.com ou nome.usuario"
+                  type="text"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
                   className="pl-10"
                   required
                 />
