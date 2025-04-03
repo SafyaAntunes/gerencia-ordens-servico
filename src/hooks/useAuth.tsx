@@ -1,8 +1,10 @@
+
 import { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { auth } from '@/lib/firebase';
-import { User, onAuthStateChanged, signOut, signInWithEmailAndPassword } from 'firebase/auth';
+import { User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { toast } from 'sonner';
 import { Funcionario, NivelPermissao } from '@/types/funcionarios';
+import { loginUser, getUserData, registerUser } from '@/services/authService';
 
 // Define the shape of our auth context
 type AuthContextType = {
@@ -11,6 +13,7 @@ type AuthContextType = {
   loading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
+  register: (email: string, password: string) => Promise<boolean>;
   hasPermission: (minLevel: string) => boolean;
 };
 
@@ -36,13 +39,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         // Set funcionario data
         setFuncionario({
-          id: parsedUser.uid,
-          nome: parsedUser.displayName || 'Administrador',
-          email: parsedUser.email || 'admin@sgr.com',
+          id: parsedUser.uid || parsedUser.email,
+          nome: parsedUser.displayName || 'Usuário',
+          email: parsedUser.email || '',
           telefone: '',
           especialidades: [],
           ativo: true,
-          nivelPermissao: 'admin' as NivelPermissao
+          nivelPermissao: parsedUser.role === 'admin' ? 'admin' as NivelPermissao : 'visualizacao' as NivelPermissao
         });
       } catch (error) {
         console.error('Error parsing stored user:', error);
@@ -57,12 +60,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(authUser);
         setFuncionario({
           id: authUser.uid,
-          nome: authUser.displayName || 'Admin',
-          email: authUser.email || 'admin@example.com',
+          nome: authUser.displayName || 'Usuário',
+          email: authUser.email || '',
           telefone: '',
           especialidades: [],
           ativo: true,
-          nivelPermissao: 'admin' as NivelPermissao
+          nivelPermissao: 'visualizacao' as NivelPermissao
         });
       }
       
@@ -77,45 +80,79 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
+  // Register a new user
+  const register = async (email: string, password: string): Promise<boolean> => {
+    try {
+      const success = await registerUser(email, password);
+      
+      if (success) {
+        // Auto-login after registration
+        return login(email, password);
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Erro no registro:', error);
+      toast.error('Erro ao registrar usuário.');
+      return false;
+    }
+  };
+
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       console.log("Login attempt for:", email);
       
-      // For demo purposes - hardcoded admin credentials
-      if (email === 'admin@sgr.com' && password === 'adm123') {
-        console.log("Using mock admin authentication");
+      const success = await loginUser(email, password);
+      
+      if (success) {
+        let userData;
         
-        // Create a mock user for the admin
-        const adminUser = {
-          uid: 'admin-uid',
-          email: 'admin@sgr.com',
-          displayName: 'Administrador',
-        };
+        // For admin user - use hardcoded data
+        if (email === 'admin@sgr.com') {
+          userData = {
+            uid: 'admin-uid',
+            email: 'admin@sgr.com',
+            displayName: 'Administrador',
+            role: 'admin'
+          };
+        } else {
+          // For regular users - get data from Firestore
+          userData = await getUserData(email);
+          
+          if (!userData) {
+            toast.error('Erro ao buscar dados do usuário.');
+            return false;
+          }
+          
+          userData = {
+            uid: email,
+            email: email,
+            displayName: userData.nome || 'Usuário',
+            role: userData.role || 'user'
+          };
+        }
         
-        // Set the user state directly
-        setUser(adminUser as User);
+        // Set the user state
+        setUser(userData as User);
         
         // Set the funcionario state
         setFuncionario({
-          id: adminUser.uid,
-          nome: adminUser.displayName || 'Administrador',
-          email: adminUser.email || 'admin@sgr.com',
+          id: userData.uid,
+          nome: userData.displayName || 'Usuário',
+          email: userData.email,
           telefone: '',
           especialidades: [],
           ativo: true,
-          nivelPermissao: 'admin' as NivelPermissao
+          nivelPermissao: userData.role === 'admin' ? 'admin' as NivelPermissao : 'visualizacao' as NivelPermissao
         });
         
         // Store in localStorage for persistence
-        localStorage.setItem('sgr_user', JSON.stringify(adminUser));
-        console.log("Admin user stored in localStorage");
+        localStorage.setItem('sgr_user', JSON.stringify(userData));
+        console.log("User stored in localStorage");
         
         return true;
       } else {
-        // If not using hardcoded admin, try Firebase authentication
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        localStorage.setItem('sgr_user', JSON.stringify(userCredential.user));
-        return true;
+        return false;
       }
     } catch (error) {
       console.error('Erro ao fazer login:', error);
@@ -125,18 +162,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     try {
-      // If we're using the mock admin user, just clear the state
-      if (user?.email === 'admin@sgr.com') {
-        setUser(null);
-        setFuncionario(null);
-        localStorage.removeItem('sgr_user');
-        toast.success('Logout realizado com sucesso!');
-        return;
-      }
-      
-      // Otherwise use Firebase signOut
-      await signOut(auth);
+      // If we're using a user from Firestore or the mock admin user, just clear the state
+      setUser(null);
+      setFuncionario(null);
       localStorage.removeItem('sgr_user');
+      
+      // Also sign out from Firebase Auth if needed
+      await signOut(auth);
+      
       toast.success('Logout realizado com sucesso!');
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
@@ -166,6 +199,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     loading,
     login,
     logout,
+    register,
     hasPermission,
   };
 
