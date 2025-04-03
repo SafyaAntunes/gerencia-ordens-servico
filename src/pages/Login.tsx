@@ -29,24 +29,15 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Default admin credentials shortcut
-    if (email === "admin@sgr.com" && password === "adm123") {
-      // Immediately navigate without waiting for state updates
-      const success = await login(email, password);
-      if (success) {
-        toast.success("Login realizado com sucesso!");
-        window.location.href = "/"; // Force a full page navigation
-      }
-      setIsLoading(false);
-      return;
-    }
-
     try {
+      console.log("Attempting login with:", email);
       const success = await login(email, password);
       
       if (success) {
         toast.success("Login realizado com sucesso!");
-        navigate("/", { replace: true });
+        console.log("Login successful, forcing navigation");
+        // Force a full page navigation for more reliable redirect
+        window.location.href = "/";
       } else {
         toast.error("Credenciais inválidas. Por favor, tente novamente.");
       }
