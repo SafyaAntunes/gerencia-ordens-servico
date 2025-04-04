@@ -54,10 +54,21 @@ export default function EtapaCard({
 }: EtapaCardProps) {
   const { funcionario } = useAuth();
   
-  // Filter only retifica services if etapa is retifica
-  const retificaServicos = etapa === 'retifica' ? servicos.filter(servico => 
-    ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo)
-  ) : [];
+  // Filter services based on etapa type
+  const etapaServicos = (() => {
+    switch(etapa) {
+      case 'retifica':
+        return servicos.filter(servico => 
+          ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo)
+        );
+      case 'montagem':
+        return servicos.filter(servico => servico.tipo === 'montagem');
+      case 'dinamometro':
+        return servicos.filter(servico => servico.tipo === 'dinamometro');
+      default:
+        return [];
+    }
+  })();
   
   const handleCompleteWithoutTimer = () => {
     if (!funcionario?.id) {
@@ -87,11 +98,11 @@ export default function EtapaCard({
         </div>
       </div>
       
-      {/* Show service trackers inside retifica etapa */}
-      {etapa === 'retifica' && retificaServicos.length > 0 && (
+      {/* Show service trackers based on etapa type */}
+      {etapaServicos.length > 0 && (
         <div className="mb-6 space-y-4">
-          <h4 className="text-md font-medium">Serviços de Retífica</h4>
-          {retificaServicos.map((servico, i) => (
+          <h4 className="text-md font-medium">Serviços de {etapaNome}</h4>
+          {etapaServicos.map((servico, i) => (
             <ServicoTracker
               key={`${servico.tipo}-${i}`}
               servico={servico}

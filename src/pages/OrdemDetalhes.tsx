@@ -24,7 +24,6 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
-import ServicoTracker from "@/components/ordens/ServicoTracker";
 import EtapasTracker from "@/components/ordens/EtapasTracker";
 import {
   AlertDialog,
@@ -498,35 +497,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
               ordem={ordem}
               onOrdemUpdate={handleOrdemUpdate}
             />
-            
-            <Card className="mb-4">
-              <CardHeader>
-                <CardTitle>Acompanhamento dos Serviços</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {ordem.servicos?.length ? (
-                  <div className="flex flex-col gap-4">
-                    {ordem.servicos.map((servico, i) => (
-                      <ServicoTracker
-                        key={`${servico.tipo}-${i}`}
-                        servico={servico}
-                        ordemId={ordem.id}
-                        funcionarioId={funcionario?.id || ""}
-                        funcionarioNome={funcionario?.nome}
-                        onSubatividadeToggle={(subId, checked) => 
-                          handleSubatividadeToggle(servico.tipo, subId, checked)
-                        }
-                        onServicoStatusChange={(concluido) => 
-                          handleServicoStatusChange(servico.tipo, concluido)
-                        }
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground">Nenhum serviço cadastrado.</p>
-                )}
-              </CardContent>
-            </Card>
           </TabsContent>
           
           <TabsContent value="fotos" className="space-y-6">

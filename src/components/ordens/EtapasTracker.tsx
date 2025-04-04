@@ -1,4 +1,3 @@
-
 import { EtapaOS, OrdemServico, TipoServico } from "@/types/ordens";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { useEffect, useState } from "react";
@@ -20,34 +19,28 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
   const [progresso, setProgresso] = useState(0);
   const { funcionario } = useAuth();
 
-  // Determina as etapas baseadas nos serviços selecionados
   useEffect(() => {
     let novasEtapas: EtapaOS[] = ["lavagem", "inspecao_inicial"];
     
-    // Adiciona etapa de retífica se tiver algum serviço de retífica
     if (ordem.servicos?.some(s => 
       ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo))) {
       novasEtapas.push("retifica");
     }
     
-    // Verifica se montagem está selecionada
     const temMontagem = ordem.servicos?.some(s => s.tipo === "montagem");
     if (temMontagem) {
       novasEtapas.push("montagem");
     }
     
-    // Verifica se dinamômetro está selecionado
     const temDinamometro = ordem.servicos?.some(s => s.tipo === "dinamometro");
     if (temDinamometro) {
       novasEtapas.push("dinamometro");
     }
     
-    // Sempre adiciona inspeção final
     novasEtapas.push("inspecao_final");
     
     setEtapas(novasEtapas);
     
-    // Calcula o progresso inicial
     const percentual = calcularEAtualizarProgresso(ordem.etapasAndamento || {}, novasEtapas);
     setProgresso(percentual);
     
@@ -81,7 +74,6 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
     }
 
     try {
-      // Atualiza o estado da etapa no Firebase
       const etapasAndamento = {
         ...ordem.etapasAndamento || {},
         [etapa]: {
@@ -97,17 +89,14 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
       const orderRef = doc(db, "ordens", ordem.id);
       await updateDoc(orderRef, { etapasAndamento });
 
-      // Atualiza o estado local
       const ordemAtualizada = {
         ...ordem,
         etapasAndamento,
       };
 
-      // Recalcula o progresso
       const percentualProgresso = calcularEAtualizarProgresso(etapasAndamento, etapas);
       const novoProgressoDecimal = percentualProgresso / 100;
       
-      // Atualiza o progresso
       await updateDoc(orderRef, { progressoEtapas: novoProgressoDecimal });
       ordemAtualizada.progressoEtapas = novoProgressoDecimal;
 
@@ -129,10 +118,8 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
       const etapaAtual = ordem.etapasAndamento?.[etapa];
       if (!etapaAtual) return;
       
-      // Pega pausas existentes ou inicializa array vazio
       const pausasExistentes = etapaAtual.pausas || [];
       
-      // Adiciona nova pausa
       const novaPausa = {
         inicio: new Date().getTime(),
         motivo
@@ -140,7 +127,6 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
       
       const pausasAtualizadas = [...pausasExistentes, novaPausa];
       
-      // Atualiza o estado da etapa no Firebase
       const etapasAndamento = {
         ...ordem.etapasAndamento,
         [etapa]: {
@@ -152,7 +138,6 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
       const orderRef = doc(db, "ordens", ordem.id);
       await updateDoc(orderRef, { etapasAndamento });
       
-      // Atualiza o estado local
       const ordemAtualizada = {
         ...ordem,
         etapasAndamento
@@ -176,7 +161,6 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
       const etapaAtual = ordem.etapasAndamento?.[etapa];
       if (!etapaAtual || !etapaAtual.pausas || etapaAtual.pausas.length === 0) return;
       
-      // Pega todas as pausas e finaliza a última
       const pausas = [...etapaAtual.pausas];
       const ultimaPausa = pausas[pausas.length - 1];
       
@@ -187,7 +171,6 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
         };
       }
       
-      // Atualiza o estado da etapa no Firebase
       const etapasAndamento = {
         ...ordem.etapasAndamento,
         [etapa]: {
@@ -199,7 +182,6 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
       const orderRef = doc(db, "ordens", ordem.id);
       await updateDoc(orderRef, { etapasAndamento });
       
-      // Atualiza o estado local
       const ordemAtualizada = {
         ...ordem,
         etapasAndamento
@@ -222,7 +204,6 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
     try {
       const etapaAtual = ordem.etapasAndamento?.[etapa];
       
-      // Atualiza o estado da etapa no Firebase
       const etapasAndamento = {
         ...ordem.etapasAndamento || {},
         [etapa]: {
@@ -232,7 +213,6 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
         }
       };
 
-      // Se houver tempo registrado, armazena nos registros de tempo
       let tempoRegistros = [...(ordem.tempoRegistros || [])];
       
       if (etapaAtual?.iniciado && etapaAtual?.usarCronometro) {
@@ -246,7 +226,6 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
         });
       }
 
-      // Calcula o novo progresso percentual
       const percentualProgresso = calcularEAtualizarProgresso(etapasAndamento, etapas);
       const novoProgressoDecimal = percentualProgresso / 100;
 
@@ -257,7 +236,6 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
         progressoEtapas: novoProgressoDecimal
       });
 
-      // Atualiza o estado local
       const ordemAtualizada = {
         ...ordem,
         etapasAndamento,
@@ -277,7 +255,6 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
     try {
       const etapaAtual = ordem.etapasAndamento?.[etapa];
       
-      // Atualiza o estado da etapa no Firebase
       const etapasAndamento = {
         ...ordem.etapasAndamento || {},
         [etapa]: {
@@ -289,7 +266,6 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
       const orderRef = doc(db, "ordens", ordem.id);
       await updateDoc(orderRef, { etapasAndamento });
 
-      // Atualiza o estado local
       const ordemAtualizada = {
         ...ordem,
         etapasAndamento
@@ -304,7 +280,6 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
 
   const handleCompleteWithoutTimer = async (etapa: EtapaOS) => {
     try {
-      // Atualiza o estado da etapa no Firebase
       const etapasAndamento = {
         ...ordem.etapasAndamento || {},
         [etapa]: {
@@ -318,7 +293,6 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
         }
       };
 
-      // Calcula o novo progresso
       const percentualProgresso = calcularEAtualizarProgresso(etapasAndamento, etapas);
       const novoProgressoDecimal = percentualProgresso / 100;
 
@@ -328,7 +302,6 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
         progressoEtapas: novoProgressoDecimal
       });
 
-      // Atualiza o estado local
       const ordemAtualizada = {
         ...ordem,
         etapasAndamento,
@@ -380,10 +353,8 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
     if (!ordem.id) return;
     
     try {
-      // Atualiza o status do serviço
       const servicos = ordem.servicos.map(servico => {
         if (servico.tipo === servicoTipo) {
-          // Ao marcar serviço como concluído, também marca todas as subatividades
           const subatividades = servico.subatividades?.map(sub => ({
             ...sub,
             concluida: concluido ? true : sub.concluida
@@ -438,11 +409,7 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
           {etapas.map((etapa) => {
             const etapaInfo = ordem.etapasAndamento?.[etapa];
             const isConcluida = etapaInfo?.concluido || false;
-            // Corrigindo: Uma etapa só é considerada iniciada se tiver a propriedade iniciado
-            // E também um funcionarioId associado, e não estiver concluída
-            const isIniciada = !!etapaInfo?.iniciado && 
-                               !!etapaInfo?.funcionarioId && 
-                               !etapaInfo?.concluido;
+            const isIniciada = !!etapaInfo?.iniciado && !!etapaInfo?.funcionarioId && !etapaInfo?.concluido;
             const usarCronometro = etapaInfo?.usarCronometro !== false;
             
             return (
