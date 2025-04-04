@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -9,8 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { LogoutProps } from "@/types/props";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { saveCliente, getCliente } from "@/services/clienteService";
 import { Cliente, Motor } from "@/types/clientes";
 
@@ -59,7 +58,7 @@ export default function ClienteCadastro({ onLogout }: LogoutProps) {
             nome: clienteData.nome || "",
             telefone: clienteData.telefone || "",
             email: clienteData.email || "",
-            endereco: clienteData.endereco || "",
+            endereco: typeof clienteData.endereco === 'string' ? clienteData.endereco : "",
             cnpj_cpf: clienteData.cnpj_cpf || "",
             observacoes: clienteData.observacoes || "",
           });
@@ -90,7 +89,12 @@ export default function ClienteCadastro({ onLogout }: LogoutProps) {
       // Preparar objeto cliente
       const clienteData: Cliente = {
         id: id || "",
-        ...values,
+        nome: values.nome,
+        telefone: values.telefone,
+        email: values.email,
+        endereco: values.endereco,
+        cnpj_cpf: values.cnpj_cpf,
+        observacoes: values.observacoes,
         motores: motores,
       };
       

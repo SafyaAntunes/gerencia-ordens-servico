@@ -4,8 +4,9 @@ export interface Cliente {
   nome: string;
   email: string;
   telefone: string;
+  endereco?: string | Endereco;
+  cnpj_cpf?: string;
   motores?: Motor[];
-  endereco?: Endereco;
   dataCriacao?: Date | string;
   observacoes?: string;
 }
