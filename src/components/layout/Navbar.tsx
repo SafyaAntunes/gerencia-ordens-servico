@@ -43,7 +43,8 @@ export default function Navbar({ toggleSidebar, onLogout }: NavbarProps) {
 
   const handleEditProfile = () => {
     if (funcionario) {
-      navigate(`/funcionarios/editar/${funcionario.id}`);
+      // Para técnicos, já existe uma rota específica no App.tsx
+      navigate(`/meu-perfil`);
     }
   };
 

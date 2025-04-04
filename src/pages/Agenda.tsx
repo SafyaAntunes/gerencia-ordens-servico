@@ -184,6 +184,14 @@ const Agenda = ({ onLogout }: AgendaProps) => {
     );
   }
   
+  const getMonthName = (month: number) => {
+    const monthNames = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    return monthNames[month];
+  };
+  
   return (
     <Layout onLogout={onLogout}>
       <div className="space-y-6">
@@ -240,6 +248,12 @@ const Agenda = ({ onLogout }: AgendaProps) => {
                       }}
                       modifiersClassNames={{
                         event: "bg-primary/10 font-medium text-primary",
+                      }}
+                      // Corrigindo o problema de meses não exibidos
+                      fromMonth={new Date(2023, 0)}
+                      toMonth={new Date(2025, 11)}
+                      formatters={{
+                        formatMonthCaption: (date) => getMonthName(date.getMonth()) + ' ' + date.getFullYear(),
                       }}
                     />
                   </TabsContent>

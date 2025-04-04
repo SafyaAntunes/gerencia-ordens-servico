@@ -87,12 +87,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const mobileClass = isOpen ? "block lg:hidden" : "hidden";
   
-  // Determine which menu items to show based on user role
-  const showFuncionariosMenu = hasPermission('tecnico');
-  const showClientesMenu = hasPermission('gerente');
-  const showAgendaMenu = hasPermission('gerente');
-  const showRelatoriosMenu = hasPermission('gerente');
-  const showConfiguracoesMenu = hasPermission('admin');
+  // Técnicos devem ver apenas Dashboard e Ordens de Serviço
+  const isTecnico = funcionario?.nivelPermissao === 'tecnico';
+  
+  // Determine quais itens de menu mostrar com base no papel do usuário
+  const showFuncionariosMenu = !isTecnico && hasPermission('tecnico');
+  const showClientesMenu = !isTecnico && hasPermission('gerente');
+  const showAgendaMenu = !isTecnico && hasPermission('gerente');
+  const showRelatoriosMenu = !isTecnico && hasPermission('gerente');
+  const showConfiguracoesMenu = !isTecnico && hasPermission('admin');
   
   return (
     <>
@@ -130,12 +133,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
           
           <div className="flex-1 px-3 py-2 space-y-1">
+            {/* Todos os usuários veem o Dashboard */}
             <NavItem icon={LayoutDashboard} label="Dashboard" to="/" />
             
+            {/* Todos os técnicos ou superiores veem Ordens de Serviço */}
             {hasPermission('tecnico') && (
               <NavItem icon={FileText} label="Ordens de Serviço" to="/ordens" badge={12} />
             )}
             
+            {/* O resto dos menus são filtrados por papel */}
             {showFuncionariosMenu && (
               <NavItem icon={Users} label="Funcionários" to="/funcionarios" />
             )}
@@ -192,12 +198,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
           
           <div className="flex-1 px-3 py-2 space-y-1">
+            {/* Todos os usuários veem o Dashboard */}
             <NavItem icon={LayoutDashboard} label="Dashboard" to="/" isCollapsed={isCollapsed} />
             
+            {/* Todos os técnicos ou superiores veem Ordens de Serviço */}
             {hasPermission('tecnico') && (
               <NavItem icon={FileText} label="Ordens de Serviço" to="/ordens" badge={isCollapsed ? undefined : 12} isCollapsed={isCollapsed} />
             )}
             
+            {/* O resto dos menus são filtrados por papel */}
             {showFuncionariosMenu && (
               <NavItem icon={Users} label="Funcionários" to="/funcionarios" isCollapsed={isCollapsed} />
             )}

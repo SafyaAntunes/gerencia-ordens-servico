@@ -99,6 +99,17 @@ const AppRoutes = () => {
         </PrivateRoute>
       } />
       
+      {/* Rota para Meu Perfil para técnicos */}
+      <Route path="/meu-perfil" element={
+        <PrivateRoute requiredPermission="visualizacao">
+          {funcionario ? (
+            <Navigate to={`/funcionarios/editar/${funcionario.id}`} replace />
+          ) : (
+            <Navigate to="/" replace />
+          )}
+        </PrivateRoute>
+      } />
+      
       <Route path="/funcionarios" element={
         <PrivateRoute requiredPermission="gerente">
           <Funcionarios onLogout={handleLogout} />
