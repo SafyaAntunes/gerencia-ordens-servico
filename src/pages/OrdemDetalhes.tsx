@@ -4,9 +4,9 @@ import Layout from "@/components/layout/Layout";
 import { LogoutProps } from "@/types/props";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ChevronLeft, Edit, ClipboardCheck } from "lucide-react";
+import { ChevronLeft, Edit, ClipboardCheck, Trash } from "lucide-react";
 import { OrdemServico, StatusOS, TipoServico, SubAtividade, EtapaOS } from "@/types/ordens";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import OrdemForm from "@/components/ordens/OrdemForm";
@@ -26,6 +26,16 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import ServicoTracker from "@/components/ordens/ServicoTracker";
 import EtapasTracker from "@/components/ordens/EtapasTracker";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface OrdemDetalhesProps extends LogoutProps {}
 
@@ -39,6 +49,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
   const [fotosSaida, setFotosSaida] = useState<File[]>([]);
   const [activeTab, setActiveTab] = useState<string>("detalhes");
   const [isEditando, setIsEditando] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const { funcionario } = useAuth();
   
   const statusLabels: Record<StatusOS, string> = {
@@ -279,6 +290,25 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
     setOrdem(ordemAtualizada);
   };
 
+  const handleDelete = async () => {
+    if (!id) return;
+    
+    try {
+      setIsSubmitting(true);
+      const orderRef = doc(db, "ordens", id);
+      await deleteDoc(orderRef);
+      
+      toast.success("Ordem de serviço excluída com sucesso!");
+      navigate("/ordens");
+    } catch (error) {
+      console.error("Error deleting order:", error);
+      toast.error("Erro ao excluir ordem de serviço");
+    } finally {
+      setIsSubmitting(false);
+      setDeleteDialogOpen(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Layout>
@@ -321,13 +351,22 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
           </h1>
           <div className="flex gap-2">
             {!isEditando && (
-              <Button 
-                variant="outline" 
-                onClick={() => setIsEditando(true)}
-              >
-                <Edit className="mr-2 h-4 w-4" />
-                Editar
-              </Button>
+              <>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsEditando(true)}
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  Editar
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  <Trash className="mr-2 h-4 w-4" />
+                  Excluir
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -541,6 +580,27 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
           </TabsContent>
         </Tabs>
       )}
+      
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Ordem de Serviço</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta ordem de serviço? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 };
