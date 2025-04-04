@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -50,7 +49,6 @@ export default function ClienteCadastro({ onLogout }: LogoutProps) {
   const [isMotorDialogOpen, setIsMotorDialogOpen] = useState(false);
   const [currentMotor, setCurrentMotor] = useState<Motor | null>(null);
   
-  // Initialize main form
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -63,7 +61,6 @@ export default function ClienteCadastro({ onLogout }: LogoutProps) {
     },
   });
   
-  // Initialize motor form
   const motorForm = useForm<MotorFormValues>({
     resolver: zodResolver(motorSchema),
     defaultValues: {
@@ -77,7 +74,6 @@ export default function ClienteCadastro({ onLogout }: LogoutProps) {
     },
   });
   
-  // Fetch cliente data on mount if editing
   useEffect(() => {
     const fetchCliente = async () => {
       if (!id) return;
@@ -90,7 +86,6 @@ export default function ClienteCadastro({ onLogout }: LogoutProps) {
           console.log("Cliente carregado:", clienteData);
           setCliente(clienteData);
           
-          // Fill form with cliente data
           form.reset({
             nome: clienteData.nome || "",
             telefone: clienteData.telefone || "",
@@ -101,7 +96,6 @@ export default function ClienteCadastro({ onLogout }: LogoutProps) {
             observacoes: clienteData.observacoes || "",
           });
           
-          // Load motores
           if (clienteData.motores && clienteData.motores.length > 0) {
             setMotores(clienteData.motores);
           }
@@ -120,12 +114,10 @@ export default function ClienteCadastro({ onLogout }: LogoutProps) {
     fetchCliente();
   }, [id, navigate, form]);
   
-  // Submit handler for main form
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
     
     try {
-      // Prepare cliente object
       const clienteData: Cliente = {
         id: id || "",
         nome: values.nome,
@@ -137,7 +129,6 @@ export default function ClienteCadastro({ onLogout }: LogoutProps) {
         motores: motores,
       };
       
-      // Save cliente
       await saveCliente(clienteData);
       
       toast.success(id ? "Cliente atualizado com sucesso!" : "Cliente cadastrado com sucesso!");
@@ -150,7 +141,6 @@ export default function ClienteCadastro({ onLogout }: LogoutProps) {
     }
   };
   
-  // Open modal to add new motor
   const handleMotorAdd = () => {
     setCurrentMotor(null);
     motorForm.reset({
@@ -165,7 +155,6 @@ export default function ClienteCadastro({ onLogout }: LogoutProps) {
     setIsMotorDialogOpen(true);
   };
   
-  // Open modal to edit existing motor
   const handleMotorEdit = (motor: Motor) => {
     setCurrentMotor(motor);
     motorForm.reset({
@@ -180,24 +169,26 @@ export default function ClienteCadastro({ onLogout }: LogoutProps) {
     setIsMotorDialogOpen(true);
   };
   
-  // Delete a motor
   const handleMotorDelete = (motorId: string) => {
     setMotores(prev => prev.filter(m => m.id !== motorId));
     toast.success("Motor removido");
   };
   
-  // Save motor from form
   const handleMotorSubmit = (values: MotorFormValues) => {
     const motor: Motor = {
       id: currentMotor?.id || `temp-${Date.now()}`,
-      ...values,
+      modelo: values.modelo,
+      marca: values.marca,
+      ano: values.ano,
+      numeracao: values.numeracao,
+      cilindrada: values.cilindrada,
+      combustivel: values.combustivel,
+      observacoes: values.observacoes,
     };
     
     if (currentMotor) {
-      // Update existing motor
       setMotores(prev => prev.map(m => m.id === motor.id ? motor : m));
     } else {
-      // Add new motor
       setMotores(prev => [...prev, motor]);
     }
     
@@ -422,7 +413,6 @@ export default function ClienteCadastro({ onLogout }: LogoutProps) {
           </div>
         )}
         
-        {/* Motor Dialog */}
         <Dialog open={isMotorDialogOpen} onOpenChange={setIsMotorDialogOpen}>
           <DialogContent>
             <DialogHeader>
