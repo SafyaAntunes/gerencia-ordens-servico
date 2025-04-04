@@ -8,6 +8,8 @@ import { Prioridade, TipoServico, OrdemServico, SubAtividade } from "@/types/ord
 import { collection, addDoc, doc, setDoc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
+import { getClientes } from "@/services/clienteService";
+import { Cliente } from "@/types/clientes";
 
 interface NovaOrdemProps {
   onLogout?: () => void;
@@ -17,6 +19,25 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedServices, setSelectedServices] = useState<TipoServico[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Buscar clientes ao montar o componente
+  useEffect(() => {
+    const fetchClientes = async () => {
+      try {
+        const clientesData = await getClientes();
+        setClientes(clientesData);
+      } catch (error) {
+        console.error("Erro ao buscar clientes:", error);
+        toast.error("Erro ao carregar lista de clientes");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchClientes();
+  }, []);
   
   const handleSubmit = async (values: any) => {
     setIsSubmitting(true);
@@ -149,6 +170,8 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         onSubmit={handleSubmit}
         isLoading={isSubmitting}
         onCancel={() => navigate("/ordens")}
+        clientes={clientes}
+        isLoadingClientes={loading}
       />
     </Layout>
   );

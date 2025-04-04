@@ -8,7 +8,10 @@ import {
   setDoc, 
   updateDoc, 
   deleteDoc, 
-  Timestamp 
+  Timestamp,
+  query,
+  where,
+  addDoc
 } from 'firebase/firestore';
 import { Cliente, Motor } from '@/types/clientes';
 import { toast } from 'sonner';
@@ -18,6 +21,7 @@ export const getClientes = async (): Promise<Cliente[]> => {
   try {
     const clientesRef = collection(db, 'clientes');
     const snapshot = await getDocs(clientesRef);
+    
     return snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
@@ -64,8 +68,10 @@ export const saveCliente = async (cliente: Cliente): Promise<boolean> => {
   try {
     const { id, motores, ...clienteData } = cliente;
     
+    let clienteId = id;
+    
     // Se for uma atualização
-    if (id) {
+    if (id && id.trim() !== '') {
       const clienteRef = doc(db, 'clientes', id);
       await updateDoc(clienteRef, clienteData);
       
@@ -82,6 +88,8 @@ export const saveCliente = async (cliente: Cliente): Promise<boolean> => {
     else {
       const clientesRef = collection(db, 'clientes');
       const novoClienteRef = doc(clientesRef);
+      clienteId = novoClienteRef.id;
+      
       await setDoc(novoClienteRef, {
         ...clienteData,
         dataCriacao: Timestamp.now()
@@ -95,6 +103,9 @@ export const saveCliente = async (cliente: Cliente): Promise<boolean> => {
           await setDoc(motorRef, motorData);
         }
       }
+      
+      console.log(`Novo cliente criado com ID: ${clienteId}`);
+      toast.success("Cliente criado com sucesso!");
     }
     
     return true;
@@ -151,12 +162,15 @@ export const deleteMotor = async (clienteId: string, motorId: string): Promise<b
 // Obter os motores de um cliente
 export const getMotores = async (clienteId: string): Promise<Motor[]> => {
   try {
+    console.log(`Buscando motores para o cliente ID: ${clienteId}`);
     const motoresRef = collection(db, `clientes/${clienteId}/motores`);
     const snapshot = await getDocs(motoresRef);
-    return snapshot.docs.map(doc => ({
+    const motores = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     } as Motor));
+    console.log(`${motores.length} motores encontrados`);
+    return motores;
   } catch (error) {
     console.error('Erro ao carregar motores:', error);
     throw error;

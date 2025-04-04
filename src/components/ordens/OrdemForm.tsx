@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -41,12 +42,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { Prioridade, TipoServico, Motor, SubAtividade } from "@/types/ordens";
+import { Cliente } from "@/types/clientes";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FotosForm from "./FotosForm";
 import ServicoSubatividades from "./ServicoSubatividades";
 import ClienteForm from "@/components/clientes/ClienteForm";
 import { v4 as uuidv4 } from "uuid";
-import { saveCliente } from "@/services/clienteService";
+import { saveCliente, getMotores } from "@/services/clienteService";
 import { toast } from "sonner";
 
 // Define all subatividades for each tipo de serviço
@@ -111,37 +113,6 @@ const SUBATIVIDADES: Record<TipoServico, string[]> = {
   ]
 };
 
-const CLIENTES = [
-  { id: "1", nome: "Auto Peças Silva" },
-  { id: "2", nome: "Oficina Mecânica Central" },
-  { id: "3", nome: "Concessionária Motors" },
-  { id: "4", nome: "Autoelétrica Express" },
-  { id: "5", nome: "Transportadora Rodovia" },
-];
-
-const MOTORES: Record<string, Motor[]> = {
-  "1": [
-    { id: "101", marca: "Ford", modelo: "Zetec Rocam 1.0", numeroSerie: "ZR10-123456", ano: "2018" },
-    { id: "102", marca: "Ford", modelo: "Zetec Rocam 1.6", numeroSerie: "ZR16-234567", ano: "2019" }
-  ],
-  "2": [
-    { id: "201", marca: "Volkswagen", modelo: "EA111 1.0", numeroSerie: "EA111-345678", ano: "2018" },
-    { id: "202", marca: "Volkswagen", modelo: "EA211 1.6", numeroSerie: "EA211-456789", ano: "2020" }
-  ],
-  "3": [
-    { id: "301", marca: "Fiat", modelo: "Fire 1.0", numeroSerie: "FIRE-567890", ano: "2017" },
-    { id: "302", marca: "Fiat", modelo: "E.torQ 1.6", numeroSerie: "ETORQ-678901", ano: "2018" }
-  ],
-  "4": [
-    { id: "401", marca: "Chevrolet", modelo: "Econo.Flex 1.0", numeroSerie: "EFLEX-789012", ano: "2019" },
-    { id: "402", marca: "Chevrolet", modelo: "Family 1.4", numeroSerie: "FAM-890123", ano: "2020" }
-  ],
-  "5": [
-    { id: "501", marca: "Mercedes", modelo: "OM 366", numeroSerie: "OM366-901234", ano: "2017" },
-    { id: "502", marca: "Scania", modelo: "DC13", numeroSerie: "DC13-012345", ano: "2018" }
-  ]
-};
-
 const formSchema = z.object({
   id: z.string().min(1, { message: "Número da OS é obrigatório" }),
   nome: z.string().min(2, { message: "Nome deve ter pelo menos 2 caracteres" }),
@@ -164,6 +135,8 @@ type OrdemFormProps = {
   defaultFotosEntrada?: any[];
   defaultFotosSaida?: any[];
   onCancel?: () => void;
+  clientes?: Cliente[];
+  isLoadingClientes?: boolean;
 };
 
 const tiposServico: { value: TipoServico; label: string }[] = [
@@ -183,6 +156,8 @@ export default function OrdemForm({
   defaultFotosEntrada = [],
   defaultFotosSaida = [],
   onCancel,
+  clientes = [],
+  isLoadingClientes = false,
 }: OrdemFormProps) {
   const [servicosDescricoes, setServicosDescricoes] = useState<Record<string, string>>({});
   const [servicosSubatividades, setServicosSubatividades] = useState<Record<string, SubAtividade[]>>({});
@@ -193,7 +168,7 @@ export default function OrdemForm({
   const [motores, setMotores] = useState<Motor[]>([]);
   const [isNovoClienteOpen, setIsNovoClienteOpen] = useState(false);
   const [isSubmittingCliente, setIsSubmittingCliente] = useState(false);
-  const [clientes, setClientes] = useState(CLIENTES);
+  const [isLoadingMotores, setIsLoadingMotores] = useState(false);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -239,8 +214,21 @@ export default function OrdemForm({
   
   useEffect(() => {
     if (selectedClienteId) {
-      const clienteMotores = MOTORES[selectedClienteId] || [];
-      setMotores(clienteMotores);
+      const fetchMotores = async () => {
+        setIsLoadingMotores(true);
+        try {
+          const motoresData = await getMotores(selectedClienteId);
+          setMotores(motoresData);
+        } catch (error) {
+          console.error("Erro ao buscar motores:", error);
+          toast.error("Não foi possível carregar os motores deste cliente");
+          setMotores([]);
+        } finally {
+          setIsLoadingMotores(false);
+        }
+      };
+      
+      fetchMotores();
     } else {
       setMotores([]);
     }
@@ -321,7 +309,7 @@ export default function OrdemForm({
     setIsSubmittingCliente(true);
     
     try {
-      const novoCliente = {
+      const novoCliente: Cliente = {
         id: "",
         nome: data.nome,
         telefone: data.telefone,
@@ -334,15 +322,15 @@ export default function OrdemForm({
       if (success) {
         toast.success("Cliente cadastrado com sucesso!");
         
-        const novoClienteId = novoCliente.id || `temp-${Date.now()}`;
+        // Recarregar a lista de clientes
+        const clientesAtualizados = await getClientes();
+        // Encontrar o ID do cliente recém-criado
+        const clienteCriado = clientesAtualizados.find(c => c.nome === novoCliente.nome && c.telefone === novoCliente.telefone);
         
-        setClientes(prev => [
-          ...prev, 
-          { id: novoClienteId, nome: novoCliente.nome }
-        ]);
-        
-        setSelectedClienteId(novoClienteId);
-        form.setValue("clienteId", novoClienteId);
+        if (clienteCriado) {
+          setSelectedClienteId(clienteCriado.id);
+          form.setValue("clienteId", clienteCriado.id);
+        }
         
         setIsNovoClienteOpen(false);
       }
@@ -435,18 +423,29 @@ export default function OrdemForm({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione um cliente" />
+                        <SelectValue placeholder={isLoadingClientes ? "Carregando clientes..." : "Selecione um cliente"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {clientes.map((cliente) => (
-                        <SelectItem 
-                          key={cliente.id} 
-                          value={cliente.id}
-                        >
-                          {cliente.nome}
-                        </SelectItem>
-                      ))}
+                      {isLoadingClientes ? (
+                        <div className="p-2 text-center">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary mx-auto"></div>
+                          <p className="text-xs mt-1">Carregando...</p>
+                        </div>
+                      ) : clientes.length === 0 ? (
+                        <div className="p-2 text-center">
+                          <p className="text-sm text-muted-foreground">Nenhum cliente encontrado</p>
+                        </div>
+                      ) : (
+                        clientes.map((cliente) => (
+                          <SelectItem 
+                            key={cliente.id} 
+                            value={cliente.id}
+                          >
+                            {cliente.nome}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <FormDescription>
@@ -466,28 +465,37 @@ export default function OrdemForm({
                   <Select 
                     onValueChange={field.onChange} 
                     defaultValue={field.value}
-                    disabled={!selectedClienteId || motores.length === 0}
+                    disabled={!selectedClienteId || isLoadingMotores || motores.length === 0}
                   >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder={
                           !selectedClienteId 
                             ? "Selecione um cliente primeiro" 
-                            : motores.length === 0 
-                              ? "Nenhum motor cadastrado para este cliente" 
-                              : "Selecione um motor"
+                            : isLoadingMotores 
+                              ? "Carregando motores..." 
+                              : motores.length === 0 
+                                ? "Nenhum motor cadastrado para este cliente" 
+                                : "Selecione um motor"
                         } />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {motores.map((motor) => (
-                        <SelectItem 
-                          key={motor.id} 
-                          value={motor.id}
-                        >
-                          {motor.marca} {motor.modelo} - {motor.numeroSerie} ({motor.ano})
-                        </SelectItem>
-                      ))}
+                      {isLoadingMotores ? (
+                        <div className="p-2 text-center">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary mx-auto"></div>
+                          <p className="text-xs mt-1">Carregando...</p>
+                        </div>
+                      ) : (
+                        motores.map((motor) => (
+                          <SelectItem 
+                            key={motor.id} 
+                            value={motor.id}
+                          >
+                            {motor.marca} {motor.modelo} {motor.numeracao ? `- ${motor.numeracao}` : ''} {motor.ano ? `(${motor.ano})` : ''}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <FormDescription>
