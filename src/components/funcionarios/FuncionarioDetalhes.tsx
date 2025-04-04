@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Phone, Mail, Wrench, Shield, Edit, Calendar } from "lucide-react";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 
 interface FuncionarioDetalhesProps {
   funcionario: Funcionario | null;
@@ -30,14 +30,15 @@ export default function FuncionarioDetalhes({
     .substring(0, 2)
     .toUpperCase();
   
-  // Format date if available
+  // Format date if available and valid
   const formattedDate = funcionario.dataCriacao 
-    ? format(
-        typeof funcionario.dataCriacao === 'string' 
+    ? (() => {
+        const date = typeof funcionario.dataCriacao === 'string' 
           ? new Date(funcionario.dataCriacao) 
-          : funcionario.dataCriacao, 
-        "dd/MM/yyyy"
-      )
+          : funcionario.dataCriacao;
+        
+        return isValid(date) ? format(date, "dd/MM/yyyy") : "N/A";
+      })()
     : "N/A";
 
   return (
