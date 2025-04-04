@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Phone, Mail, Building, Edit, Calendar, Car } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 
 interface ClienteDetalhesProps {
   cliente: Cliente | null;
@@ -22,15 +22,18 @@ export default function ClienteDetalhes({
 }: ClienteDetalhesProps) {
   if (!cliente) return null;
   
-  // Format date if available
-  const formattedDate = cliente.dataCriacao 
-    ? format(
-        typeof cliente.dataCriacao === 'string' 
-          ? new Date(cliente.dataCriacao) 
-          : cliente.dataCriacao, 
-        "dd/MM/yyyy"
-      )
-    : "N/A";
+  // Format date if available and valid
+  const formattedDate = (() => {
+    if (!cliente.dataCriacao) return "N/A";
+    
+    const dateValue = typeof cliente.dataCriacao === 'string' 
+      ? new Date(cliente.dataCriacao) 
+      : cliente.dataCriacao;
+      
+    return isValid(dateValue) 
+      ? format(dateValue, "dd/MM/yyyy")
+      : "Data inválida";
+  })();
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
