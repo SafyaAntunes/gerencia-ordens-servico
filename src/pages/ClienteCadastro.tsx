@@ -31,7 +31,7 @@ const motorSchema = z.object({
   modelo: z.string().min(2, { message: "Modelo deve ter no mínimo 2 caracteres" }),
   marca: z.string().min(2, { message: "Marca deve ter no mínimo 2 caracteres" }),
   ano: z.string().optional(),
-  numeracao: z.string().optional(),
+  numeroSerie: z.string().optional(),
   cilindrada: z.string().optional(),
   combustivel: z.enum(["gasolina", "diesel", "flex", "etanol", "gnv"]).optional(),
   observacoes: z.string().optional(),
@@ -67,7 +67,7 @@ export default function ClienteCadastro({ onLogout }: LogoutProps) {
       modelo: "",
       marca: "",
       ano: "",
-      numeracao: "",
+      numeroSerie: "",
       cilindrada: "",
       combustivel: undefined,
       observacoes: "",
@@ -147,7 +147,7 @@ export default function ClienteCadastro({ onLogout }: LogoutProps) {
       modelo: "",
       marca: "",
       ano: "",
-      numeracao: "",
+      numeroSerie: "",
       cilindrada: "",
       combustivel: undefined,
       observacoes: "",
@@ -161,7 +161,7 @@ export default function ClienteCadastro({ onLogout }: LogoutProps) {
       modelo: motor.modelo,
       marca: motor.marca,
       ano: motor.ano || "",
-      numeracao: motor.numeracao || "",
+      numeroSerie: motor.numeroSerie || "",
       cilindrada: motor.cilindrada || "",
       combustivel: motor.combustivel,
       observacoes: motor.observacoes || "",
@@ -180,7 +180,7 @@ export default function ClienteCadastro({ onLogout }: LogoutProps) {
       modelo: values.modelo,
       marca: values.marca,
       ano: values.ano,
-      numeracao: values.numeracao,
+      numeroSerie: values.numeroSerie,
       cilindrada: values.cilindrada,
       combustivel: values.combustivel,
       observacoes: values.observacoes,
@@ -376,9 +376,9 @@ export default function ClienteCadastro({ onLogout }: LogoutProps) {
                             </div>
                             
                             <div className="mt-2 space-y-1">
-                              {motor.numeracao && (
+                              {motor.numeroSerie && (
                                 <p className="text-sm">
-                                  <span className="font-medium">Numeração:</span> {motor.numeracao}
+                                  <span className="font-medium">Numeração:</span> {motor.numeroSerie}
                                 </p>
                               )}
                               
@@ -470,7 +470,7 @@ export default function ClienteCadastro({ onLogout }: LogoutProps) {
                   
                   <FormField
                     control={motorForm.control}
-                    name="numeracao"
+                    name="numeroSerie"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Numeração</FormLabel>

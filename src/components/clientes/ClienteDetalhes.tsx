@@ -125,9 +125,9 @@ export default function ClienteDetalhes({
                         {motor.ano && <span className="text-sm text-muted-foreground">Ano: {motor.ano}</span>}
                       </div>
                       
-                      {motor.numeracao && (
+                      {motor.numeroSerie && (
                         <p className="text-sm mt-1">
-                          Numeração: <span className="font-medium">{motor.numeracao}</span>
+                          Numeração: <span className="font-medium">{motor.numeroSerie}</span>
                         </p>
                       )}
                       

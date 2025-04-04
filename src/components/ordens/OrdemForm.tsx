@@ -50,7 +50,6 @@ import { v4 as uuidv4 } from "uuid";
 import { saveCliente, getMotores } from "@/services/clienteService";
 import { toast } from "sonner";
 
-// Define all subatividades for each tipo de serviço
 const SUBATIVIDADES: Record<TipoServico, string[]> = {
   bloco: [
     'RETÍFICA DE CILINDRO',
@@ -321,10 +320,12 @@ export default function OrdemForm({
       if (success) {
         toast.success("Cliente cadastrado com sucesso!");
         
-        // Fix: We should use the clientes prop from the parent component,
-        // not call getClientes() directly
-        // Let the parent component handle refreshing the clients list
-        onSubmit({ ...form.getValues(), clienteId: "" });
+        onSubmit({ 
+          ...form.getValues(), 
+          clienteId: "",
+          fotosEntrada: [],
+          fotosSaida: []
+        });
         
         setIsNovoClienteOpen(false);
       }
