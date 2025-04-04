@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import Layout from "@/components/layout/Layout";
 import OrdemForm from "@/components/ordens/OrdemForm";
-import { Prioridade, TipoServico, OrdemServico, SubAtividade } from "@/types/ordens";
+import { Prioridade, TipoServico, OrdemServico, SubAtividade, EtapaOS } from "@/types/ordens";
 import { collection, addDoc, doc, setDoc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
@@ -96,7 +96,7 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
       }));
 
       // Determinar etapas com base nos serviços selecionados
-      let etapas = ["lavagem", "inspecao_inicial"];
+      let etapas: EtapaOS[] = ["lavagem", "inspecao_inicial"];
       
       // Adiciona etapa de retífica se tiver algum serviço de retífica
       if (servicos.some(s => ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo))) {
@@ -116,13 +116,16 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
       // Sempre adiciona inspeção final
       etapas.push("inspecao_final");
 
-      // Inicializar etapasAndamento
-      const etapasAndamento: any = {};
+      // Inicializar etapasAndamento com todas as etapas como não iniciadas
+      const etapasAndamento: Record<string, any> = {};
+      
+      // Corrigindo: Inicializamos todas as etapas como não iniciadas e não concluídas
       etapas.forEach(etapa => {
         etapasAndamento[etapa] = { 
-          concluido: false, 
+          concluido: false,
           usarCronometro: true,
           pausas: []
+          // Removido iniciado e funcionarioId para que a etapa seja considerada não iniciada
         };
       });
 

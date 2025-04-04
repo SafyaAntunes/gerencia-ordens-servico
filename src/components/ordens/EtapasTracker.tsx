@@ -438,7 +438,11 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
           {etapas.map((etapa) => {
             const etapaInfo = ordem.etapasAndamento?.[etapa];
             const isConcluida = etapaInfo?.concluido || false;
-            const isIniciada = !!etapaInfo?.iniciado && !etapaInfo?.concluido;
+            // Corrigindo: Uma etapa só é considerada iniciada se tiver a propriedade iniciado
+            // E também um funcionarioId associado, e não estiver concluída
+            const isIniciada = !!etapaInfo?.iniciado && 
+                               !!etapaInfo?.funcionarioId && 
+                               !etapaInfo?.concluido;
             const usarCronometro = etapaInfo?.usarCronometro !== false;
             
             return (
