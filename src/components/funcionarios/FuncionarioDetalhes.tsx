@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Phone, Mail, Wrench, Shield, Edit, Calendar } from "lucide-react";
+import { Phone, Mail, Wrench, Shield, Edit, Calendar, User } from "lucide-react";
 import { format, isValid } from "date-fns";
 
 interface FuncionarioDetalhesProps {
@@ -105,6 +105,13 @@ export default function FuncionarioDetalhes({
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <span>Cadastrado em {formattedDate}</span>
               </div>
+
+              {funcionario.nomeUsuario && (
+                <div className="flex items-center gap-3">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span>Nome de usuário: {funcionario.nomeUsuario}</span>
+                </div>
+              )}
             </div>
           </div>
           

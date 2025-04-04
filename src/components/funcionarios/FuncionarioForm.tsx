@@ -44,7 +44,8 @@ interface FuncionarioFormProps {
 
 export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSubmitting, isMeuPerfil }: FuncionarioFormProps) {
   const isEditing = !!initialData?.id;
-  const [showCredentials, setShowCredentials] = useState(!isEditing || false);
+  // Sempre mostrar credenciais quando for o perfil do próprio usuário
+  const [showCredentials, setShowCredentials] = useState(!isEditing || isMeuPerfil || false);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -202,7 +203,7 @@ export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSub
               <FormLabel className="text-base m-0">Credenciais de Acesso</FormLabel>
             </div>
             
-            {isEditing && !showCredentials && (
+            {isEditing && !showCredentials && !isMeuPerfil && (
               <Button 
                 type="button" 
                 variant="outline" 
@@ -234,7 +235,7 @@ export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSub
             )}
           />
           
-          {(!isEditing || showCredentials) && (
+          {(!isEditing || showCredentials || isMeuPerfil) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}

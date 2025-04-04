@@ -10,6 +10,7 @@ import { LogoutProps } from "@/types/props";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { OrdemServico } from "@/types/ordens";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface AgendaProps extends LogoutProps {}
 
@@ -173,6 +174,57 @@ const Agenda = ({ onLogout }: AgendaProps) => {
   };
   
   const isEntregue = (event: EventoOS) => event.status === "entregue";
+
+  // Componente de renderização personalizado para os dias com eventos
+  const renderDayContents = (day: Date) => {
+    const dayEvents = getEventsByDate(day);
+    
+    return (
+      <div className="relative flex flex-col items-center justify-center h-full w-full">
+        <span className="absolute top-0.5 left-0.5">{day.getDate()}</span>
+        
+        {dayEvents.length > 0 && (
+          <div className="absolute bottom-0 left-0 right-0 flex justify-center">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex space-x-0.5 mt-1">
+                    {dayEvents.map((event, index) => (
+                      <div
+                        key={event.id}
+                        className={`h-1.5 w-1.5 rounded-full ${
+                          event.type === "entrega"
+                            ? "bg-green-500"
+                            : event.type === "recebimento"
+                            ? "bg-blue-500"
+                            : "bg-yellow-500"
+                        }`}
+                      />
+                    )).slice(0, 3)}
+                    {dayEvents.length > 3 && (
+                      <span className="text-[0.6rem] text-muted-foreground">+{dayEvents.length - 3}</span>
+                    )}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" align="center" className="p-1">
+                  <div className="text-xs p-1">
+                    {dayEvents.map(event => (
+                      <div 
+                        key={event.id} 
+                        className={`py-0.5 px-1 mb-1 rounded ${getEventColor(event.type, event.status)}`}
+                      >
+                        {event.title}
+                      </div>
+                    ))}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
+      </div>
+    );
+  };
   
   if (isLoading) {
     return (
@@ -243,11 +295,18 @@ const Agenda = ({ onLogout }: AgendaProps) => {
                       selected={date}
                       onSelect={setDate}
                       className="border rounded-md"
+                      components={{
+                        Day: (props) => {
+                          const { date: dayDate, ...rest } = props;
+                          if (!dayDate) return null;
+                          return <div {...rest}>{renderDayContents(dayDate)}</div>;
+                        }
+                      }}
                       modifiers={{
                         event: (date) => getEventsByDate(date).length > 0,
                       }}
                       modifiersClassNames={{
-                        event: "bg-primary/10 font-medium text-primary",
+                        event: "",
                       }}
                       // Corrigindo o problema de meses não exibidos
                       fromMonth={new Date(2023, 0)}
