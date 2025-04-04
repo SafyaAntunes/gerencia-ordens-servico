@@ -6,6 +6,7 @@ import { formatTime } from "@/utils/timerUtils";
 import { Progress } from "../ui/progress";
 import { Badge } from "../ui/badge";
 import ServicoTracker from "./ServicoTracker";
+import OrdemCronometro from "./OrdemCronometro";
 
 interface EtapaCardProps {
   ordemId: string;
@@ -60,15 +61,20 @@ export default function EtapaCard({
     setProgresso(percentualProgresso);
   }, [etapaServicos]);
 
-  // Se não houver serviços específicos para esta etapa, exiba uma mensagem
-  if (etapaServicos.length === 0 && ['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa)) {
+  // Se for uma das etapas sem serviços específicos, exibir apenas o cronômetro
+  if (['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa)) {
     return (
       <Card className="p-6 mb-4">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-semibold">{etapaNome}</h3>
         </div>
-        <div className="text-center py-6">
-          <p className="text-muted-foreground">Esta etapa não possui serviços específicos.</p>
+        <div className="p-4 border rounded-md">
+          <OrdemCronometro
+            ordemId={ordemId}
+            funcionarioId={funcionarioId}
+            funcionarioNome={funcionarioNome}
+            etapa={etapa}
+          />
         </div>
       </Card>
     );
