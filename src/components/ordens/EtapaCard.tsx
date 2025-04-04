@@ -17,6 +17,7 @@ interface EtapaCardProps {
   servicos?: Servico[];
   onSubatividadeToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
   onServicoStatusChange?: (servicoTipo: TipoServico, concluido: boolean) => void;
+  onEtapaStatusChange?: (etapa: EtapaOS, concluida: boolean) => void;
 }
 
 export default function EtapaCard({
@@ -27,7 +28,8 @@ export default function EtapaCard({
   funcionarioNome,
   servicos = [],
   onSubatividadeToggle,
-  onServicoStatusChange
+  onServicoStatusChange,
+  onEtapaStatusChange
 }: EtapaCardProps) {
   const [progresso, setProgresso] = useState(0);
   
@@ -61,24 +63,14 @@ export default function EtapaCard({
     setProgresso(percentualProgresso);
   }, [etapaServicos]);
 
-  // Se for uma das etapas sem serviços específicos, exibir apenas o cronômetro
-  if (['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa)) {
-    return (
-      <Card className="p-6 mb-4">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold">{etapaNome}</h3>
-        </div>
-        <div className="p-4 border rounded-md">
-          <OrdemCronometro
-            ordemId={ordemId}
-            funcionarioId={funcionarioId}
-            funcionarioNome={funcionarioNome}
-            etapa={etapa}
-          />
-        </div>
-      </Card>
-    );
-  }
+  // Verifica se a etapa deve ter cronômetro próprio (etapas sem serviços específicos)
+  const etapaComCronometro = ['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa);
+  
+  const handleEtapaConcluida = (tempoTotal: number) => {
+    if (onEtapaStatusChange) {
+      onEtapaStatusChange(etapa, true);
+    }
+  };
 
   return (
     <Card className="p-6 mb-4">
@@ -97,6 +89,19 @@ export default function EtapaCard({
       {etapaServicos.length > 0 && (
         <div className="mb-4">
           <Progress value={progresso} className="h-2" />
+        </div>
+      )}
+      
+      {/* Para etapas com cronômetro próprio, exibir o cronômetro */}
+      {etapaComCronometro && (
+        <div className="p-4 border rounded-md">
+          <OrdemCronometro
+            ordemId={ordemId}
+            funcionarioId={funcionarioId}
+            funcionarioNome={funcionarioNome}
+            etapa={etapa}
+            onFinish={handleEtapaConcluida}
+          />
         </div>
       )}
       

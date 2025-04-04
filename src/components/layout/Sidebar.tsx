@@ -7,9 +7,11 @@ import {
   Users, 
   Settings, 
   BarChart, 
+  TrendingUp,
   Calendar,
   ChevronRight,
-  UserSquare
+  UserSquare,
+  Wrench
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -147,7 +149,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             )}
             
             {showRelatoriosMenu && (
-              <NavItem icon={BarChart} label="Relatórios" to="/relatorios" />
+              <>
+                <NavItem icon={Wrench} label="Relatórios de Produção" to="/relatorios/producao" />
+                <NavItem icon={TrendingUp} label="Relatórios Financeiros" to="/relatorios/financeiro" />
+              </>
             )}
             
             <Separator className="my-4 bg-sidebar-border" />
@@ -206,7 +211,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             )}
             
             {showRelatoriosMenu && (
-              <NavItem icon={BarChart} label="Relatórios" to="/relatorios" isCollapsed={isCollapsed} />
+              <>
+                <NavItem icon={Wrench} label="Relatórios de Produção" to="/relatorios/producao" isCollapsed={isCollapsed} />
+                <NavItem icon={TrendingUp} label="Relatórios Financeiros" to="/relatorios/financeiro" isCollapsed={isCollapsed} />
+              </>
             )}
             
             <Separator className="my-4 bg-sidebar-border" />

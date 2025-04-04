@@ -13,7 +13,8 @@ import OrdemDetalhes from "./pages/OrdemDetalhes";
 import Clientes from "./pages/Clientes";
 import ClienteCadastro from "./pages/ClienteCadastro";
 import Agenda from "./pages/Agenda";
-import Relatorios from "./pages/Relatorios";
+import RelatoriosProducao from "./pages/RelatoriosProducao";
+import RelatoriosFinanceiro from "./pages/RelatoriosFinanceiro";
 import Configuracoes from "./pages/Configuracoes";
 import Login from "./pages/Login";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
@@ -134,10 +135,21 @@ const AppRoutes = () => {
         </PrivateRoute>
       } />
       
-      <Route path="/relatorios" element={
+      <Route path="/relatorios/producao" element={
         <PrivateRoute requiredPermission="gerente">
-          <Relatorios onLogout={handleLogout} />
+          <RelatoriosProducao onLogout={handleLogout} />
         </PrivateRoute>
+      } />
+      
+      <Route path="/relatorios/financeiro" element={
+        <PrivateRoute requiredPermission="gerente">
+          <RelatoriosFinanceiro onLogout={handleLogout} />
+        </PrivateRoute>
+      } />
+      
+      {/* Redirecionar /relatorios para /relatorios/producao */}
+      <Route path="/relatorios" element={
+        <Navigate to="/relatorios/producao" replace />
       } />
       
       <Route path="/configuracoes" element={

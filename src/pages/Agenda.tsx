@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -7,39 +7,74 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { LogoutProps } from "@/types/props";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { OrdemServico } from "@/types/ordens";
 
 interface AgendaProps extends LogoutProps {}
+
+interface EventoOS {
+  id: string;
+  title: string;
+  date: Date;
+  type: "entrega" | "recebimento" | "manutencao" | "reuniao";
+  status: string;
+  ordemId: string;
+}
 
 const Agenda = ({ onLogout }: AgendaProps) => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [view, setView] = useState<"day" | "week" | "month">("month");
+  const [eventos, setEventos] = useState<EventoOS[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
-  const events = [
-    {
-      id: "1",
-      title: "Entrega - Motor Ford Ka",
-      date: new Date(2023, 10, 15, 14, 30),
-      type: "entrega",
-    },
-    {
-      id: "2",
-      title: "Recebimento - Cabeçote Fiat Uno",
-      date: new Date(2023, 10, 16, 10, 0),
-      type: "recebimento",
-    },
-    {
-      id: "3",
-      title: "Manutenção - Equipamento Retífica",
-      date: new Date(2023, 10, 17, 9, 0),
-      type: "manutencao",
-    },
-    {
-      id: "4",
-      title: "Reunião - Equipe Técnica",
-      date: new Date(2023, 10, 18, 15, 0),
-      type: "reuniao",
-    },
-  ];
+  useEffect(() => {
+    const fetchOrdens = async () => {
+      setIsLoading(true);
+      try {
+        const querySnapshot = await getDocs(collection(db, "ordens"));
+        const eventosTemp: EventoOS[] = [];
+        
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          const ordem = {
+            ...data,
+            id: doc.id,
+            dataAbertura: data.dataAbertura?.toDate() || new Date(),
+            dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
+          } as OrdemServico;
+          
+          // Adicionar evento de entrega
+          eventosTemp.push({
+            id: `entrega-${ordem.id}`,
+            title: `Entrega - ${ordem.nome}`,
+            date: new Date(ordem.dataPrevistaEntrega),
+            type: "entrega",
+            status: ordem.status,
+            ordemId: ordem.id
+          });
+          
+          // Adicionar evento de recebimento
+          eventosTemp.push({
+            id: `recebimento-${ordem.id}`,
+            title: `Recebimento - ${ordem.nome}`,
+            date: new Date(ordem.dataAbertura),
+            type: "recebimento",
+            status: ordem.status,
+            ordemId: ordem.id
+          });
+        });
+        
+        setEventos(eventosTemp);
+      } catch (error) {
+        console.error("Erro ao buscar ordens:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchOrdens();
+  }, []);
   
   const handlePrevious = () => {
     if (date) {
@@ -110,14 +145,19 @@ const Agenda = ({ onLogout }: AgendaProps) => {
   };
   
   const getEventsByDate = (day: Date) => {
-    return events.filter(event => 
+    return eventos.filter(event => 
       event.date.getDate() === day.getDate() &&
       event.date.getMonth() === day.getMonth() &&
       event.date.getFullYear() === day.getFullYear()
     );
   };
   
-  const getEventColor = (type: string) => {
+  const getEventColor = (type: string, status: string) => {
+    if (status === "entregue") {
+      // Eventos de ordens entregues devem ter uma cor mais clara/desativada
+      return "bg-gray-100 text-gray-500 border-gray-300";
+    }
+    
     switch (type) {
       case "entrega":
         return "bg-green-100 text-green-800 border-green-300";
@@ -131,6 +171,18 @@ const Agenda = ({ onLogout }: AgendaProps) => {
         return "bg-gray-100 text-gray-800 border-gray-300";
     }
   };
+  
+  const isEntregue = (event: EventoOS) => event.status === "entregue";
+  
+  if (isLoading) {
+    return (
+      <Layout onLogout={onLogout}>
+        <div className="flex items-center justify-center h-full">
+          <p>Carregando dados da agenda...</p>
+        </div>
+      </Layout>
+    );
+  }
   
   return (
     <Layout onLogout={onLogout}>
@@ -200,16 +252,21 @@ const Agenda = ({ onLogout }: AgendaProps) => {
                           {getEventsByDate(date).map((event) => (
                             <div 
                               key={event.id}
-                              className={`p-3 rounded-md border ${getEventColor(event.type)}`}
+                              className={`p-3 rounded-md border ${getEventColor(event.type, event.status)}`}
                             >
                               <div className="flex justify-between items-start">
                                 <div>
-                                  <p className="font-medium">{event.title}</p>
+                                  <p className={`font-medium ${isEntregue(event) ? 'line-through' : ''}`}>
+                                    {event.title}
+                                  </p>
                                   <p className="text-sm">
                                     {event.date.toLocaleTimeString('pt-BR', { 
                                       hour: '2-digit', 
                                       minute: '2-digit' 
                                     })}
+                                    {isEntregue(event) && (
+                                      <span className="ml-2 text-green-600">Concluído</span>
+                                    )}
                                   </p>
                                 </div>
                                 <Button variant="ghost" size="sm">Detalhes</Button>
@@ -250,12 +307,14 @@ const Agenda = ({ onLogout }: AgendaProps) => {
                                 {dayEvents.map((event) => (
                                   <div 
                                     key={event.id}
-                                    className={`text-xs p-1 rounded truncate ${getEventColor(event.type)}`}
+                                    className={`text-xs p-1 rounded truncate ${getEventColor(event.type, event.status)}`}
                                   >
-                                    {event.date.toLocaleTimeString('pt-BR', { 
-                                      hour: '2-digit', 
-                                      minute: '2-digit' 
-                                    })} - {event.title}
+                                    <span className={isEntregue(event) ? 'line-through' : ''}>
+                                      {event.date.toLocaleTimeString('pt-BR', { 
+                                        hour: '2-digit', 
+                                        minute: '2-digit' 
+                                      })} - {event.title}
+                                    </span>
                                   </div>
                                 ))}
                               </div>
