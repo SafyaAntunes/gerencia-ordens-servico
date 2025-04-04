@@ -39,9 +39,10 @@ interface FuncionarioFormProps {
   onSubmit: (data: FormValues) => void;
   onCancel: () => void;
   isSubmitting?: boolean;
+  isMeuPerfil?: boolean;
 }
 
-export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSubmitting }: FuncionarioFormProps) {
+export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSubmitting, isMeuPerfil }: FuncionarioFormProps) {
   const isEditing = !!initialData?.id;
   const [showCredentials, setShowCredentials] = useState(!isEditing || false);
   
