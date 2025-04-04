@@ -1,17 +1,11 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
-import OrdemCronometro from "./OrdemCronometro";
 import { formatTime } from "@/utils/timerUtils";
-import { Label } from "../ui/label";
-import { Switch } from "../ui/switch";
-import ServicoTracker from "./ServicoTracker";
+import { Progress } from "../ui/progress";
 import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
-import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
+import ServicoTracker from "./ServicoTracker";
 
 interface EtapaCardProps {
   ordemId: string;
@@ -19,16 +13,7 @@ interface EtapaCardProps {
   etapaNome: string;
   funcionarioId: string;
   funcionarioNome?: string;
-  isConcluida: boolean;
-  isIniciada: boolean;
-  usarCronometro?: boolean;
   servicos?: Servico[];
-  onStart: () => void;
-  onPause?: (motivo?: string) => void;
-  onResume?: () => void;
-  onFinish: (tempoTotal: number) => void;
-  onToggleCronometro?: (usarCronometro: boolean) => void;
-  onCompleteWithoutTimer?: () => void;
   onSubatividadeToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
   onServicoStatusChange?: (servicoTipo: TipoServico, concluido: boolean) => void;
 }
@@ -39,20 +24,11 @@ export default function EtapaCard({
   etapaNome,
   funcionarioId,
   funcionarioNome,
-  isConcluida,
-  isIniciada,
-  usarCronometro = true,
   servicos = [],
-  onStart,
-  onPause,
-  onResume,
-  onFinish,
-  onToggleCronometro,
-  onCompleteWithoutTimer,
   onSubatividadeToggle,
   onServicoStatusChange
 }: EtapaCardProps) {
-  const { funcionario } = useAuth();
+  const [progresso, setProgresso] = useState(0);
   
   // Filter services based on etapa type
   const etapaServicos = (() => {
@@ -65,43 +41,62 @@ export default function EtapaCard({
         return servicos.filter(servico => servico.tipo === 'montagem');
       case 'dinamometro':
         return servicos.filter(servico => servico.tipo === 'dinamometro');
+      case 'lavagem':
+      case 'inspecao_inicial':
+      case 'inspecao_final':
+        // Estas etapas não têm serviços específicos associados
+        return [];
       default:
         return [];
     }
   })();
-  
-  const handleCompleteWithoutTimer = () => {
-    if (!funcionario?.id) {
-      toast.error("É necessário estar logado para finalizar uma etapa");
-      return;
-    }
+
+  // Calcular o progresso da etapa baseado nos serviços concluídos
+  useEffect(() => {
+    if (etapaServicos.length === 0) return;
     
-    if (onCompleteWithoutTimer) {
-      onCompleteWithoutTimer();
-    }
-  };
+    const servicosConcluidos = etapaServicos.filter(servico => servico.concluido).length;
+    const percentualProgresso = Math.round((servicosConcluidos / etapaServicos.length) * 100);
+    setProgresso(percentualProgresso);
+  }, [etapaServicos]);
+
+  // Se não houver serviços específicos para esta etapa, exiba uma mensagem
+  if (etapaServicos.length === 0 && ['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa)) {
+    return (
+      <Card className="p-6 mb-4">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-semibold">{etapaNome}</h3>
+        </div>
+        <div className="text-center py-6">
+          <p className="text-muted-foreground">Esta etapa não possui serviços específicos.</p>
+        </div>
+      </Card>
+    );
+  }
 
   return (
-    <Card className={`p-6 ${isConcluida ? "border-green-500/50" : ""} mb-4`}>
+    <Card className="p-6 mb-4">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xl font-semibold">{etapaNome}</h3>
-        
-        {/* Removendo o switch da interface, mas mantendo a funcionalidade na implementação */}
-        <div className="hidden">
-          {!isConcluida && onToggleCronometro && (
-            <Switch
-              id={`usar-cronometro-${etapa}`}
-              checked={usarCronometro}
-              onCheckedChange={(checked) => onToggleCronometro(checked)}
-            />
-          )}
-        </div>
+        {etapaServicos.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="ml-2">
+              {progresso}% Concluído
+            </Badge>
+          </div>
+        )}
       </div>
       
-      {/* Show service trackers based on etapa type */}
+      {/* Progress bar para a etapa baseado nos serviços */}
       {etapaServicos.length > 0 && (
-        <div className="mb-6 space-y-4">
-          <h4 className="text-md font-medium">Serviços de {etapaNome}</h4>
+        <div className="mb-4">
+          <Progress value={progresso} className="h-2" />
+        </div>
+      )}
+      
+      {/* Show service trackers */}
+      {etapaServicos.length > 0 && (
+        <div className="space-y-4">
           {etapaServicos.map((servico, i) => (
             <ServicoTracker
               key={`${servico.tipo}-${i}`}
@@ -121,48 +116,6 @@ export default function EtapaCard({
               }
             />
           ))}
-        </div>
-      )}
-      
-      {isConcluida ? (
-        <OrdemCronometro
-          ordemId={ordemId}
-          funcionarioId={funcionarioId}
-          funcionarioNome={funcionarioNome}
-          etapa={etapa}
-          isEtapaConcluida={true}
-        />
-      ) : isIniciada ? (
-        <OrdemCronometro
-          ordemId={ordemId}
-          funcionarioId={funcionarioId}
-          funcionarioNome={funcionarioNome}
-          etapa={etapa}
-          onPause={onPause}
-          onResume={onResume}
-          onFinish={onFinish}
-        />
-      ) : !usarCronometro ? (
-        <div className="flex items-center justify-center py-4">
-          <Button
-            onClick={handleCompleteWithoutTimer}
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white"
-          >
-            Marcar como concluído
-          </Button>
-        </div>
-      ) : (
-        <div className="text-center py-4">
-          <OrdemCronometro
-            ordemId={ordemId}
-            funcionarioId={funcionarioId}
-            funcionarioNome={funcionarioNome || ""}
-            etapa={etapa}
-            onStart={onStart}
-            onPause={onPause}
-            onResume={onResume}
-            onFinish={onFinish}
-          />
         </div>
       )}
     </Card>
