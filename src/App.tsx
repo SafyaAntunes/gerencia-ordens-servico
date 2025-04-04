@@ -118,7 +118,7 @@ const AppRoutes = () => {
       
       <Route path="/funcionarios/editar/:id" element={
         <PrivateRoute requiredPermission="visualizacao">
-          <Funcionarios onLogout={handleLogout} />
+          <Funcionarios onLogout={handleLogout} meuPerfil={true} />
         </PrivateRoute>
       } />
       

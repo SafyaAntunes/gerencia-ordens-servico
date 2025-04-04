@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { PlusCircle, Filter, Search, Users, CheckCircle2, FilterX } from "lucide-react";
 import Layout from "@/components/layout/Layout";
@@ -34,14 +35,16 @@ import FuncionarioCard from "@/components/funcionarios/FuncionarioCard";
 import FuncionarioForm from "@/components/funcionarios/FuncionarioForm";
 import FuncionarioDetalhes from "@/components/funcionarios/FuncionarioDetalhes";
 import { toast } from "sonner";
-import { getFuncionarios, saveFuncionario, deleteFuncionario } from "@/services/funcionarioService";
+import { getFuncionarios, saveFuncionario, deleteFuncionario, getFuncionario } from "@/services/funcionarioService";
 import { useAuth } from "@/hooks/useAuth";
+import { useParams } from "react-router-dom";
 
 interface FuncionariosProps {
   onLogout?: () => void;
+  meuPerfil?: boolean;
 }
 
-export default function Funcionarios({ onLogout }: FuncionariosProps) {
+export default function Funcionarios({ onLogout, meuPerfil = false }: FuncionariosProps) {
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -55,11 +58,50 @@ export default function Funcionarios({ onLogout }: FuncionariosProps) {
   const [funcionarioToDelete, setFuncionarioToDelete] = useState<string | null>(null);
   
   const { funcionario: currentUser } = useAuth();
-  const canManageFuncionarios = true;
+  const params = useParams();
+  const funcionarioId = params.id;
+  const isMeuPerfil = meuPerfil || (funcionarioId && currentUser && funcionarioId === currentUser.id);
+  const canManageFuncionarios = !isMeuPerfil && currentUser?.nivelPermissao !== 'tecnico';
   
   useEffect(() => {
-    fetchFuncionarios();
-  }, []);
+    if (isMeuPerfil && currentUser) {
+      // Se estiver visualizando o próprio perfil, carrega apenas o funcionário atual
+      loadSingleFuncionario(currentUser.id);
+    } else {
+      // Caso contrário, carrega todos os funcionários (para administradores/gerentes)
+      fetchFuncionarios();
+    }
+  }, [currentUser, isMeuPerfil, funcionarioId]);
+  
+  const loadSingleFuncionario = async (id: string) => {
+    setLoading(true);
+    try {
+      // Se já temos o funcionário atual no state do useAuth, usamos ele
+      if (currentUser && currentUser.id === id) {
+        setFuncionarios([currentUser]);
+        setLoading(false);
+        return;
+      }
+      
+      // Caso contrário, buscamos do serviço
+      const funcionario = await getFuncionario(id);
+      if (funcionario) {
+        setFuncionarios([funcionario]);
+        // Abre automaticamente o formulário de edição para o próprio perfil
+        if (isMeuPerfil) {
+          setSelectedFuncionario(funcionario);
+          setIsDialogOpen(true);
+        }
+      } else {
+        toast.error('Funcionário não encontrado');
+      }
+    } catch (error) {
+      console.error('Error fetching funcionario:', error);
+      toast.error('Erro ao carregar funcionário');
+    } finally {
+      setLoading(false);
+    }
+  };
   
   const fetchFuncionarios = async () => {
     setLoading(true);
@@ -75,9 +117,15 @@ export default function Funcionarios({ onLogout }: FuncionariosProps) {
   };
   
   const filteredFuncionarios = funcionarios.filter((funcionario) => {
+    // Se estiver no modo "meu perfil", retorna apenas o funcionário atual
+    if (isMeuPerfil && currentUser) {
+      return funcionario.id === currentUser.id;
+    }
+    
     const matchesSearch = searchTerm === "" ||
       funcionario.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      funcionario.email.toLowerCase().includes(searchTerm.toLowerCase());
+      funcionario.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      funcionario.nomeUsuario?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesEspecialidade = especialidadeFilter === "todas" || 
       funcionario.especialidades.includes(especialidadeFilter as TipoServico);
@@ -132,7 +180,11 @@ export default function Funcionarios({ onLogout }: FuncionariosProps) {
             : "Funcionário cadastrado com sucesso!"
         );
         setIsDialogOpen(false);
-        fetchFuncionarios();
+        if (isMeuPerfil && currentUser) {
+          loadSingleFuncionario(currentUser.id);
+        } else {
+          fetchFuncionarios();
+        }
       }
     } catch (error) {
       console.error('Error saving funcionario:', error);
@@ -165,82 +217,124 @@ export default function Funcionarios({ onLogout }: FuncionariosProps) {
     setEspecialidadeFilter("todas");
     setStatusFilter("todos");
   };
+
+  // Determina o título da página com base no modo
+  const pageTitle = isMeuPerfil ? "Meu Perfil" : "Funcionários";
+  const pageDescription = isMeuPerfil 
+    ? "Visualize e edite suas informações" 
+    : "Gerencie os funcionários da sua retífica";
   
   return (
     <Layout onLogout={onLogout}>
       <div className="animate-fade-in space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Funcionários</h1>
+            <h1 className="text-3xl font-bold tracking-tight">{pageTitle}</h1>
             <p className="text-muted-foreground">
-              Gerencie os funcionários da sua retífica
+              {pageDescription}
             </p>
           </div>
           
-          <Button onClick={handleOpenAddDialog} className="bg-blue-600 hover:bg-blue-700">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Novo Funcionário
-          </Button>
+          {canManageFuncionarios && (
+            <Button onClick={handleOpenAddDialog} className="bg-blue-600 hover:bg-blue-700">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Novo Funcionário
+            </Button>
+          )}
         </div>
         
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nome ou email..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          
-          <div className="flex gap-3 flex-wrap">
-            <Select
-              value={especialidadeFilter}
-              onValueChange={(value) => setEspecialidadeFilter(value as TipoServico | "todas")}
-            >
-              <SelectTrigger className="w-[160px] truncate">
-                <Filter className="h-4 w-4 mr-2" />
-                {especialidadeFilter === "todas" 
-                  ? "Especialidade" 
-                  : tipoServicoLabels[especialidadeFilter as TipoServico]}
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todas">Todas as Especialidades</SelectItem>
-                {Object.entries(tipoServicoLabels).map(([id, label]) => (
-                  <SelectItem key={id} value={id}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {!isMeuPerfil && (
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome ou email..."
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
             
-            <Select
-              value={statusFilter}
-              onValueChange={(value) => setStatusFilter(value as "ativos" | "inativos" | "todos")}
-            >
-              <SelectTrigger className="w-[120px]">
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                Status
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="ativos">Ativos</SelectItem>
-                <SelectItem value="inativos">Inativos</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            {(searchTerm || especialidadeFilter !== "todas" || statusFilter !== "todos") && (
-              <Button variant="outline" size="icon" onClick={resetFilters}>
-                <FilterX className="h-4 w-4" />
-              </Button>
-            )}
+            <div className="flex gap-3 flex-wrap">
+              <Select
+                value={especialidadeFilter}
+                onValueChange={(value) => setEspecialidadeFilter(value as TipoServico | "todas")}
+              >
+                <SelectTrigger className="w-[160px] truncate">
+                  <Filter className="h-4 w-4 mr-2" />
+                  {especialidadeFilter === "todas" 
+                    ? "Especialidade" 
+                    : tipoServicoLabels[especialidadeFilter as TipoServico]}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas as Especialidades</SelectItem>
+                  {Object.entries(tipoServicoLabels).map(([id, label]) => (
+                    <SelectItem key={id} value={id}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => setStatusFilter(value as "ativos" | "inativos" | "todos")}
+              >
+                <SelectTrigger className="w-[120px]">
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Status
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="ativos">Ativos</SelectItem>
+                  <SelectItem value="inativos">Inativos</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {(searchTerm || especialidadeFilter !== "todas" || statusFilter !== "todos") && (
+                <Button variant="outline" size="icon" onClick={resetFilters}>
+                  <FilterX className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
         
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
+        ) : isMeuPerfil ? (
+          // Modo "Meu Perfil" - exibe apenas o card do funcionário atual
+          <div className="mt-6">
+            {filteredFuncionarios.length > 0 ? (
+              <div className="max-w-md mx-auto">
+                <FuncionarioCard
+                  key={filteredFuncionarios[0].id}
+                  funcionario={filteredFuncionarios[0]}
+                  onView={handleOpenDetailsDialog}
+                  onEdit={handleOpenEditDialog}
+                  onDelete={handleOpenDeleteDialog}
+                  hideDeleteButton={true}
+                />
+                
+                <div className="mt-4 flex justify-center">
+                  <Button 
+                    className="w-full max-w-xs"
+                    onClick={() => handleOpenEditDialog(filteredFuncionarios[0])}
+                  >
+                    Editar Meu Perfil
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <p className="text-sm text-muted-foreground mt-1">
+                  Perfil não encontrado.
+                </p>
+              </div>
+            )}
+          </div>
         ) : (
+          // Modo "Funcionários" - exibe a lista de todos os funcionários
           <Tabs defaultValue="todos" className="mt-4">
             <TabsList className="mb-6">
               <TabsTrigger value="todos" className="relative">
@@ -280,9 +374,17 @@ export default function Funcionarios({ onLogout }: FuncionariosProps) {
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{selectedFuncionario ? "Editar" : "Novo"} Funcionário</DialogTitle>
+              <DialogTitle>
+                {isMeuPerfil 
+                  ? "Editar Meu Perfil" 
+                  : selectedFuncionario 
+                    ? "Editar Funcionário" 
+                    : "Novo Funcionário"}
+              </DialogTitle>
               <DialogDescription>
-                Preencha todos os campos para {selectedFuncionario ? "atualizar" : "cadastrar"} um funcionário.
+                {isMeuPerfil 
+                  ? "Atualize suas informações de perfil." 
+                  : `Preencha todos os campos para ${selectedFuncionario ? "atualizar" : "cadastrar"} um funcionário.`}
               </DialogDescription>
             </DialogHeader>
             
@@ -291,6 +393,7 @@ export default function Funcionarios({ onLogout }: FuncionariosProps) {
               onSubmit={handleSubmit}
               onCancel={() => setIsDialogOpen(false)}
               isSubmitting={isSubmitting}
+              isMeuPerfil={isMeuPerfil}
             />
           </DialogContent>
         </Dialog>

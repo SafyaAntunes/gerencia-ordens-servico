@@ -1,4 +1,5 @@
-import { Phone, Mail, Wrench, Shield, Trash, Edit, Eye } from "lucide-react";
+
+import { Phone, Mail, Wrench, Shield, Trash, Edit, Eye, User } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Funcionario, permissoesLabels, tipoServicoLabels } from "@/types/funcionarios";
@@ -10,9 +11,16 @@ interface FuncionarioCardProps {
   onView: (funcionario: Funcionario) => void;
   onEdit: (funcionario: Funcionario) => void;
   onDelete: (id: string) => void;
+  hideDeleteButton?: boolean;
 }
 
-export default function FuncionarioCard({ funcionario, onView, onEdit, onDelete }: FuncionarioCardProps) {
+export default function FuncionarioCard({ 
+  funcionario, 
+  onView, 
+  onEdit, 
+  onDelete,
+  hideDeleteButton = false
+}: FuncionarioCardProps) {
   // Extract initials for the avatar
   const iniciais = funcionario.nome
     .split(" ")
@@ -34,6 +42,12 @@ export default function FuncionarioCard({ funcionario, onView, onEdit, onDelete 
               <Shield className="h-3.5 w-3.5" />
               {permissoesLabels[funcionario.nivelPermissao || 'visualizacao']}
             </div>
+            {funcionario.nomeUsuario && (
+              <div className="flex items-center gap-1 text-sm text-muted-foreground mt-0.5">
+                <User className="h-3.5 w-3.5" />
+                {funcionario.nomeUsuario}
+              </div>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -57,15 +71,19 @@ export default function FuncionarioCard({ funcionario, onView, onEdit, onDelete 
             </div>
             
             <div className="flex flex-wrap gap-1.5">
-              {funcionario.especialidades.map((especialidade) => (
-                <Badge 
-                  key={especialidade}
-                  variant="secondary"
-                  className="text-xs"
-                >
-                  {tipoServicoLabels[especialidade as keyof typeof tipoServicoLabels]}
-                </Badge>
-              ))}
+              {funcionario.especialidades.length > 0 ? (
+                funcionario.especialidades.map((especialidade) => (
+                  <Badge 
+                    key={especialidade}
+                    variant="secondary"
+                    className="text-xs"
+                  >
+                    {tipoServicoLabels[especialidade as keyof typeof tipoServicoLabels]}
+                  </Badge>
+                ))
+              ) : (
+                <span className="text-xs text-muted-foreground">Nenhuma especialidade</span>
+              )}
             </div>
           </div>
         </div>
@@ -87,9 +105,11 @@ export default function FuncionarioCard({ funcionario, onView, onEdit, onDelete 
             <Edit className="h-4 w-4" />
           </Button>
           
-          <Button variant="ghost" size="icon" onClick={() => onDelete(funcionario.id)}>
-            <Trash className="h-4 w-4 text-destructive" />
-          </Button>
+          {!hideDeleteButton && (
+            <Button variant="ghost" size="icon" onClick={() => onDelete(funcionario.id)}>
+              <Trash className="h-4 w-4 text-destructive" />
+            </Button>
+          )}
           
           <Button variant="outline" size="sm" onClick={() => onView(funcionario)}>
             <Eye className="h-4 w-4 mr-1" />
