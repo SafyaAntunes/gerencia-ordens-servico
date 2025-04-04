@@ -16,7 +16,7 @@ export interface Motor {
   modelo: string;
   marca: string;
   ano?: string;
-  numeracao?: string;
+  numeroSerie?: string;
   cilindrada?: string;
   combustivel?: 'gasolina' | 'diesel' | 'flex' | 'etanol' | 'gnv';
   observacoes?: string;

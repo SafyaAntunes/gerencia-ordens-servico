@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -322,15 +321,10 @@ export default function OrdemForm({
       if (success) {
         toast.success("Cliente cadastrado com sucesso!");
         
-        // Recarregar a lista de clientes
-        const clientesAtualizados = await getClientes();
-        // Encontrar o ID do cliente recém-criado
-        const clienteCriado = clientesAtualizados.find(c => c.nome === novoCliente.nome && c.telefone === novoCliente.telefone);
-        
-        if (clienteCriado) {
-          setSelectedClienteId(clienteCriado.id);
-          form.setValue("clienteId", clienteCriado.id);
-        }
+        // Fix: We should use the clientes prop from the parent component,
+        // not call getClientes() directly
+        // Let the parent component handle refreshing the clients list
+        onSubmit({ ...form.getValues(), clienteId: "" });
         
         setIsNovoClienteOpen(false);
       }
@@ -492,7 +486,7 @@ export default function OrdemForm({
                             key={motor.id} 
                             value={motor.id}
                           >
-                            {motor.marca} {motor.modelo} {motor.numeracao ? `- ${motor.numeracao}` : ''} {motor.ano ? `(${motor.ano})` : ''}
+                            {motor.marca} {motor.modelo} {motor.numeroSerie ? `- ${motor.numeroSerie}` : ''} {motor.ano ? `(${motor.ano})` : ''}
                           </SelectItem>
                         ))
                       )}
