@@ -54,7 +54,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
   const statusLabels: Record<StatusOS, string> = {
     orcamento: "Orçamento",
     aguardando_aprovacao: "Aguardando Aprovação",
-    retifica: "Retífica",
+    fabricacao: "Fabricação",
     aguardando_peca_cliente: "Aguardando Peça (Cliente)",
     aguardando_peca_interno: "Aguardando Peça (Interno)",
     finalizado: "Finalizado",
@@ -384,10 +384,12 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full mb-6">
             <TabsTrigger value="detalhes" className="flex-1">Detalhes</TabsTrigger>
-            <TabsTrigger value="tracker" className="flex-1">
-              <ClipboardCheck className="h-4 w-4 mr-2" />
-              Tracker
-            </TabsTrigger>
+            {ordem.status === "fabricacao" && (
+              <TabsTrigger value="tracker" className="flex-1">
+                <ClipboardCheck className="h-4 w-4 mr-2" />
+                Tracker
+              </TabsTrigger>
+            )}
             <TabsTrigger value="fotos" className="flex-1">Fotos</TabsTrigger>
           </TabsList>
           
@@ -417,7 +419,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
                       <SelectContent>
                         <SelectItem value="orcamento">Orçamento</SelectItem>
                         <SelectItem value="aguardando_aprovacao">Aguardando Aprovação</SelectItem>
-                        <SelectItem value="retifica">Retífica</SelectItem>
+                        <SelectItem value="fabricacao">Fabricação</SelectItem>
                         <SelectItem value="aguardando_peca_cliente">Aguardando Peça (Cliente)</SelectItem>
                         <SelectItem value="aguardando_peca_interno">Aguardando Peça (Interno)</SelectItem>
                         <SelectItem value="finalizado">Finalizado</SelectItem>
@@ -493,10 +495,16 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
           </TabsContent>
           
           <TabsContent value="tracker" className="space-y-4">
-            <EtapasTracker
-              ordem={ordem}
-              onOrdemUpdate={handleOrdemUpdate}
-            />
+            {ordem.status === "fabricacao" ? (
+              <EtapasTracker
+                ordem={ordem}
+                onOrdemUpdate={handleOrdemUpdate}
+              />
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                O tracker só está disponível quando o status é "Fabricação"
+              </div>
+            )}
           </TabsContent>
           
           <TabsContent value="fotos" className="space-y-6">

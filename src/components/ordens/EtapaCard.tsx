@@ -5,6 +5,8 @@ import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
 import { formatTime } from "@/utils/timerUtils";
 import { Progress } from "../ui/progress";
 import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { CheckCircle2 } from "lucide-react";
 import ServicoTracker from "./ServicoTracker";
 import OrdemCronometro from "./OrdemCronometro";
 
@@ -15,6 +17,13 @@ interface EtapaCardProps {
   funcionarioId: string;
   funcionarioNome?: string;
   servicos?: Servico[];
+  etapaInfo?: {
+    concluido?: boolean;
+    iniciado?: Date;
+    finalizado?: Date;
+    usarCronometro?: boolean;
+    pausas?: { inicio: number; fim?: number; motivo?: string }[];
+  };
   onSubatividadeToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
   onServicoStatusChange?: (servicoTipo: TipoServico, concluido: boolean) => void;
   onEtapaStatusChange?: (etapa: EtapaOS, concluida: boolean) => void;
@@ -27,6 +36,7 @@ export default function EtapaCard({
   funcionarioId,
   funcionarioNome,
   servicos = [],
+  etapaInfo,
   onSubatividadeToggle,
   onServicoStatusChange,
   onEtapaStatusChange
@@ -72,17 +82,25 @@ export default function EtapaCard({
     }
   };
 
+  const handleMarcarConcluido = () => {
+    if (onEtapaStatusChange) {
+      onEtapaStatusChange(etapa, true);
+    }
+  };
+
   return (
     <Card className="p-6 mb-4">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xl font-semibold">{etapaNome}</h3>
-        {etapaServicos.length > 0 && (
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="ml-2">
-              {progresso}% Concluído
+        <div className="flex items-center gap-2">
+          {etapaInfo?.concluido ? (
+            <Badge variant="success" className="bg-green-500 text-white">
+              Concluído
             </Badge>
-          </div>
-        )}
+          ) : (
+            <Badge variant="outline">Em andamento</Badge>
+          )}
+        </div>
       </div>
       
       {/* Progress bar para a etapa baseado nos serviços */}
@@ -94,14 +112,29 @@ export default function EtapaCard({
       
       {/* Para etapas com cronômetro próprio, exibir o cronômetro */}
       {etapaComCronometro && (
-        <div className="p-4 border rounded-md">
+        <div className="p-4 border rounded-md mb-4">
           <OrdemCronometro
             ordemId={ordemId}
             funcionarioId={funcionarioId}
             funcionarioNome={funcionarioNome}
             etapa={etapa}
             onFinish={handleEtapaConcluida}
+            isEtapaConcluida={etapaInfo?.concluido}
           />
+          
+          {!etapaInfo?.concluido && (
+            <div className="mt-4">
+              <Button 
+                variant="default" 
+                size="sm" 
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                onClick={handleMarcarConcluido}
+              >
+                <CheckCircle2 className="h-4 w-4 mr-1" />
+                Marcar Etapa como Concluída
+              </Button>
+            </div>
+          )}
         </div>
       )}
       

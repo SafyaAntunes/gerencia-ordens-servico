@@ -41,10 +41,10 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
     
     setEtapas(novasEtapas);
     
-    // Calcular o progresso baseado nos serviços concluídos
-    calcularProgressoTotal(ordem);
+    // Calcular o progresso baseado em todas as etapas
+    calcularProgressoTotal(ordem, novasEtapas);
     
-  }, [ordem.servicos]);
+  }, [ordem.servicos, ordem.etapasAndamento]);
 
   const etapasLabels: Record<EtapaOS, string> = {
     lavagem: "Lavagem",
@@ -55,20 +55,26 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
     inspecao_final: "Inspeção Final"
   };
   
-  // Calcula o progresso total baseado nos serviços concluídos
-  const calcularProgressoTotal = (ordem: OrdemServico) => {
-    // Obter todos os serviços
-    const totalServicos = ordem.servicos?.length || 0;
-    if (totalServicos === 0) {
+  // Calcula o progresso total baseado nos serviços concluídos e etapas de inspeção/lavagem
+  const calcularProgressoTotal = (ordem: OrdemServico, etapasList: EtapaOS[]) => {
+    const totalItens = etapasList.length;
+    if (totalItens === 0) {
       setProgresso(0);
       return 0;
     }
     
-    // Contar serviços concluídos
-    const servicosConcluidos = ordem.servicos?.filter(s => s.concluido).length || 0;
+    let itensConcluidos = 0;
+    
+    // Verificar etapas de inspeção/lavagem
+    etapasList.forEach(etapa => {
+      const etapaInfo = ordem.etapasAndamento?.[etapa];
+      if (etapaInfo?.concluido) {
+        itensConcluidos++;
+      }
+    });
     
     // Calcular percentual
-    const percentualProgresso = Math.round((servicosConcluidos / totalServicos) * 100);
+    const percentualProgresso = Math.round((itensConcluidos / totalItens) * 100);
     setProgresso(percentualProgresso);
     
     return percentualProgresso;
@@ -101,7 +107,7 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
       };
       
       // Recalcular o progresso total
-      const novoProgresso = calcularProgressoTotal(ordemAtualizada);
+      const novoProgresso = calcularProgressoTotal(ordemAtualizada, etapas);
       const novoProgressoDecimal = novoProgresso / 100;
       
       await updateDoc(orderRef, { progressoEtapas: novoProgressoDecimal });
@@ -143,7 +149,7 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
       };
       
       // Recalcular o progresso total
-      const novoProgresso = calcularProgressoTotal(ordemAtualizada);
+      const novoProgresso = calcularProgressoTotal(ordemAtualizada, etapas);
       const novoProgressoDecimal = novoProgresso / 100;
       
       await updateDoc(orderRef, { progressoEtapas: novoProgressoDecimal });
@@ -157,6 +163,46 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
     } catch (error) {
       console.error("Erro ao atualizar status do serviço:", error);
       toast.error("Erro ao atualizar status do serviço");
+    }
+  };
+
+  const handleEtapaStatusChange = async (etapa: EtapaOS, concluida: boolean) => {
+    if (!ordem.id) return;
+    
+    try {
+      // Atualizar a etapa específica
+      const etapasAndamento = {
+        ...ordem.etapasAndamento,
+        [etapa]: {
+          ...(ordem.etapasAndamento?.[etapa] || {}),
+          concluido: concluida,
+          finalizado: concluida ? new Date() : undefined
+        }
+      };
+      
+      const orderRef = doc(db, "ordens", ordem.id);
+      await updateDoc(orderRef, { etapasAndamento });
+      
+      const ordemAtualizada = {
+        ...ordem,
+        etapasAndamento
+      };
+      
+      // Recalcular o progresso total
+      const novoProgresso = calcularProgressoTotal(ordemAtualizada, etapas);
+      const novoProgressoDecimal = novoProgresso / 100;
+      
+      await updateDoc(orderRef, { progressoEtapas: novoProgressoDecimal });
+      ordemAtualizada.progressoEtapas = novoProgressoDecimal;
+      
+      onOrdemUpdate(ordemAtualizada);
+      
+      if (concluida) {
+        toast.success(`Etapa ${etapasLabels[etapa]} concluída`);
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar status da etapa:", error);
+      toast.error("Erro ao atualizar status da etapa");
     }
   };
 
@@ -188,11 +234,15 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
                 funcionarioId={funcionario?.id || ""}
                 funcionarioNome={funcionario?.nome}
                 servicos={ordem.servicos}
+                etapaInfo={ordem.etapasAndamento?.[etapa]}
                 onSubatividadeToggle={(servicoTipo, subId, checked) => 
                   handleSubatividadeToggle(servicoTipo, subId, checked)
                 }
                 onServicoStatusChange={(servicoTipo, concluido) => 
                   handleServicoStatusChange(servicoTipo, concluido)
+                }
+                onEtapaStatusChange={(etapa, concluida) =>
+                  handleEtapaStatusChange(etapa, concluida)
                 }
               />
             );

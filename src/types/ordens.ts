@@ -46,7 +46,7 @@ export type Servico = {
 export type StatusOS = 
   | 'orcamento'
   | 'aguardando_aprovacao'
-  | 'retifica'
+  | 'fabricacao'  // Alterado de 'retifica' para 'fabricacao'
   | 'aguardando_peca_cliente'
   | 'aguardando_peca_interno'
   | 'finalizado'
