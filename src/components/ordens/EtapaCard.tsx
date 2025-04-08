@@ -68,7 +68,12 @@ export default function EtapaCard({
     const servicosConcluidos = etapaServicos.filter(servico => servico.concluido).length;
     const percentualProgresso = Math.round((servicosConcluidos / etapaServicos.length) * 100);
     setProgresso(percentualProgresso);
-  }, [etapaServicos]);
+    
+    // Se todos os serviços estiverem concluídos, marcar a etapa como concluída automaticamente
+    if (percentualProgresso === 100 && !etapaInfo?.concluido && onEtapaStatusChange) {
+      onEtapaStatusChange(etapa, true);
+    }
+  }, [etapaServicos, etapaInfo, etapa, onEtapaStatusChange]);
 
   const etapaComCronometro = ['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa);
   

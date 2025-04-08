@@ -10,6 +10,7 @@ import CompletedTimer from "./CompletedTimer";
 import TimerControls from "./TimerControls";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 export interface OrdemCronometroProps {
   ordemId: string;
@@ -64,6 +65,19 @@ export default function OrdemCronometro({
     isEtapaConcluida
   });
   
+  // Determinar o status da etapa/serviço
+  const getStatus = () => {
+    if (isEtapaConcluida) {
+      return "concluido";
+    } else if (isRunning || isPaused) {
+      return "em_andamento";
+    } else {
+      return "nao_iniciado";
+    }
+  };
+  
+  const status = getStatus();
+  
   // If the stage is completed, just show the saved time without controls
   if (isEtapaConcluida) {
     return <CompletedTimer totalSavedTime={totalSavedTime} />;
@@ -73,7 +87,15 @@ export default function OrdemCronometro({
     <div className="w-full">
       {/* Nome da etapa e tempo em destaque */}
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-bold">{formatTime(displayTime)}</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-xl font-bold">{formatTime(displayTime)}</h3>
+          {status === "em_andamento" && (
+            <Badge variant="outline">Em andamento</Badge>
+          )}
+          {status === "nao_iniciado" && (
+            <Badge variant="outline" className="bg-gray-100">Não iniciado</Badge>
+          )}
+        </div>
       </div>
       
       {/* Tempo em formato menor abaixo do principal */}

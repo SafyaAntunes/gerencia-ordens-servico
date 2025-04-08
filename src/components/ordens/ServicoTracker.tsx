@@ -68,6 +68,17 @@ export default function ServicoTracker({
   // Verificar se todas as subatividades estão concluídas
   const allCompleted = totalSubatividades > 0 && completedSubatividades === totalSubatividades;
   
+  // Determinar o status do serviço
+  const getServicoStatus = () => {
+    if (servico.concluido) {
+      return "concluido";
+    } else if (isRunning || isPaused) {
+      return "em_andamento";
+    } else {
+      return "nao_iniciado";
+    }
+  };
+  
   // Format the service type for display
   const formatServicoTipo = (tipo: TipoServico): string => {
     const labels: Record<TipoServico, string> = {
@@ -112,6 +123,15 @@ export default function ServicoTracker({
     
     onServicoStatusChange(true);
   };
+  
+  useEffect(() => {
+    // Se todas as subatividades estiverem concluídas, marcar o serviço como concluído automaticamente
+    if (allCompleted && !servico.concluido) {
+      onServicoStatusChange(true);
+    }
+  }, [allCompleted, servico.concluido, onServicoStatusChange]);
+
+  const servicoStatus = getServicoStatus();
 
   return (
     <Card className={cn("w-full", className)}>
@@ -123,8 +143,11 @@ export default function ServicoTracker({
                 <h3 className="font-medium text-lg">
                   {formatServicoTipo(servico.tipo)}
                 </h3>
-                {servico.concluido && (
+                {servicoStatus === "concluido" && (
                   <Badge variant="success" className="ml-2">Concluído</Badge>
+                )}
+                {servicoStatus === "em_andamento" && (
+                  <Badge variant="outline" className="ml-2">Em andamento</Badge>
                 )}
               </div>
               <div className="flex items-center gap-2">
