@@ -51,7 +51,7 @@ export default function ServicoTracker({
     ordemId,
     etapa: 'retifica',
     tipoServico: servico.tipo,
-    onFinish: () => onServicoStatusChange(true),
+    onFinish: () => {/* Removed auto-completion */},
     isEtapaConcluida: servico.concluido
   });
 
@@ -68,13 +68,7 @@ export default function ServicoTracker({
   // Verificar se todas as subatividades estão concluídas
   const allCompleted = totalSubatividades > 0 && completedSubatividades === totalSubatividades;
   
-  // Efeito para finalizar o timer automaticamente quando todas as subatividades forem concluídas
-  useEffect(() => {
-    if (allCompleted && !servico.concluido && isRunning) {
-      handleFinish();
-      onServicoStatusChange(true);
-    }
-  }, [allCompleted, servico.concluido, isRunning]);
+  // Removido o efeito que marcava o serviço como concluído automaticamente
 
   // Format the service type for display
   const formatServicoTipo = (tipo: TipoServico): string => {

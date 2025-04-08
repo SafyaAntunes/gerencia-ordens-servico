@@ -44,6 +44,10 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
     // Calcular o progresso baseado em todas as etapas
     calcularProgressoTotal(ordem, novasEtapas);
     
+    // Verificar se todas as atividades de cada etapa foram concluídas
+    // Se sim, marcar a etapa como concluída automaticamente
+    verificarEtapasConcluidas(ordem, novasEtapas);
+    
   }, [ordem.servicos, ordem.etapasAndamento]);
 
   const etapasLabels: Record<EtapaOS, string> = {
@@ -55,26 +59,102 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
     inspecao_final: "Inspeção Final"
   };
   
-  // Calcula o progresso total baseado nos serviços concluídos e etapas de inspeção/lavagem
+  const verificarEtapasConcluidas = async (ordem: OrdemServico, etapasList: EtapaOS[]) => {
+    const etapasParaAtualizar: EtapaOS[] = [];
+    
+    // Verificar etapa de retífica
+    const servicosRetifica = ordem.servicos.filter(s => 
+      ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo)
+    );
+    
+    if (servicosRetifica.length > 0 && !ordem.etapasAndamento?.retifica?.concluido) {
+      const todosServicosRetificaConcluidos = servicosRetifica.every(s => s.concluido);
+      if (todosServicosRetificaConcluidos) {
+        etapasParaAtualizar.push("retifica");
+      }
+    }
+    
+    // Verificar etapa de montagem
+    const servicosMontagem = ordem.servicos.filter(s => s.tipo === "montagem");
+    if (servicosMontagem.length > 0 && !ordem.etapasAndamento?.montagem?.concluido) {
+      const todosServicoMontagemConcluidos = servicosMontagem.every(s => s.concluido);
+      if (todosServicoMontagemConcluidos) {
+        etapasParaAtualizar.push("montagem");
+      }
+    }
+    
+    // Verificar etapa de dinamômetro
+    const servicosDinamometro = ordem.servicos.filter(s => s.tipo === "dinamometro");
+    if (servicosDinamometro.length > 0 && !ordem.etapasAndamento?.dinamometro?.concluido) {
+      const todosServicoDinamometroConcluidos = servicosDinamometro.every(s => s.concluido);
+      if (todosServicoDinamometroConcluidos) {
+        etapasParaAtualizar.push("dinamometro");
+      }
+    }
+    
+    // Atualizar etapas se necessário
+    if (etapasParaAtualizar.length > 0 && ordem.id) {
+      const etapasAndamento = { ...ordem.etapasAndamento };
+      
+      for (const etapa of etapasParaAtualizar) {
+        etapasAndamento[etapa] = {
+          ...(etapasAndamento[etapa] || {}),
+          concluido: true,
+          finalizado: new Date()
+        };
+        
+        // Notificar usuário
+        toast.success(`Etapa ${etapasLabels[etapa]} concluída automaticamente`);
+      }
+      
+      try {
+        const orderRef = doc(db, "ordens", ordem.id);
+        await updateDoc(orderRef, { etapasAndamento });
+        
+        const ordemAtualizada = {
+          ...ordem,
+          etapasAndamento
+        };
+        
+        // Recalcular o progresso total
+        const novoProgresso = calcularProgressoTotal(ordemAtualizada, etapasList);
+        const novoProgressoDecimal = novoProgresso / 100;
+        
+        await updateDoc(orderRef, { progressoEtapas: novoProgressoDecimal });
+        ordemAtualizada.progressoEtapas = novoProgressoDecimal;
+        
+        onOrdemUpdate(ordemAtualizada);
+      } catch (error) {
+        console.error("Erro ao atualizar etapas concluídas automaticamente:", error);
+      }
+    }
+  };
+  
+  // Calcula o progresso total baseado nas etapas de retífica, montagem e dinamômetro
   const calcularProgressoTotal = (ordem: OrdemServico, etapasList: EtapaOS[]) => {
-    const totalItens = etapasList.length;
-    if (totalItens === 0) {
+    // Filtrar apenas as etapas que devem influenciar o progresso geral
+    const etapasParaProgresso = etapasList.filter(etapa => 
+      ["retifica", "montagem", "dinamometro"].includes(etapa)
+    );
+    
+    const totalEtapas = etapasParaProgresso.length;
+    if (totalEtapas === 0) {
       setProgresso(0);
       return 0;
     }
     
-    let itensConcluidos = 0;
+    let etapasConcluidas = 0;
     
-    // Verificar etapas de inspeção/lavagem
-    etapasList.forEach(etapa => {
+    // Verificar etapas concluídas
+    etapasParaProgresso.forEach(etapa => {
       const etapaInfo = ordem.etapasAndamento?.[etapa];
       if (etapaInfo?.concluido) {
-        itensConcluidos++;
+        etapasConcluidas++;
       }
     });
     
     // Calcular percentual
-    const percentualProgresso = Math.round((itensConcluidos / totalItens) * 100);
+    const percentualProgresso = Math.round((etapasConcluidas / totalEtapas) * 100);
     setProgresso(percentualProgresso);
     
     return percentualProgresso;
