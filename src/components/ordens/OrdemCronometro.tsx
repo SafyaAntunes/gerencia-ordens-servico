@@ -61,18 +61,6 @@ export default function OrdemCronometro({
     isEtapaConcluida
   });
   
-  const handleFinalizarClick = () => {
-    // Verificar se o usuário está autenticado antes de finalizar a etapa
-    if (!funcionario?.id) {
-      toast.error("É necessário estar logado para finalizar uma etapa");
-      return;
-    }
-    
-    if (onFinish) {
-      onFinish(totalSavedTime);
-    }
-  };
-  
   // If the stage is completed, just show the saved time without controls
   if (isEtapaConcluida) {
     return <CompletedTimer totalSavedTime={totalSavedTime} />;
@@ -106,17 +94,6 @@ export default function OrdemCronometro({
         onResume={handleResume}
         onFinish={handleFinish}
       />
-      
-      {/* Botão para marcar como concluído - sempre visível */}
-      {onFinish && (
-        <Button 
-          onClick={handleFinalizarClick}
-          className="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white"
-        >
-          <CheckCircle2 className="h-4 w-4 mr-1" />
-          Marcar Concluído
-        </Button>
-      )}
       
       {/* Checkbox escondido mas mantendo a funcionalidade */}
       <div className="hidden">

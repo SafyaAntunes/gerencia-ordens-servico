@@ -64,6 +64,17 @@ export default function ServicoTracker({
   const progressPercentage = totalSubatividades > 0 
     ? Math.round((completedSubatividades / totalSubatividades) * 100)
     : 0;
+    
+  // Verificar se todas as subatividades estão concluídas
+  const allCompleted = totalSubatividades > 0 && completedSubatividades === totalSubatividades;
+  
+  // Efeito para finalizar o timer automaticamente quando todas as subatividades forem concluídas
+  useEffect(() => {
+    if (allCompleted && !servico.concluido && isRunning) {
+      handleFinish();
+      onServicoStatusChange(true);
+    }
+  }, [allCompleted, servico.concluido, isRunning]);
 
   // Format the service type for display
   const formatServicoTipo = (tipo: TipoServico): string => {
@@ -103,6 +114,10 @@ export default function ServicoTracker({
       return;
     }
     
+    if (isRunning || isPaused) {
+      handleFinish();
+    }
+    
     onServicoStatusChange(true);
   };
 
@@ -117,7 +132,7 @@ export default function ServicoTracker({
                   {formatServicoTipo(servico.tipo)}
                 </h3>
                 {servico.concluido && (
-                  <Badge variant="secondary" className="ml-2 bg-green-500 text-white">Concluído</Badge>
+                  <Badge variant="success" className="ml-2">Concluído</Badge>
                 )}
               </div>
               <div className="flex items-center gap-2">
@@ -225,18 +240,19 @@ export default function ServicoTracker({
             </div>
           </CardContent>
           
-          <CardFooter className="pt-2 pb-4">
-            <Button 
-              variant="default" 
-              size="sm" 
-              onClick={handleMarcarConcluido}
-              disabled={servico.concluido}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white"
-            >
-              <CheckCircle2 className="h-4 w-4 mr-1" />
-              Marcar Concluído
-            </Button>
-          </CardFooter>
+          {!servico.concluido && (
+            <CardFooter className="pt-0 pb-4">
+              <Button 
+                variant="default" 
+                size="sm" 
+                onClick={handleMarcarConcluido}
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+              >
+                <CheckCircle2 className="h-4 w-4 mr-1" />
+                Marcar Concluído
+              </Button>
+            </CardFooter>
+          )}
         </CollapsibleContent>
       </Collapsible>
       

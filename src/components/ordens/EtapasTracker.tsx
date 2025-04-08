@@ -93,7 +93,17 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
             return sub;
           });
           
-          return { ...servico, subatividades };
+          // Verificar se todas as subatividades foram concluídas
+          const todasConcluidas = subatividades
+            .filter(sub => sub.selecionada)
+            .every(sub => sub.concluida);
+          
+          // Se todas concluídas, marcar o serviço como concluído também
+          return { 
+            ...servico, 
+            subatividades,
+            concluido: todasConcluidas ? true : servico.concluido
+          };
         }
         return servico;
       });
@@ -114,6 +124,17 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
       ordemAtualizada.progressoEtapas = novoProgressoDecimal;
       
       onOrdemUpdate(ordemAtualizada);
+      
+      // Notificar se a subatividade foi concluída
+      if (checked) {
+        // Encontrar o nome da subatividade para exibir na notificação
+        const servicoAtualizado = servicos.find(s => s.tipo === servicoTipo);
+        const subatividadeAtualizada = servicoAtualizado?.subatividades?.find(s => s.id === subatividadeId);
+        
+        if (subatividadeAtualizada) {
+          toast.success(`Subatividade "${subatividadeAtualizada.nome}" concluída`);
+        }
+      }
     } catch (error) {
       console.error("Erro ao atualizar subatividade:", error);
       toast.error("Erro ao atualizar subatividade");
@@ -158,7 +179,20 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
       onOrdemUpdate(ordemAtualizada);
       
       if (concluido) {
-        toast.success(`Serviço ${servicoTipo} concluído`);
+        const servicoNome = (() => {
+          switch(servicoTipo) {
+            case 'bloco': return 'Bloco';
+            case 'biela': return 'Biela';
+            case 'cabecote': return 'Cabeçote';
+            case 'virabrequim': return 'Virabrequim';
+            case 'eixo_comando': return 'Eixo de Comando';
+            case 'montagem': return 'Montagem';
+            case 'dinamometro': return 'Dinamômetro';
+            default: return servicoTipo;
+          }
+        })();
+        
+        toast.success(`Serviço ${servicoNome} concluído`);
       }
     } catch (error) {
       console.error("Erro ao atualizar status do serviço:", error);
