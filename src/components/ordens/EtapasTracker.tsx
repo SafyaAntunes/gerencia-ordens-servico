@@ -131,20 +131,29 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
   };
   
   // Calcula o progresso total baseado em todas as atividades de todas as etapas
+  // e das etapas em si
   const calcularProgressoTotal = (ordem: OrdemServico, etapasList: EtapaOS[]) => {
-    // Considerar todas as etapas para cálculo de progresso
+    // Contar o total de itens a serem considerados no progresso
+    const totalEtapas = etapasList.length;
     const totalServicos = ordem.servicos.length;
+    const totalItens = totalEtapas + totalServicos;
     
-    if (totalServicos === 0) {
+    if (totalItens === 0) {
       setProgresso(0);
       return 0;
     }
+    
+    // Contar etapas concluídas
+    const etapasConcluidas = etapasList.filter(etapa => 
+      ordem.etapasAndamento?.[etapa]?.concluido
+    ).length;
     
     // Contar serviços concluídos
     const servicosConcluidos = ordem.servicos.filter(servico => servico.concluido).length;
     
     // Calcular percentual
-    const percentualProgresso = Math.round((servicosConcluidos / totalServicos) * 100);
+    const itensConcluidos = etapasConcluidas + servicosConcluidos;
+    const percentualProgresso = Math.round((itensConcluidos / totalItens) * 100);
     setProgresso(percentualProgresso);
     
     return percentualProgresso;
@@ -276,6 +285,7 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
         [etapa]: {
           ...(ordem.etapasAndamento?.[etapa] || {}),
           concluido: concluida,
+          iniciado: ordem.etapasAndamento?.[etapa]?.iniciado || new Date(), // Se não tiver data de início, adiciona agora
           finalizado: concluida ? new Date() : undefined
         }
       };

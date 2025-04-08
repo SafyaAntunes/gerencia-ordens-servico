@@ -83,18 +83,35 @@ export default function EtapaCard({
       onEtapaStatusChange(etapa, true);
     }
   };
+  
+  // Determinar o status da etapa
+  const getEtapaStatus = () => {
+    if (etapaInfo?.concluido) {
+      return "concluido";
+    } else if (etapaInfo?.iniciado) {
+      return "em_andamento";
+    } else {
+      return "nao_iniciado";
+    }
+  };
+  
+  const etapaStatus = getEtapaStatus();
 
   return (
     <Card className="p-6 mb-4">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xl font-semibold">{etapaNome}</h3>
         <div className="flex items-center gap-2">
-          {etapaInfo?.concluido ? (
+          {etapaStatus === "concluido" && (
             <Badge variant="success">
               Concluído
             </Badge>
-          ) : (
+          )}
+          {etapaStatus === "em_andamento" && (
             <Badge variant="outline">Em andamento</Badge>
+          )}
+          {etapaStatus === "nao_iniciado" && (
+            <Badge variant="outline" className="bg-gray-100">Não iniciado</Badge>
           )}
         </div>
       </div>

@@ -5,7 +5,7 @@ import { Clock, Calendar, ArrowRight, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { OrdemServico } from "@/types/ordens";
+import { OrdemServico, EtapaOS } from "@/types/ordens";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
@@ -51,7 +51,7 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
     progresso = Math.round(ordem.progressoEtapas * 100);
   } else {
     // Calcula o progresso com base nas etapas concluídas
-    let etapas = ["lavagem", "inspecao_inicial"];
+    let etapas: EtapaOS[] = ["lavagem", "inspecao_inicial"];
     
     // Adiciona retífica se tiver serviços relacionados
     if (ordem.servicos?.some(s => 
@@ -72,11 +72,26 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
     // Adiciona inspeção final
     etapas.push("inspecao_final");
     
-    const etapasConcluidas = etapas.filter(etapa => 
-      ordem.etapasAndamento?.[etapa]?.concluido
-    ).length;
+    // Contar o total de itens a serem considerados no progresso
+    const totalEtapas = etapas.length;
+    const totalServicos = ordem.servicos?.length || 0;
+    const totalItens = totalEtapas + totalServicos;
     
-    progresso = Math.round((etapasConcluidas / etapas.length) * 100);
+    if (totalItens === 0) {
+      progresso = 0;
+    } else {
+      // Contar etapas concluídas
+      const etapasConcluidas = etapas.filter(etapa => 
+        ordem.etapasAndamento?.[etapa]?.concluido
+      ).length;
+      
+      // Contar serviços concluídos
+      const servicosConcluidos = ordem.servicos?.filter(servico => servico.concluido).length || 0;
+      
+      // Calcular percentual
+      const itensConcluidos = etapasConcluidas + servicosConcluidos;
+      progresso = Math.round((itensConcluidos / totalItens) * 100);
+    }
   }
   
   const handleNavigateToDetail = (e: React.MouseEvent) => {
