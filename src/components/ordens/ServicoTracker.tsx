@@ -68,8 +68,6 @@ export default function ServicoTracker({
   // Verificar se todas as subatividades estão concluídas
   const allCompleted = totalSubatividades > 0 && completedSubatividades === totalSubatividades;
   
-  // Removido o efeito que marcava o serviço como concluído automaticamente
-
   // Format the service type for display
   const formatServicoTipo = (tipo: TipoServico): string => {
     const labels: Record<TipoServico, string> = {

@@ -130,31 +130,21 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
     }
   };
   
-  // Calcula o progresso total baseado nas etapas de retífica, montagem e dinamômetro
+  // Calcula o progresso total baseado em todas as atividades de todas as etapas
   const calcularProgressoTotal = (ordem: OrdemServico, etapasList: EtapaOS[]) => {
-    // Filtrar apenas as etapas que devem influenciar o progresso geral
-    const etapasParaProgresso = etapasList.filter(etapa => 
-      ["retifica", "montagem", "dinamometro"].includes(etapa)
-    );
+    // Considerar todas as etapas para cálculo de progresso
+    const totalServicos = ordem.servicos.length;
     
-    const totalEtapas = etapasParaProgresso.length;
-    if (totalEtapas === 0) {
+    if (totalServicos === 0) {
       setProgresso(0);
       return 0;
     }
     
-    let etapasConcluidas = 0;
-    
-    // Verificar etapas concluídas
-    etapasParaProgresso.forEach(etapa => {
-      const etapaInfo = ordem.etapasAndamento?.[etapa];
-      if (etapaInfo?.concluido) {
-        etapasConcluidas++;
-      }
-    });
+    // Contar serviços concluídos
+    const servicosConcluidos = ordem.servicos.filter(servico => servico.concluido).length;
     
     // Calcular percentual
-    const percentualProgresso = Math.round((etapasConcluidas / totalEtapas) * 100);
+    const percentualProgresso = Math.round((servicosConcluidos / totalServicos) * 100);
     setProgresso(percentualProgresso);
     
     return percentualProgresso;
@@ -173,16 +163,11 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
             return sub;
           });
           
-          // Verificar se todas as subatividades foram concluídas
-          const todasConcluidas = subatividades
-            .filter(sub => sub.selecionada)
-            .every(sub => sub.concluida);
-          
-          // Se todas concluídas, marcar o serviço como concluído também
+          // Importante: Não marcar o serviço como concluído automaticamente
+          // mesmo que todas as subatividades estejam concluídas
           return { 
             ...servico, 
-            subatividades,
-            concluido: todasConcluidas ? true : servico.concluido
+            subatividades
           };
         }
         return servico;
@@ -227,6 +212,7 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
     try {
       const servicos = ordem.servicos.map(servico => {
         if (servico.tipo === servicoTipo) {
+          // Se marcar como concluído, todas as subatividades também são marcadas
           const subatividades = servico.subatividades?.map(sub => ({
             ...sub,
             concluida: concluido ? true : sub.concluida
