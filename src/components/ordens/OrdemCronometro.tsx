@@ -54,7 +54,10 @@ export default function OrdemCronometro({
     ordemId,
     etapa,
     tipoServico,
-    onStart,
+    onStart: () => {
+      // Chama o onStart original, que vai atualizar o status para "em andamento"
+      if (onStart) onStart();
+    },
     onPause,
     onResume,
     onFinish,

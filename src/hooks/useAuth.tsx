@@ -5,7 +5,6 @@ import { toast } from 'sonner';
 import { Funcionario, NivelPermissao } from '@/types/funcionarios';
 import { loginUser, getUserData, registerUser, getFuncionarioByIdentifier } from '@/services/authService';
 
-// Define the shape of our auth context
 type AuthContextType = {
   user: User | null;
   funcionario: Funcionario | null;
@@ -17,16 +16,13 @@ type AuthContextType = {
   canAccessRoute: (route: string) => boolean;
 };
 
-// Create the context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Provider component
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [funcionario, setFuncionario] = useState<Funcionario | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Check if there's a stored user session on mount
   useEffect(() => {
     console.log("AuthProvider initialized");
     
@@ -37,15 +33,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser as User);
         
-        // Try to load funcionario data if it exists
         const loadStoredFuncionario = async () => {
           if (parsedUser.funcionarioId) {
-            // This is a funcionario user
             const funcionarioData = await getFuncionarioByIdentifier(parsedUser.email || parsedUser.nomeUsuario);
             if (funcionarioData) {
               setFuncionario(funcionarioData);
             } else {
-              // Set basic funcionario info based on stored user
               setFuncionario({
                 id: parsedUser.funcionarioId,
                 nome: parsedUser.displayName || 'Usuário',
@@ -57,7 +50,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               });
             }
           } else if (parsedUser.role === 'admin') {
-            // Admin user
             setFuncionario({
               id: 'admin',
               nome: 'Administrador',
@@ -96,7 +88,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     });
 
-    // Set loading to false even if no auth state change occurs
     setTimeout(() => {
       setLoading(false);
     }, 1000);
@@ -109,7 +100,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const success = await registerUser(email, password);
       
       if (success) {
-        // Auto-login after registration
         return login(email, password);
       }
       
@@ -130,7 +120,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (success) {
         let userData;
         
-        // For admin user - use hardcoded data
         if (identifier === 'admin@sgr.com') {
           userData = {
             uid: 'admin-uid',
@@ -139,7 +128,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             role: 'admin'
           };
           
-          // Set funcionario for admin
           setFuncionario({
             id: 'admin',
             nome: 'Administrador',
@@ -150,7 +138,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             nivelPermissao: 'admin' as NivelPermissao
           });
         } else {
-          // For regular users - get data from Firestore
           userData = await getUserData(identifier);
           
           if (!userData) {
@@ -158,13 +145,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return false;
           }
           
-          // Check if this user is linked to a funcionario
           const funcionarioData = await getFuncionarioByIdentifier(identifier);
           
           if (funcionarioData) {
             setFuncionario(funcionarioData);
             
-            // Set user data
             userData = {
               uid: userData.funcionarioId || identifier,
               email: userData.email,
@@ -175,7 +160,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               especialidades: funcionarioData.especialidades
             };
           } else {
-            // Regular user without funcionario association
             userData = {
               uid: userData.email || identifier,
               email: userData.email,
@@ -184,7 +168,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               role: userData.role || 'user'
             };
             
-            // Set basic funcionario for non-funcionario users
             setFuncionario({
               id: userData.email || identifier,
               nome: userData.displayName || 'Usuário',
@@ -197,10 +180,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         }
         
-        // Set the user state
         setUser(userData as User);
         
-        // Store in localStorage for persistence
         localStorage.setItem('sgr_user', JSON.stringify(userData));
         console.log("User stored in localStorage:", userData);
         
@@ -216,12 +197,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     try {
-      // If we're using a user from Firestore or the mock admin user, just clear the state
       setUser(null);
       setFuncionario(null);
       localStorage.removeItem('sgr_user');
       
-      // Also sign out from Firebase Auth if needed
       await signOut(auth);
       
       toast.success('Logout realizado com sucesso!');
@@ -250,22 +229,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const canAccessRoute = (route: string) => {
     if (!user || !funcionario) return false;
     
-    // Admin and manager can access everything
     if (['admin', 'gerente'].includes(funcionario.nivelPermissao)) {
       return true;
     }
     
-    // For technicians (tecnico)
     if (funcionario.nivelPermissao === 'tecnico') {
-      // Allow access to profile editing if it's their own profile
       if (route.startsWith('/funcionarios/editar/') && route.includes(funcionario.id)) {
         return true;
       }
 
       const allowedRoutes = [
-        '/', // Dashboard
-        '/ordens', // Orders list
-        '/ordens/', // Single order details (all routes that start with /ordens/)
+        '/',
+        '/ordens',
+        '/ordens/'
       ];
       
       return allowedRoutes.some(allowedRoute => 
@@ -274,15 +250,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       );
     }
     
-    // For view-only users
     if (funcionario.nivelPermissao === 'visualizacao') {
-      // Allow access to profile editing if it's their own profile
       if (route.startsWith('/funcionarios/editar/') && route.includes(funcionario.id)) {
         return true;
       }
 
       const allowedRoutes = [
-        '/', // Dashboard only
+        '/'
       ];
       
       return allowedRoutes.some(allowedRoute => route === allowedRoute);
@@ -305,13 +279,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// Custom hook to use the auth context
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+export const useAuth = () => useContext(AuthContext);
 
 export default useAuth;

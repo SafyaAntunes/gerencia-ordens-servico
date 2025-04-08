@@ -11,6 +11,12 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { OrdemServico } from "@/types/ordens";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 interface AgendaProps extends LogoutProps {}
 
@@ -23,11 +29,29 @@ interface EventoOS {
   ordemId: string;
 }
 
+interface NovoEventoFormValues {
+  titulo: string;
+  data: string;
+  hora: string;
+  tipo: "entrega" | "recebimento" | "manutencao" | "reuniao";
+  ordemId?: string;
+}
+
 const Agenda = ({ onLogout }: AgendaProps) => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [view, setView] = useState<"day" | "week" | "month">("month");
   const [eventos, setEventos] = useState<EventoOS[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [novoEventoAberto, setNovoEventoAberto] = useState(false);
+  
+  const form = useForm<NovoEventoFormValues>({
+    defaultValues: {
+      titulo: "",
+      data: new Date().toISOString().split('T')[0],
+      hora: "09:00",
+      tipo: "reuniao"
+    }
+  });
   
   useEffect(() => {
     const fetchOrdens = async () => {
@@ -226,6 +250,40 @@ const Agenda = ({ onLogout }: AgendaProps) => {
     );
   };
   
+  const handleNovoEvento = () => {
+    setNovoEventoAberto(true);
+    
+    // Se tiver uma data selecionada, preenche o formulário com ela
+    if (date) {
+      form.setValue('data', date.toISOString().split('T')[0]);
+    }
+  };
+  
+  const onSubmitNovoEvento = (values: NovoEventoFormValues) => {
+    try {
+      // Aqui você implementaria a lógica para salvar o evento no Firebase
+      // Por enquanto, vamos apenas adicionar ao estado local
+      const dataEvento = new Date(`${values.data}T${values.hora}`);
+      
+      const novoEvento: EventoOS = {
+        id: `manual-${Date.now()}`,
+        title: values.titulo,
+        date: dataEvento,
+        type: values.tipo,
+        status: "pendente",
+        ordemId: values.ordemId || ""
+      };
+      
+      setEventos([...eventos, novoEvento]);
+      setNovoEventoAberto(false);
+      toast.success("Evento adicionado com sucesso!");
+      form.reset();
+    } catch (error) {
+      console.error("Erro ao criar evento:", error);
+      toast.error("Erro ao criar evento");
+    }
+  };
+  
   if (isLoading) {
     return (
       <Layout onLogout={onLogout}>
@@ -255,7 +313,7 @@ const Agenda = ({ onLogout }: AgendaProps) => {
             </p>
           </div>
           
-          <Button>
+          <Button onClick={handleNovoEvento}>
             <Plus className="mr-2 h-4 w-4" />
             Novo Evento
           </Button>
@@ -403,6 +461,94 @@ const Agenda = ({ onLogout }: AgendaProps) => {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Modal para adicionar novo evento */}
+      <Dialog open={novoEventoAberto} onOpenChange={setNovoEventoAberto}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adicionar Novo Evento</DialogTitle>
+            <DialogDescription>
+              Preencha os detalhes do evento para adicioná-lo à agenda.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmitNovoEvento)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="titulo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Título</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Digite o título do evento" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="data"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="hora"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Hora</FormLabel>
+                      <FormControl>
+                        <Input type="time" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="tipo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo de Evento</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="reuniao">Reunião</SelectItem>
+                        <SelectItem value="entrega">Entrega</SelectItem>
+                        <SelectItem value="recebimento">Recebimento</SelectItem>
+                        <SelectItem value="manutencao">Manutenção</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setNovoEventoAberto(false)}>Cancelar</Button>
+                <Button type="submit">Salvar</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };

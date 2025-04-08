@@ -1,55 +1,60 @@
 
-import { EtapaOS, OrdemServico, TipoServico } from "@/types/ordens";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { useEffect, useState } from "react";
-import { Progress } from "../ui/progress";
-import EtapaCard from "./EtapaCard";
-import { useAuth } from "@/hooks/useAuth";
+import { useState, useEffect } from "react";
+import { EtapaOS, OrdemServico, TipoServico, SubAtividade } from "@/types/ordens";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { Progress } from "@/components/ui/progress";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import EtapaCard from "./EtapaCard";
 
 interface EtapasTrackerProps {
   ordem: OrdemServico;
-  onOrdemUpdate: (ordem: OrdemServico) => void;
+  onOrdemUpdate?: (ordemAtualizada: OrdemServico) => void;
 }
 
 export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerProps) {
-  const [etapas, setEtapas] = useState<EtapaOS[]>([]);
   const [progresso, setProgresso] = useState(0);
   const { funcionario } = useAuth();
-
-  useEffect(() => {
-    let novasEtapas: EtapaOS[] = ["lavagem", "inspecao_inicial"];
+  
+  // Lista de etapas disponíveis
+  const etapas: EtapaOS[] = [
+    "lavagem",
+    "inspecao_inicial",
+    "retifica",
+    "montagem",
+    "dinamometro",
+    "inspecao_final"
+  ];
+  
+  // Filtra as etapas disponíveis com base nos serviços selecionados
+  const etapasAtivas = (() => {
+    const etapasList: EtapaOS[] = ["lavagem", "inspecao_inicial"];
     
+    // Adicionar retífica se tiver algum serviço de retífica
     if (ordem.servicos?.some(s => 
-      ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo))) {
-      novasEtapas.push("retifica");
+      ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo)
+    )) {
+      etapasList.push("retifica");
     }
     
-    const temMontagem = ordem.servicos?.some(s => s.tipo === "montagem");
-    if (temMontagem) {
-      novasEtapas.push("montagem");
+    // Adicionar montagem se tiver serviço de montagem
+    if (ordem.servicos?.some(s => s.tipo === "montagem")) {
+      etapasList.push("montagem");
     }
     
-    const temDinamometro = ordem.servicos?.some(s => s.tipo === "dinamometro");
-    if (temDinamometro) {
-      novasEtapas.push("dinamometro");
+    // Adicionar dinamômetro se tiver serviço de dinamômetro
+    if (ordem.servicos?.some(s => s.tipo === "dinamometro")) {
+      etapasList.push("dinamometro");
     }
     
-    novasEtapas.push("inspecao_final");
+    // Sempre adicionar inspeção final
+    etapasList.push("inspecao_final");
     
-    setEtapas(novasEtapas);
-    
-    // Calcular o progresso baseado em todas as etapas
-    calcularProgressoTotal(ordem, novasEtapas);
-    
-    // Verificar se todas as atividades de cada etapa foram concluídas
-    // Se sim, marcar a etapa como concluída automaticamente
-    verificarEtapasConcluidas(ordem, novasEtapas);
-    
-  }, [ordem.servicos, ordem.etapasAndamento]);
-
+    return etapasList;
+  })();
+  
+  // Labels para as etapas
   const etapasLabels: Record<EtapaOS, string> = {
     lavagem: "Lavagem",
     inspecao_inicial: "Inspeção Inicial",
@@ -59,74 +64,119 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
     inspecao_final: "Inspeção Final"
   };
   
-  const verificarEtapasConcluidas = async (ordem: OrdemServico, etapasList: EtapaOS[]) => {
-    const etapasParaAtualizar: EtapaOS[] = [];
-    
-    // Verificar etapa de retífica
-    const servicosRetifica = ordem.servicos.filter(s => 
-      ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo)
-    );
-    
-    if (servicosRetifica.length > 0 && !ordem.etapasAndamento?.retifica?.concluido) {
-      const todosServicosRetificaConcluidos = servicosRetifica.every(s => s.concluido);
-      if (todosServicosRetificaConcluidos) {
-        etapasParaAtualizar.push("retifica");
-      }
+  // Calcular progresso quando a ordem for carregada ou atualizada
+  useEffect(() => {
+    if (ordem) {
+      calcularProgressoTotal(ordem, etapasAtivas);
     }
+  }, [ordem, etapasAtivas]);
+  
+  // Função para lidar com a troca de status da subatividade
+  const handleSubatividadeToggle = async (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => {
+    if (!ordem?.id || !funcionario?.id) return;
     
-    // Verificar etapa de montagem
-    const servicosMontagem = ordem.servicos.filter(s => s.tipo === "montagem");
-    if (servicosMontagem.length > 0 && !ordem.etapasAndamento?.montagem?.concluido) {
-      const todosServicoMontagemConcluidos = servicosMontagem.every(s => s.concluido);
-      if (todosServicoMontagemConcluidos) {
-        etapasParaAtualizar.push("montagem");
-      }
-    }
-    
-    // Verificar etapa de dinamômetro
-    const servicosDinamometro = ordem.servicos.filter(s => s.tipo === "dinamometro");
-    if (servicosDinamometro.length > 0 && !ordem.etapasAndamento?.dinamometro?.concluido) {
-      const todosServicoDinamometroConcluidos = servicosDinamometro.every(s => s.concluido);
-      if (todosServicoDinamometroConcluidos) {
-        etapasParaAtualizar.push("dinamometro");
-      }
-    }
-    
-    // Atualizar etapas se necessário
-    if (etapasParaAtualizar.length > 0 && ordem.id) {
-      const etapasAndamento = { ...ordem.etapasAndamento };
+    try {
+      // Crie uma cópia dos serviços atuais
+      const servicosAtualizados = ordem.servicos.map(servico => {
+        if (servico.tipo === servicoTipo && servico.subatividades) {
+          // Atualiza a subatividade específica
+          const subatividades = servico.subatividades.map(sub => {
+            if (sub.id === subatividadeId) {
+              return { ...sub, concluida: checked };
+            }
+            return sub;
+          });
+          
+          // Verifica se todas as subatividades estão concluídas
+          const todasConcluidas = subatividades
+            .filter(sub => sub.selecionada)
+            .every(sub => sub.concluida);
+          
+          // Se todas estiverem concluídas, marque o serviço como concluído
+          return { 
+            ...servico, 
+            subatividades,
+            concluido: todasConcluidas
+          };
+        }
+        return servico;
+      });
       
-      for (const etapa of etapasParaAtualizar) {
-        etapasAndamento[etapa] = {
-          ...(etapasAndamento[etapa] || {}),
-          concluido: true,
-          finalizado: new Date()
-        };
-        
-        // Notificar usuário
-        toast.success(`Etapa ${etapasLabels[etapa]} concluída automaticamente`);
-      }
+      // Atualize o Firestore
+      const ordemRef = doc(db, "ordens", ordem.id);
+      await updateDoc(ordemRef, { servicos: servicosAtualizados });
       
-      try {
-        const orderRef = doc(db, "ordens", ordem.id);
-        await updateDoc(orderRef, { etapasAndamento });
-        
-        const ordemAtualizada = {
-          ...ordem,
-          etapasAndamento
-        };
-        
-        // Recalcular o progresso total
-        const novoProgresso = calcularProgressoTotal(ordemAtualizada, etapasList);
-        const novoProgressoDecimal = novoProgresso / 100;
-        
-        await updateDoc(orderRef, { progressoEtapas: novoProgressoDecimal });
-        ordemAtualizada.progressoEtapas = novoProgressoDecimal;
-        
+      // Atualize o estado local
+      const ordemAtualizada = {
+        ...ordem,
+        servicos: servicosAtualizados
+      };
+      
+      // Calcule o novo progresso
+      calcularProgressoTotal(ordemAtualizada, etapasAtivas);
+      
+      if (onOrdemUpdate) {
         onOrdemUpdate(ordemAtualizada);
-      } catch (error) {
-        console.error("Erro ao atualizar etapas concluídas automaticamente:", error);
       }
+      
+      // Exiba um toast de sucesso
+      toast.success(`Subatividade ${checked ? 'concluída' : 'desmarcada'}`);
+    } catch (error) {
+      console.error("Erro ao atualizar subatividade:", error);
+      toast.error("Erro ao atualizar subatividade");
+    }
+  };
+  
+  // Função para lidar com a troca de status do serviço
+  const handleServicoStatusChange = async (servicoTipo: TipoServico, concluido: boolean) => {
+    if (!ordem?.id || !funcionario?.id) return;
+    
+    try {
+      // Crie uma cópia dos serviços atuais
+      const servicosAtualizados = ordem.servicos.map(servico => {
+        if (servico.tipo === servicoTipo) {
+          // Se estiver marcando como concluído, todas as subatividades também devem ser marcadas
+          let subatividades = servico.subatividades;
+          if (concluido && subatividades) {
+            subatividades = subatividades.map(sub => {
+              if (sub.selecionada) {
+                return { ...sub, concluida: true };
+              }
+              return sub;
+            });
+          }
+          
+          return { 
+            ...servico, 
+            concluido,
+            subatividades
+          };
+        }
+        return servico;
+      });
+      
+      // Atualize o Firestore
+      const ordemRef = doc(db, "ordens", ordem.id);
+      await updateDoc(ordemRef, { servicos: servicosAtualizados });
+      
+      // Atualize o estado local
+      const ordemAtualizada = {
+        ...ordem,
+        servicos: servicosAtualizados
+      };
+      
+      // Calcule o novo progresso
+      calcularProgressoTotal(ordemAtualizada, etapasAtivas);
+      
+      if (onOrdemUpdate) {
+        onOrdemUpdate(ordemAtualizada);
+      }
+      
+      // Exiba um toast de sucesso
+      toast.success(`Serviço ${servicoTipo} ${concluido ? 'concluído' : 'reaberto'}`);
+    } catch (error) {
+      console.error("Erro ao atualizar status do serviço:", error);
+      toast.error("Erro ao atualizar status do serviço");
     }
   };
   
@@ -158,128 +208,145 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
     
     return percentualProgresso;
   };
-
-  const handleSubatividadeToggle = async (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => {
-    if (!ordem.id) return;
+  
+  // Função para iniciar o timer de uma etapa
+  const handleStartEtapa = async (etapa: EtapaOS) => {
+    if (!ordem?.id || !funcionario?.id) return;
     
     try {
-      const servicos = ordem.servicos.map(servico => {
-        if (servico.tipo === servicoTipo && servico.subatividades) {
-          const subatividades = servico.subatividades.map(sub => {
-            if (sub.id === subatividadeId) {
-              return { ...sub, concluida: checked };
-            }
-            return sub;
-          });
-          
-          // Importante: Não marcar o serviço como concluído automaticamente
-          // mesmo que todas as subatividades estejam concluídas
-          return { 
-            ...servico, 
-            subatividades
-          };
+      // Verifique se a etapa atual já está iniciada
+      if (ordem.etapasAndamento?.[etapa]?.iniciado) {
+        // Se já estiver iniciada, não faça nada (evita sobrescrever dados existentes)
+        return;
+      }
+      
+      // Atualize o estado da etapa no Firestore
+      const etapasAndamento = {
+        ...ordem.etapasAndamento,
+        [etapa]: {
+          ...(ordem.etapasAndamento?.[etapa] || {}),
+          iniciado: new Date(),
+          concluido: false
         }
-        return servico;
-      });
-      
-      const orderRef = doc(db, "ordens", ordem.id);
-      await updateDoc(orderRef, { servicos });
-      
-      const ordemAtualizada = {
-        ...ordem,
-        servicos
       };
       
-      // Recalcular o progresso total
-      const novoProgresso = calcularProgressoTotal(ordemAtualizada, etapas);
-      const novoProgressoDecimal = novoProgresso / 100;
+      const ordemRef = doc(db, "ordens", ordem.id);
+      await updateDoc(ordemRef, { etapasAndamento });
       
-      await updateDoc(orderRef, { progressoEtapas: novoProgressoDecimal });
-      ordemAtualizada.progressoEtapas = novoProgressoDecimal;
+      // Atualize o estado local
+      const ordemAtualizada = {
+        ...ordem,
+        etapasAndamento
+      };
       
-      onOrdemUpdate(ordemAtualizada);
-      
-      // Notificar se a subatividade foi concluída
-      if (checked) {
-        // Encontrar o nome da subatividade para exibir na notificação
-        const servicoAtualizado = servicos.find(s => s.tipo === servicoTipo);
-        const subatividadeAtualizada = servicoAtualizado?.subatividades?.find(s => s.id === subatividadeId);
-        
-        if (subatividadeAtualizada) {
-          toast.success(`Subatividade "${subatividadeAtualizada.nome}" concluída`);
-        }
+      if (onOrdemUpdate) {
+        onOrdemUpdate(ordemAtualizada);
       }
+      
+      // Calcule o novo progresso
+      calcularProgressoTotal(ordemAtualizada, etapasAtivas);
+      
+      toast.success(`Etapa ${etapasLabels[etapa]} iniciada`);
     } catch (error) {
-      console.error("Erro ao atualizar subatividade:", error);
-      toast.error("Erro ao atualizar subatividade");
+      console.error("Erro ao iniciar etapa:", error);
+      toast.error("Erro ao iniciar etapa");
     }
   };
   
-  const handleServicoStatusChange = async (servicoTipo: TipoServico, concluido: boolean) => {
-    if (!ordem.id) return;
+  // Função para pausar uma etapa
+  const handlePauseEtapa = async (etapa: EtapaOS, motivo?: string) => {
+    if (!ordem?.id || !funcionario?.id) return;
     
     try {
-      const servicos = ordem.servicos.map(servico => {
-        if (servico.tipo === servicoTipo) {
-          // Se marcar como concluído, todas as subatividades também são marcadas
-          const subatividades = servico.subatividades?.map(sub => ({
-            ...sub,
-            concluida: concluido ? true : sub.concluida
-          }));
-          
-          return { 
-            ...servico, 
-            concluido,
-            subatividades: subatividades || servico.subatividades
-          };
-        }
-        return servico;
-      });
+      // Obtenha as pausas existentes
+      const pausasAtuais = ordem.etapasAndamento?.[etapa]?.pausas || [];
       
-      const orderRef = doc(db, "ordens", ordem.id);
-      await updateDoc(orderRef, { servicos });
-      
-      const ordemAtualizada = {
-        ...ordem,
-        servicos
+      // Adicione uma nova pausa
+      const novaPausa = {
+        inicio: Date.now(),
+        motivo
       };
       
-      // Recalcular o progresso total
-      const novoProgresso = calcularProgressoTotal(ordemAtualizada, etapas);
-      const novoProgressoDecimal = novoProgresso / 100;
+      const pausas = [...pausasAtuais, novaPausa];
       
-      await updateDoc(orderRef, { progressoEtapas: novoProgressoDecimal });
-      ordemAtualizada.progressoEtapas = novoProgressoDecimal;
+      // Atualize o estado da etapa no Firestore
+      const etapasAndamento = {
+        ...ordem.etapasAndamento,
+        [etapa]: {
+          ...(ordem.etapasAndamento?.[etapa] || {}),
+          pausas
+        }
+      };
       
-      onOrdemUpdate(ordemAtualizada);
+      const ordemRef = doc(db, "ordens", ordem.id);
+      await updateDoc(ordemRef, { etapasAndamento });
       
-      if (concluido) {
-        const servicoNome = (() => {
-          switch(servicoTipo) {
-            case 'bloco': return 'Bloco';
-            case 'biela': return 'Biela';
-            case 'cabecote': return 'Cabeçote';
-            case 'virabrequim': return 'Virabrequim';
-            case 'eixo_comando': return 'Eixo de Comando';
-            case 'montagem': return 'Montagem';
-            case 'dinamometro': return 'Dinamômetro';
-            default: return servicoTipo;
-          }
-        })();
-        
-        toast.success(`Serviço ${servicoNome} concluído`);
+      // Atualize o estado local
+      const ordemAtualizada = {
+        ...ordem,
+        etapasAndamento
+      };
+      
+      if (onOrdemUpdate) {
+        onOrdemUpdate(ordemAtualizada);
       }
+      
+      toast.success(`Etapa ${etapasLabels[etapa]} pausada`);
     } catch (error) {
-      console.error("Erro ao atualizar status do serviço:", error);
-      toast.error("Erro ao atualizar status do serviço");
+      console.error("Erro ao pausar etapa:", error);
+      toast.error("Erro ao pausar etapa");
     }
   };
-
-  const handleEtapaStatusChange = async (etapa: EtapaOS, concluida: boolean) => {
-    if (!ordem.id) return;
+  
+  // Função para retomar uma etapa
+  const handleResumeEtapa = async (etapa: EtapaOS) => {
+    if (!ordem?.id || !funcionario?.id) return;
     
     try {
-      // Atualizar a etapa específica
+      // Obtenha as pausas existentes
+      const pausasAtuais = ordem.etapasAndamento?.[etapa]?.pausas || [];
+      
+      if (pausasAtuais.length === 0) return;
+      
+      // Atualize a última pausa
+      const ultimaPausa = { ...pausasAtuais[pausasAtuais.length - 1], fim: Date.now() };
+      const pausas = [...pausasAtuais.slice(0, -1), ultimaPausa];
+      
+      // Atualize o estado da etapa no Firestore
+      const etapasAndamento = {
+        ...ordem.etapasAndamento,
+        [etapa]: {
+          ...(ordem.etapasAndamento?.[etapa] || {}),
+          pausas
+        }
+      };
+      
+      const ordemRef = doc(db, "ordens", ordem.id);
+      await updateDoc(ordemRef, { etapasAndamento });
+      
+      // Atualize o estado local
+      const ordemAtualizada = {
+        ...ordem,
+        etapasAndamento
+      };
+      
+      if (onOrdemUpdate) {
+        onOrdemUpdate(ordemAtualizada);
+      }
+      
+      toast.success(`Etapa ${etapasLabels[etapa]} retomada`);
+    } catch (error) {
+      console.error("Erro ao retomar etapa:", error);
+      toast.error("Erro ao retomar etapa");
+    }
+  };
+  
+  // Função para concluir uma etapa
+  const handleEtapaStatusChange = async (etapa: EtapaOS, concluida: boolean) => {
+    if (!ordem?.id || !funcionario?.id) return;
+    
+    try {
+      // Atualize o estado da etapa no Firestore
       const etapasAndamento = {
         ...ordem.etapasAndamento,
         [etapa]: {
@@ -290,75 +357,54 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
         }
       };
       
-      const orderRef = doc(db, "ordens", ordem.id);
-      await updateDoc(orderRef, { etapasAndamento });
+      const ordemRef = doc(db, "ordens", ordem.id);
+      await updateDoc(ordemRef, { etapasAndamento });
       
+      // Atualize o estado local
       const ordemAtualizada = {
         ...ordem,
         etapasAndamento
       };
       
-      // Recalcular o progresso total
-      const novoProgresso = calcularProgressoTotal(ordemAtualizada, etapas);
-      const novoProgressoDecimal = novoProgresso / 100;
+      // Calcule o novo progresso
+      calcularProgressoTotal(ordemAtualizada, etapasAtivas);
       
-      await updateDoc(orderRef, { progressoEtapas: novoProgressoDecimal });
-      ordemAtualizada.progressoEtapas = novoProgressoDecimal;
-      
-      onOrdemUpdate(ordemAtualizada);
-      
-      if (concluida) {
-        toast.success(`Etapa ${etapasLabels[etapa]} concluída`);
+      if (onOrdemUpdate) {
+        onOrdemUpdate(ordemAtualizada);
       }
+      
+      toast.success(`Etapa ${etapasLabels[etapa]} ${concluida ? 'concluída' : 'reaberta'}`);
     } catch (error) {
       console.error("Erro ao atualizar status da etapa:", error);
       toast.error("Erro ao atualizar status da etapa");
     }
   };
-
-  if (etapas.length === 0) {
-    return <div className="text-center py-8 text-muted-foreground">Carregando etapas...</div>;
-  }
-
+  
   return (
-    <Card className="mb-4">
-      <CardHeader>
-        <CardTitle>Acompanhamento das Etapas</CardTitle>
-        <div className="mt-4">
-          <div className="flex justify-between items-center mb-1.5">
-            <span className="text-sm font-medium">Progresso Geral</span>
-            <span className="text-sm text-muted-foreground">{progresso}%</span>
-          </div>
-          <Progress value={progresso} className="h-2" />
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {etapas.map((etapa) => {
-            return (
-              <EtapaCard
-                key={etapa}
-                ordemId={ordem.id}
-                etapa={etapa}
-                etapaNome={etapasLabels[etapa]}
-                funcionarioId={funcionario?.id || ""}
-                funcionarioNome={funcionario?.nome}
-                servicos={ordem.servicos}
-                etapaInfo={ordem.etapasAndamento?.[etapa]}
-                onSubatividadeToggle={(servicoTipo, subId, checked) => 
-                  handleSubatividadeToggle(servicoTipo, subId, checked)
-                }
-                onServicoStatusChange={(servicoTipo, concluido) => 
-                  handleServicoStatusChange(servicoTipo, concluido)
-                }
-                onEtapaStatusChange={(etapa, concluida) =>
-                  handleEtapaStatusChange(etapa, concluida)
-                }
-              />
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      <div className="mb-6">
+        <h2 className="text-xl font-bold mb-2">Progresso Geral</h2>
+        <Progress value={progresso} className="h-3" />
+        <p className="text-right mt-1 text-sm text-muted-foreground">{progresso}% concluído</p>
+      </div>
+      
+      <div className="space-y-6">
+        {etapasAtivas.map((etapa) => (
+          <EtapaCard
+            key={etapa}
+            ordemId={ordem.id}
+            etapa={etapa}
+            etapaNome={etapasLabels[etapa]}
+            funcionarioId={funcionario?.id || ""}
+            funcionarioNome={funcionario?.nome}
+            servicos={ordem.servicos}
+            etapaInfo={ordem.etapasAndamento?.[etapa]}
+            onSubatividadeToggle={handleSubatividadeToggle}
+            onServicoStatusChange={handleServicoStatusChange}
+            onEtapaStatusChange={handleEtapaStatusChange}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
