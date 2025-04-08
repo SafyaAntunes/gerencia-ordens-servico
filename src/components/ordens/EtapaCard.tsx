@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
@@ -43,7 +42,6 @@ export default function EtapaCard({
 }: EtapaCardProps) {
   const [progresso, setProgresso] = useState(0);
   
-  // Filter services based on etapa type
   const etapaServicos = (() => {
     switch(etapa) {
       case 'retifica':
@@ -57,14 +55,12 @@ export default function EtapaCard({
       case 'lavagem':
       case 'inspecao_inicial':
       case 'inspecao_final':
-        // Estas etapas não têm serviços específicos associados
         return [];
       default:
         return [];
     }
   })();
 
-  // Calcular o progresso da etapa baseado nos serviços concluídos
   useEffect(() => {
     if (etapaServicos.length === 0) return;
     
@@ -73,7 +69,6 @@ export default function EtapaCard({
     setProgresso(percentualProgresso);
   }, [etapaServicos]);
 
-  // Verifica se a etapa deve ter cronômetro próprio (etapas sem serviços específicos)
   const etapaComCronometro = ['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa);
   
   const handleEtapaConcluida = (tempoTotal: number) => {
@@ -94,7 +89,7 @@ export default function EtapaCard({
         <h3 className="text-xl font-semibold">{etapaNome}</h3>
         <div className="flex items-center gap-2">
           {etapaInfo?.concluido ? (
-            <Badge variant="success" className="bg-green-500 text-white">
+            <Badge variant="success">
               Concluído
             </Badge>
           ) : (
@@ -103,14 +98,12 @@ export default function EtapaCard({
         </div>
       </div>
       
-      {/* Progress bar para a etapa baseado nos serviços */}
       {etapaServicos.length > 0 && (
         <div className="mb-4">
           <Progress value={progresso} className="h-2" />
         </div>
       )}
       
-      {/* Para etapas com cronômetro próprio, exibir o cronômetro */}
       {etapaComCronometro && (
         <div className="p-4 border rounded-md mb-4">
           <OrdemCronometro
@@ -138,7 +131,6 @@ export default function EtapaCard({
         </div>
       )}
       
-      {/* Show service trackers */}
       {etapaServicos.length > 0 && (
         <div className="space-y-4">
           {etapaServicos.map((servico, i) => (

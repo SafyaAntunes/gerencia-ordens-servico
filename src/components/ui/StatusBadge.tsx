@@ -13,7 +13,7 @@ export function StatusBadge({ status, size = "md", className }: StatusBadgeProps
     // Status de Ordem de Serviço
     if (status === "orcamento") return { label: "Orçamento", color: "bg-blue-100 text-blue-800" };
     if (status === "aguardando_aprovacao") return { label: "Aguardando Aprovação", color: "bg-amber-100 text-amber-800" };
-    if (status === "retifica") return { label: "Retífica", color: "bg-purple-100 text-purple-800" };
+    if (status === "fabricacao") return { label: "Fabricação", color: "bg-purple-100 text-purple-800" };
     if (status === "aguardando_peca_cliente") return { label: "Aguardando Peça (Cliente)", color: "bg-gray-100 text-gray-800" };
     if (status === "aguardando_peca_interno") return { label: "Aguardando Peça (Interno)", color: "bg-yellow-100 text-yellow-800" };
     if (status === "finalizado") return { label: "Finalizado", color: "bg-green-100 text-green-800" };

@@ -152,7 +152,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         case 'aguardando_aprovacao':
           statusCounts["Aguardando Aprovação"]++;
           break;
-        case 'retifica':
+        case 'fabricacao':
           statusCounts["Em Fabricação"]++;
           break;
         case 'aguardando_peca_cliente':
