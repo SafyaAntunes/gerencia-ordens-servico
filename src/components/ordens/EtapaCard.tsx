@@ -83,35 +83,19 @@ export default function EtapaCard({
       onEtapaStatusChange(etapa, true);
     }
   };
-  
-  const handleIniciarEtapa = () => {
-    if (onEtapaStatusChange) {
-      // Marca como iniciada mas não concluída
-      onEtapaStatusChange(etapa, false);
-    }
-  };
-  
-  // Determinar o status da etapa
-  const getEtapaStatus = () => {
-    if (etapaInfo?.concluido) {
-      return { status: "concluido", text: "Concluído", variant: "success" as const };
-    } else if (etapaInfo?.iniciado) {
-      return { status: "em_andamento", text: "Em andamento", variant: "outline" as const };
-    } else {
-      return { status: "nao_iniciado", text: "Não iniciado", variant: "secondary" as const };
-    }
-  };
-  
-  const etapaStatus = getEtapaStatus();
 
   return (
     <Card className="p-6 mb-4">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xl font-semibold">{etapaNome}</h3>
         <div className="flex items-center gap-2">
-          <Badge variant={etapaStatus.variant}>
-            {etapaStatus.text}
-          </Badge>
+          {etapaInfo?.concluido ? (
+            <Badge variant="success">
+              Concluído
+            </Badge>
+          ) : (
+            <Badge variant="outline">Em andamento</Badge>
+          )}
         </div>
       </div>
       
@@ -121,20 +105,7 @@ export default function EtapaCard({
         </div>
       )}
       
-      {etapaStatus.status === "nao_iniciado" && (
-        <div className="mb-4">
-          <Button 
-            variant="default" 
-            size="sm" 
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white"
-            onClick={handleIniciarEtapa}
-          >
-            Iniciar Etapa
-          </Button>
-        </div>
-      )}
-      
-      {etapaComCronometro && etapaStatus.status !== "nao_iniciado" && (
+      {etapaComCronometro && (
         <div className="p-4 border rounded-md mb-4">
           <OrdemCronometro
             ordemId={ordemId}
@@ -145,7 +116,7 @@ export default function EtapaCard({
             isEtapaConcluida={etapaInfo?.concluido}
           />
           
-          {etapaStatus.status === "em_andamento" && (
+          {!etapaInfo?.concluido && (
             <div className="mt-4">
               <Button 
                 variant="default" 
@@ -161,7 +132,7 @@ export default function EtapaCard({
         </div>
       )}
       
-      {etapaServicos.length > 0 && etapaStatus.status !== "nao_iniciado" && (
+      {etapaServicos.length > 0 && (
         <div className="space-y-4">
           {etapaServicos.map((servico, i) => (
             <ServicoTracker

@@ -42,7 +42,6 @@ export function useOrdemTimer({
       // If the etapa is completed, just show the total saved time
       if (isEtapaConcluida) {
         setTotalSavedTime(savedData.totalTime || 0);
-        setPausas(savedData.pausas || []);
         return;
       }
       
@@ -67,7 +66,7 @@ export function useOrdemTimer({
   
   // Save state to localStorage
   useEffect(() => {
-    if (isRunning || totalSavedTime > 0 || pausas.length > 0) {
+    if (isRunning || totalSavedTime > 0) {
       const dataToSave: TimerState = {
         isRunning,
         isPaused,
@@ -117,7 +116,7 @@ export function useOrdemTimer({
   
   const handlePause = (motivo?: string) => {
     if (!usarCronometro) {
-      onPause?.(motivo);
+      onPause?.();
       return;
     }
     
@@ -133,21 +132,6 @@ export function useOrdemTimer({
     };
     
     setPausas(prev => [...prev, novaPausa]);
-    
-    // Garantir que os dados sejam salvos imediatamente
-    const dataToSave: TimerState = {
-      isRunning: true,
-      isPaused: true,
-      startTime,
-      pauseTime: now,
-      totalPausedTime,
-      elapsedTime,
-      totalTime: totalSavedTime + elapsedTime,
-      usarCronometro,
-      pausas: [...pausas, novaPausa]
-    };
-    
-    saveTimerData(ordemId, etapa as EtapaOS, tipoServico as TipoServico, dataToSave);
     
     onPause?.(motivo);
     
@@ -167,31 +151,17 @@ export function useOrdemTimer({
       setTotalPausedTime(prev => prev + pauseDuration);
       
       // Atualiza o fim da última pausa
-      const novasPausas = [...pausas];
-      if (novasPausas.length > 0) {
-        const ultimaPausa = novasPausas[novasPausas.length - 1];
-        novasPausas[novasPausas.length - 1] = {
-          ...ultimaPausa,
-          fim: now
-        };
-        
-        setPausas(novasPausas);
-        
-        // Garantir que os dados sejam salvos imediatamente
-        const dataToSave: TimerState = {
-          isRunning: true,
-          isPaused: false,
-          startTime,
-          pauseTime: null,
-          totalPausedTime: totalPausedTime + pauseDuration,
-          elapsedTime,
-          totalTime: totalSavedTime + elapsedTime,
-          usarCronometro,
-          pausas: novasPausas
-        };
-        
-        saveTimerData(ordemId, etapa as EtapaOS, tipoServico as TipoServico, dataToSave);
-      }
+      setPausas(prev => {
+        const novasPausas = [...prev];
+        if (novasPausas.length > 0) {
+          const ultimaPausa = novasPausas[novasPausas.length - 1];
+          novasPausas[novasPausas.length - 1] = {
+            ...ultimaPausa,
+            fim: now
+          };
+        }
+        return novasPausas;
+      });
     }
     
     setIsPaused(false);
@@ -207,23 +177,6 @@ export function useOrdemTimer({
       return;
     }
     
-    // Se estiver pausado, finalize a última pausa
-    if (isPaused && pauseTime) {
-      const now = Date.now();
-      const novasPausas = [...pausas];
-      
-      if (novasPausas.length > 0) {
-        const ultimaPausa = novasPausas[novasPausas.length - 1];
-        if (!ultimaPausa.fim) {
-          novasPausas[novasPausas.length - 1] = {
-            ...ultimaPausa,
-            fim: now
-          };
-          setPausas(novasPausas);
-        }
-      }
-    }
-    
     setIsRunning(false);
     setIsPaused(false);
     const finalTime = elapsedTime;
@@ -237,7 +190,6 @@ export function useOrdemTimer({
     
     // Reset current session
     setStartTime(null);
-    setPauseTime(null);
     setTotalPausedTime(0);
     setElapsedTime(0);
     
