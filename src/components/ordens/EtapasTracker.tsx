@@ -130,21 +130,61 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
     }
   };
   
-  // Calcula o progresso total baseado em todas as atividades de todas as etapas
+  // Calcula o progresso total baseado em todas as etapas e atividades
   const calcularProgressoTotal = (ordem: OrdemServico, etapasList: EtapaOS[]) => {
     // Considerar todas as etapas para cálculo de progresso
-    const totalServicos = ordem.servicos.length;
+    // Calcular o número total de etapas que temos
+    const totalEtapas = etapasList.length;
     
-    if (totalServicos === 0) {
+    if (totalEtapas === 0) {
       setProgresso(0);
       return 0;
     }
     
-    // Contar serviços concluídos
-    const servicosConcluidos = ordem.servicos.filter(servico => servico.concluido).length;
+    // Contar etapas concluídas
+    let etapasConcluidas = 0;
+    
+    for (const etapa of etapasList) {
+      if (ordem.etapasAndamento?.[etapa]?.concluido) {
+        etapasConcluidas++;
+        continue;
+      }
+      
+      // Se a etapa não está concluída, mas todas as atividades dela estão, conta como parcialmente completa
+      if (etapa === 'retifica') {
+        const servicosRetifica = ordem.servicos.filter(s => 
+          ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo)
+        );
+        
+        if (servicosRetifica.length > 0) {
+          const servicosConcluidos = servicosRetifica.filter(s => s.concluido).length;
+          if (servicosConcluidos > 0) {
+            // Adiciona progresso parcial baseado na proporção de atividades concluídas
+            etapasConcluidas += (servicosConcluidos / servicosRetifica.length) * 0.8;
+          }
+        }
+      } else if (etapa === 'montagem') {
+        const servicosMontagem = ordem.servicos.filter(s => s.tipo === 'montagem');
+        if (servicosMontagem.length > 0 && servicosMontagem[0].concluido) {
+          etapasConcluidas += 0.8; // 80% do progresso da etapa
+        }
+      } else if (etapa === 'dinamometro') {
+        const servicosDinamometro = ordem.servicos.filter(s => s.tipo === 'dinamometro');
+        if (servicosDinamometro.length > 0 && servicosDinamometro[0].concluido) {
+          etapasConcluidas += 0.8; // 80% do progresso da etapa
+        }
+      }
+      
+      // Para etapas como lavagem, inspeção inicial e final, verificar se iniciadas
+      else if (['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa)) {
+        if (ordem.etapasAndamento?.[etapa]?.iniciado) {
+          etapasConcluidas += 0.5; // 50% do progresso para etapas iniciadas mas não concluídas
+        }
+      }
+    }
     
     // Calcular percentual
-    const percentualProgresso = Math.round((servicosConcluidos / totalServicos) * 100);
+    const percentualProgresso = Math.round((etapasConcluidas / totalEtapas) * 100);
     setProgresso(percentualProgresso);
     
     return percentualProgresso;
@@ -276,6 +316,7 @@ export default function EtapasTracker({ ordem, onOrdemUpdate }: EtapasTrackerPro
         [etapa]: {
           ...(ordem.etapasAndamento?.[etapa] || {}),
           concluido: concluida,
+          iniciado: ordem.etapasAndamento?.[etapa]?.iniciado || new Date(),
           finalizado: concluida ? new Date() : undefined
         }
       };
