@@ -25,6 +25,7 @@ import { ptBR } from "date-fns/locale";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import EtapasTracker from "@/components/ordens/EtapasTracker";
+import PausaRelatorio from "@/components/ordens/PausaRelatorio";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -391,6 +392,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
               </TabsTrigger>
             )}
             <TabsTrigger value="fotos" className="flex-1">Fotos</TabsTrigger>
+            <TabsTrigger value="relatorio" className="flex-1">Relatório</TabsTrigger>
           </TabsList>
           
           <TabsContent value="detalhes" className="space-y-6">
@@ -555,6 +557,10 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+          
+          <TabsContent value="relatorio" className="space-y-6">
+            <PausaRelatorio ordem={ordem} />
           </TabsContent>
         </Tabs>
       )}

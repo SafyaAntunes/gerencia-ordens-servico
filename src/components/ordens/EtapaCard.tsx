@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
@@ -68,12 +67,7 @@ export default function EtapaCard({
     const servicosConcluidos = etapaServicos.filter(servico => servico.concluido).length;
     const percentualProgresso = Math.round((servicosConcluidos / etapaServicos.length) * 100);
     setProgresso(percentualProgresso);
-    
-    // Se todos os serviços estiverem concluídos, marcar a etapa como concluída automaticamente
-    if (percentualProgresso === 100 && !etapaInfo?.concluido && onEtapaStatusChange) {
-      onEtapaStatusChange(etapa, true);
-    }
-  }, [etapaServicos, etapaInfo, etapa, onEtapaStatusChange]);
+  }, [etapaServicos]);
 
   const etapaComCronometro = ['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa);
   
@@ -89,7 +83,6 @@ export default function EtapaCard({
     }
   };
   
-  // Determinar o status da etapa
   const getEtapaStatus = () => {
     if (etapaInfo?.concluido) {
       return "concluido";

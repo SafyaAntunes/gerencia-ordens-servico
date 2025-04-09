@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -55,20 +54,16 @@ export default function ServicoTracker({
     isEtapaConcluida: servico.concluido
   });
 
-  // Filtramos apenas as subatividades selecionadas durante a criação da OS
   const subatividadesFiltradas = servico.subatividades?.filter(item => item.selecionada) || [];
   
-  // Calculate progress percentage apenas das selecionadas
   const totalSubatividades = subatividadesFiltradas.length || 0;
   const completedSubatividades = subatividadesFiltradas.filter(item => item.concluida).length || 0;
   const progressPercentage = totalSubatividades > 0 
     ? Math.round((completedSubatividades / totalSubatividades) * 100)
     : 0;
     
-  // Verificar se todas as subatividades estão concluídas
   const allCompleted = totalSubatividades > 0 && completedSubatividades === totalSubatividades;
   
-  // Determinar o status do serviço
   const getServicoStatus = () => {
     if (servico.concluido) {
       return "concluido";
@@ -79,7 +74,6 @@ export default function ServicoTracker({
     }
   };
   
-  // Format the service type for display
   const formatServicoTipo = (tipo: TipoServico): string => {
     const labels: Record<TipoServico, string> = {
       bloco: "Bloco",
@@ -93,7 +87,6 @@ export default function ServicoTracker({
     return labels[tipo] || tipo;
   };
 
-  // Toggle a subatividade
   const handleSubatividadeToggle = (subatividade: SubAtividade) => {
     onSubatividadeToggle(subatividade.id, !subatividade.concluida);
   };
@@ -125,10 +118,6 @@ export default function ServicoTracker({
   };
   
   useEffect(() => {
-    // Se todas as subatividades estiverem concluídas, marcar o serviço como concluído automaticamente
-    if (allCompleted && !servico.concluido) {
-      onServicoStatusChange(true);
-    }
   }, [allCompleted, servico.concluido, onServicoStatusChange]);
 
   const servicoStatus = getServicoStatus();
