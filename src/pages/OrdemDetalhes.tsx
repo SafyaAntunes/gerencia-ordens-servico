@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -6,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ChevronLeft, Edit, ClipboardCheck, Trash } from "lucide-react";
 import { OrdemServico, StatusOS, TipoServico, SubAtividade, EtapaOS } from "@/types/ordens";
-import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import OrdemForm from "@/components/ordens/OrdemForm";
@@ -36,6 +37,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Cliente, Motor } from "@/types/ordens";
 
 interface OrdemDetalhesProps extends LogoutProps {}
 
@@ -43,6 +45,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [ordem, setOrdem] = useState<OrdemServico | null>(null);
+  const [motor, setMotor] = useState<Motor | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fotosEntrada, setFotosEntrada] = useState<File[]>([]);
@@ -91,6 +94,11 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
           } as OrdemServico;
           
           setOrdem(ordemFormatada);
+          
+          // Se tiver motorId, buscar os detalhes do motor
+          if (ordemFormatada.motorId && ordemFormatada.cliente?.id) {
+            await fetchMotorDetails(ordemFormatada.cliente.id, ordemFormatada.motorId);
+          }
         } else {
           toast.error("Ordem não encontrada");
           navigate("/ordens");
@@ -105,6 +113,27 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
     
     fetchOrdem();
   }, [id, navigate]);
+
+  const fetchMotorDetails = async (clienteId: string, motorId: string) => {
+    try {
+      // Buscar os detalhes do motor
+      const clientesRef = doc(db, "clientes", clienteId);
+      const clienteDoc = await getDoc(clientesRef);
+      
+      if (clienteDoc.exists()) {
+        const clienteData = clienteDoc.data() as Cliente;
+        
+        if (clienteData.motores && clienteData.motores.length > 0) {
+          const motorEncontrado = clienteData.motores.find(m => m.id === motorId);
+          if (motorEncontrado) {
+            setMotor(motorEncontrado);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao buscar detalhes do motor:", error);
+    }
+  };
 
   const handleStatusChange = async (newStatus: StatusOS) => {
     if (!id || !ordem) return;
@@ -250,6 +279,11 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
         if (!prev) return null;
         return { ...prev, ...updatedOrder } as OrdemServico;
       });
+      
+      // Atualizar os detalhes do motor se houve mudança
+      if (values.motorId && values.motorId !== ordem?.motorId) {
+        await fetchMotorDetails(values.clienteId, values.motorId);
+      }
       
       toast.success("Ordem atualizada com sucesso!");
       setIsEditando(false);
@@ -469,26 +503,87 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
                   <CardTitle>Cliente e Motor</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Cliente</p>
-                    <p className="font-medium">{ordem.cliente?.nome}</p>
+                  <div className="mb-6">
+                    <h3 className="text-lg font-medium mb-2">Dados do Cliente</h3>
+                    <div className="grid grid-cols-1 gap-2">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Nome</p>
+                        <p className="font-medium">{ordem.cliente?.nome}</p>
+                      </div>
+                      {ordem.cliente?.telefone && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Telefone</p>
+                          <p className="font-medium">{ordem.cliente?.telefone}</p>
+                        </div>
+                      )}
+                      {ordem.cliente?.email && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Email</p>
+                          <p className="font-medium">{ordem.cliente?.email}</p>
+                        </div>
+                      )}
+                      {ordem.cliente?.cnpj_cpf && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">CPF/CNPJ</p>
+                          <p className="font-medium">{ordem.cliente?.cnpj_cpf}</p>
+                        </div>
+                      )}
+                      {ordem.cliente?.endereco && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Endereço</p>
+                          <p className="font-medium">{ordem.cliente?.endereco}</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  {ordem.cliente?.telefone && (
+                  
+                  {motor && (
                     <div>
-                      <p className="text-sm text-muted-foreground">Telefone</p>
-                      <p className="font-medium">{ordem.cliente?.telefone}</p>
+                      <h3 className="text-lg font-medium mb-2">Dados do Motor</h3>
+                      <div className="grid grid-cols-1 gap-2">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Marca</p>
+                          <p className="font-medium">{motor.marca}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Modelo</p>
+                          <p className="font-medium">{motor.modelo}</p>
+                        </div>
+                        {motor.ano && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">Ano</p>
+                            <p className="font-medium">{motor.ano}</p>
+                          </div>
+                        )}
+                        {motor.numeroSerie && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">Número de Série</p>
+                            <p className="font-medium">{motor.numeroSerie}</p>
+                          </div>
+                        )}
+                        {motor.cilindradas && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">Cilindradas</p>
+                            <p className="font-medium">{motor.cilindradas}</p>
+                          </div>
+                        )}
+                        {motor.observacoes && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">Observações</p>
+                            <p className="font-medium">{motor.observacoes}</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
-                  {ordem.cliente?.email && (
+                  
+                  {!motor && ordem.motorId && (
                     <div>
-                      <p className="text-sm text-muted-foreground">Email</p>
-                      <p className="font-medium">{ordem.cliente?.email}</p>
-                    </div>
-                  )}
-                  {ordem.motorId && (
-                    <div className="mt-4">
-                      <p className="text-sm text-muted-foreground">Motor</p>
-                      <p className="font-medium">ID: {ordem.motorId}</p>
+                      <h3 className="text-lg font-medium mb-2">Dados do Motor</h3>
+                      <p className="text-muted-foreground">ID do motor: {ordem.motorId}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Detalhes completos não disponíveis.
+                      </p>
                     </div>
                   )}
                 </CardContent>

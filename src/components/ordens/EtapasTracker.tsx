@@ -12,7 +12,6 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { CheckCircle, Clock, PlayCircle } from "lucide-react";
-import ServicoTracker from "./ServicoTracker";
 import EtapaCard from "./EtapaCard";
 
 interface EtapasTrackerProps {
@@ -22,16 +21,10 @@ interface EtapasTrackerProps {
 
 const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
   const [etapasAtivas, setEtapasAtivas] = useState<EtapaOS[]>([]);
-  const [activeTab, setActiveTab] = useState<"servicos" | "etapas">("servicos");
-  const [activeServicoTab, setActiveServicoTab] = useState<TipoServico | "">("");
+  const [progressoTotal, setProgressoTotal] = useState(0);
   const { funcionario } = useAuth();
 
   useEffect(() => {
-    // Inicializar com a primeira aba de serviço ativa (se existir)
-    if (ordem.servicos.length > 0 && !activeServicoTab) {
-      setActiveServicoTab(ordem.servicos[0].tipo);
-    }
-
     // Determine active etapas based on ordem status
     const availableEtapas: EtapaOS[] = [
       'lavagem', 
@@ -42,12 +35,26 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
       'inspecao_final'
     ];
     setEtapasAtivas(availableEtapas);
-  }, [ordem.servicos, activeServicoTab]);
+    
+    // Calcular o progresso total da ordem
+    calcularProgressoTotal(ordem);
+  }, [ordem]);
 
   // Função para calcular o progresso total
-  const calcularProgressoTotal = (ordemAtualizada: OrdemServico, etapasAtivas: EtapaOS[]) => {
-    // Por enquanto, apenas retornamos a ordem sem modificação
-    return ordemAtualizada;
+  const calcularProgressoTotal = (ordemAtual: OrdemServico) => {
+    const etapas = Object.keys(ordemAtual.etapasAndamento) as EtapaOS[];
+    
+    if (etapas.length === 0) {
+      setProgressoTotal(0);
+      return;
+    }
+    
+    const etapasConcluidas = etapas.filter(
+      etapa => ordemAtual.etapasAndamento[etapa]?.concluido
+    ).length;
+    
+    const progresso = Math.round((etapasConcluidas / etapas.length) * 100);
+    setProgressoTotal(progresso);
   };
 
   // Função para lidar com a troca de status do serviço
@@ -88,9 +95,6 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         servicos: servicosAtualizados
       };
       
-      // Calcule o novo progresso
-      calcularProgressoTotal(ordemAtualizada, etapasAtivas);
-      
       if (onOrdemUpdate) {
         onOrdemUpdate(ordemAtualizada);
       }
@@ -130,6 +134,8 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         etapasAndamento
       };
       
+      calcularProgressoTotal(ordemAtualizada);
+      
       if (onOrdemUpdate) {
         onOrdemUpdate(ordemAtualizada);
       }
@@ -143,17 +149,17 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
   };
 
   // Função para lidar com a troca de status de uma subatividade
-  const handleSubatividadeToggle = async (subatividadeId: string, checked: boolean) => {
-    if (!activeServicoTab || !ordem?.id) return;
+  const handleSubatividadeToggle = async (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => {
+    if (!ordem?.id) return;
     
     try {
       // Encontre o serviço atual
-      const servicoAtual = ordem.servicos.find(s => s.tipo === activeServicoTab);
+      const servicoAtual = ordem.servicos.find(s => s.tipo === servicoTipo);
       if (!servicoAtual || !servicoAtual.subatividades) return;
       
       // Atualize a subatividade
       const servicosAtualizados = ordem.servicos.map(servico => {
-        if (servico.tipo === activeServicoTab && servico.subatividades) {
+        if (servico.tipo === servicoTipo && servico.subatividades) {
           const subatividades = servico.subatividades.map(sub => {
             if (sub.id === subatividadeId) {
               return { ...sub, concluida: checked };
@@ -188,32 +194,6 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     }
   };
 
-  // Função para calcular o progresso de um serviço
-  const calcularProgressoServico = (servico: TipoServico) => {
-    const servicoAtual = ordem.servicos.find(s => s.tipo === servico);
-    if (!servicoAtual || !servicoAtual.subatividades) return 0;
-    
-    const subatividadesSelecionadas = servicoAtual.subatividades.filter(sub => sub.selecionada);
-    if (subatividadesSelecionadas.length === 0) return 0;
-    
-    const concluidas = subatividadesSelecionadas.filter(sub => sub.concluida).length;
-    return Math.round((concluidas / subatividadesSelecionadas.length) * 100);
-  };
-
-  // Função para formatação dos nomes dos serviços
-  const formatarTipoServico = (tipo: TipoServico): string => {
-    const labels: Record<TipoServico, string> = {
-      bloco: "Bloco",
-      biela: "Biela",
-      cabecote: "Cabeçote",
-      virabrequim: "Virabrequim",
-      eixo_comando: "Eixo de Comando",
-      montagem: "Montagem",
-      dinamometro: "Dinamômetro"
-    };
-    return labels[tipo] || tipo;
-  };
-
   // Função para formatação dos nomes das etapas
   const formatarEtapa = (etapa: EtapaOS): string => {
     const labels: Record<EtapaOS, string> = {
@@ -226,11 +206,6 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     };
     return labels[etapa] || etapa;
   };
-
-  // Filtra apenas os serviços ativos
-  const servicosAtivos = ordem.servicos.filter(servico => 
-    servico.subatividades && servico.subatividades.some(sub => sub.selecionada)
-  );
 
   // Organiza os serviços por etapas
   const getServicosParaEtapa = (etapa: EtapaOS): Servico[] => {
@@ -247,6 +222,11 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         return [];
     }
   };
+
+  // Filtra apenas os serviços ativos
+  const servicosAtivos = ordem.servicos.filter(servico => 
+    servico.subatividades && servico.subatividades.some(sub => sub.selecionada)
+  );
 
   // Se não houver serviços selecionados, exiba uma mensagem
   if (servicosAtivos.length === 0) {
@@ -267,7 +247,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     );
   }
 
-  // Exibe o painel de tracker com abas para cada serviço e etapas
+  // Exibe o painel de tracker
   return (
     <div className="space-y-6">
       <Card className="w-full">
@@ -278,112 +258,35 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Tabs principais: Serviços e Etapas */}
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "servicos" | "etapas")} className="w-full">
-            <TabsList className="w-full mb-4">
-              <TabsTrigger value="servicos" className="flex-1">Serviços</TabsTrigger>
-              <TabsTrigger value="etapas" className="flex-1">Etapas</TabsTrigger>
-            </TabsList>
+          {/* Barra de progresso total */}
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium">Progresso Total</span>
+              <span className="text-sm font-medium">{progressoTotal}%</span>
+            </div>
+            <Progress value={progressoTotal} className="h-3" />
+          </div>
 
-            {/* Conteúdo da aba Serviços */}
-            <TabsContent value="servicos" className="m-0">
-              {/* Resumo geral dos serviços */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                {servicosAtivos.map(servico => (
-                  <Card key={servico.tipo} className="overflow-hidden">
-                    <CardHeader className="p-4 pb-2">
-                      <div className="flex justify-between items-start">
-                        <CardTitle className="text-base">
-                          {formatarTipoServico(servico.tipo)}
-                        </CardTitle>
-                        {servico.concluido ? (
-                          <Badge variant="success">Concluído</Badge>
-                        ) : (
-                          <Badge variant="outline">Em andamento</Badge>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-1">
-                      <Progress 
-                        value={calcularProgressoServico(servico.tipo)} 
-                        className="h-2 mb-2" 
-                      />
-                      <div className="flex justify-between items-center text-xs text-muted-foreground">
-                        <span>Progresso: {calcularProgressoServico(servico.tipo)}%</span>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="p-0 h-auto text-xs hover:bg-transparent"
-                          onClick={() => setActiveServicoTab(servico.tipo)}
-                        >
-                          Ver detalhes
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Abas para cada serviço */}
-              <Tabs 
-                value={activeServicoTab} 
-                onValueChange={(value) => setActiveServicoTab(value as TipoServico)}
-                className="w-full"
-              >
-                <TabsList className="w-full mb-4 overflow-auto">
-                  {servicosAtivos.map(servico => (
-                    <TabsTrigger 
-                      key={servico.tipo} 
-                      value={servico.tipo}
-                      className="flex-1"
-                    >
-                      {formatarTipoServico(servico.tipo)}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-
-                {servicosAtivos.map(servico => (
-                  <TabsContent key={servico.tipo} value={servico.tipo} className="m-0">
-                    <ServicoTracker
-                      servico={servico}
-                      ordemId={ordem.id}
-                      funcionarioId={funcionario?.id}
-                      funcionarioNome={funcionario?.nome}
-                      onSubatividadeToggle={handleSubatividadeToggle}
-                      onServicoStatusChange={(concluido) => handleServicoStatusChange(servico.tipo, concluido)}
-                      className="w-full"
-                    />
-                  </TabsContent>
-                ))}
-              </Tabs>
-            </TabsContent>
-
-            {/* Conteúdo da aba Etapas */}
-            <TabsContent value="etapas" className="m-0">
-              <div className="grid grid-cols-1 gap-6">
-                {etapasAtivas.map(etapa => (
-                  <EtapaCard 
-                    key={etapa}
-                    ordemId={ordem.id}
-                    etapa={etapa}
-                    etapaNome={formatarEtapa(etapa)}
-                    funcionarioId={funcionario?.id || ""}
-                    funcionarioNome={funcionario?.nome}
-                    servicos={getServicosParaEtapa(etapa)}
-                    etapaInfo={ordem.etapasAndamento[etapa]}
-                    onSubatividadeToggle={(servicoTipo, subId, checked) => {
-                      const servico = ordem.servicos.find(s => s.tipo === servicoTipo);
-                      if (servico) {
-                        handleSubatividadeToggle(subId, checked);
-                      }
-                    }}
-                    onServicoStatusChange={handleServicoStatusChange}
-                    onEtapaStatusChange={handleEtapaStatusChange}
-                  />
-                ))}
-              </div>
-            </TabsContent>
-          </Tabs>
+          {/* Lista de etapas */}
+          <div className="grid grid-cols-1 gap-6">
+            {etapasAtivas.map(etapa => (
+              <EtapaCard 
+                key={etapa}
+                ordemId={ordem.id}
+                etapa={etapa}
+                etapaNome={formatarEtapa(etapa)}
+                funcionarioId={funcionario?.id || ""}
+                funcionarioNome={funcionario?.nome}
+                servicos={getServicosParaEtapa(etapa)}
+                etapaInfo={ordem.etapasAndamento[etapa]}
+                onSubatividadeToggle={(servicoTipo, subId, checked) => {
+                  handleSubatividadeToggle(servicoTipo, subId, checked);
+                }}
+                onServicoStatusChange={handleServicoStatusChange}
+                onEtapaStatusChange={handleEtapaStatusChange}
+              />
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>

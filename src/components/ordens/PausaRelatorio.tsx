@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OrdemServico, EtapaOS, PausaRegistro } from "@/types/ordens";
@@ -12,6 +12,12 @@ interface PausaRelatorioProps {
 
 export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
   const [activeTab, setActiveTab] = useState<string>("etapas");
+  const [pausasPorEtapa, setPausasPorEtapa] = useState<{etapa: EtapaOS, pausas: PausaRegistro[]}[]>([]);
+  const [servicosComPausas, setServicosComPausas] = useState<{servico: string, pausas: PausaRegistro[]}[]>([]);
+  const [totalPausas, setTotalPausas] = useState(0);
+  const [pausasEmAndamento, setPausasEmAndamento] = useState(0);
+  const [tempoTotalEmPausa, setTempoTotalEmPausa] = useState(0);
+  const [pausasPorMotivo, setPausasPorMotivo] = useState<Record<string, { count: number, tempo: number }>>({});
   
   // Labels para as etapas
   const etapasLabels: Record<EtapaOS, string> = {
@@ -21,6 +27,101 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
     montagem: "Montagem",
     dinamometro: "Dinamômetro",
     inspecao_final: "Inspeção Final"
+  };
+  
+  useEffect(() => {
+    // Carregar e processar as pausas quando a ordem mudar
+    carregarPausas();
+  }, [ordem]);
+  
+  const carregarPausas = () => {
+    // Filtrar pausas por etapas
+    const etapasPausas = Object.entries(ordem.etapasAndamento || {})
+      .filter(([_, info]) => info?.pausas && info.pausas.length > 0)
+      .map(([etapaKey, info]) => ({
+        etapa: etapaKey as EtapaOS,
+        pausas: info.pausas || []
+      }));
+    
+    setPausasPorEtapa(etapasPausas);
+    
+    // Filtrar pausas por serviços (obtidas do localStorage)
+    const servicosPausas = ordem.servicos
+      .filter(servico => {
+        // Verifique se há pausas registradas no localStorage para este serviço
+        const storageKey = `timer_${ordem.id}_retifica_${servico.tipo}`;
+        const data = localStorage.getItem(storageKey);
+        if (!data) return false;
+        
+        try {
+          const parsed = JSON.parse(data);
+          return parsed.pausas && parsed.pausas.length > 0;
+        } catch {
+          return false;
+        }
+      })
+      .map(servico => {
+        // Obtenha as pausas do localStorage
+        const storageKey = `timer_${ordem.id}_retifica_${servico.tipo}`;
+        const data = localStorage.getItem(storageKey);
+        let pausas: PausaRegistro[] = [];
+        
+        if (data) {
+          try {
+            const parsed = JSON.parse(data);
+            pausas = parsed.pausas || [];
+          } catch {
+            // Ignorar erro de parsing
+          }
+        }
+        
+        return {
+          servico: servico.tipo,
+          pausas
+        };
+      });
+    
+    setServicosComPausas(servicosPausas);
+    
+    // Contadores para o resumo
+    const totalPausasCount = etapasPausas.reduce((acc, item) => acc + item.pausas.length, 0) + 
+                           servicosPausas.reduce((acc, item) => acc + item.pausas.length, 0);
+    
+    setTotalPausas(totalPausasCount);
+    
+    const emAndamento = etapasPausas.reduce((acc, item) => 
+      acc + item.pausas.filter(p => !p.fim).length, 0) + 
+      servicosPausas.reduce((acc, item) => 
+      acc + item.pausas.filter(p => !p.fim).length, 0);
+    
+    setPausasEmAndamento(emAndamento);
+    
+    // Calcular tempo total em pausa (apenas pausas finalizadas)
+    const todasAsPausas = [
+      ...etapasPausas.flatMap(item => item.pausas),
+      ...servicosPausas.flatMap(item => item.pausas)
+    ];
+    
+    const tempoTotal = todasAsPausas
+      .filter(pausa => pausa.fim)
+      .reduce((acc, pausa) => acc + ((pausa.fim || 0) - pausa.inicio), 0);
+    
+    setTempoTotalEmPausa(tempoTotal);
+    
+    // Agrupar pausas por motivo para estatísticas
+    const porMotivo = todasAsPausas.reduce((acc, pausa) => {
+      const motivo = pausa.motivo || "Sem motivo";
+      if (!acc[motivo]) {
+        acc[motivo] = { count: 0, tempo: 0 };
+      }
+      acc[motivo].count += 1;
+      if (pausa.fim) {
+        acc[motivo].tempo += (pausa.fim - pausa.inicio);
+      }
+      return acc;
+    }, {} as Record<string, { count: number, tempo: number }>);
+    
+    setPausasPorMotivo(porMotivo);
   };
   
   // Funções para formatar tempo
@@ -43,67 +144,6 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
     return `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
   };
   
-  // Filtrar pausas por etapas
-  const pausasPorEtapa = Object.entries(ordem.etapasAndamento || {})
-    .filter(([_, info]) => info.pausas && info.pausas.length > 0)
-    .map(([etapaKey, info]) => ({
-      etapa: etapaKey as EtapaOS,
-      pausas: info.pausas || []
-    }));
-  
-  // Filtrar pausas por serviços (obtidas do localStorage via hook)
-  const servicosComPausas = ordem.servicos
-    .filter(servico => {
-      // Verifique se há pausas registradas no localStorage para este serviço
-      const storageKey = `timer_${ordem.id}_retifica_${servico.tipo}`;
-      const data = localStorage.getItem(storageKey);
-      if (!data) return false;
-      
-      try {
-        const parsed = JSON.parse(data);
-        return parsed.pausas && parsed.pausas.length > 0;
-      } catch {
-        return false;
-      }
-    })
-    .map(servico => {
-      // Obtenha as pausas do localStorage
-      const storageKey = `timer_${ordem.id}_retifica_${servico.tipo}`;
-      const data = localStorage.getItem(storageKey);
-      let pausas: PausaRegistro[] = [];
-      
-      if (data) {
-        try {
-          const parsed = JSON.parse(data);
-          pausas = parsed.pausas || [];
-        } catch {
-          // Ignorar erro de parsing
-        }
-      }
-      
-      return {
-        servico: servico.tipo,
-        pausas
-      };
-    });
-  
-  // Contadores para o resumo
-  const totalPausas = pausasPorEtapa.reduce((acc, item) => acc + item.pausas.length, 0) + 
-                     servicosComPausas.reduce((acc, item) => acc + item.pausas.length, 0);
-  
-  const pausasEmAndamento = pausasPorEtapa.reduce((acc, item) => 
-    acc + item.pausas.filter(p => !p.fim).length, 0) + 
-    servicosComPausas.reduce((acc, item) => 
-    acc + item.pausas.filter(p => !p.fim).length, 0);
-  
-  // Calcular tempo total em pausa (apenas pausas finalizadas)
-  const tempoTotalEmPausa = [
-    ...pausasPorEtapa.flatMap(item => item.pausas),
-    ...servicosComPausas.flatMap(item => item.pausas)
-  ]
-    .filter(pausa => pausa.fim)
-    .reduce((acc, pausa) => acc + ((pausa.fim || 0) - pausa.inicio), 0);
-  
   const formatarTempoTotal = (ms: number) => {
     const segundos = Math.floor((ms / 1000) % 60);
     const minutos = Math.floor((ms / (1000 * 60)) % 60);
@@ -114,22 +154,6 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
       ? `${dias}d ${horas}h ${minutos}m ${segundos}s`
       : `${horas}h ${minutos}m ${segundos}s`;
   };
-  
-  // Agrupar pausas por motivo para estatísticas
-  const pausasPorMotivo = [
-    ...pausasPorEtapa.flatMap(item => item.pausas),
-    ...servicosComPausas.flatMap(item => item.pausas)
-  ].reduce((acc, pausa) => {
-    const motivo = pausa.motivo || "Sem motivo";
-    if (!acc[motivo]) {
-      acc[motivo] = { count: 0, tempo: 0 };
-    }
-    acc[motivo].count += 1;
-    if (pausa.fim) {
-      acc[motivo].tempo += (pausa.fim - pausa.inicio);
-    }
-    return acc;
-  }, {} as Record<string, { count: number, tempo: number }>);
   
   return (
     <div className="space-y-6">
@@ -158,19 +182,23 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
           <CardTitle>Motivos de Pausa</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {Object.entries(pausasPorMotivo).map(([motivo, stats]) => (
-              <div key={motivo} className="flex justify-between items-center border-b pb-2">
-                <div>
-                  <p className="font-medium">{motivo}</p>
-                  <p className="text-sm text-muted-foreground">{stats.count} pausa(s)</p>
+          {Object.keys(pausasPorMotivo).length > 0 ? (
+            <div className="space-y-4">
+              {Object.entries(pausasPorMotivo).map(([motivo, stats]) => (
+                <div key={motivo} className="flex justify-between items-center border-b pb-2">
+                  <div>
+                    <p className="font-medium">{motivo}</p>
+                    <p className="text-sm text-muted-foreground">{stats.count} pausa(s)</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">{formatarTempoTotal(stats.tempo)}</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-medium">{formatarTempoTotal(stats.tempo)}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-4">Nenhum motivo de pausa registrado.</p>
+          )}
         </CardContent>
       </Card>
       
