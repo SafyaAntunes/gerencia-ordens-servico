@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -62,7 +63,7 @@ export default function ServicoTracker({
     ? Math.round((completedSubatividades / totalSubatividades) * 100)
     : 0;
     
-  const allCompleted = totalSubatividades > 0 && completedSubatividades === totalSubatividades;
+  // Removido o allCompleted que marcava automaticamente o serviço como concluído
   
   const getServicoStatus = () => {
     if (servico.concluido) {
@@ -117,9 +118,8 @@ export default function ServicoTracker({
     onServicoStatusChange(true);
   };
   
-  useEffect(() => {
-  }, [allCompleted, servico.concluido, onServicoStatusChange]);
-
+  // Removed effect that automatically completed the service
+  
   const servicoStatus = getServicoStatus();
 
   return (
