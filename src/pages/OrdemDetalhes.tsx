@@ -392,7 +392,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
               </TabsTrigger>
             )}
             <TabsTrigger value="fotos" className="flex-1">Fotos</TabsTrigger>
-            <TabsTrigger value="relatorio" className="flex-1">Relatório</TabsTrigger>
+            <TabsTrigger value="relatorio" className="flex-1">Relatório de Pausas</TabsTrigger>
           </TabsList>
           
           <TabsContent value="detalhes" className="space-y-6">

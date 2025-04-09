@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
@@ -41,6 +42,7 @@ export default function EtapaCard({
   onEtapaStatusChange
 }: EtapaCardProps) {
   const [progresso, setProgresso] = useState(0);
+  const [isAtivo, setIsAtivo] = useState(false);
   
   const etapaServicos = (() => {
     switch(etapa) {
@@ -94,6 +96,15 @@ export default function EtapaCard({
   };
   
   const etapaStatus = getEtapaStatus();
+  
+  // Adicionado para atualizar o status quando o cronômetro estiver ativo
+  useEffect(() => {
+    if (etapaInfo?.iniciado && !etapaInfo?.concluido) {
+      setIsAtivo(true);
+    } else {
+      setIsAtivo(false);
+    }
+  }, [etapaInfo]);
 
   return (
     <Card className="p-6 mb-4">
@@ -129,6 +140,7 @@ export default function EtapaCard({
             etapa={etapa}
             onFinish={handleEtapaConcluida}
             isEtapaConcluida={etapaInfo?.concluido}
+            onStart={() => setIsAtivo(true)}
           />
           
           {!etapaInfo?.concluido && (
