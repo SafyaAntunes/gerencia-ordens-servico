@@ -1,7 +1,7 @@
 
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Clock, Calendar, ArrowRight, Settings } from "lucide-react";
+import { Clock, Calendar, ArrowRight, Settings, Hash } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -116,6 +116,13 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-lg">{ordem.nome || "Sem título"}</CardTitle>
+            
+            {/* Exibição do ID da Ordem */}
+            <p className="text-xs flex items-center gap-1 mt-1 text-muted-foreground">
+              <Hash className="h-3 w-3" />
+              <span>OS #{ordem.id}</span>
+            </p>
+            
             <p className="text-sm text-muted-foreground mt-1">
               Cliente: {clienteNome}
             </p>
