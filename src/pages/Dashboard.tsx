@@ -1,17 +1,14 @@
-
 import {
   FileText,
   Clock,
   Users,
   CheckCircle,
   TrendingUp,
-  BarChart
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import MetricCard from "@/components/dashboard/MetricCard";
 import StatusChart from "@/components/dashboard/StatusChart";
-import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -42,7 +39,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
     const fetchOrdens = async () => {
       setIsLoading(true);
       try {
-        // Buscar todas as ordens ordenadas por data de abertura
         const q = query(collection(db, "ordens"), orderBy("dataAbertura", "desc"));
         const querySnapshot = await getDocs(q);
         
@@ -60,12 +56,9 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         
         setOrdens(ordensData);
         
-        // Calcular métricas
         calcularMetricas(ordensData);
         
-        // Calcular dados para os gráficos
         calcularDadosGraficos(ordensData);
-        
       } catch (error) {
         console.error("Erro ao buscar ordens:", error);
         toast.error("Erro ao carregar dados do dashboard");
@@ -78,15 +71,12 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
   }, []);
   
   const calcularMetricas = (ordensData: OrdemServico[]) => {
-    // Total de OSs
     const total = ordensData.length;
     
-    // OSs pendentes (não finalizadas ou entregues)
     const pendentes = ordensData.filter(
       ordem => !['finalizado', 'entregue'].includes(ordem.status)
     ).length;
     
-    // Calcular tempo de operação total
     let tempoTotalMs = 0;
     let tempoPausaMs = 0;
     
@@ -99,7 +89,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
           const duracaoMs = fim.getTime() - inicio.getTime();
           tempoTotalMs += duracaoMs;
           
-          // Somar tempo de pausas
           if (registro.pausas && registro.pausas.length > 0) {
             registro.pausas.forEach(pausa => {
               const pausaInicio = pausa.inicio instanceof Date ? pausa.inicio : new Date(pausa.inicio);
@@ -113,14 +102,12 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       }
     });
     
-    // Converter para formato de horas
     const tempoOperacaoHoras = Math.floor(tempoTotalMs / (1000 * 60 * 60));
     const tempoOperacaoMinutos = Math.floor((tempoTotalMs % (1000 * 60 * 60)) / (1000 * 60));
     
     const tempoPausaHoras = Math.floor(tempoPausaMs / (1000 * 60 * 60));
     const tempoPausaMinutos = Math.floor((tempoPausaMs % (1000 * 60 * 60)) / (1000 * 60));
     
-    // Calcular eficiência (tempo operacional / tempo total)
     const tempoOperacional = tempoTotalMs - tempoPausaMs;
     const eficiencia = tempoTotalMs > 0 ? Math.round((tempoOperacional / tempoTotalMs) * 100) : 0;
     
@@ -134,7 +121,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
   };
   
   const calcularDadosGraficos = (ordensData: OrdemServico[]) => {
-    // Dados para o gráfico de status
     const statusCounts: Record<string, number> = {
       "Em Orçamento": 0,
       "Aguardando Aprovação": 0,
@@ -171,7 +157,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
     const statusChartData = Object.entries(statusCounts).map(([name, total]) => ({ name, total }));
     setStatusData(statusChartData);
     
-    // Dados para o gráfico de tipos de serviços
     const servicosCounts: Record<string, number> = {
       "Bloco": 0,
       "Biela": 0,
@@ -213,7 +198,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
     });
     
     const servicosChartData = Object.entries(servicosCounts)
-      .filter(([_, total]) => total > 0) // Apenas mostrar serviços que existem
+      .filter(([_, total]) => total > 0)
       .map(([name, total]) => ({ name, total }));
     
     setServicosData(servicosChartData);
@@ -223,7 +208,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
     navigate(`/ordens/${osId}`);
   };
   
-  // Obter as 5 ordens mais recentes para exibir na tabela
   const osRecentes = ordens.slice(0, 5);
   
   return (
@@ -235,18 +219,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
             <p className="text-muted-foreground">
               Acompanhe as métricas e estatísticas do seu negócio
             </p>
-          </div>
-          
-          <div className="flex gap-2">
-            <Button variant="outline">
-              <BarChart className="mr-2 h-4 w-4" />
-              Relatórios
-            </Button>
-            
-            <Button onClick={() => navigate("/ordens/nova")}>
-              <FileText className="mr-2 h-4 w-4" />
-              Nova OS
-            </Button>
           </div>
         </div>
         
@@ -280,15 +252,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
                 description="Total de horas trabalhadas"
                 trend={{ value: 8, isPositive: true }}
                 className="animate-slide-in [animation-delay:200ms]"
-              />
-              
-              <MetricCard
-                title="Eficiência"
-                value={`${metricas.eficiencia}%`}
-                icon={<CheckCircle />}
-                description={`Tempo operacional: ${metricas.tempoPausa} em pausa`}
-                trend={{ value: 3, isPositive: true }}
-                className="animate-slide-in [animation-delay:300ms]"
               />
             </div>
             

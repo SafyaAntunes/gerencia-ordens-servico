@@ -115,13 +115,13 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-lg">{ordem.nome || "Sem título"}</CardTitle>
-            
-            {/* Exibição do ID da Ordem */}
-            <p className="text-xs flex items-center gap-1 mt-1 text-muted-foreground">
-              <Hash className="h-3 w-3" />
-              <span>OS #{ordem.id}</span>
+            {/* OS number displayed prominently first */}
+            <p className="text-sm font-bold flex items-center gap-1">
+              <Hash className="h-4 w-4" />
+              OS: {ordem.id}
             </p>
+            
+            <CardTitle className="text-lg mt-1">{ordem.nome || "Sem título"}</CardTitle>
             
             <p className="text-sm text-muted-foreground mt-1">
               Cliente: {clienteNome}
