@@ -11,7 +11,6 @@ import {
   deleteDoc,
   query, 
   where,
-  Timestamp,
   serverTimestamp,
   DocumentReference,
   DocumentData
@@ -29,15 +28,7 @@ export const getFuncionarios = async (): Promise<Funcionario[]> => {
     
     return snapshot.docs.map(doc => {
       const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        nome: data.nome || '',
-        especialidades: data.especialidades || [],
-        nivelPermissao: data.nivelPermissao || 'visualizacao',
-        dataCriacao: data.dataCriacao ? data.dataCriacao.toDate() : null,
-        nomeUsuario: data.nomeUsuario || ''
-      } as Funcionario;
+      return formatFuncionarioData(doc.id, data);
     });
   } catch (error) {
     console.error('Error fetching funcionarios:', error);
@@ -56,15 +47,7 @@ export const getFuncionario = async (id: string): Promise<Funcionario | null> =>
     }
     
     const data = funcionarioDoc.data();
-    return {
-      id: funcionarioDoc.id,
-      ...data,
-      nome: data.nome || '',
-      especialidades: data.especialidades || [],
-      nivelPermissao: data.nivelPermissao || 'visualizacao',
-      dataCriacao: data.dataCriacao ? data.dataCriacao.toDate() : null,
-      nomeUsuario: data.nomeUsuario || ''
-    } as Funcionario;
+    return formatFuncionarioData(funcionarioDoc.id, data);
   } catch (error) {
     console.error('Error fetching funcionario:', error);
     toast.error('Erro ao carregar funcionário');
@@ -72,69 +55,116 @@ export const getFuncionario = async (id: string): Promise<Funcionario | null> =>
   }
 };
 
+// Helper function to format funcionario data
+const formatFuncionarioData = (id: string, data: DocumentData): Funcionario => {
+  return {
+    id: id,
+    ...data,
+    nome: data.nome || '',
+    especialidades: data.especialidades || [],
+    nivelPermissao: data.nivelPermissao || 'visualizacao',
+    dataCriacao: data.dataCriacao ? data.dataCriacao.toDate() : null,
+    nomeUsuario: data.nomeUsuario || ''
+  } as Funcionario;
+};
+
+// Helper to update user credentials
+const updateUserCredentials = async (
+  funcionarioId: string, 
+  email: string, 
+  senha?: string, 
+  nomeUsuario?: string, 
+  nivelPermissao?: string
+) => {
+  try {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where("funcionarioId", "==", funcionarioId));
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      // Se não existir usuário para este funcionário, cria um novo
+      if (senha) {
+        const registeredSuccess = await registerUser(
+          email, 
+          senha, 
+          funcionarioId, 
+          nivelPermissao || 'visualizacao'
+        );
+        console.log('Criando novo usuário para funcionário existente:', registeredSuccess);
+        
+        if (registeredSuccess && nomeUsuario) {
+          const userDoc = doc(usersRef, email);
+          await updateDoc(userDoc, {
+            nomeUsuario: nomeUsuario
+          });
+          console.log('Nome de usuário atualizado:', nomeUsuario);
+        }
+      }
+    } else {
+      // Se já existir usuário, só atualiza se tiver senha ou nome de usuário
+      if (senha || nomeUsuario || nivelPermissao) {
+        const userDoc = querySnapshot.docs[0].ref;
+        const updateData: Record<string, any> = {
+          updatedAt: serverTimestamp()
+        };
+        
+        if (nivelPermissao) {
+          updateData.role = nivelPermissao;
+        }
+        
+        if (senha) {
+          updateData.password = btoa(senha);
+        }
+        
+        if (nomeUsuario) {
+          updateData.nomeUsuario = nomeUsuario;
+        }
+        
+        await updateDoc(userDoc, updateData);
+        console.log('Credenciais atualizadas para usuário existente');
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error updating user credentials:', error);
+    return false;
+  }
+};
+
 export const saveFuncionario = async (funcionario: Funcionario): Promise<boolean> => {
   try {
     let docRef: DocumentReference<DocumentData>;
     
+    // Extract credentials data
     const { senha, nomeUsuario, ...funcionarioData } = funcionario;
     
-    // Se tiver um ID, atualiza o funcionário existente
+    // If updating an existing employee
     if (funcionario.id) {
       docRef = doc(db, COLLECTION, funcionario.id);
       
-      // Salva os dados do funcionário (exceto senha)
+      // Update employee data (excluding credentials)
       await updateDoc(docRef, {
         ...funcionarioData,
         updatedAt: serverTimestamp()
       });
       
       console.log('Atualizando funcionário:', funcionario.id);
-      console.log('Dados atualizados:', funcionarioData);
       
-      // Se tiver email e senha, atualiza ou cria as credenciais do usuário
+      // Update user credentials if email is provided
       if (funcionario.email) {
-        const usersRef = collection(db, 'users');
-        const q = query(usersRef, where("funcionarioId", "==", funcionario.id));
-        const querySnapshot = await getDocs(q);
-        
-        if (querySnapshot.empty) {
-          // Se não existir usuário para este funcionário, cria um novo
-          if (senha) {
-            const registeredSuccess = await registerUser(funcionario.email, senha, funcionario.id, funcionario.nivelPermissao);
-            console.log('Criando novo usuário para funcionário existente:', registeredSuccess);
-            
-            if (registeredSuccess && nomeUsuario) {
-              const userDoc = doc(usersRef, funcionario.email);
-              await updateDoc(userDoc, {
-                nomeUsuario: nomeUsuario
-              });
-              console.log('Nome de usuário atualizado:', nomeUsuario);
-            }
-          }
-        } else {
-          // Se já existir usuário, só atualiza se tiver senha ou nome de usuário
-          if (senha || nomeUsuario) {
-            const userDoc = querySnapshot.docs[0].ref;
-            const updateData: Record<string, any> = {
-              role: funcionario.nivelPermissao,
-              updatedAt: serverTimestamp()
-            };
-            
-            if (senha) {
-              updateData.password = btoa(senha);
-            }
-            
-            if (nomeUsuario) {
-              updateData.nomeUsuario = nomeUsuario;
-            }
-            
-            await updateDoc(userDoc, updateData);
-            console.log('Credenciais atualizadas para usuário existente');
-          }
-        }
+        await updateUserCredentials(
+          funcionario.id,
+          funcionario.email,
+          senha,
+          nomeUsuario,
+          funcionario.nivelPermissao
+        );
       }
-    } else {
-      // Cria um novo funcionário
+    } 
+    // If creating a new employee
+    else {
+      // Create new employee
       docRef = doc(collection(db, COLLECTION));
       await setDoc(docRef, {
         ...funcionarioData,
@@ -143,18 +173,15 @@ export const saveFuncionario = async (funcionario: Funcionario): Promise<boolean
         nomeUsuario: nomeUsuario || ''
       });
       
-      // Se tiver email e senha, cria as credenciais do usuário
+      // Create user credentials if email and password are provided
       if (funcionario.email && senha) {
-        const registeredSuccess = await registerUser(funcionario.email, senha, docRef.id, funcionario.nivelPermissao);
-        console.log('Novo usuário criado:', registeredSuccess);
-        
-        if (registeredSuccess && nomeUsuario) {
-          const userDoc = doc(collection(db, 'users'), funcionario.email);
-          await updateDoc(userDoc, {
-            nomeUsuario: nomeUsuario
-          });
-          console.log('Nome de usuário definido:', nomeUsuario);
-        }
+        await updateUserCredentials(
+          docRef.id,
+          funcionario.email,
+          senha,
+          nomeUsuario,
+          funcionario.nivelPermissao
+        );
       }
     }
     
@@ -168,9 +195,11 @@ export const saveFuncionario = async (funcionario: Funcionario): Promise<boolean
 
 export const deleteFuncionario = async (id: string): Promise<boolean> => {
   try {
+    // Delete employee record
     const funcionarioRef = doc(db, COLLECTION, id);
     await deleteDoc(funcionarioRef);
     
+    // Delete associated user credentials
     const credentialsRef = collection(db, 'users');
     const q = query(credentialsRef, where('funcionarioId', '==', id));
     const credentialsSnapshot = await getDocs(q);

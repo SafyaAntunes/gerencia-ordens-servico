@@ -11,8 +11,7 @@ import {
   Calendar,
   ChevronRight,
   UserSquare,
-  Wrench,
-  UserCircle
+  Wrench
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -130,9 +129,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             {/* Todos os níveis podem ver a lista de Ordens de Serviço */}
             <NavItem icon={FileText} label="Ordens de Serviço" to="/ordens" />
             
-            {/* Acesso ao meu perfil para todos */}
-            <NavItem icon={UserCircle} label="Meu Perfil" to="/meu-perfil" />
-            
             {/* Funcionários - Gerente ou superior */}
             {hasPermission('gerente') && (
               <NavItem icon={Users} label="Funcionários" to="/funcionarios" />
@@ -201,9 +197,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             
             {/* Todos os níveis podem ver a lista de Ordens de Serviço */}
             <NavItem icon={FileText} label="Ordens de Serviço" to="/ordens" isCollapsed={isCollapsed} />
-            
-            {/* Acesso ao meu perfil para todos */}
-            <NavItem icon={UserCircle} label="Meu Perfil" to="/meu-perfil" isCollapsed={isCollapsed} />
             
             {/* Funcionários - Gerente ou superior */}
             {hasPermission('gerente') && (

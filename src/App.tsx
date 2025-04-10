@@ -24,7 +24,7 @@ const PrivateRoute = ({ children, requiredPermission = "visualizacao" }: {
   children: React.ReactNode;
   requiredPermission?: string;
 }) => {
-  const { user, loading, hasPermission, canAccessRoute, funcionario } = useAuth();
+  const { user, loading, hasPermission, canAccessRoute } = useAuth();
   const location = useLocation();
   
   if (loading) {
@@ -33,13 +33,6 @@ const PrivateRoute = ({ children, requiredPermission = "visualizacao" }: {
   
   if (!user) {
     return <Navigate to="/login" replace />;
-  }
-  
-  // Special case: If this is the funcionario's own profile page, allow access
-  if (location.pathname.includes('/funcionarios/editar/') && 
-      funcionario && 
-      location.pathname.includes(funcionario.id)) {
-    return <>{children}</>;
   }
   
   // Check if user has permission for this specific route
@@ -65,7 +58,7 @@ const queryClient = new QueryClient({
 });
 
 const AppRoutes = () => {
-  const { logout, funcionario } = useAuth();
+  const { logout } = useAuth();
   
   const handleLogout = () => {
     logout();
@@ -103,17 +96,6 @@ const AppRoutes = () => {
         </PrivateRoute>
       } />
       
-      {/* Rota para Meu Perfil */}
-      <Route path="/meu-perfil" element={
-        <PrivateRoute>
-          {funcionario ? (
-            <Navigate to={`/funcionarios/editar/${funcionario.id}`} replace />
-          ) : (
-            <Navigate to="/" replace />
-          )}
-        </PrivateRoute>
-      } />
-      
       {/* Funcionários - gerentes ou superior */}
       <Route path="/funcionarios" element={
         <PrivateRoute requiredPermission="gerente">
@@ -123,7 +105,7 @@ const AppRoutes = () => {
       
       {/* Edição do próprio perfil - todos os níveis */}
       <Route path="/funcionarios/editar/:id" element={
-        <PrivateRoute>
+        <PrivateRoute requiredPermission="tecnico">
           <Funcionarios onLogout={handleLogout} meuPerfil={true} />
         </PrivateRoute>
       } />

@@ -244,10 +244,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     
     if (funcionario.nivelPermissao === 'tecnico') {
-      if (route.startsWith('/funcionarios/editar/') && route.includes(funcionario.id)) {
-        return true;
-      }
-
       const allowedRoutes = [
         '/',
         '/ordens',
@@ -261,10 +257,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     
     if (funcionario.nivelPermissao === 'visualizacao') {
-      if (route.startsWith('/funcionarios/editar/') && route.includes(funcionario.id)) {
-        return true;
-      }
-
       const allowedRoutes = [
         '/'
       ];
