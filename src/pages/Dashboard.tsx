@@ -1,3 +1,4 @@
+
 import {
   FileText,
   Clock,
@@ -10,6 +11,7 @@ import Layout from "@/components/layout/Layout";
 import MetricCard from "@/components/dashboard/MetricCard";
 import StatusChart from "@/components/dashboard/StatusChart";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
