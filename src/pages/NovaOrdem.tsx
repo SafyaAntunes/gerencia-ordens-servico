@@ -11,6 +11,15 @@ import { db, storage } from "@/lib/firebase";
 import { getClientes } from "@/services/clienteService";
 import { Cliente } from "@/types/clientes";
 
+// Helper function to format text to title case
+const toTitleCase = (str: string) => {
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
 interface NovaOrdemProps {
   onLogout?: () => void;
 }
@@ -87,12 +96,24 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         }
       }
       
+      // Format subactivity names to title case and ensure they're properly processed
+      const formattedServicoSubatividades: Record<string, SubAtividade[]> = {};
+      
+      if (values.servicosSubatividades) {
+        Object.entries(values.servicosSubatividades).forEach(([tipo, subatividades]) => {
+          formattedServicoSubatividades[tipo] = (subatividades as SubAtividade[]).map(sub => ({
+            ...sub,
+            nome: toTitleCase(sub.nome)
+          }));
+        });
+      }
+      
       // Preparar serviços apenas para os tipos selecionados
       const servicos = (values.servicosTipos || []).map((tipo: TipoServico) => ({
         tipo,
         descricao: values.servicosDescricoes?.[tipo] || "",
         concluido: false,
-        subatividades: values.servicosSubatividades?.[tipo] || []
+        subatividades: formattedServicoSubatividades[tipo] || []
       }));
 
       // Determinar etapas com base nos serviços selecionados

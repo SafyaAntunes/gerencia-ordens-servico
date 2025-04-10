@@ -138,7 +138,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             
             {/* Todos os técnicos ou superiores veem Ordens de Serviço */}
             {hasPermission('tecnico') && (
-              <NavItem icon={FileText} label="Ordens de Serviço" to="/ordens" badge={12} />
+              <NavItem icon={FileText} label="Ordens de Serviço" to="/ordens" />
             )}
             
             {/* O resto dos menus são filtrados por papel */}
@@ -203,7 +203,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             
             {/* Todos os técnicos ou superiores veem Ordens de Serviço */}
             {hasPermission('tecnico') && (
-              <NavItem icon={FileText} label="Ordens de Serviço" to="/ordens" badge={isCollapsed ? undefined : 12} isCollapsed={isCollapsed} />
+              <NavItem icon={FileText} label="Ordens de Serviço" to="/ordens" isCollapsed={isCollapsed} />
             )}
             
             {/* O resto dos menus são filtrados por papel */}
