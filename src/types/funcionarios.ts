@@ -1,3 +1,4 @@
+
 export interface Funcionario {
   id: string;
   nome: string;
@@ -21,15 +22,15 @@ export interface Funcionario {
   dataCriacao?: Date;
 }
 
-// Define NivelPermissao type
+// Define NivelPermissao type com descrições claras
 export type NivelPermissao = 'admin' | 'gerente' | 'tecnico' | 'visualizacao';
 
-// Add the labels for permissions
+// Add the labels for permissions with descriptions
 export const permissoesLabels: Record<string, string> = {
-  admin: 'Administrador',
-  gerente: 'Gerente',
-  tecnico: 'Técnico',
-  visualizacao: 'Visualização',
+  admin: 'Administrador', // Acesso completo ao sistema
+  gerente: 'Gerente',     // Acesso aos dados administrativos e operacionais, exceto configurações
+  tecnico: 'Técnico',     // Acesso às ordens de serviço atribuídas
+  visualizacao: 'Visualização', // Acesso somente leitura ao Dashboard
 };
 
 // Import TipoServico from ordens.ts and re-export a label mapping
@@ -44,6 +45,14 @@ export const tipoServicoLabels: Record<TipoServico, string> = {
   eixo_comando: 'Eixo de Comando',
   montagem: 'Montagem',
   dinamometro: 'Dinamômetro'
+};
+
+// Descrição detalhada de permissões por nível
+export const permissoesDescricao: Record<NivelPermissao, string> = {
+  admin: 'Acesso total ao sistema, configurações e dados financeiros',
+  gerente: 'Gestão de ordens, clientes, funcionários e agenda. Acesso a relatórios de produção',
+  tecnico: 'Visualização e atualização de ordens de serviço atribuídas',
+  visualizacao: 'Visualização do dashboard e listagem de ordens'
 };
 
 export interface FuncionarioPermissoes {

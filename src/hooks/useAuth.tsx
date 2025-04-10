@@ -14,6 +14,8 @@ type AuthContextType = {
   register: (email: string, password: string) => Promise<boolean>;
   hasPermission: (minLevel: string) => boolean;
   canAccessRoute: (route: string) => boolean;
+  canViewOrderDetails: (ordenId: string) => boolean;
+  canEditOrder: (ordenId: string) => boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -229,7 +231,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const canAccessRoute = (route: string) => {
     if (!user || !funcionario) return false;
     
-    if (['admin', 'gerente'].includes(funcionario.nivelPermissao)) {
+    if (funcionario.nivelPermissao === 'admin') {
+      return true;
+    }
+    
+    if (funcionario.nivelPermissao === 'gerente') {
+      if (route.startsWith('/configuracoes') || route.startsWith('/relatorios/financeiro')) {
+        return false;
+      }
+      
       return true;
     }
     
@@ -265,6 +275,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return false;
   };
 
+  const canViewOrderDetails = (ordenId: string) => {
+    if (!funcionario) return false;
+    
+    if (['admin', 'gerente'].includes(funcionario.nivelPermissao)) {
+      return true;
+    }
+    
+    if (funcionario.nivelPermissao === 'tecnico') {
+      return true;
+    }
+    
+    return false;
+  };
+
+  const canEditOrder = (ordenId: string) => {
+    if (!funcionario) return false;
+    
+    if (['admin', 'gerente'].includes(funcionario.nivelPermissao)) {
+      return true;
+    }
+    
+    return false;
+  };
+
   const value = {
     user,
     funcionario,
@@ -274,11 +308,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     register,
     hasPermission,
     canAccessRoute,
+    canViewOrderDetails,
+    canEditOrder
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
 export default useAuth;

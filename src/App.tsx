@@ -75,33 +75,37 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/login" element={<Login />} />
       
+      {/* Dashboard - todos os níveis têm acesso */}
       <Route path="/" element={
         <PrivateRoute>
           <Dashboard onLogout={handleLogout} />
         </PrivateRoute>
       } />
       
+      {/* Ordens - todos os níveis têm acesso à listagem */}
       <Route path="/ordens" element={
-        <PrivateRoute requiredPermission="tecnico">
+        <PrivateRoute>
           <Ordens onLogout={handleLogout} />
         </PrivateRoute>
       } />
       
+      {/* Criação de Ordens - apenas gerente ou superior */}
       <Route path="/ordens/nova" element={
         <PrivateRoute requiredPermission="gerente">
           <NovaOrdem onLogout={handleLogout} />
         </PrivateRoute>
       } />
       
+      {/* Detalhes de Ordens - técnicos ou superior */}
       <Route path="/ordens/:id" element={
         <PrivateRoute requiredPermission="tecnico">
           <OrdemDetalhes onLogout={handleLogout} />
         </PrivateRoute>
       } />
       
-      {/* Rota para Meu Perfil para técnicos */}
+      {/* Rota para Meu Perfil */}
       <Route path="/meu-perfil" element={
-        <PrivateRoute requiredPermission="visualizacao">
+        <PrivateRoute>
           {funcionario ? (
             <Navigate to={`/funcionarios/editar/${funcionario.id}`} replace />
           ) : (
@@ -110,18 +114,21 @@ const AppRoutes = () => {
         </PrivateRoute>
       } />
       
+      {/* Funcionários - gerentes ou superior */}
       <Route path="/funcionarios" element={
         <PrivateRoute requiredPermission="gerente">
           <Funcionarios onLogout={handleLogout} />
         </PrivateRoute>
       } />
       
+      {/* Edição do próprio perfil - todos os níveis */}
       <Route path="/funcionarios/editar/:id" element={
-        <PrivateRoute requiredPermission="visualizacao">
+        <PrivateRoute>
           <Funcionarios onLogout={handleLogout} meuPerfil={true} />
         </PrivateRoute>
       } />
       
+      {/* Clientes - gerentes ou superior */}
       <Route path="/clientes" element={
         <PrivateRoute requiredPermission="gerente">
           <Clientes onLogout={handleLogout} />
@@ -140,20 +147,23 @@ const AppRoutes = () => {
         </PrivateRoute>
       } />
       
+      {/* Agenda - gerentes ou superior */}
       <Route path="/agenda" element={
         <PrivateRoute requiredPermission="gerente">
           <Agenda onLogout={handleLogout} />
         </PrivateRoute>
       } />
       
+      {/* Relatórios de Produção - gerentes ou superior */}
       <Route path="/relatorios/producao" element={
         <PrivateRoute requiredPermission="gerente">
           <RelatoriosProducao onLogout={handleLogout} />
         </PrivateRoute>
       } />
       
+      {/* Relatórios Financeiros - apenas administradores */}
       <Route path="/relatorios/financeiro" element={
-        <PrivateRoute requiredPermission="gerente">
+        <PrivateRoute requiredPermission="admin">
           <RelatoriosFinanceiro onLogout={handleLogout} />
         </PrivateRoute>
       } />
@@ -163,6 +173,7 @@ const AppRoutes = () => {
         <Navigate to="/relatorios/producao" replace />
       } />
       
+      {/* Configurações - apenas administradores */}
       <Route path="/configuracoes" element={
         <PrivateRoute requiredPermission="admin">
           <Configuracoes onLogout={handleLogout} />

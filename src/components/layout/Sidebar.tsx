@@ -11,7 +11,8 @@ import {
   Calendar,
   ChevronRight,
   UserSquare,
-  Wrench
+  Wrench,
+  UserCircle
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -87,16 +88,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const mobileClass = isOpen ? "block lg:hidden" : "hidden";
   
-  // Técnicos devem ver apenas Dashboard e Ordens de Serviço
-  const isTecnico = funcionario?.nivelPermissao === 'tecnico';
-  
-  // Determine quais itens de menu mostrar com base no papel do usuário
-  const showFuncionariosMenu = !isTecnico && hasPermission('tecnico');
-  const showClientesMenu = !isTecnico && hasPermission('gerente');
-  const showAgendaMenu = !isTecnico && hasPermission('gerente');
-  const showRelatoriosMenu = !isTecnico && hasPermission('gerente');
-  const showConfiguracoesMenu = !isTecnico && hasPermission('admin');
-  
   return (
     <>
       {/* Overlay for mobile */}
@@ -136,34 +127,41 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             {/* Todos os usuários veem o Dashboard */}
             <NavItem icon={LayoutDashboard} label="Dashboard" to="/" />
             
-            {/* Todos os técnicos ou superiores veem Ordens de Serviço */}
-            {hasPermission('tecnico') && (
-              <NavItem icon={FileText} label="Ordens de Serviço" to="/ordens" />
-            )}
+            {/* Todos os níveis podem ver a lista de Ordens de Serviço */}
+            <NavItem icon={FileText} label="Ordens de Serviço" to="/ordens" />
             
-            {/* O resto dos menus são filtrados por papel */}
-            {showFuncionariosMenu && (
+            {/* Acesso ao meu perfil para todos */}
+            <NavItem icon={UserCircle} label="Meu Perfil" to="/meu-perfil" />
+            
+            {/* Funcionários - Gerente ou superior */}
+            {hasPermission('gerente') && (
               <NavItem icon={Users} label="Funcionários" to="/funcionarios" />
             )}
             
-            {showClientesMenu && (
+            {/* Clientes - Gerente ou superior */}
+            {hasPermission('gerente') && (
               <NavItem icon={UserSquare} label="Clientes" to="/clientes" />
             )}
             
-            {showAgendaMenu && (
+            {/* Agenda - Gerente ou superior */}
+            {hasPermission('gerente') && (
               <NavItem icon={Calendar} label="Agenda" to="/agenda" />
             )}
             
-            {showRelatoriosMenu && (
+            {/* Relatórios - Produção para Gerente ou superior, Financeiro para Admin */}
+            {hasPermission('gerente') && (
               <>
                 <NavItem icon={Wrench} label="Relatórios de Produção" to="/relatorios/producao" />
-                <NavItem icon={TrendingUp} label="Relatórios Financeiros" to="/relatorios/financeiro" />
+                {hasPermission('admin') && (
+                  <NavItem icon={TrendingUp} label="Relatórios Financeiros" to="/relatorios/financeiro" />
+                )}
               </>
             )}
             
             <Separator className="my-4 bg-sidebar-border" />
             
-            {showConfiguracoesMenu && (
+            {/* Configurações - Apenas Admin */}
+            {hasPermission('admin') && (
               <NavItem icon={Settings} label="Configurações" to="/configuracoes" />
             )}
           </div>
@@ -201,34 +199,41 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             {/* Todos os usuários veem o Dashboard */}
             <NavItem icon={LayoutDashboard} label="Dashboard" to="/" isCollapsed={isCollapsed} />
             
-            {/* Todos os técnicos ou superiores veem Ordens de Serviço */}
-            {hasPermission('tecnico') && (
-              <NavItem icon={FileText} label="Ordens de Serviço" to="/ordens" isCollapsed={isCollapsed} />
-            )}
+            {/* Todos os níveis podem ver a lista de Ordens de Serviço */}
+            <NavItem icon={FileText} label="Ordens de Serviço" to="/ordens" isCollapsed={isCollapsed} />
             
-            {/* O resto dos menus são filtrados por papel */}
-            {showFuncionariosMenu && (
+            {/* Acesso ao meu perfil para todos */}
+            <NavItem icon={UserCircle} label="Meu Perfil" to="/meu-perfil" isCollapsed={isCollapsed} />
+            
+            {/* Funcionários - Gerente ou superior */}
+            {hasPermission('gerente') && (
               <NavItem icon={Users} label="Funcionários" to="/funcionarios" isCollapsed={isCollapsed} />
             )}
             
-            {showClientesMenu && (
+            {/* Clientes - Gerente ou superior */}
+            {hasPermission('gerente') && (
               <NavItem icon={UserSquare} label="Clientes" to="/clientes" isCollapsed={isCollapsed} />
             )}
             
-            {showAgendaMenu && (
+            {/* Agenda - Gerente ou superior */}
+            {hasPermission('gerente') && (
               <NavItem icon={Calendar} label="Agenda" to="/agenda" isCollapsed={isCollapsed} />
             )}
             
-            {showRelatoriosMenu && (
+            {/* Relatórios - Produção para Gerente ou superior, Financeiro para Admin */}
+            {hasPermission('gerente') && (
               <>
                 <NavItem icon={Wrench} label="Relatórios de Produção" to="/relatorios/producao" isCollapsed={isCollapsed} />
-                <NavItem icon={TrendingUp} label="Relatórios Financeiros" to="/relatorios/financeiro" isCollapsed={isCollapsed} />
+                {hasPermission('admin') && (
+                  <NavItem icon={TrendingUp} label="Relatórios Financeiros" to="/relatorios/financeiro" isCollapsed={isCollapsed} />
+                )}
               </>
             )}
             
             <Separator className="my-4 bg-sidebar-border" />
             
-            {showConfiguracoesMenu && (
+            {/* Configurações - Apenas Admin */}
+            {hasPermission('admin') && (
               <NavItem icon={Settings} label="Configurações" to="/configuracoes" isCollapsed={isCollapsed} />
             )}
           </div>
