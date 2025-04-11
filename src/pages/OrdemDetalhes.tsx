@@ -4,7 +4,7 @@ import Layout from "@/components/layout/Layout";
 import { LogoutProps } from "@/types/props";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ChevronLeft, Edit, ClipboardCheck, Trash } from "lucide-react";
+import { ChevronLeft, Edit, ClipboardCheck, Trash, FileTextIcon, Clock } from "lucide-react";
 import { OrdemServico, StatusOS, TipoServico, SubAtividade, EtapaOS } from "@/types/ordens";
 import { doc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -26,6 +26,7 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import EtapasTracker from "@/components/ordens/EtapasTracker";
 import PausaRelatorio from "@/components/ordens/PausaRelatorio";
+import HorasRelatorio from "@/components/ordens/HorasRelatorio";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -339,6 +340,18 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
     }
   };
 
+  const tecnicoPodeVerTracker = () => {
+    if (!ordem || !funcionario || funcionario.tipo !== 'tecnico') {
+      return true; // Não é um técnico, então pode ver
+    }
+    
+    if (funcionario.especializacoes && funcionario.especializacoes.length > 0) {
+      return ordem.servicos.some(servico => funcionario.especializacoes?.includes(servico.tipo));
+    }
+    
+    return false; // Técnico sem especialização não pode ver o tracker
+  };
+
   if (isLoading) {
     return (
       <Layout>
@@ -362,6 +375,12 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
     );
   }
 
+  const podeEditarOS = funcionario?.tipo !== 'tecnico';
+  
+  const statusPermiteTracker = ordem.status === "fabricacao" || ordem.status === "orcamento";
+  
+  const tecnicoTemPermissao = tecnicoPodeVerTracker();
+
   return (
     <Layout onLogout={onLogout}>
       <div className="mb-6">
@@ -380,7 +399,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
             OS #{ordem.id.slice(-5)} - {ordem.nome}
           </h1>
           <div className="flex gap-2">
-            {!isEditando && (
+            {!isEditando && podeEditarOS && (
               <>
                 <Button 
                   variant="outline" 
@@ -415,7 +434,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full mb-6">
             <TabsTrigger value="detalhes" className="flex-1">Detalhes</TabsTrigger>
-            {(ordem.status === "fabricacao" || ordem.status === "orcamento") && (
+            {statusPermiteTracker && tecnicoTemPermissao && (
               <TabsTrigger value="tracker" className="flex-1">
                 <ClipboardCheck className="h-4 w-4 mr-2" />
                 Tracker
@@ -423,6 +442,10 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
             )}
             <TabsTrigger value="fotos" className="flex-1">Fotos</TabsTrigger>
             <TabsTrigger value="relatorio" className="flex-1">Relatório de Pausas</TabsTrigger>
+            <TabsTrigger value="horas" className="flex-1">
+              <Clock className="h-4 w-4 mr-2" />
+              Relatório de Horas
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="detalhes" className="space-y-6">
@@ -588,14 +611,16 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
           </TabsContent>
           
           <TabsContent value="tracker" className="space-y-4">
-            {(ordem.status === "fabricacao" || ordem.status === "orcamento") ? (
+            {statusPermiteTracker && tecnicoTemPermissao ? (
               <EtapasTracker
                 ordem={ordem}
                 onOrdemUpdate={handleOrdemUpdate}
               />
             ) : (
               <div className="text-center py-8 text-muted-foreground">
-                O tracker só está disponível quando o status é "Fabricação" ou "Orçamento".
+                {!statusPermiteTracker 
+                  ? "O tracker só está disponível quando o status é 'Fabricação' ou 'Orçamento'."
+                  : "Você não tem permissão para ver o tracker desta ordem de serviço."}
               </div>
             )}
           </TabsContent>
@@ -652,6 +677,10 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
           
           <TabsContent value="relatorio" className="space-y-6">
             <PausaRelatorio ordem={ordem} />
+          </TabsContent>
+          
+          <TabsContent value="horas" className="space-y-6">
+            <HorasRelatorio ordem={ordem} />
           </TabsContent>
         </Tabs>
       )}
