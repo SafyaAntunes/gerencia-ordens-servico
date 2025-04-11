@@ -2,6 +2,24 @@
 import { TipoServico } from './ordens';
 
 export type TipoFuncionario = 'admin' | 'gerente' | 'tecnico' | 'visualizador';
+export type NivelPermissao = 'admin' | 'gerente' | 'tecnico' | 'visualizacao';
+
+export const permissoesLabels: Record<NivelPermissao, string> = {
+  admin: 'Administrador',
+  gerente: 'Gerente',
+  tecnico: 'Técnico',
+  visualizacao: 'Visualizador'
+};
+
+export const tipoServicoLabels: Record<TipoServico, string> = {
+  bloco: 'Retífica de Bloco',
+  cabecote: 'Retífica de Cabeçote',
+  virabrequim: 'Retífica de Virabrequim',
+  biela: 'Balanceamento de Bielas',
+  polimento: 'Polimento',
+  montagem: 'Montagem de Motor',
+  outro: 'Outros Serviços'
+};
 
 export interface Funcionario {
   id: string;
@@ -22,7 +40,12 @@ export interface Funcionario {
   nomeUsuario?: string;
   senha?: string;
   fotoPerfil?: string;
-  especializacoes?: TipoServico[]; // Especialização para técnicos
+  
+  // New properties previously missing in the interface
+  nivelPermissao: NivelPermissao;
+  especializacoes?: TipoServico[]; // Renamed from 'especialidades'
+  dataCriacao?: Date;
+  especialidades?: TipoServico[]; // Keep for backwards compatibility during transition
 }
 
 export interface Credentials {

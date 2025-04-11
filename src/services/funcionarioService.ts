@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/firebase';
-import { Funcionario } from '@/types/funcionarios';
+import { Funcionario, NivelPermissao } from '@/types/funcionarios';
 import { 
   collection, 
   doc, 
@@ -57,14 +57,17 @@ export const getFuncionario = async (id: string): Promise<Funcionario | null> =>
 
 // Helper function to format funcionario data
 const formatFuncionarioData = (id: string, data: DocumentData): Funcionario => {
+  // Add default values and handle field name mappings
   return {
     id: id,
     ...data,
     nome: data.nome || '',
     especialidades: data.especialidades || [],
+    especializacoes: data.especialidades || data.especializacoes || [],
     nivelPermissao: data.nivelPermissao || 'visualizacao',
     dataCriacao: data.dataCriacao ? data.dataCriacao.toDate() : null,
-    nomeUsuario: data.nomeUsuario || ''
+    nomeUsuario: data.nomeUsuario || '',
+    tipo: data.tipo || 'visualizador', // Required by the Funcionario interface
   } as Funcionario;
 };
 
@@ -146,6 +149,8 @@ export const saveFuncionario = async (funcionario: Funcionario): Promise<boolean
       // Update employee data (excluding credentials)
       await updateDoc(docRef, {
         ...funcionarioData,
+        // Map especializacoes to especialidades for backward compatibility
+        especialidades: funcionario.especializacoes || funcionario.especialidades || [],
         updatedAt: serverTimestamp()
       });
       
@@ -169,6 +174,8 @@ export const saveFuncionario = async (funcionario: Funcionario): Promise<boolean
       await setDoc(docRef, {
         ...funcionarioData,
         id: docRef.id,
+        // Map especializacoes to especialidades for backward compatibility
+        especialidades: funcionario.especializacoes || funcionario.especialidades || [],
         dataCriacao: serverTimestamp(),
         nomeUsuario: nomeUsuario || ''
       });

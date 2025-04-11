@@ -1,3 +1,4 @@
+
 import { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { auth } from '@/lib/firebase';
 import { User, onAuthStateChanged, signOut } from 'firebase/auth';
@@ -46,9 +47,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 nome: parsedUser.displayName || 'Usuário',
                 email: parsedUser.email || '',
                 telefone: '',
-                especialidades: parsedUser.especialidades || [],
+                especializacoes: parsedUser.especialidades || [],
                 ativo: true,
-                nivelPermissao: parsedUser.role as NivelPermissao
+                nivelPermissao: parsedUser.role as NivelPermissao,
+                tipo: 'visualizador' // Default value
               });
             }
           } else if (parsedUser.role === 'admin') {
@@ -57,9 +59,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               nome: 'Administrador',
               email: parsedUser.email || '',
               telefone: '',
-              especialidades: [],
+              especializacoes: [],
               ativo: true,
-              nivelPermissao: 'admin' as NivelPermissao
+              nivelPermissao: 'admin' as NivelPermissao,
+              tipo: 'admin' // Default value
             });
           }
         };
@@ -81,9 +84,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           nome: authUser.displayName || 'Usuário',
           email: authUser.email || '',
           telefone: '',
-          especialidades: [],
+          especializacoes: [],
           ativo: true,
-          nivelPermissao: 'visualizacao' as NivelPermissao
+          nivelPermissao: 'visualizacao' as NivelPermissao,
+          tipo: 'visualizador' // Default value
         });
       }
       
@@ -135,9 +139,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             nome: 'Administrador',
             email: 'admin@sgr.com',
             telefone: '',
-            especialidades: [],
+            especializacoes: [],
             ativo: true,
-            nivelPermissao: 'admin' as NivelPermissao
+            nivelPermissao: 'admin' as NivelPermissao,
+            tipo: 'admin' // Default value
           });
         } else {
           userData = await getUserData(identifier);
@@ -159,7 +164,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               displayName: funcionarioData.nome,
               role: funcionarioData.nivelPermissao,
               funcionarioId: funcionarioData.id,
-              especialidades: funcionarioData.especialidades
+              especialidades: funcionarioData.especializacoes || funcionarioData.especialidades || []
             };
           } else {
             userData = {
@@ -175,9 +180,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               nome: userData.displayName || 'Usuário',
               email: userData.email || '',
               telefone: '',
-              especialidades: [],
+              especializacoes: [],
               ativo: true,
-              nivelPermissao: userData.role as NivelPermissao || 'visualizacao'
+              nivelPermissao: userData.role as NivelPermissao || 'visualizacao',
+              tipo: 'visualizador' // Default value
             });
           }
         }

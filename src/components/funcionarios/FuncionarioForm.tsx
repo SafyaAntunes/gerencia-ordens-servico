@@ -16,7 +16,7 @@ const formSchema = z.object({
   nome: z.string().min(2, { message: "Nome deve ter pelo menos 2 caracteres" }),
   email: z.string().email({ message: "E-mail inválido" }),
   telefone: z.string().min(8, { message: "Telefone inválido" }),
-  especialidades: z.array(z.string()).min(1, { message: "Selecione pelo menos uma especialidade" }),
+  especializacoes: z.array(z.string()).min(1, { message: "Selecione pelo menos uma especialidade" }),
   ativo: z.boolean().default(true),
   nivelPermissao: z.enum(["admin", "gerente", "tecnico", "visualizacao"] as const).default("visualizacao"),
   senha: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres" }).optional(),
@@ -47,13 +47,16 @@ export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSub
   // Sempre mostrar credenciais quando for o perfil do próprio usuário
   const [showCredentials, setShowCredentials] = useState(!isEditing || isMeuPerfil || false);
   
+  // Handle both especializacoes and especialidades for backward compatibility
+  const initialEspecializacoes = initialData?.especializacoes || initialData?.especialidades || [];
+  
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       nome: initialData?.nome || "",
       email: initialData?.email || "",
       telefone: initialData?.telefone || "",
-      especialidades: initialData?.especialidades || [],
+      especializacoes: initialEspecializacoes,
       ativo: initialData?.ativo !== undefined ? initialData.ativo : true,
       nivelPermissao: (initialData?.nivelPermissao as NivelPermissao) || "visualizacao",
       senha: "",
@@ -154,7 +157,7 @@ export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSub
           <div className="rounded-md border border-border p-4">
             <FormField
               control={form.control}
-              name="especialidades"
+              name="especializacoes"
               render={() => (
                 <FormItem>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -162,7 +165,7 @@ export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSub
                       <FormField
                         key={id}
                         control={form.control}
-                        name="especialidades"
+                        name="especializacoes"
                         render={({ field }) => (
                           <FormItem
                             key={id}
