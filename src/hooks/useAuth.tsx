@@ -1,4 +1,3 @@
-
 import { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { auth } from '@/lib/firebase';
 import { User, onAuthStateChanged, signOut } from 'firebase/auth';
@@ -290,11 +289,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const canEditOrder = (ordenId: string) => {
     if (!funcionario) return false;
     
-    if (['admin', 'gerente'].includes(funcionario.nivelPermissao)) {
-      return true;
-    }
-    
-    return false;
+    return ['admin', 'gerente'].includes(funcionario.nivelPermissao);
   };
 
   const value = {

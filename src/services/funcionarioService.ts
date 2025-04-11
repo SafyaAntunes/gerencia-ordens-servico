@@ -156,13 +156,33 @@ export const saveFuncionario = async (funcionario: Funcionario): Promise<boolean
       
       console.log('Atualizando funcionário:', funcionario.id);
       
-      // Update user credentials if email is provided
-      if (funcionario.email) {
+      // Only update user credentials if email and password are provided
+      if (funcionario.email && senha) {
         await updateUserCredentials(
           funcionario.id,
           funcionario.email,
           senha,
           nomeUsuario,
+          funcionario.nivelPermissao
+        );
+      } 
+      // Update username only if it's provided without password
+      else if (funcionario.email && nomeUsuario) {
+        await updateUserCredentials(
+          funcionario.id,
+          funcionario.email,
+          undefined,
+          nomeUsuario,
+          funcionario.nivelPermissao
+        );
+      }
+      // Update only role if neither password nor username provided
+      else if (funcionario.email) {
+        await updateUserCredentials(
+          funcionario.id,
+          funcionario.email,
+          undefined,
+          undefined,
           funcionario.nivelPermissao
         );
       }
