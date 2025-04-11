@@ -12,30 +12,16 @@ import { Button } from "@/components/ui/button";
 import { Shield, Wrench, Lock } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
-// Create two separate schemas: one for new employees and one for updating existing employees
-const baseFormSchema = z.object({
+const formSchema = z.object({
   nome: z.string().min(2, { message: "Nome deve ter pelo menos 2 caracteres" }),
   email: z.string().email({ message: "E-mail inválido" }),
   telefone: z.string().min(8, { message: "Telefone inválido" }),
-  especializacoes: z.array(z.string()).min(1, { message: "Selecione pelo menos uma especialidade" }),
+  especialidades: z.array(z.string()).min(1, { message: "Selecione pelo menos uma especialidade" }),
   ativo: z.boolean().default(true),
   nivelPermissao: z.enum(["admin", "gerente", "tecnico", "visualizacao"] as const).default("visualizacao"),
-  nomeUsuario: z.string().min(3, { message: "Nome de usuário deve ter pelo menos 3 caracteres" }).optional(),
-});
-
-// Schema for new employees (requires password)
-const newEmployeeSchema = baseFormSchema.extend({
-  senha: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres" }),
-  confirmarSenha: z.string(),
-}).refine((data) => data.senha === data.confirmarSenha, {
-  message: "As senhas não coincidem",
-  path: ["confirmarSenha"],
-});
-
-// Schema for updating employees (password is optional)
-const updateEmployeeSchema = baseFormSchema.extend({
   senha: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres" }).optional(),
   confirmarSenha: z.string().optional(),
+  nomeUsuario: z.string().min(3, { message: "Nome de usuário deve ter pelo menos 3 caracteres" }).optional(),
 }).refine((data) => {
   if (data.senha) {
     return data.senha === data.confirmarSenha;
@@ -46,10 +32,7 @@ const updateEmployeeSchema = baseFormSchema.extend({
   path: ["confirmarSenha"],
 });
 
-type FormValues = z.infer<typeof baseFormSchema> & {
-  senha?: string;
-  confirmarSenha?: string;
-};
+type FormValues = z.infer<typeof formSchema>;
 
 interface FuncionarioFormProps {
   initialData?: Funcionario | null;
@@ -61,14 +44,8 @@ interface FuncionarioFormProps {
 
 export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSubmitting, isMeuPerfil }: FuncionarioFormProps) {
   const isEditing = !!initialData?.id;
-  // Only show credentials section when creating a new employee, for user profile, or when explicitly clicked
+  // Sempre mostrar credenciais quando for o perfil do próprio usuário
   const [showCredentials, setShowCredentials] = useState(!isEditing || isMeuPerfil || false);
-  
-  // Handle both especializacoes and especialidades for backward compatibility
-  const initialEspecializacoes = initialData?.especializacoes || initialData?.especialidades || [];
-  
-  // Use different schema based on whether we're creating or updating
-  const formSchema = isEditing ? updateEmployeeSchema : newEmployeeSchema;
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -76,7 +53,7 @@ export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSub
       nome: initialData?.nome || "",
       email: initialData?.email || "",
       telefone: initialData?.telefone || "",
-      especializacoes: initialEspecializacoes,
+      especialidades: initialData?.especialidades || [],
       ativo: initialData?.ativo !== undefined ? initialData.ativo : true,
       nivelPermissao: (initialData?.nivelPermissao as NivelPermissao) || "visualizacao",
       senha: "",
@@ -177,7 +154,7 @@ export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSub
           <div className="rounded-md border border-border p-4">
             <FormField
               control={form.control}
-              name="especializacoes"
+              name="especialidades"
               render={() => (
                 <FormItem>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -185,7 +162,7 @@ export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSub
                       <FormField
                         key={id}
                         control={form.control}
-                        name="especializacoes"
+                        name="especialidades"
                         render={({ field }) => (
                           <FormItem
                             key={id}
@@ -219,7 +196,6 @@ export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSub
           </div>
         </div>
 
-        {/* Credentials section */}
         <div className="space-y-4 rounded-md border border-border p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -241,9 +217,7 @@ export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSub
           
           <p className="text-sm text-muted-foreground mt-0">
             {isEditing 
-              ? (showCredentials 
-                ? "Defina um nome de usuário e uma nova senha para este funcionário."
-                : "Clique em 'Alterar credenciais' se precisar redefinir a senha ou o nome de usuário.")
+              ? "Defina um nome de usuário e uma nova senha para este funcionário." 
               : "Defina uma senha e um nome de usuário para que o funcionário possa acessar o sistema."}
           </p>
           
@@ -268,7 +242,7 @@ export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSub
                 name="senha"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{isEditing ? "Nova Senha" : "Senha"}</FormLabel>
+                    <FormLabel>Senha</FormLabel>
                     <FormControl>
                       <Input type="password" placeholder="••••••••" {...field} />
                     </FormControl>

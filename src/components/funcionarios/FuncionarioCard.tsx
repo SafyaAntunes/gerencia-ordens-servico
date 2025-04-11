@@ -29,9 +29,6 @@ export default function FuncionarioCard({
     .substring(0, 2)
     .toUpperCase();
     
-  // Use especializacoes as the primary field, fall back to especialidades if needed
-  const especialidades = funcionario.especializacoes || funcionario.especialidades || [];
-  
   return (
     <Card className="overflow-hidden transition-all duration-200 hover:shadow-md border-border h-full flex flex-col">
       <CardHeader className="pb-2">
@@ -74,14 +71,14 @@ export default function FuncionarioCard({
             </div>
             
             <div className="flex flex-wrap gap-1.5">
-              {especialidades.length > 0 ? (
-                especialidades.map((especialidade) => (
+              {funcionario.especialidades.length > 0 ? (
+                funcionario.especialidades.map((especialidade) => (
                   <Badge 
                     key={especialidade}
                     variant="secondary"
                     className="text-xs"
                   >
-                    {tipoServicoLabels[especialidade] || especialidade}
+                    {tipoServicoLabels[especialidade as keyof typeof tipoServicoLabels]}
                   </Badge>
                 ))
               ) : (

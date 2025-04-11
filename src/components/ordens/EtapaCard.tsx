@@ -23,12 +23,10 @@ interface EtapaCardProps {
     finalizado?: Date;
     usarCronometro?: boolean;
     pausas?: { inicio: number; fim?: number; motivo?: string }[];
-    servicoTipo?: TipoServico;
   };
   onSubatividadeToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
   onServicoStatusChange?: (servicoTipo: TipoServico, concluido: boolean) => void;
   onEtapaStatusChange?: (etapa: EtapaOS, concluida: boolean) => void;
-  servicoTipo?: TipoServico; // Novo prop para identificar o tipo de serviço
 }
 
 export default function EtapaCard({
@@ -41,19 +39,12 @@ export default function EtapaCard({
   etapaInfo,
   onSubatividadeToggle,
   onServicoStatusChange,
-  onEtapaStatusChange,
-  servicoTipo
+  onEtapaStatusChange
 }: EtapaCardProps) {
   const [progresso, setProgresso] = useState(0);
   const [isAtivo, setIsAtivo] = useState(false);
   
   const etapaServicos = (() => {
-    // Se um servicoTipo específico foi passado, filtra apenas esse serviço
-    if (servicoTipo) {
-      return servicos.filter(servico => servico.tipo === servicoTipo);
-    }
-    
-    // Caso contrário, usa a lógica original
     switch(etapa) {
       case 'retifica':
         return servicos.filter(servico => 
@@ -65,10 +56,6 @@ export default function EtapaCard({
         return servicos.filter(servico => servico.tipo === 'dinamometro');
       case 'lavagem':
       case 'inspecao_inicial':
-        if (servicoTipo) {
-          return servicos.filter(servico => servico.tipo === servicoTipo);
-        }
-        return servicos;
       case 'inspecao_final':
         return [];
       default:
@@ -108,6 +95,8 @@ export default function EtapaCard({
     }
   };
   
+  const etapaStatus = getEtapaStatus();
+  
   // Adicionado para atualizar o status quando o cronômetro estiver ativo
   useEffect(() => {
     if (etapaInfo?.iniciado && !etapaInfo?.concluido) {
@@ -122,15 +111,15 @@ export default function EtapaCard({
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xl font-semibold">{etapaNome}</h3>
         <div className="flex items-center gap-2">
-          {getEtapaStatus() === "concluido" && (
+          {etapaStatus === "concluido" && (
             <Badge variant="success">
               Concluído
             </Badge>
           )}
-          {getEtapaStatus() === "em_andamento" && (
+          {etapaStatus === "em_andamento" && (
             <Badge variant="outline">Em andamento</Badge>
           )}
-          {getEtapaStatus() === "nao_iniciado" && (
+          {etapaStatus === "nao_iniciado" && (
             <Badge variant="outline" className="bg-gray-100">Não iniciado</Badge>
           )}
         </div>
@@ -148,7 +137,7 @@ export default function EtapaCard({
             ordemId={ordemId}
             funcionarioId={funcionarioId}
             funcionarioNome={funcionarioNome}
-            etapa={servicoTipo ? `${etapa}_${servicoTipo}` as EtapaOS : etapa}
+            etapa={etapa}
             onFinish={handleEtapaConcluida}
             isEtapaConcluida={etapaInfo?.concluido}
             onStart={() => setIsAtivo(true)}

@@ -40,9 +40,6 @@ export default function FuncionarioDetalhes({
         return isValid(date) ? format(date, "dd/MM/yyyy") : "N/A";
       })()
     : "N/A";
-    
-  // Use especializacoes as the primary field, fall back to especialidades if needed
-  const especialidades = funcionario.especializacoes || funcionario.especialidades || [];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -127,9 +124,9 @@ export default function FuncionarioDetalhes({
             </div>
             
             <div className="flex flex-wrap gap-2">
-              {especialidades.map((especialidade) => (
+              {funcionario.especialidades.map((especialidade) => (
                 <Badge key={especialidade} variant="secondary">
-                  {tipoServicoLabels[especialidade] || especialidade}
+                  {tipoServicoLabels[especialidade as keyof typeof tipoServicoLabels]}
                 </Badge>
               ))}
             </div>

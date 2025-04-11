@@ -46,10 +46,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 nome: parsedUser.displayName || 'Usuário',
                 email: parsedUser.email || '',
                 telefone: '',
-                especializacoes: parsedUser.especialidades || [],
+                especialidades: parsedUser.especialidades || [],
                 ativo: true,
-                nivelPermissao: parsedUser.role as NivelPermissao,
-                tipo: 'visualizador' // Default value
+                nivelPermissao: parsedUser.role as NivelPermissao
               });
             }
           } else if (parsedUser.role === 'admin') {
@@ -58,10 +57,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               nome: 'Administrador',
               email: parsedUser.email || '',
               telefone: '',
-              especializacoes: [],
+              especialidades: [],
               ativo: true,
-              nivelPermissao: 'admin' as NivelPermissao,
-              tipo: 'admin' // Default value
+              nivelPermissao: 'admin' as NivelPermissao
             });
           }
         };
@@ -83,10 +81,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           nome: authUser.displayName || 'Usuário',
           email: authUser.email || '',
           telefone: '',
-          especializacoes: [],
+          especialidades: [],
           ativo: true,
-          nivelPermissao: 'visualizacao' as NivelPermissao,
-          tipo: 'visualizador' // Default value
+          nivelPermissao: 'visualizacao' as NivelPermissao
         });
       }
       
@@ -138,10 +135,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             nome: 'Administrador',
             email: 'admin@sgr.com',
             telefone: '',
-            especializacoes: [],
+            especialidades: [],
             ativo: true,
-            nivelPermissao: 'admin' as NivelPermissao,
-            tipo: 'admin' // Default value
+            nivelPermissao: 'admin' as NivelPermissao
           });
         } else {
           userData = await getUserData(identifier);
@@ -163,7 +159,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               displayName: funcionarioData.nome,
               role: funcionarioData.nivelPermissao,
               funcionarioId: funcionarioData.id,
-              especialidades: funcionarioData.especializacoes || funcionarioData.especialidades || []
+              especialidades: funcionarioData.especialidades
             };
           } else {
             userData = {
@@ -179,10 +175,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               nome: userData.displayName || 'Usuário',
               email: userData.email || '',
               telefone: '',
-              especializacoes: [],
+              especialidades: [],
               ativo: true,
-              nivelPermissao: userData.role as NivelPermissao || 'visualizacao',
-              tipo: 'visualizador' // Default value
+              nivelPermissao: userData.role as NivelPermissao || 'visualizacao'
             });
           }
         }
@@ -289,7 +284,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const canEditOrder = (ordenId: string) => {
     if (!funcionario) return false;
     
-    return ['admin', 'gerente'].includes(funcionario.nivelPermissao);
+    if (['admin', 'gerente'].includes(funcionario.nivelPermissao)) {
+      return true;
+    }
+    
+    return false;
   };
 
   const value = {

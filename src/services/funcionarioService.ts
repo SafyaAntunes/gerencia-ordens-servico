@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/firebase';
-import { Funcionario, NivelPermissao } from '@/types/funcionarios';
+import { Funcionario } from '@/types/funcionarios';
 import { 
   collection, 
   doc, 
@@ -57,17 +57,14 @@ export const getFuncionario = async (id: string): Promise<Funcionario | null> =>
 
 // Helper function to format funcionario data
 const formatFuncionarioData = (id: string, data: DocumentData): Funcionario => {
-  // Add default values and handle field name mappings
   return {
     id: id,
     ...data,
     nome: data.nome || '',
     especialidades: data.especialidades || [],
-    especializacoes: data.especialidades || data.especializacoes || [],
     nivelPermissao: data.nivelPermissao || 'visualizacao',
     dataCriacao: data.dataCriacao ? data.dataCriacao.toDate() : null,
-    nomeUsuario: data.nomeUsuario || '',
-    tipo: data.tipo || 'visualizador', // Required by the Funcionario interface
+    nomeUsuario: data.nomeUsuario || ''
   } as Funcionario;
 };
 
@@ -149,40 +146,18 @@ export const saveFuncionario = async (funcionario: Funcionario): Promise<boolean
       // Update employee data (excluding credentials)
       await updateDoc(docRef, {
         ...funcionarioData,
-        // Map especializacoes to especialidades for backward compatibility
-        especialidades: funcionario.especializacoes || funcionario.especialidades || [],
         updatedAt: serverTimestamp()
       });
       
       console.log('Atualizando funcionário:', funcionario.id);
       
-      // Only update user credentials if email and password are provided
-      if (funcionario.email && senha) {
+      // Update user credentials if email is provided
+      if (funcionario.email) {
         await updateUserCredentials(
           funcionario.id,
           funcionario.email,
           senha,
           nomeUsuario,
-          funcionario.nivelPermissao
-        );
-      } 
-      // Update username only if it's provided without password
-      else if (funcionario.email && nomeUsuario) {
-        await updateUserCredentials(
-          funcionario.id,
-          funcionario.email,
-          undefined,
-          nomeUsuario,
-          funcionario.nivelPermissao
-        );
-      }
-      // Update only role if neither password nor username provided
-      else if (funcionario.email) {
-        await updateUserCredentials(
-          funcionario.id,
-          funcionario.email,
-          undefined,
-          undefined,
           funcionario.nivelPermissao
         );
       }
@@ -194,8 +169,6 @@ export const saveFuncionario = async (funcionario: Funcionario): Promise<boolean
       await setDoc(docRef, {
         ...funcionarioData,
         id: docRef.id,
-        // Map especializacoes to especialidades for backward compatibility
-        especialidades: funcionario.especializacoes || funcionario.especialidades || [],
         dataCriacao: serverTimestamp(),
         nomeUsuario: nomeUsuario || ''
       });

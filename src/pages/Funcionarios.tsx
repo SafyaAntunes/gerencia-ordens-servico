@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { PlusCircle, Filter, Search, Users, CheckCircle2, FilterX } from "lucide-react";
 import Layout from "@/components/layout/Layout";
@@ -64,8 +65,10 @@ export default function Funcionarios({ onLogout, meuPerfil = false }: Funcionari
   
   useEffect(() => {
     if (isMeuPerfil && currentUser) {
+      // Se estiver visualizando o próprio perfil, carrega apenas o funcionário atual
       loadSingleFuncionario(currentUser.id);
     } else {
+      // Caso contrário, carrega todos os funcionários (para administradores/gerentes)
       fetchFuncionarios();
     }
   }, [currentUser, isMeuPerfil, funcionarioId]);
@@ -73,15 +76,18 @@ export default function Funcionarios({ onLogout, meuPerfil = false }: Funcionari
   const loadSingleFuncionario = async (id: string) => {
     setLoading(true);
     try {
+      // Se já temos o funcionário atual no state do useAuth, usamos ele
       if (currentUser && currentUser.id === id) {
         setFuncionarios([currentUser]);
         setLoading(false);
         return;
       }
       
+      // Caso contrário, buscamos do serviço
       const funcionario = await getFuncionario(id);
       if (funcionario) {
         setFuncionarios([funcionario]);
+        // Abre automaticamente o formulário de edição para o próprio perfil
         if (isMeuPerfil) {
           setSelectedFuncionario(funcionario);
           setIsDialogOpen(true);
@@ -111,6 +117,7 @@ export default function Funcionarios({ onLogout, meuPerfil = false }: Funcionari
   };
   
   const filteredFuncionarios = funcionarios.filter((funcionario) => {
+    // Se estiver no modo "meu perfil", retorna apenas o funcionário atual
     if (isMeuPerfil && currentUser) {
       return funcionario.id === currentUser.id;
     }
@@ -120,9 +127,8 @@ export default function Funcionarios({ onLogout, meuPerfil = false }: Funcionari
       funcionario.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       funcionario.nomeUsuario?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const especializacoes = funcionario.especializacoes || funcionario.especialidades || [];
     const matchesEspecialidade = especialidadeFilter === "todas" || 
-      especializacoes.includes(especialidadeFilter as TipoServico);
+      funcionario.especialidades.includes(especialidadeFilter as TipoServico);
     
     const matchesStatus = statusFilter === "todos" ||
       (statusFilter === "ativos" && funcionario.ativo) ||
@@ -212,6 +218,7 @@ export default function Funcionarios({ onLogout, meuPerfil = false }: Funcionari
     setStatusFilter("todos");
   };
 
+  // Determina o título da página com base no modo
   const pageTitle = isMeuPerfil ? "Meu Perfil" : "Funcionários";
   const pageDescription = isMeuPerfil 
     ? "Visualize e edite suas informações" 
@@ -296,6 +303,7 @@ export default function Funcionarios({ onLogout, meuPerfil = false }: Funcionari
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         ) : isMeuPerfil ? (
+          // Modo "Meu Perfil" - exibe apenas o card do funcionário atual
           <div className="mt-6">
             {filteredFuncionarios.length > 0 ? (
               <div className="max-w-md mx-auto">
@@ -326,6 +334,7 @@ export default function Funcionarios({ onLogout, meuPerfil = false }: Funcionari
             )}
           </div>
         ) : (
+          // Modo "Funcionários" - exibe a lista de todos os funcionários
           <Tabs defaultValue="todos" className="mt-4">
             <TabsList className="mb-6">
               <TabsTrigger value="todos" className="relative">
