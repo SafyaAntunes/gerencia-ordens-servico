@@ -16,9 +16,9 @@ export const tipoServicoLabels: Record<TipoServico, string> = {
   cabecote: 'Retífica de Cabeçote',
   virabrequim: 'Retífica de Virabrequim',
   biela: 'Balanceamento de Bielas',
-  polimento: 'Polimento',
+  eixo_comando: 'Eixo de Comando',
   montagem: 'Montagem de Motor',
-  outro: 'Outros Serviços'
+  dinamometro: 'Dinamômetro'
 };
 
 export interface Funcionario {
