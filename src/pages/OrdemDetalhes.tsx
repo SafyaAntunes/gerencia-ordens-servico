@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -95,7 +94,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
           
           setOrdem(ordemFormatada);
           
-          // Se tiver motorId, buscar os detalhes do motor
           if (ordemFormatada.motorId && ordemFormatada.cliente?.id) {
             await fetchMotorDetails(ordemFormatada.cliente.id, ordemFormatada.motorId);
           }
@@ -116,7 +114,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
 
   const fetchMotorDetails = async (clienteId: string, motorId: string) => {
     try {
-      // Buscar os detalhes do motor
       const clientesRef = doc(db, "clientes", clienteId);
       const clienteDoc = await getDoc(clientesRef);
       
@@ -280,7 +277,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
         return { ...prev, ...updatedOrder } as OrdemServico;
       });
       
-      // Atualizar os detalhes do motor se houve mudança
       if (values.motorId && values.motorId !== ordem?.motorId) {
         await fetchMotorDetails(values.clienteId, values.motorId);
       }
@@ -419,7 +415,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full mb-6">
             <TabsTrigger value="detalhes" className="flex-1">Detalhes</TabsTrigger>
-            {ordem.status === "fabricacao" && (
+            {(ordem.status === "fabricacao" || ordem.status === "orcamento") && (
               <TabsTrigger value="tracker" className="flex-1">
                 <ClipboardCheck className="h-4 w-4 mr-2" />
                 Tracker
@@ -592,14 +588,14 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
           </TabsContent>
           
           <TabsContent value="tracker" className="space-y-4">
-            {ordem.status === "fabricacao" ? (
+            {(ordem.status === "fabricacao" || ordem.status === "orcamento") ? (
               <EtapasTracker
                 ordem={ordem}
                 onOrdemUpdate={handleOrdemUpdate}
               />
             ) : (
               <div className="text-center py-8 text-muted-foreground">
-                O tracker só está disponível quando o status é "Fabricação"
+                O tracker só está disponível quando o status é "Fabricação" ou "Orçamento".
               </div>
             )}
           </TabsContent>
