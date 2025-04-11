@@ -340,16 +340,24 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
     }
   };
 
+  const podeEditarOS = funcionario?.tipo === 'gerente' || funcionario?.tipo === 'admin';
+  
+  const statusPermiteTracker = ordem?.status === "fabricacao" || ordem?.status === "orcamento";
+  
   const tecnicoPodeVerTracker = () => {
-    if (!ordem || !funcionario || funcionario.tipo !== 'tecnico') {
-      return true; // Não é um técnico, então pode ver
+    if (!ordem || !funcionario) {
+      return false;
     }
     
-    if (funcionario.especializacoes && funcionario.especializacoes.length > 0) {
+    if (funcionario.tipo === 'gerente' || funcionario.tipo === 'admin') {
+      return true;
+    }
+    
+    if (funcionario.tipo === 'tecnico' && funcionario.especializacoes && funcionario.especializacoes.length > 0) {
       return ordem.servicos.some(servico => funcionario.especializacoes?.includes(servico.tipo));
     }
     
-    return false; // Técnico sem especialização não pode ver o tracker
+    return false;
   };
 
   if (isLoading) {
@@ -374,12 +382,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
       </Layout>
     );
   }
-
-  const podeEditarOS = funcionario?.tipo !== 'tecnico';
-  
-  const statusPermiteTracker = ordem.status === "fabricacao" || ordem.status === "orcamento";
-  
-  const tecnicoTemPermissao = tecnicoPodeVerTracker();
 
   return (
     <Layout onLogout={onLogout}>
@@ -434,7 +436,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full mb-6">
             <TabsTrigger value="detalhes" className="flex-1">Detalhes</TabsTrigger>
-            {statusPermiteTracker && tecnicoTemPermissao && (
+            {statusPermiteTracker && tecnicoPodeVerTracker() && (
               <TabsTrigger value="tracker" className="flex-1">
                 <ClipboardCheck className="h-4 w-4 mr-2" />
                 Tracker
@@ -611,7 +613,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
           </TabsContent>
           
           <TabsContent value="tracker" className="space-y-4">
-            {statusPermiteTracker && tecnicoTemPermissao ? (
+            {statusPermiteTracker && tecnicoPodeVerTracker() ? (
               <EtapasTracker
                 ordem={ordem}
                 onOrdemUpdate={handleOrdemUpdate}
