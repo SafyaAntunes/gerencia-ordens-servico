@@ -151,8 +151,8 @@ export const saveFuncionario = async (funcionario: Funcionario): Promise<boolean
       
       console.log('Atualizando funcionário:', funcionario.id);
       
-      // Update user credentials if email is provided
-      if (funcionario.email) {
+      // Update user credentials only if senha is provided
+      if (funcionario.email && senha) {
         await updateUserCredentials(
           funcionario.id,
           funcionario.email,

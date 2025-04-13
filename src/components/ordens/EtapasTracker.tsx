@@ -299,6 +299,8 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         return ordem.servicos.filter(servico => servico.tipo === 'montagem');
       case 'dinamometro':
         return ordem.servicos.filter(servico => servico.tipo === 'dinamometro');
+      case 'lavagem': 
+        return ordem.servicos.filter(servico => servico.tipo === 'lavagem');
       default:
         return [];
     }
@@ -348,8 +350,8 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
             <Progress value={progressoTotal} className="h-3" />
           </div>
 
-          {/* Botões horizontais para etapas */}
-          <div className="flex flex-wrap gap-2 mb-6">
+          {/* Botões horizontais para etapas - agora centralizados */}
+          <div className="flex flex-wrap justify-center gap-2 mb-6">
             {etapasAtivas.map(etapa => (
               <Button
                 key={etapa}

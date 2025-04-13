@@ -12,16 +12,33 @@ import { Button } from "@/components/ui/button";
 import { Shield, Wrench, Lock } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
-const formSchema = z.object({
+// Create schemas based on whether we're creating or editing a user
+const createFormSchema = z.object({
   nome: z.string().min(2, { message: "Nome deve ter pelo menos 2 caracteres" }),
   email: z.string().email({ message: "E-mail inválido" }),
   telefone: z.string().min(8, { message: "Telefone inválido" }),
   especialidades: z.array(z.string()).min(1, { message: "Selecione pelo menos uma especialidade" }),
   ativo: z.boolean().default(true),
   nivelPermissao: z.enum(["admin", "gerente", "tecnico", "visualizacao"] as const).default("visualizacao"),
-  senha: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres" }).optional(),
+  senha: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres" }),
+  confirmarSenha: z.string(),
+  nomeUsuario: z.string().min(3, { message: "Nome de usuário deve ter pelo menos 3 caracteres" }),
+}).refine((data) => data.senha === data.confirmarSenha, {
+  message: "As senhas não coincidem",
+  path: ["confirmarSenha"],
+});
+
+// Edit form schema doesn't require senha and confirmarSenha
+const editFormSchema = z.object({
+  nome: z.string().min(2, { message: "Nome deve ter pelo menos 2 caracteres" }),
+  email: z.string().email({ message: "E-mail inválido" }),
+  telefone: z.string().min(8, { message: "Telefone inválido" }),
+  especialidades: z.array(z.string()).min(1, { message: "Selecione pelo menos uma especialidade" }),
+  ativo: z.boolean().default(true),
+  nivelPermissao: z.enum(["admin", "gerente", "tecnico", "visualizacao"] as const).default("visualizacao"),
+  senha: z.string().optional(),
   confirmarSenha: z.string().optional(),
-  nomeUsuario: z.string().min(3, { message: "Nome de usuário deve ter pelo menos 3 caracteres" }).optional(),
+  nomeUsuario: z.string().optional(),
 }).refine((data) => {
   if (data.senha) {
     return data.senha === data.confirmarSenha;
@@ -32,7 +49,7 @@ const formSchema = z.object({
   path: ["confirmarSenha"],
 });
 
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = z.infer<typeof createFormSchema> | z.infer<typeof editFormSchema>;
 
 interface FuncionarioFormProps {
   initialData?: Funcionario | null;
@@ -44,11 +61,14 @@ interface FuncionarioFormProps {
 
 export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSubmitting, isMeuPerfil }: FuncionarioFormProps) {
   const isEditing = !!initialData?.id;
-  // Sempre mostrar credenciais quando for o perfil do próprio usuário
+  // Apenas mostrar credenciais quando for criação de novo funcionário ou edição do próprio perfil
   const [showCredentials, setShowCredentials] = useState(!isEditing || isMeuPerfil || false);
   
+  // Use the appropriate schema based on whether we're creating or editing
+  const schema = isEditing ? editFormSchema : createFormSchema;
+  
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       nome: initialData?.nome || "",
       email: initialData?.email || "",
@@ -196,46 +216,46 @@ export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSub
           </div>
         </div>
 
-        <div className="space-y-4 rounded-md border border-border p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Lock className="h-4 w-4 text-muted-foreground" />
-              <FormLabel className="text-base m-0">Credenciais de Acesso</FormLabel>
+        {(!isEditing || showCredentials) && (
+          <div className="space-y-4 rounded-md border border-border p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-muted-foreground" />
+                <FormLabel className="text-base m-0">Credenciais de Acesso</FormLabel>
+              </div>
+              
+              {isEditing && !isMeuPerfil && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowCredentials(false)}
+                >
+                  Ocultar credenciais
+                </Button>
+              )}
             </div>
             
-            {isEditing && !showCredentials && !isMeuPerfil && (
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="sm"
-                onClick={() => setShowCredentials(true)}
-              >
-                Alterar credenciais
-              </Button>
-            )}
-          </div>
-          
-          <p className="text-sm text-muted-foreground mt-0">
-            {isEditing 
-              ? "Defina um nome de usuário e uma nova senha para este funcionário." 
-              : "Defina uma senha e um nome de usuário para que o funcionário possa acessar o sistema."}
-          </p>
-          
-          <FormField
-            control={form.control}
-            name="nomeUsuario"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Nome de Usuário</FormLabel>
-                <FormControl>
-                  <Input placeholder="nome.sobrenome" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          {(!isEditing || showCredentials || isMeuPerfil) && (
+            <p className="text-sm text-muted-foreground mt-0">
+              {isEditing 
+                ? "Defina um nome de usuário e uma nova senha para este funcionário." 
+                : "Defina uma senha e um nome de usuário para que o funcionário possa acessar o sistema."}
+            </p>
+            
+            <FormField
+              control={form.control}
+              name="nomeUsuario"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome de Usuário</FormLabel>
+                  <FormControl>
+                    <Input placeholder="nome.sobrenome" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -265,8 +285,19 @@ export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSub
                 )}
               />
             </div>
-          )}
-        </div>
+          </div>
+        )}
+        
+        {isEditing && !showCredentials && !isMeuPerfil && (
+          <Button 
+            type="button" 
+            variant="outline"
+            onClick={() => setShowCredentials(true)}
+          >
+            <Lock className="mr-2 h-4 w-4" />
+            Alterar credenciais
+          </Button>
+        )}
         
         <FormField
           control={form.control}
