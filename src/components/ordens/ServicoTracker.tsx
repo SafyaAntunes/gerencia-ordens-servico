@@ -38,6 +38,11 @@ export default function ServicoTracker({
   const [pausaDialogOpen, setPausaDialogOpen] = useState(false);
   const { funcionario } = useAuth();
   
+  // Verificar se o usuário tem permissão para este tipo de serviço
+  const temPermissao = funcionario?.nivelPermissao === 'admin' || 
+                      funcionario?.nivelPermissao === 'gerente' ||
+                      (funcionario?.especialidades && funcionario.especialidades.includes(servico.tipo));
+  
   const {
     isRunning,
     isPaused,
@@ -63,8 +68,6 @@ export default function ServicoTracker({
     ? Math.round((completedSubatividades / totalSubatividades) * 100)
     : 0;
     
-  // Removido o allCompleted que marcava automaticamente o serviço como concluído
-  
   const getServicoStatus = () => {
     if (servico.concluido) {
       return "concluido";
@@ -89,10 +92,20 @@ export default function ServicoTracker({
   };
 
   const handleSubatividadeToggle = (subatividade: SubAtividade) => {
+    if (!temPermissao) {
+      toast.error("Você não tem permissão para editar este tipo de serviço");
+      return;
+    }
+    
     onSubatividadeToggle(subatividade.id, !subatividade.concluida);
   };
   
   const handlePauseClick = () => {
+    if (!temPermissao) {
+      toast.error("Você não tem permissão para pausar este tipo de serviço");
+      return;
+    }
+    
     setPausaDialogOpen(true);
   };
   
@@ -111,14 +124,17 @@ export default function ServicoTracker({
       return;
     }
     
+    if (!temPermissao) {
+      toast.error("Você não tem permissão para editar este tipo de serviço");
+      return;
+    }
+    
     if (isRunning || isPaused) {
       handleFinish();
     }
     
     onServicoStatusChange(true);
   };
-  
-  // Removed effect that automatically completed the service
   
   const servicoStatus = getServicoStatus();
 
@@ -170,10 +186,13 @@ export default function ServicoTracker({
                   {subatividadesFiltradas.map((subatividade) => (
                     <div 
                       key={subatividade.id}
-                      className="flex items-center justify-between"
-                      onClick={() => handleSubatividadeToggle(subatividade)}
+                      className={cn(
+                        "flex items-center justify-between",
+                        temPermissao ? "cursor-pointer" : "cursor-default"
+                      )}
+                      onClick={() => temPermissao && handleSubatividadeToggle(subatividade)}
                     >
-                      <div className="flex items-center gap-2 cursor-pointer">
+                      <div className="flex items-center gap-2">
                         <div 
                           className={cn(
                             "h-5 w-5 rounded-full border flex items-center justify-center",
@@ -200,51 +219,53 @@ export default function ServicoTracker({
             </>
           )}
           
-          <CardContent className="py-3">
-            <div className="flex space-x-2 my-2">
-              {!isRunning && !isPaused && !servico.concluido && (
-                <Button
-                  onClick={handleStart}
-                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
-                >
-                  <Play className="h-4 w-4 mr-1" />
-                  Iniciar Timer
-                </Button>
-              )}
-              
-              {isRunning && !isPaused && (
-                <Button
-                  onClick={handlePauseClick}
-                  className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-white"
-                >
-                  <Pause className="h-4 w-4 mr-1" />
-                  Pausar
-                </Button>
-              )}
-              
-              {isPaused && (
-                <Button
-                  onClick={handleResume}
-                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
-                >
-                  <Play className="h-4 w-4 mr-1" />
-                  Retomar
-                </Button>
-              )}
-              
-              {(isRunning || isPaused) && (
-                <Button
-                  onClick={handleFinish}
-                  className="flex-1 bg-red-500 hover:bg-red-600 text-white"
-                >
-                  <StopCircle className="h-4 w-4 mr-1" />
-                  Terminar
-                </Button>
-              )}
-            </div>
-          </CardContent>
+          {temPermissao && (
+            <CardContent className="py-3">
+              <div className="flex space-x-2 my-2">
+                {!isRunning && !isPaused && !servico.concluido && (
+                  <Button
+                    onClick={handleStart}
+                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
+                  >
+                    <Play className="h-4 w-4 mr-1" />
+                    Iniciar Timer
+                  </Button>
+                )}
+                
+                {isRunning && !isPaused && (
+                  <Button
+                    onClick={handlePauseClick}
+                    className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-white"
+                  >
+                    <Pause className="h-4 w-4 mr-1" />
+                    Pausar
+                  </Button>
+                )}
+                
+                {isPaused && (
+                  <Button
+                    onClick={handleResume}
+                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
+                  >
+                    <Play className="h-4 w-4 mr-1" />
+                    Retomar
+                  </Button>
+                )}
+                
+                {(isRunning || isPaused) && (
+                  <Button
+                    onClick={handleFinish}
+                    className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+                  >
+                    <StopCircle className="h-4 w-4 mr-1" />
+                    Terminar
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          )}
           
-          {!servico.concluido && (
+          {!servico.concluido && temPermissao && (
             <CardFooter className="pt-0 pb-4">
               <Button 
                 variant="default" 

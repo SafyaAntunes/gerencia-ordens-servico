@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -53,7 +52,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
   const [activeTab, setActiveTab] = useState<string>("detalhes");
   const [isEditando, setIsEditando] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const { funcionario } = useAuth();
+  const { funcionario, canEditOrder } = useAuth();
   
   const statusLabels: Record<StatusOS, string> = {
     orcamento: "Orçamento",
@@ -95,7 +94,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
           
           setOrdem(ordemFormatada);
           
-          // Se tiver motorId, buscar os detalhes do motor
           if (ordemFormatada.motorId && ordemFormatada.cliente?.id) {
             await fetchMotorDetails(ordemFormatada.cliente.id, ordemFormatada.motorId);
           }
@@ -116,7 +114,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
 
   const fetchMotorDetails = async (clienteId: string, motorId: string) => {
     try {
-      // Buscar os detalhes do motor
       const clientesRef = doc(db, "clientes", clienteId);
       const clienteDoc = await getDoc(clientesRef);
       
@@ -280,7 +277,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
         return { ...prev, ...updatedOrder } as OrdemServico;
       });
       
-      // Atualizar os detalhes do motor se houve mudança
       if (values.motorId && values.motorId !== ordem?.motorId) {
         await fetchMotorDetails(values.clienteId, values.motorId);
       }
@@ -343,6 +339,8 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
     }
   };
 
+  const canEditThisOrder = canEditOrder(ordem.id);
+
   if (isLoading) {
     return (
       <Layout>
@@ -384,7 +382,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
             OS #{ordem.id.slice(-5)} - {ordem.nome}
           </h1>
           <div className="flex gap-2">
-            {!isEditando && (
+            {!isEditando && canEditThisOrder && (
               <>
                 <Button 
                   variant="outline" 
@@ -419,12 +417,10 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full mb-6">
             <TabsTrigger value="detalhes" className="flex-1">Detalhes</TabsTrigger>
-            {ordem.status === "fabricacao" && (
-              <TabsTrigger value="tracker" className="flex-1">
-                <ClipboardCheck className="h-4 w-4 mr-2" />
-                Tracker
-              </TabsTrigger>
-            )}
+            <TabsTrigger value="tracker" className="flex-1">
+              <ClipboardCheck className="h-4 w-4 mr-2" />
+              Tracker
+            </TabsTrigger>
             <TabsTrigger value="fotos" className="flex-1">Fotos</TabsTrigger>
             <TabsTrigger value="relatorio" className="flex-1">Relatório de Pausas</TabsTrigger>
           </TabsList>

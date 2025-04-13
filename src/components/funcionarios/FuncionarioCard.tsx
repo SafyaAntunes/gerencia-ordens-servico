@@ -71,14 +71,14 @@ export default function FuncionarioCard({
             </div>
             
             <div className="flex flex-wrap gap-1.5">
-              {funcionario.especialidades.length > 0 ? (
+              {funcionario.especialidades && funcionario.especialidades.length > 0 ? (
                 funcionario.especialidades.map((especialidade) => (
                   <Badge 
                     key={especialidade}
                     variant="secondary"
                     className="text-xs"
                   >
-                    {tipoServicoLabels[especialidade as keyof typeof tipoServicoLabels]}
+                    {tipoServicoLabels[especialidade as keyof typeof tipoServicoLabels] || especialidade}
                   </Badge>
                 ))
               ) : (
