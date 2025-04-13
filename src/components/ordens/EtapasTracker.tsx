@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -46,6 +47,12 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
 
   // Define quais etapas o usuário pode ver com base em suas permissões
   useEffect(() => {
+    if (!ordem || !funcionario) {
+      setEtapasAtivas([]);
+      setSelectedEtapa(null);
+      return;
+    }
+    
     // Define todas as etapas disponíveis
     const allEtapas: EtapaOS[] = [
       'lavagem', 
@@ -360,7 +367,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
           <Separator className="my-4" />
 
           {/* Conteúdo da etapa selecionada */}
-          {selectedEtapa && (
+          {selectedEtapa && funcionario && (
             <EtapaCard 
               key={selectedEtapa}
               ordemId={ordem.id}

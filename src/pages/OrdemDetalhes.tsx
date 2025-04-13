@@ -339,7 +339,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
     }
   };
 
-  const canEditThisOrder = canEditOrder(ordem.id);
+  const canEditThisOrder = ordem ? canEditOrder(ordem.id) : false;
 
   if (isLoading) {
     return (
