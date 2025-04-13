@@ -86,10 +86,20 @@ export default function ServicoTracker({
       virabrequim: "Virabrequim",
       eixo_comando: "Eixo de Comando",
       montagem: "Montagem",
-      dinamometro: "Dinamômetro"
+      dinamometro: "Dinamômetro",
+      lavagem: "Lavagem"
     };
     return labels[tipo] || tipo;
   };
+
+  // Verificar se todas as subatividades foram concluídas para marcar o serviço como concluído
+  useEffect(() => {
+    if (subatividadesFiltradas.length > 0 && 
+        subatividadesFiltradas.every(sub => sub.concluida) && 
+        !servico.concluido) {
+      handleMarcarConcluido();
+    }
+  }, [subatividadesFiltradas]);
 
   const handleSubatividadeToggle = (subatividade: SubAtividade) => {
     if (!temPermissao) {

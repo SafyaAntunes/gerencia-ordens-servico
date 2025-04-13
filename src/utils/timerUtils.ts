@@ -1,46 +1,39 @@
 
-import { EtapaOS, TipoServico } from "@/types/ordens";
-
-// Format milliseconds as HH:MM:SS
-export const formatTime = (ms: number): string => {
-  if (!ms || isNaN(ms)) return "00:00:00";
-  
-  const totalSeconds = Math.floor(ms / 1000);
+export const formatTime = (milliseconds: number): string => {
+  const totalSeconds = Math.floor(milliseconds / 1000);
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-  
-  const padZero = (n: number) => n.toString().padStart(2, '0');
-  
-  return `${padZero(hours)}:${padZero(minutes)}:${padZero(seconds)}`;
+
+  return [hours, minutes, seconds]
+    .map(unit => String(unit).padStart(2, '0'))
+    .join(':');
 };
 
-// Generate a unique key for localStorage
-export const generateTimerStorageKey = (
-  ordemId: string, 
-  etapa: string | EtapaOS, 
-  tipoServico?: string | TipoServico
-): string => {
-  return tipoServico 
-    ? `timer_${ordemId}_${etapa}_${tipoServico}` 
-    : `timer_${ordemId}_${etapa}`;
-};
-
-// Calculate elapsed time based on start, pause, and total paused time
 export const calculateElapsedTime = (
-  startTime: number | null,
-  isPaused: boolean,
-  pauseTime: number | null,
-  totalPausedTime: number
+  startTime: Date | number, 
+  endTime: Date | number | undefined, 
+  pausas: { inicio: Date | number; fim?: Date | number }[] = []
 ): number => {
-  if (!startTime) return 0;
+  if (!endTime) {
+    endTime = new Date();
+  }
+
+  const startMs = startTime instanceof Date ? startTime.getTime() : startTime;
+  const endMs = endTime instanceof Date ? endTime.getTime() : endTime;
   
-  const now = Date.now();
-  let elapsed = now - startTime - totalPausedTime;
+  // Calculate total time
+  let totalMs = endMs - startMs;
   
-  if (isPaused && pauseTime) {
-    elapsed = pauseTime - startTime - totalPausedTime;
+  // Subtract paused time
+  for (const pausa of pausas) {
+    const pausaStartMs = pausa.inicio instanceof Date ? pausa.inicio.getTime() : pausa.inicio;
+    const pausaEndMs = pausa.fim 
+      ? (pausa.fim instanceof Date ? pausa.fim.getTime() : pausa.fim) 
+      : endMs;
+    
+    totalMs -= (pausaEndMs - pausaStartMs);
   }
   
-  return elapsed > 0 ? elapsed : 0;
+  return Math.max(0, totalMs);
 };

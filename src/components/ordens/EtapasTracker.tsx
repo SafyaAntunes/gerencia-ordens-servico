@@ -160,6 +160,9 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         servicos: servicosAtualizados
       };
       
+      // Verificar se todos os serviços de uma etapa foram concluídos
+      verificarEtapaConcluida(ordemAtualizada, servicoTipo);
+      
       if (onOrdemUpdate) {
         onOrdemUpdate(ordemAtualizada);
       }
@@ -169,6 +172,48 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     } catch (error) {
       console.error("Erro ao atualizar status do serviço:", error);
       toast.error("Erro ao atualizar status do serviço");
+    }
+  };
+
+  // Função para verificar se todos os serviços de uma etapa foram concluídos
+  const verificarEtapaConcluida = async (ordemAtualizada: OrdemServico, servicoTipo: TipoServico) => {
+    let etapa: EtapaOS | null = null;
+    
+    // Determinar a qual etapa o serviço pertence
+    if (['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servicoTipo)) {
+      etapa = 'retifica';
+    } else if (servicoTipo === 'montagem') {
+      etapa = 'montagem';
+    } else if (servicoTipo === 'dinamometro') {
+      etapa = 'dinamometro';
+    } else if (servicoTipo === 'lavagem') {
+      etapa = 'lavagem';
+    }
+    
+    if (!etapa) return;
+    
+    // Obter os serviços dessa etapa
+    const servicosEtapa = ordemAtualizada.servicos.filter(s => {
+      if (etapa === 'retifica') {
+        return ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(s.tipo as TipoServico);
+      }
+      return s.tipo === etapa;
+    });
+    
+    // Verificar se há serviços ativos (com subatividades selecionadas)
+    const servicosAtivos = servicosEtapa.filter(s => 
+      s.subatividades && s.subatividades.some(sub => sub.selecionada)
+    );
+    
+    // Se não há serviços ativos, não prosseguir
+    if (servicosAtivos.length === 0) return;
+    
+    // Verificar se todos os serviços ativos estão concluídos
+    const todosConcluidos = servicosAtivos.every(s => s.concluido);
+    
+    // Se todos estão concluídos, marcar a etapa como concluída
+    if (todosConcluidos && !ordemAtualizada.etapasAndamento[etapa]?.concluido) {
+      await handleEtapaStatusChange(etapa, true);
     }
   };
 
@@ -240,9 +285,17 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
             return sub;
           });
           
+          // Verificar se todas as subatividades selecionadas estão concluídas
+          const selecionadas = subatividades.filter(sub => sub.selecionada);
+          const todasConcluidas = selecionadas.length > 0 && selecionadas.every(sub => sub.concluida);
+          
+          // Se todas estiverem concluídas, marcar o serviço como concluído
+          const concluido = todasConcluidas;
+          
           return { 
             ...servico, 
-            subatividades 
+            subatividades,
+            concluido 
           };
         }
         return servico;
@@ -257,6 +310,9 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         ...ordem,
         servicos: servicosAtualizados
       };
+      
+      // Verificar se todos os serviços de uma etapa foram concluídos após atualizar uma subatividade
+      verificarEtapaConcluida(ordemAtualizada, servicoTipo);
       
       if (onOrdemUpdate) {
         onOrdemUpdate(ordemAtualizada);

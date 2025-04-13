@@ -55,6 +55,7 @@ export default function EtapaCard({
       case 'dinamometro':
         return servicos.filter(servico => servico.tipo === 'dinamometro');
       case 'lavagem':
+        return servicos.filter(servico => servico.tipo === 'lavagem');
       case 'inspecao_inicial':
       case 'inspecao_final':
         return [];
@@ -63,13 +64,19 @@ export default function EtapaCard({
     }
   })();
 
+  // Verificar e atualizar o progresso com base nos serviços
   useEffect(() => {
     if (etapaServicos.length === 0) return;
     
     const servicosConcluidos = etapaServicos.filter(servico => servico.concluido).length;
     const percentualProgresso = Math.round((servicosConcluidos / etapaServicos.length) * 100);
     setProgresso(percentualProgresso);
-  }, [etapaServicos]);
+    
+    // Se todos os serviços estiverem concluídos, marcar a etapa como concluída automaticamente
+    if (servicosConcluidos === etapaServicos.length && !etapaInfo?.concluido && onEtapaStatusChange) {
+      onEtapaStatusChange(etapa, true);
+    }
+  }, [etapaServicos, etapaInfo, onEtapaStatusChange]);
 
   const etapaComCronometro = ['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa);
   
@@ -94,8 +101,6 @@ export default function EtapaCard({
       return "nao_iniciado";
     }
   };
-  
-  const etapaStatus = getEtapaStatus();
   
   // Adicionado para atualizar o status quando o cronômetro estiver ativo
   useEffect(() => {
