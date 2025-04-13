@@ -588,16 +588,10 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
           </TabsContent>
           
           <TabsContent value="tracker" className="space-y-4">
-            {ordem.status === "fabricacao" ? (
-              <EtapasTracker
-                ordem={ordem}
-                onOrdemUpdate={handleOrdemUpdate}
-              />
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                O tracker só está disponível quando o status é "Fabricação"
-              </div>
-            )}
+            <EtapasTracker
+              ordem={ordem}
+              onOrdemUpdate={handleOrdemUpdate}
+            />
           </TabsContent>
           
           <TabsContent value="fotos" className="space-y-6">
