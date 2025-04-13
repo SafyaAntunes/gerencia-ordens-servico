@@ -27,7 +27,8 @@ export type TipoServico =
   | 'virabrequim' 
   | 'eixo_comando'
   | 'montagem'
-  | 'dinamometro';
+  | 'dinamometro'
+  | 'lavagem';
 
 export type SubAtividade = {
   id: string;

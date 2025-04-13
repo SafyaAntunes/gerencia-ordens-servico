@@ -37,7 +37,7 @@ export const permissoesLabels: Record<string, string> = {
 import { TipoServico } from './ordens';
 
 // Labels for service types
-export const tipoServicoLabels: Record<TipoServico, string> = {
+export const tipoServicoLabels: Record<TipoServico | 'lavagem', string> = {
   bloco: 'Bloco',
   biela: 'Biela',
   cabecote: 'Cabeçote',

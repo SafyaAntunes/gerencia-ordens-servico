@@ -76,7 +76,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         // Para retífica, verificar se o técnico tem permissão para algum dos serviços dessa etapa
         if (etapa === 'retifica') {
           return ordem.servicos.some(servico => 
-            ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo) &&
+            ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo as TipoServico) &&
             funcionario?.especialidades.includes(servico.tipo)
           );
         }
@@ -306,6 +306,21 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     }
   };
 
+  // Verifica se a etapa "retifica" está habilitada com base no status da ordem
+  const isRetificaHabilitada = () => {
+    return ordem.status === 'fabricacao';
+  };
+
+  // Verifica se a etapa "inspecao_final" está habilitada com base na conclusão de etapas anteriores
+  const isInspecaoFinalHabilitada = () => {
+    const { etapasAndamento } = ordem;
+    return (
+      (etapasAndamento['retifica']?.concluido === true) ||
+      (etapasAndamento['montagem']?.concluido === true) ||
+      (etapasAndamento['dinamometro']?.concluido === true)
+    );
+  };
+
   // Filtra apenas os serviços ativos
   const servicosAtivos = ordem.servicos.filter(servico => 
     servico.subatividades && servico.subatividades.some(sub => sub.selecionada)
@@ -352,17 +367,30 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
 
           {/* Botões horizontais para etapas - agora centralizados */}
           <div className="flex flex-wrap justify-center gap-2 mb-6">
-            {etapasAtivas.map(etapa => (
-              <Button
-                key={etapa}
-                variant={selectedEtapa === etapa ? "default" : "outline"}
-                className="flex items-center"
-                onClick={() => setSelectedEtapa(etapa)}
-              >
-                {getEtapaIcon(etapa)}
-                {formatarEtapa(etapa)}
-              </Button>
-            ))}
+            {etapasAtivas.map(etapa => {
+              // Verifica se a etapa está desabilitada
+              const isDisabled = 
+                (etapa === 'retifica' && !isRetificaHabilitada()) ||
+                (etapa === 'inspecao_final' && !isInspecaoFinalHabilitada());
+              
+              return (
+                <Button
+                  key={etapa}
+                  variant={selectedEtapa === etapa ? "default" : "outline"}
+                  className="flex items-center"
+                  onClick={() => !isDisabled && setSelectedEtapa(etapa)}
+                  disabled={isDisabled}
+                >
+                  {getEtapaIcon(etapa)}
+                  {formatarEtapa(etapa)}
+                  {isDisabled && (
+                    <Badge variant="outline" className="ml-2 text-xs bg-opacity-50">
+                      Bloqueado
+                    </Badge>
+                  )}
+                </Button>
+              );
+            })}
           </div>
 
           {/* Separator */}
