@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Layout from "@/components/layout/Layout";
 import { SubatividadeForm } from "@/components/subatividades/SubatividadeForm";
@@ -123,7 +122,7 @@ export default function SubatividadesConfig({ onLogout }: { onLogout?: () => voi
   };
 
   return (
-    <Layout title="Configuração de Subatividades" onLogout={onLogout}>
+    <Layout onLogout={onLogout}>
       <div className="container mx-auto py-6 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold tracking-tight">Configuração de Subatividades</h1>

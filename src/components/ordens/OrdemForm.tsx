@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -680,9 +679,9 @@ export default function OrdemForm({
                                       
                                       {servicosSubatividades[tipo.value] && (
                                         <ServicoSubatividades
-                                          tipo={tipo.value}
+                                          tipoServico={tipo.value}
                                           subatividades={servicosSubatividades[tipo.value]}
-                                          onSubatividadesChange={(subatividades) => 
+                                          onChange={(subatividades) => 
                                             handleSubatividadesChange(tipo.value, subatividades)
                                           }
                                         />
