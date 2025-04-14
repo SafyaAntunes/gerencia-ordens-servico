@@ -79,15 +79,13 @@ export function SubatividadeList({ subatividades, isLoading, onEdit, onDelete }:
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setSubatividadeToDelete(subatividade.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </AlertDialogTrigger>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSubatividadeToDelete(subatividade.id)}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
                 </div>
               </TableCell>
             </TableRow>
