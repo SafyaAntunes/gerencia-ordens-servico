@@ -1,3 +1,4 @@
+
 import { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { auth } from '@/lib/firebase';
 import { User, onAuthStateChanged, signOut } from 'firebase/auth';
@@ -16,6 +17,8 @@ type AuthContextType = {
   canAccessRoute: (route: string) => boolean;
   canViewOrderDetails: (ordenId: string) => boolean;
   canEditOrder: (ordenId: string) => boolean;
+  canCreateOrder: () => boolean;
+  canDeleteOrder: (ordenId: string) => boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -284,11 +287,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const canEditOrder = (ordenId: string) => {
     if (!funcionario) return false;
     
-    if (['admin', 'gerente'].includes(funcionario.nivelPermissao)) {
-      return true;
-    }
+    // Agora apenas administradores e gerentes podem editar ordens
+    return ['admin', 'gerente'].includes(funcionario.nivelPermissao);
+  };
+  
+  // Nova função para verificar permissão de criação de ordens
+  const canCreateOrder = () => {
+    if (!funcionario) return false;
     
-    return false;
+    // Apenas administradores e gerentes podem criar ordens
+    return ['admin', 'gerente'].includes(funcionario.nivelPermissao);
+  };
+  
+  // Nova função para verificar permissão de exclusão de ordens
+  const canDeleteOrder = (ordenId: string) => {
+    if (!funcionario) return false;
+    
+    // Apenas administradores e gerentes podem excluir ordens
+    return ['admin', 'gerente'].includes(funcionario.nivelPermissao);
   };
 
   const value = {
@@ -301,7 +317,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     hasPermission,
     canAccessRoute,
     canViewOrderDetails,
-    canEditOrder
+    canEditOrder,
+    canCreateOrder,
+    canDeleteOrder
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

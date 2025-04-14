@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -97,21 +96,69 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     calcularProgressoTotal(ordem);
   }, [ordem, funcionario, selectedEtapa]);
 
-  // Função para calcular o progresso total
+  // Função para calcular o progresso total - melhorada para sincronização precisa
   const calcularProgressoTotal = (ordemAtual: OrdemServico) => {
-    const etapas = Object.keys(ordemAtual.etapasAndamento) as EtapaOS[];
+    // Etapas relevantes para esta ordem
+    const etapasPossiveis: EtapaOS[] = ["lavagem", "inspecao_inicial", "retifica", "montagem", "dinamometro", "inspecao_final"];
     
-    if (etapas.length === 0) {
-      setProgressoTotal(0);
-      return;
-    }
+    // Filtra apenas as etapas relevantes para esta ordem
+    const etapasRelevantes = etapasPossiveis.filter(etapa => {
+      if (etapa === "retifica") {
+        return ordemAtual.servicos?.some(s => 
+          ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo));
+      } else if (etapa === "montagem") {
+        return ordemAtual.servicos?.some(s => s.tipo === "montagem");
+      } else if (etapa === "dinamometro") {
+        return ordemAtual.servicos?.some(s => s.tipo === "dinamometro");
+      } else if (etapa === "lavagem") {
+        return ordemAtual.servicos?.some(s => s.tipo === "lavagem");
+      }
+      return true; // As etapas de inspeção são sempre relevantes
+    });
     
-    const etapasConcluidas = etapas.filter(
-      etapa => ordemAtual.etapasAndamento[etapa]?.concluido
+    // Contar os itens totais e concluídos
+    const totalEtapas = etapasRelevantes.length;
+    const etapasConcluidas = etapasRelevantes.filter(etapa => 
+      ordemAtual.etapasAndamento?.[etapa]?.concluido
     ).length;
     
-    const progresso = Math.round((etapasConcluidas / etapas.length) * 100);
+    // Subetapas (serviços e subatividades)
+    const servicosAtivos = ordemAtual.servicos?.filter(s => {
+      return s.subatividades?.some(sub => sub.selecionada) || true; // Considera todos os serviços
+    }) || [];
+    
+    const totalServicos = servicosAtivos.length;
+    const servicosConcluidos = servicosAtivos.filter(s => s.concluido).length;
+    
+    // Cálculo ponderado do progresso
+    // Etapas têm peso 2, serviços têm peso 1
+    const pesoEtapas = 2;
+    const pesoServicos = 1;
+    
+    const totalItens = (totalEtapas * pesoEtapas) + (totalServicos * pesoServicos);
+    const itensConcluidos = (etapasConcluidas * pesoEtapas) + (servicosConcluidos * pesoServicos);
+    
+    const progresso = totalItens > 0 ? Math.round((itensConcluidos / totalItens) * 100) : 0;
     setProgressoTotal(progresso);
+    
+    // Atualizar o progresso na base de dados
+    if (ordemAtual.id && totalItens > 0) {
+      const progressoFracao = itensConcluidos / totalItens;
+      atualizarProgressoNoDB(ordemAtual.id, progressoFracao);
+    }
+  };
+  
+  // Função para atualizar o progresso no banco de dados
+  const atualizarProgressoNoDB = async (ordenId: string, progresso: number) => {
+    try {
+      const ordemRef = doc(db, "ordens_servico", ordenId);
+      await updateDoc(ordemRef, { progressoEtapas: progresso });
+      
+      // Não precisamos de toast para essa atualização silenciosa de progresso
+    } catch (error) {
+      console.error("Erro ao atualizar progresso da ordem:", error);
+      // Não mostramos erros para não poluir a interface
+    }
   };
 
   // Função para lidar com a troca de status do serviço
@@ -370,10 +417,12 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
   // Verifica se a etapa "inspecao_final" está habilitada com base na conclusão de etapas anteriores
   const isInspecaoFinalHabilitada = () => {
     const { etapasAndamento } = ordem;
+    
+    // Verificar se pelo menos uma das etapas intermediárias foi concluída para habilitar a inspeção final
     return (
-      (etapasAndamento['retifica']?.concluido === true) ||
-      (etapasAndamento['montagem']?.concluido === true) ||
-      (etapasAndamento['dinamometro']?.concluido === true)
+      etapasAndamento['retifica']?.concluido === true ||
+      etapasAndamento['montagem']?.concluido === true ||
+      etapasAndamento['dinamometro']?.concluido === true
     );
   };
 

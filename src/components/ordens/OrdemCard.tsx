@@ -43,55 +43,54 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
   // Identificar o motor selecionado se houver
   const motorInfo = ordem.motorId ? MOTORES_DISPLAY[ordem.motorId] || "Motor #" + ordem.motorId : null;
   
-  // Contador das etapas concluídas e cálculo do progresso
+  // Aprimorado - Cálculo de progresso mais preciso
   let progresso = 0;
   
   // Se tiver progresso já calculado, usa o valor armazenado
   if (ordem.progressoEtapas !== undefined) {
     progresso = Math.round(ordem.progressoEtapas * 100);
   } else {
-    // Calcula o progresso com base nas etapas concluídas
-    let etapas: EtapaOS[] = ["lavagem", "inspecao_inicial"];
+    // Calcula o progresso com base nas etapas e serviços
+    const etapasPossiveis: EtapaOS[] = ["lavagem", "inspecao_inicial", "retifica", "montagem", "dinamometro", "inspecao_final"];
     
-    // Adiciona retífica se tiver serviços relacionados
-    if (ordem.servicos?.some(s => 
-      ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo))) {
-      etapas.push("retifica");
-    }
+    // Filtra apenas as etapas relevantes para esta ordem
+    const etapasRelevantes = etapasPossiveis.filter(etapa => {
+      if (etapa === "retifica") {
+        return ordem.servicos?.some(s => 
+          ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo));
+      } else if (etapa === "montagem") {
+        return ordem.servicos?.some(s => s.tipo === "montagem");
+      } else if (etapa === "dinamometro") {
+        return ordem.servicos?.some(s => s.tipo === "dinamometro");
+      } else if (etapa === "lavagem") {
+        return ordem.servicos?.some(s => s.tipo === "lavagem");
+      }
+      return true; // As etapas de inspeção são sempre relevantes
+    });
     
-    // Adiciona montagem se selecionada
-    if (ordem.servicos?.some(s => s.tipo === "montagem")) {
-      etapas.push("montagem");
-    }
+    // Contar os itens totais e concluídos
+    const totalEtapas = etapasRelevantes.length;
+    const etapasConcluidas = etapasRelevantes.filter(etapa => 
+      ordem.etapasAndamento?.[etapa]?.concluido
+    ).length;
     
-    // Adiciona dinamômetro se selecionado
-    if (ordem.servicos?.some(s => s.tipo === "dinamometro")) {
-      etapas.push("dinamometro");
-    }
+    // Subetapas (serviços e subatividades)
+    const servicosAtivos = ordem.servicos?.filter(s => {
+      return s.subatividades?.some(sub => sub.selecionada) || true; // Considera todos os serviços
+    }) || [];
     
-    // Adiciona inspeção final
-    etapas.push("inspecao_final");
+    const totalServicos = servicosAtivos.length;
+    const servicosConcluidos = servicosAtivos.filter(s => s.concluido).length;
     
-    // Contar o total de itens a serem considerados no progresso
-    const totalEtapas = etapas.length;
-    const totalServicos = ordem.servicos?.length || 0;
-    const totalItens = totalEtapas + totalServicos;
+    // Cálculo ponderado do progresso
+    // Etapas têm peso 2, serviços têm peso 1
+    const pesoEtapas = 2;
+    const pesoServicos = 1;
     
-    if (totalItens === 0) {
-      progresso = 0;
-    } else {
-      // Contar etapas concluídas
-      const etapasConcluidas = etapas.filter(etapa => 
-        ordem.etapasAndamento?.[etapa]?.concluido
-      ).length;
-      
-      // Contar serviços concluídos
-      const servicosConcluidos = ordem.servicos?.filter(servico => servico.concluido).length || 0;
-      
-      // Calcular percentual
-      const itensConcluidos = etapasConcluidas + servicosConcluidos;
-      progresso = Math.round((itensConcluidos / totalItens) * 100);
-    }
+    const totalItens = (totalEtapas * pesoEtapas) + (totalServicos * pesoServicos);
+    const itensConcluidos = (etapasConcluidas * pesoEtapas) + (servicosConcluidos * pesoServicos);
+    
+    progresso = totalItens > 0 ? Math.round((itensConcluidos / totalItens) * 100) : 0;
   }
   
   const handleNavigateToDetail = (e: React.MouseEvent) => {
@@ -186,6 +185,7 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
               {servico.tipo === 'eixo_comando' && 'Eixo de Comando'}
               {servico.tipo === 'montagem' && 'Montagem'}
               {servico.tipo === 'dinamometro' && 'Dinamômetro'}
+              {servico.tipo === 'lavagem' && 'Lavagem'}
             </span>
           ))}
         </div>
