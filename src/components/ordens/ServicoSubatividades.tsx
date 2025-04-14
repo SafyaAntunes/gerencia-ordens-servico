@@ -1,204 +1,290 @@
 
-import { useState } from "react";
-import { Checkbox } from "@/components/ui/checkbox";
-import { FormLabel } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { TipoServico, SubAtividade } from "@/types/ordens";
-import { Edit, Plus, Trash2 } from "lucide-react";
-
-// Helper function to format text to title case
-const toTitleCase = (str: string) => {
-  return str
-    .toLowerCase()
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-};
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "../ui/checkbox";
+import { Button } from "../ui/button";
+import { SubAtividade } from "@/types/ordens";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Clock, Plus } from "lucide-react";
+import { getSubatividadesByTipo } from "@/services/subatividadeService";
+import { Skeleton } from "../ui/skeleton";
+import { formatCurrency } from "@/lib/utils";
 
 interface ServicoSubatividadesProps {
-  tipo: TipoServico;
+  tipoServico: string;
   subatividades: SubAtividade[];
-  onSubatividadesChange: (subatividades: SubAtividade[]) => void;
+  onChange: (subatividades: SubAtividade[]) => void;
+  editable?: boolean;
 }
 
-export default function ServicoSubatividades({
-  tipo,
-  subatividades,
-  onSubatividadesChange
+export function ServicoSubatividades({
+  tipoServico,
+  subatividades = [],
+  onChange,
+  editable = true,
 }: ServicoSubatividadesProps) {
-  const [isEditing, setIsEditing] = useState<string | null>(null);
-  const [editText, setEditText] = useState("");
-  const [newSubatividadeText, setNewSubatividadeText] = useState("");
-  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [customSubatividade, setCustomSubatividade] = useState("");
+  const [isAddingCustom, setIsAddingCustom] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [presetSubatividades, setPresetSubatividades] = useState<SubAtividade[]>([]);
+  const { toast } = useToast();
 
-  const handleSubatividadeChange = (subatividadeId: string, checked: boolean) => {
-    const novasSubatividades = subatividades.map(sub => {
-      if (sub.id === subatividadeId) {
-        return { ...sub, selecionada: checked };
-      }
-      return sub;
-    });
-    
-    onSubatividadesChange(novasSubatividades);
-  };
+  useEffect(() => {
+    if (tipoServico) {
+      carregarSubatividades();
+    }
+  }, [tipoServico]);
 
-  const handleEditClick = (subatividade: SubAtividade) => {
-    setIsEditing(subatividade.id);
-    setEditText(subatividade.nome);
-  };
-
-  const handleEditSave = (subatividadeId: string) => {
-    if (editText.trim()) {
-      const novasSubatividades = subatividades.map(sub => {
-        if (sub.id === subatividadeId) {
-          return { ...sub, nome: toTitleCase(editText.trim()) };
+  const carregarSubatividades = async () => {
+    try {
+      setIsLoading(true);
+      const tipoServicoFormatado = tipoServico.toLowerCase().replace(/\s+/g, '_');
+      const resultado = await getSubatividadesByTipo(tipoServicoFormatado as any);
+      
+      // Combina subatividades já selecionadas com as pré-cadastradas
+      const subsSelecionadas = new Set(subatividades.map(s => s.id));
+      
+      const combinadas = resultado.map(sub => {
+        const existente = subatividades.find(s => s.id === sub.id);
+        if (existente) {
+          return {
+            ...sub,
+            selecionada: true,
+            tempoEstimado: existente.tempoEstimado || 0
+          };
         }
         return sub;
       });
       
-      onSubatividadesChange(novasSubatividades);
-    }
-    setIsEditing(null);
-    setEditText("");
-  };
-
-  const handleDeleteSubatividade = (subatividadeId: string) => {
-    const novasSubatividades = subatividades.filter(sub => sub.id !== subatividadeId);
-    onSubatividadesChange(novasSubatividades);
-  };
-
-  const handleAddNewSubatividade = () => {
-    if (newSubatividadeText.trim()) {
-      const newSubatividade: SubAtividade = {
-        id: `${Date.now()}`,
-        nome: toTitleCase(newSubatividadeText.trim()),
-        selecionada: true
-      };
-      
-      onSubatividadesChange([...subatividades, newSubatividade]);
-      setNewSubatividadeText("");
-      setIsAddingNew(false);
+      setPresetSubatividades(combinadas);
+    } catch (error) {
+      console.error("Erro ao carregar subatividades:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as subatividades.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  const handleToggleSubatividade = (id: string, checked: boolean) => {
+    if (!editable) return;
+    
+    const updatedSubs = subatividades.map((sub) => {
+      if (sub.id === id) {
+        return { ...sub, selecionada: checked };
+      }
+      return sub;
+    });
+
+    // Se não existe na lista de subatividades, adiciona
+    if (!updatedSubs.some((sub) => sub.id === id)) {
+      const subToAdd = presetSubatividades.find((sub) => sub.id === id);
+      if (subToAdd) {
+        updatedSubs.push({
+          ...subToAdd,
+          selecionada: checked,
+          tempoEstimado: 0
+        });
+      }
+    }
+
+    onChange(updatedSubs.filter((sub) => sub.selecionada));
+  };
+
+  const handleAddCustom = () => {
+    if (!customSubatividade.trim() || !editable) return;
+
+    const newSub: SubAtividade = {
+      id: `custom-${Date.now()}`,
+      nome: customSubatividade.trim(),
+      selecionada: true,
+      tempoEstimado: 0,
+    };
+
+    onChange([...subatividades, newSub]);
+    setCustomSubatividade("");
+    setIsAddingCustom(false);
+  };
+
+  const handleTempoEstimadoChange = (id: string, horas: number) => {
+    if (!editable) return;
+    
+    const updatedSubs = subatividades.map((sub) => {
+      if (sub.id === id) {
+        return { ...sub, tempoEstimado: horas };
+      }
+      return sub;
+    });
+    
+    onChange(updatedSubs);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-8 w-full" />
+      </div>
+    );
+  }
 
   return (
-    <div className="ml-6 mt-2 space-y-2 border-l-2 pl-4 border-gray-200">
-      <div className="flex items-center justify-between mb-2">
-        <h4 className="text-sm font-medium">Subatividades:</h4>
-        <Button 
-          type="button" 
-          variant="outline" 
-          size="sm"
-          onClick={() => setIsAddingNew(true)}
-          className="h-7 px-2 text-xs"
-        >
-          <Plus className="h-3.5 w-3.5 mr-1" />
-          Adicionar
-        </Button>
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+        {presetSubatividades.map((sub) => {
+          const selecionada = subatividades.some(s => s.id === sub.id && s.selecionada);
+          const subAtual = subatividades.find(s => s.id === sub.id) || sub;
+          
+          return (
+            <div key={sub.id} className="flex flex-col space-y-2 border p-3 rounded-md">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`sub-${sub.id}`}
+                    checked={selecionada}
+                    onCheckedChange={(checked) =>
+                      handleToggleSubatividade(sub.id, checked === true)
+                    }
+                    disabled={!editable}
+                  />
+                  <div>
+                    <Label
+                      htmlFor={`sub-${sub.id}`}
+                      className={`font-medium ${!selecionada && "text-muted-foreground"}`}
+                    >
+                      {sub.nome}
+                    </Label>
+                    {sub.precoHora > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {formatCurrency(sub.precoHora)}/hora
+                      </p>
+                    )}
+                  </div>
+                </div>
+                
+                {selecionada && (
+                  <div className="flex items-center space-x-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      className="w-16 h-8 text-sm"
+                      value={subAtual.tempoEstimado || 0}
+                      onChange={(e) => handleTempoEstimadoChange(sub.id, parseFloat(e.target.value) || 0)}
+                      disabled={!editable}
+                      placeholder="0h"
+                    />
+                    <span className="text-xs text-muted-foreground">h</span>
+                  </div>
+                )}
+              </div>
+              
+              {selecionada && sub.precoHora > 0 && subAtual.tempoEstimado > 0 && (
+                <div className="text-right text-xs">
+                  Valor estimado: <span className="font-medium">{formatCurrency(sub.precoHora * (subAtual.tempoEstimado || 0))}</span>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
-      
-      {isAddingNew && (
-        <div className="flex items-center gap-2 mb-3">
-          <Input
-            size={1}
-            placeholder="Nova subatividade"
-            value={newSubatividadeText}
-            onChange={(e) => setNewSubatividadeText(e.target.value)}
-            className="h-8 text-sm"
-          />
-          <Button 
-            type="button" 
-            size="sm" 
-            onClick={handleAddNewSubatividade}
-            className="h-8"
-          >
-            Salvar
-          </Button>
-          <Button 
-            type="button" 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => {
-              setIsAddingNew(false);
-              setNewSubatividadeText("");
-            }}
-            className="h-8"
-          >
-            Cancelar
-          </Button>
+
+      {editable && (
+        <div>
+          {isAddingCustom ? (
+            <div className="flex items-center gap-2">
+              <Input
+                value={customSubatividade}
+                onChange={(e) => setCustomSubatividade(e.target.value)}
+                placeholder="Nome da subatividade"
+                className="flex-1"
+                onKeyDown={(e) => e.key === "Enter" && handleAddCustom()}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAddCustom}
+                disabled={!customSubatividade.trim()}
+              >
+                Adicionar
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setCustomSubatividade("");
+                  setIsAddingCustom(false);
+                }}
+              >
+                Cancelar
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => setIsAddingCustom(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar Subatividade Personalizada
+            </Button>
+          )}
         </div>
       )}
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-        {subatividades.map((subatividade) => (
-          <div key={subatividade.id} className="flex items-center space-x-2 group">
-            {isEditing === subatividade.id ? (
-              <div className="flex-1 flex items-center gap-2">
-                <Input
-                  size={1}
-                  value={editText}
-                  onChange={(e) => setEditText(e.target.value)}
-                  className="h-8 text-sm"
-                />
-                <Button 
-                  type="button" 
-                  size="sm" 
-                  onClick={() => handleEditSave(subatividade.id)}
-                  className="h-8"
-                >
-                  Salvar
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setIsEditing(null)}
-                  className="h-8"
-                >
-                  Cancelar
-                </Button>
-              </div>
-            ) : (
-              <>
-                <Checkbox 
-                  id={`subatividade-${subatividade.id}`}
-                  checked={subatividade.selecionada}
-                  onCheckedChange={(checked) => 
-                    handleSubatividadeChange(subatividade.id, checked === true)
-                  }
-                />
-                <FormLabel 
-                  htmlFor={`subatividade-${subatividade.id}`}
-                  className="text-sm text-muted-foreground font-normal cursor-pointer flex-1"
-                >
-                  {toTitleCase(subatividade.nome)}
-                </FormLabel>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => handleEditClick(subatividade)}
-                    className="h-7 w-7"
+
+      {/* Lista de subatividades personalizadas selecionadas */}
+      {subatividades.filter(sub => !presetSubatividades.some(p => p.id === sub.id) && sub.selecionada).length > 0 && (
+        <div className="mt-4 space-y-2">
+          <h4 className="text-sm font-medium">Subatividades Personalizadas</h4>
+          {subatividades
+            .filter(
+              (sub) => !presetSubatividades.some((p) => p.id === sub.id) && sub.selecionada
+            )
+            .map((sub) => (
+              <div key={sub.id} className="flex items-center justify-between border p-2 rounded-md">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`sub-${sub.id}`}
+                    checked={sub.selecionada}
+                    onCheckedChange={(checked) =>
+                      handleToggleSubatividade(sub.id, checked === true)
+                    }
+                    disabled={!editable}
+                  />
+                  <Label
+                    htmlFor={`sub-${sub.id}`}
+                    className="font-medium"
                   >
-                    <Edit className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => handleDeleteSubatividade(subatividade.id)}
-                    className="h-7 w-7 text-destructive"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                    {sub.nome}
+                  </Label>
                 </div>
-              </>
-            )}
-          </div>
-        ))}
-      </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    className="w-16 h-8 text-sm"
+                    value={sub.tempoEstimado || 0}
+                    onChange={(e) => handleTempoEstimadoChange(sub.id, parseFloat(e.target.value) || 0)}
+                    disabled={!editable}
+                    placeholder="0h"
+                  />
+                  <span className="text-xs text-muted-foreground">h</span>
+                </div>
+              </div>
+            ))}
+        </div>
+      )}
     </div>
   );
 }

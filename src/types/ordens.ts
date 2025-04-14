@@ -35,6 +35,8 @@ export type SubAtividade = {
   nome: string;
   selecionada: boolean;
   concluida?: boolean;
+  precoHora?: number; // Preço por hora da subatividade
+  tempoEstimado?: number; // Tempo estimado em horas
 };
 
 export type Servico = {
@@ -110,4 +112,11 @@ export type OrdemServico = {
   tempoRegistros: TempoRegistro[];
   fotosEntrada?: FotoBase64[] | any[];
   fotosSaida?: FotoBase64[] | any[];
+  valorTotal?: number; // Valor total do orçamento
+  custoMaterial?: number; // Custo com materiais
+  custoEstimadoMaoDeObra?: number; // Custo estimado da mão de obra
+  custoRealMaoDeObra?: number; // Custo real da mão de obra
+  lucroBruto?: number; // Lucro bruto (valorTotal - custoMaterial - custoRealMaoDeObra)
+  margemLucro?: number; // Margem de lucro em porcentagem
 };
+

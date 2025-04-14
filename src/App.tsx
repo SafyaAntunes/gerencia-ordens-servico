@@ -17,6 +17,7 @@ import RelatoriosProducao from "./pages/RelatoriosProducao";
 import RelatoriosFinanceiro from "./pages/RelatoriosFinanceiro";
 import Configuracoes from "./pages/Configuracoes";
 import Login from "./pages/Login";
+import SubatividadesConfig from "./pages/SubatividadesConfig";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 
 // Authentication guard component
@@ -133,6 +134,13 @@ const AppRoutes = () => {
       <Route path="/agenda" element={
         <PrivateRoute requiredPermission="gerente">
           <Agenda onLogout={handleLogout} />
+        </PrivateRoute>
+      } />
+      
+      {/* Subatividades - Gerente ou superior */}
+      <Route path="/subatividades" element={
+        <PrivateRoute requiredPermission="gerente">
+          <SubatividadesConfig onLogout={handleLogout} />
         </PrivateRoute>
       } />
       

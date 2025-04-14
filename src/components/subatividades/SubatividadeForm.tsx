@@ -1,0 +1,130 @@
+
+import React, { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { v4 as uuidv4 } from 'uuid';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { SubAtividade, TipoServico } from '@/types/ordens';
+import { CurrencyInput } from '@/components/ui/currency-input';
+
+// Esquema de validação
+const formSchema = z.object({
+  id: z.string().optional(),
+  nome: z.string().min(3, { message: 'O nome precisa ter pelo menos 3 caracteres' }),
+  precoHora: z.number().min(0, { message: 'O preço não pode ser negativo' }).optional(),
+  descricao: z.string().optional(),
+});
+
+type FormValues = z.infer<typeof formSchema>;
+
+interface SubatividadeFormProps {
+  onSave: (data: SubAtividade) => void;
+  tipoServico: TipoServico;
+  initialData: SubAtividade | null;
+  onCancel: () => void;
+}
+
+export function SubatividadeForm({ onSave, tipoServico, initialData, onCancel }: SubatividadeFormProps) {
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      id: '',
+      nome: '',
+      precoHora: 0,
+      descricao: '',
+    },
+  });
+
+  useEffect(() => {
+    if (initialData) {
+      form.reset({
+        id: initialData.id,
+        nome: initialData.nome,
+        precoHora: initialData.precoHora || 0,
+        descricao: '',
+      });
+    } else {
+      form.reset({
+        id: '',
+        nome: '',
+        precoHora: 0,
+        descricao: '',
+      });
+    }
+  }, [initialData, form]);
+
+  const onSubmit = (data: FormValues) => {
+    const subatividade: SubAtividade = {
+      id: data.id || uuidv4(),
+      nome: data.nome,
+      precoHora: data.precoHora || 0,
+      selecionada: false,
+    };
+    
+    onSave(subatividade);
+    form.reset({
+      id: '',
+      nome: '',
+      precoHora: 0,
+      descricao: '',
+    });
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="nome"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Nome da Subatividade</FormLabel>
+              <FormControl>
+                <Input placeholder="Digite o nome da subatividade" {...field} />
+              </FormControl>
+              <FormDescription>
+                Nome que aparecerá na lista de subatividades da OS
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="precoHora"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Preço por Hora (R$)</FormLabel>
+              <FormControl>
+                <CurrencyInput
+                  placeholder="0,00"
+                  value={field.value || 0}
+                  onValueChange={(value) => field.onChange(value)}
+                />
+              </FormControl>
+              <FormDescription>
+                Valor cobrado por hora para esta subatividade
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="flex justify-end gap-2 pt-2">
+          {initialData && (
+            <Button variant="outline" type="button" onClick={onCancel}>
+              Cancelar
+            </Button>
+          )}
+          <Button type="submit">
+            {initialData ? 'Atualizar' : 'Adicionar'} Subatividade
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
