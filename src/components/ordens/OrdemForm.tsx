@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -108,6 +109,12 @@ const SUBATIVIDADES: Record<TipoServico, string[]> = {
     'POTÊNCIA',
     'TORQUE',
     'CONSUMO'
+  ],
+  lavagem: [
+    'PREPARAÇÃO',
+    'LAVAGEM QUÍMICA',
+    'SECAGEM',
+    'INSPEÇÃO'
   ]
 };
 
