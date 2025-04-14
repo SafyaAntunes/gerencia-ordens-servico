@@ -1,7 +1,7 @@
 
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Clock, Calendar, ArrowRight, Settings, Hash } from "lucide-react";
+import { Clock, Calendar, ArrowRight, Settings, Hash, DollarSign } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -105,6 +105,12 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
       navigate(`/ordens/${ordem.id}`);
     }
   };
+
+  // Formatação de valores monetários
+  const formatarValor = (valor?: number) => {
+    if (valor === undefined) return "-";
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+  };
   
   return (
     <Card 
@@ -154,6 +160,16 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
                 "Não definida"}
             </span>
           </div>
+          
+          {/* Mostra o preço total, se disponível */}
+          {ordem.precoTotal !== undefined && (
+            <div className="flex items-center gap-1.5 text-sm font-medium text-primary">
+              <DollarSign className="h-4 w-4" />
+              <span>
+                {formatarValor(ordem.precoTotal)}
+              </span>
+            </div>
+          )}
         </div>
         
         <div>
