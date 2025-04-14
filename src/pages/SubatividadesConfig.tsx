@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Layout } from "@/components/layout/Layout";
+import Layout from "@/components/layout/Layout";
 import { SubatividadeForm } from "@/components/subatividades/SubatividadeForm";
 import { getSubatividades, saveSubatividade, deleteSubatividade } from "@/services/subatividadeService";
 import { SubAtividade, TipoServico } from "@/types/ordens";

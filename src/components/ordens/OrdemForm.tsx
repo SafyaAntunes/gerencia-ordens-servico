@@ -45,7 +45,7 @@ import { Prioridade, TipoServico, Motor, SubAtividade } from "@/types/ordens";
 import { Cliente } from "@/types/clientes";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FotosForm from "./FotosForm";
-import ServicoSubatividades from "./ServicoSubatividades";
+import { ServicoSubatividades } from "./ServicoSubatividades";
 import ClienteForm from "@/components/clientes/ClienteForm";
 import { v4 as uuidv4 } from "uuid";
 import { saveCliente, getMotores } from "@/services/clienteService";
