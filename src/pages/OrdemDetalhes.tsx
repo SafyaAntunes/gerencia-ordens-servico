@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { LogoutProps } from "@/types/props";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ChevronLeft, Edit, ClipboardCheck, Trash, DollarSign } from "lucide-react";
+import { ChevronLeft, Edit, ClipboardCheck, Trash } from "lucide-react";
 import { OrdemServico, StatusOS, TipoServico, SubAtividade, EtapaOS } from "@/types/ordens";
 import { doc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -27,7 +26,6 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import EtapasTracker from "@/components/ordens/EtapasTracker";
 import PausaRelatorio from "@/components/ordens/PausaRelatorio";
-import OrcamentoTab from "@/components/ordens/OrcamentoTab";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -423,10 +421,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
               <ClipboardCheck className="h-4 w-4 mr-2" />
               Tracker
             </TabsTrigger>
-            <TabsTrigger value="orcamento" className="flex-1">
-              <DollarSign className="h-4 w-4 mr-2" />
-              Orçamento
-            </TabsTrigger>
             <TabsTrigger value="fotos" className="flex-1">Fotos</TabsTrigger>
             <TabsTrigger value="relatorio" className="flex-1">Relatório de Pausas</TabsTrigger>
           </TabsList>
@@ -595,13 +589,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
           
           <TabsContent value="tracker" className="space-y-4">
             <EtapasTracker
-              ordem={ordem}
-              onOrdemUpdate={handleOrdemUpdate}
-            />
-          </TabsContent>
-          
-          <TabsContent value="orcamento" className="space-y-6">
-            <OrcamentoTab
               ordem={ordem}
               onOrdemUpdate={handleOrdemUpdate}
             />
