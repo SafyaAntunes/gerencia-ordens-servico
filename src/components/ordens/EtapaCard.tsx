@@ -116,15 +116,15 @@ export default function EtapaCard({
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xl font-semibold">{etapaNome}</h3>
         <div className="flex items-center gap-2">
-          {etapaStatus === "concluido" && (
+          {getEtapaStatus() === "concluido" && (
             <Badge variant="success">
               Concluído
             </Badge>
           )}
-          {etapaStatus === "em_andamento" && (
+          {getEtapaStatus() === "em_andamento" && (
             <Badge variant="outline">Em andamento</Badge>
           )}
-          {etapaStatus === "nao_iniciado" && (
+          {getEtapaStatus() === "nao_iniciado" && (
             <Badge variant="outline" className="bg-gray-100">Não iniciado</Badge>
           )}
         </div>

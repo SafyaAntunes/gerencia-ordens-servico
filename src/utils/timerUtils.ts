@@ -37,3 +37,12 @@ export const calculateElapsedTime = (
   
   return Math.max(0, totalMs);
 };
+
+// Add the missing generateTimerStorageKey function
+export const generateTimerStorageKey = (
+  ordemId: string, 
+  etapa: string, 
+  tipoServico?: string
+): string => {
+  return `timer_${ordemId}_${etapa}${tipoServico ? `_${tipoServico}` : ''}`;
+};

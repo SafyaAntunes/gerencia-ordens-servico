@@ -20,7 +20,8 @@ const servicoNomes: Record<TipoServico, string> = {
   virabrequim: "Virabrequim",
   eixo_comando: "Eixo de Comando",
   montagem: "Montagem",
-  dinamometro: "Dinamômetro"
+  dinamometro: "Dinamômetro",
+  lavagem: "Lavagem/Limpeza"
 };
 
 export const notifyTimerStarted = (etapa: EtapaOS, tipoServico?: TipoServico) => {
