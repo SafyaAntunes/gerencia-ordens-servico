@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, Clock, Play, Pause, StopCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { CheckCircle2, Clock, Play, Pause, StopCircle, AlarmClock } from "lucide-react";
+import { cn, formatCurrency } from "@/lib/utils";
 import { formatTime } from "@/utils/timerUtils";
 import { Servico, SubAtividade, TipoServico } from "@/types/ordens";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -68,6 +68,16 @@ export default function ServicoTracker({
     ? Math.round((completedSubatividades / totalSubatividades) * 100)
     : 0;
     
+  // Calcular o total de horas estimadas
+  const totalHorasEstimadas = subatividadesFiltradas.reduce((total, sub) => {
+    return total + (sub.tempoEstimado || 0);
+  }, 0);
+  
+  // Calcular o valor total estimado baseado no preço/hora de cada subatividade
+  const valorTotalEstimado = subatividadesFiltradas.reduce((total, sub) => {
+    return total + ((sub.precoHora || 0) * (sub.tempoEstimado || 0));
+  }, 0);
+  
   const getServicoStatus = () => {
     if (servico.concluido) {
       return "concluido";
@@ -147,6 +157,10 @@ export default function ServicoTracker({
   };
   
   const servicoStatus = getServicoStatus();
+  
+  // Calcular eficiência: tempo real / tempo estimado (em percentual)
+  const tempoEstimadoMs = totalHorasEstimadas * 3600000; // Converter horas para ms
+  const eficiencia = tempoEstimadoMs > 0 ? Math.round((displayTime / tempoEstimadoMs) * 100) : 0;
 
   return (
     <Card className={cn("w-full", className)}>
@@ -174,9 +188,15 @@ export default function ServicoTracker({
             </div>
             <div className="mt-2">
               <Progress value={progressPercentage} className="h-2" />
-              <p className="text-xs text-right mt-1 text-muted-foreground">
-                {completedSubatividades} de {totalSubatividades} concluídas
-              </p>
+              <div className="flex justify-between mt-1 text-xs text-muted-foreground">
+                <p>{completedSubatividades} de {totalSubatividades} concluídas</p>
+                {totalHorasEstimadas > 0 && (
+                  <p className="font-medium flex items-center">
+                    <AlarmClock className="h-3 w-3 mr-1" />
+                    Estimado: {totalHorasEstimadas.toFixed(1)}h
+                  </p>
+                )}
+              </div>
             </div>
           </CardHeader>
         </CollapsibleTrigger>
@@ -187,6 +207,41 @@ export default function ServicoTracker({
               <p className="text-sm text-muted-foreground">{servico.descricao}</p>
             </CardContent>
           )}
+          
+          {/* Resumo do serviço com tempos e valor */}
+          <CardContent className="pb-2">
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="bg-muted/40 p-2 rounded-md">
+                <p className="text-muted-foreground">Tempo Estimado</p>
+                <p className="font-medium">{totalHorasEstimadas.toFixed(1)} horas</p>
+              </div>
+              <div className="bg-muted/40 p-2 rounded-md">
+                <p className="text-muted-foreground">Tempo Atual</p>
+                <p className="font-medium">{(displayTime / 3600000).toFixed(1)} horas</p>
+              </div>
+              {valorTotalEstimado > 0 && (
+                <div className="col-span-2 bg-muted/40 p-2 rounded-md">
+                  <p className="text-muted-foreground">Valor Estimado</p>
+                  <p className="font-medium">{formatCurrency(valorTotalEstimado)}</p>
+                </div>
+              )}
+              {tempoEstimadoMs > 0 && displayTime > 0 && (
+                <div className={cn(
+                  "col-span-2 p-2 rounded-md", 
+                  eficiencia <= 100 ? "bg-green-100" : "bg-yellow-100"
+                )}>
+                  <p className={cn(
+                    "text-sm",
+                    eficiencia <= 100 ? "text-green-800" : "text-yellow-800"
+                  )}>
+                    Eficiência: {eficiencia <= 100 
+                      ? `${(100 - eficiencia).toFixed(0)}% abaixo do estimado (bom)` 
+                      : `${(eficiencia - 100).toFixed(0)}% acima do estimado (atenção)`}
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
           
           {subatividadesFiltradas.length > 0 && (
             <>
@@ -221,6 +276,16 @@ export default function ServicoTracker({
                         >
                           {subatividade.nome}
                         </Badge>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        {subatividade.tempoEstimado > 0 && (
+                          <span>{subatividade.tempoEstimado}h</span>
+                        )}
+                        {(subatividade.precoHora || 0) > 0 && subatividade.tempoEstimado > 0 && (
+                          <span className="font-medium">
+                            {formatCurrency((subatividade.precoHora || 0) * (subatividade.tempoEstimado || 0))}
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}
