@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OrdemServico, EtapaOS, PausaRegistro } from "@/types/ordens";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -11,23 +10,11 @@ interface PausaRelatorioProps {
 }
 
 export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
-  const [activeTab, setActiveTab] = useState<string>("etapas");
-  const [pausasPorEtapa, setPausasPorEtapa] = useState<{etapa: EtapaOS, pausas: PausaRegistro[]}[]>([]);
-  const [servicosComPausas, setServicosComPausas] = useState<{servico: string, pausas: PausaRegistro[]}[]>([]);
+  const [todasPausas, setTodasPausas] = useState<{pausa: PausaRegistro, origem: string}[]>([]);
   const [totalPausas, setTotalPausas] = useState(0);
   const [pausasEmAndamento, setPausasEmAndamento] = useState(0);
   const [tempoTotalEmPausa, setTempoTotalEmPausa] = useState(0);
   const [pausasPorMotivo, setPausasPorMotivo] = useState<Record<string, { count: number, tempo: number }>>({});
-  
-  // Labels para as etapas
-  const etapasLabels: Record<EtapaOS, string> = {
-    lavagem: "Lavagem",
-    inspecao_inicial: "Inspeção Inicial",
-    retifica: "Retífica",
-    montagem: "Montagem",
-    dinamometro: "Dinamômetro",
-    inspecao_final: "Inspeção Final"
-  };
   
   useEffect(() => {
     // Carregar e processar as pausas quando a ordem mudar
@@ -35,88 +22,70 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
   }, [ordem]);
   
   const carregarPausas = () => {
-    // Filtrar pausas por etapas
-    const etapasPausas = Object.entries(ordem.etapasAndamento || {})
-      .filter(([_, info]) => info?.pausas && info.pausas.length > 0)
-      .map(([etapaKey, info]) => ({
-        etapa: etapaKey as EtapaOS,
-        pausas: info.pausas || []
-      }));
+    // Array para armazenar todas as pausas com origem
+    let pausasAgregadas: {pausa: PausaRegistro, origem: string}[] = [];
     
-    setPausasPorEtapa(etapasPausas);
+    // Obter pausas das etapas
+    Object.entries(ordem.etapasAndamento || {}).forEach(([etapaKey, info]) => {
+      if (info?.pausas && info.pausas.length > 0) {
+        const etapa = etapaKey as EtapaOS;
+        info.pausas.forEach(pausa => {
+          pausasAgregadas.push({
+            pausa,
+            origem: `Etapa: ${formatarEtapa(etapa)}`
+          });
+        });
+      }
+    });
     
-    // Filtrar pausas por serviços (obtidas do localStorage)
-    const servicosPausas = ordem.servicos
-      .filter(servico => {
-        // Verifique se há pausas registradas no localStorage para este serviço
-        const storageKey = `timer_${ordem.id}_retifica_${servico.tipo}`;
-        const data = localStorage.getItem(storageKey);
-        if (!data) return false;
-        
+    // Obter pausas dos serviços (do localStorage)
+    ordem.servicos.forEach(servico => {
+      const storageKey = `timer_${ordem.id}_retifica_${servico.tipo}`;
+      const data = localStorage.getItem(storageKey);
+      
+      if (data) {
         try {
           const parsed = JSON.parse(data);
-          return parsed.pausas && parsed.pausas.length > 0;
-        } catch {
-          return false;
-        }
-      })
-      .map(servico => {
-        // Obtenha as pausas do localStorage
-        const storageKey = `timer_${ordem.id}_retifica_${servico.tipo}`;
-        const data = localStorage.getItem(storageKey);
-        let pausas: PausaRegistro[] = [];
-        
-        if (data) {
-          try {
-            const parsed = JSON.parse(data);
-            pausas = parsed.pausas || [];
-          } catch {
-            // Ignorar erro de parsing
+          if (parsed.pausas && parsed.pausas.length > 0) {
+            parsed.pausas.forEach((pausa: PausaRegistro) => {
+              pausasAgregadas.push({
+                pausa,
+                origem: `Serviço: ${formatarTipoServico(servico.tipo)}`
+              });
+            });
           }
+        } catch {
+          // Ignorar erro de parsing
         }
-        
-        return {
-          servico: servico.tipo,
-          pausas
-        };
-      });
+      }
+    });
     
-    setServicosComPausas(servicosPausas);
+    // Ordenar pausas por data (mais recentes primeiro)
+    pausasAgregadas.sort((a, b) => b.pausa.inicio - a.pausa.inicio);
     
-    // Contadores para o resumo
-    const totalPausasCount = etapasPausas.reduce((acc, item) => acc + item.pausas.length, 0) + 
-                           servicosPausas.reduce((acc, item) => acc + item.pausas.length, 0);
+    setTodasPausas(pausasAgregadas);
+    setTotalPausas(pausasAgregadas.length);
     
-    setTotalPausas(totalPausasCount);
-    
-    const emAndamento = etapasPausas.reduce((acc, item) => 
-      acc + item.pausas.filter(p => !p.fim).length, 0) + 
-      servicosPausas.reduce((acc, item) => 
-      acc + item.pausas.filter(p => !p.fim).length, 0);
-    
+    // Contar pausas em andamento
+    const emAndamento = pausasAgregadas.filter(item => !item.pausa.fim).length;
     setPausasEmAndamento(emAndamento);
     
     // Calcular tempo total em pausa (apenas pausas finalizadas)
-    const todasAsPausas = [
-      ...etapasPausas.flatMap(item => item.pausas),
-      ...servicosPausas.flatMap(item => item.pausas)
-    ];
-    
-    const tempoTotal = todasAsPausas
-      .filter(pausa => pausa.fim)
-      .reduce((acc, pausa) => acc + ((pausa.fim || 0) - pausa.inicio), 0);
+    const tempoTotal = pausasAgregadas
+      .filter(item => item.pausa.fim)
+      .reduce((acc, item) => acc + ((item.pausa.fim || 0) - item.pausa.inicio), 0);
     
     setTempoTotalEmPausa(tempoTotal);
     
     // Agrupar pausas por motivo para estatísticas
-    const porMotivo = todasAsPausas.reduce((acc, pausa) => {
-      const motivo = pausa.motivo || "Sem motivo";
+    const porMotivo = pausasAgregadas.reduce((acc, item) => {
+      const motivo = item.pausa.motivo || "Sem motivo";
       if (!acc[motivo]) {
         acc[motivo] = { count: 0, tempo: 0 };
       }
       acc[motivo].count += 1;
-      if (pausa.fim) {
-        acc[motivo].tempo += (pausa.fim - pausa.inicio);
+      if (item.pausa.fim) {
+        acc[motivo].tempo += (item.pausa.fim - item.pausa.inicio);
       }
       return acc;
     }, {} as Record<string, { count: number, tempo: number }>);
@@ -124,7 +93,7 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
     setPausasPorMotivo(porMotivo);
   };
   
-  // Funções para formatar tempo
+  // Funções para formatar tempo e dados
   const formatarHora = (timestamp: number) => {
     return format(new Date(timestamp), "HH:mm:ss", { locale: ptBR });
   };
@@ -153,6 +122,22 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
     return dias > 0 
       ? `${dias}d ${horas}h ${minutos}m ${segundos}s`
       : `${horas}h ${minutos}m ${segundos}s`;
+  };
+  
+  const formatarEtapa = (etapa: EtapaOS): string => {
+    const labels: Record<EtapaOS, string> = {
+      lavagem: "Lavagem",
+      inspecao_inicial: "Inspeção Inicial",
+      retifica: "Retífica",
+      montagem: "Montagem",
+      dinamometro: "Dinamômetro",
+      inspecao_final: "Inspeção Final"
+    };
+    return labels[etapa] || etapa;
+  };
+  
+  const formatarTipoServico = (tipo: string): string => {
+    return tipo.charAt(0).toUpperCase() + tipo.slice(1).replace('_', ' ');
   };
   
   return (
@@ -202,96 +187,44 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
         </CardContent>
       </Card>
       
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full mb-4">
-          <TabsTrigger value="etapas" className="flex-1">Por Etapas</TabsTrigger>
-          <TabsTrigger value="servicos" className="flex-1">Por Serviços</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="etapas">
-          {pausasPorEtapa.length > 0 ? (
-            <div className="space-y-6">
-              {pausasPorEtapa.map(({ etapa, pausas }) => (
-                <Card key={etapa}>
-                  <CardHeader>
-                    <CardTitle>{etapasLabels[etapa]}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {pausas.map((pausa, idx) => (
-                        <div key={idx} className="bg-muted/30 p-4 rounded-lg">
-                          <div className="flex justify-between mb-2">
-                            <div>
-                              <p className="font-medium">
-                                {formatarData(pausa.inicio)} - {formatarHora(pausa.inicio)}
-                                {pausa.fim ? ` até ${formatarHora(pausa.fim)}` : " (em andamento)"}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="font-medium">
-                                Duração: {calcularDuracao(pausa.inicio, pausa.fim)}
-                              </p>
-                            </div>
-                          </div>
-                          {pausa.motivo && (
-                            <p className="text-muted-foreground">Motivo: {pausa.motivo}</p>
-                          )}
-                        </div>
-                      ))}
+      <Card>
+        <CardHeader>
+          <CardTitle>Histórico de Pausas</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {todasPausas.length > 0 ? (
+            <div className="space-y-4">
+              {todasPausas.map((item, idx) => (
+                <div key={idx} className="bg-muted/30 p-4 rounded-lg">
+                  <div className="flex justify-between mb-2">
+                    <div>
+                      <p className="font-medium">
+                        {formatarData(item.pausa.inicio)} - {formatarHora(item.pausa.inicio)}
+                        {item.pausa.fim ? ` até ${formatarHora(item.pausa.fim)}` : " (em andamento)"}
+                      </p>
                     </div>
-                  </CardContent>
-                </Card>
+                    <div>
+                      <p className="font-medium">
+                        Duração: {calcularDuracao(item.pausa.inicio, item.pausa.fim)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex justify-between">
+                    <p className="text-sm text-muted-foreground">{item.origem}</p>
+                    {item.pausa.motivo && (
+                      <p className="text-sm font-medium">Motivo: {item.pausa.motivo}</p>
+                    )}
+                  </div>
+                </div>
               ))}
             </div>
           ) : (
             <div className="text-center py-10 text-muted-foreground">
-              Não há registros de pausas em etapas.
+              Não há registros de pausas.
             </div>
           )}
-        </TabsContent>
-        
-        <TabsContent value="servicos">
-          {servicosComPausas.length > 0 ? (
-            <div className="space-y-6">
-              {servicosComPausas.map(({ servico, pausas }) => (
-                <Card key={servico}>
-                  <CardHeader>
-                    <CardTitle>{servico.charAt(0).toUpperCase() + servico.slice(1).replace('_', ' ')}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {pausas.map((pausa, idx) => (
-                        <div key={idx} className="bg-muted/30 p-4 rounded-lg">
-                          <div className="flex justify-between mb-2">
-                            <div>
-                              <p className="font-medium">
-                                {formatarData(pausa.inicio)} - {formatarHora(pausa.inicio)}
-                                {pausa.fim ? ` até ${formatarHora(pausa.fim)}` : " (em andamento)"}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="font-medium">
-                                Duração: {calcularDuracao(pausa.inicio, pausa.fim)}
-                              </p>
-                            </div>
-                          </div>
-                          {pausa.motivo && (
-                            <p className="text-muted-foreground">Motivo: {pausa.motivo}</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-10 text-muted-foreground">
-              Não há registros de pausas em serviços.
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 }

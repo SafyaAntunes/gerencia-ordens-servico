@@ -4,7 +4,7 @@ import Layout from "@/components/layout/Layout";
 import { LogoutProps } from "@/types/props";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ChevronLeft, Edit, ClipboardCheck, Trash } from "lucide-react";
+import { ChevronLeft, Edit, ClipboardCheck, Trash, BarChart } from "lucide-react";
 import { OrdemServico, StatusOS, TipoServico, SubAtividade, EtapaOS } from "@/types/ordens";
 import { doc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -26,6 +26,7 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import EtapasTracker from "@/components/ordens/EtapasTracker";
 import PausaRelatorio from "@/components/ordens/PausaRelatorio";
+import ProgressoRelatorio from "@/components/ordens/ProgressoRelatorio";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -421,6 +422,10 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
               <ClipboardCheck className="h-4 w-4 mr-2" />
               Tracker
             </TabsTrigger>
+            <TabsTrigger value="progresso" className="flex-1">
+              <BarChart className="h-4 w-4 mr-2" />
+              Progresso
+            </TabsTrigger>
             <TabsTrigger value="fotos" className="flex-1">Fotos</TabsTrigger>
             <TabsTrigger value="relatorio" className="flex-1">Relatório de Pausas</TabsTrigger>
           </TabsList>
@@ -592,6 +597,10 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
               ordem={ordem}
               onOrdemUpdate={handleOrdemUpdate}
             />
+          </TabsContent>
+          
+          <TabsContent value="progresso" className="space-y-4">
+            <ProgressoRelatorio ordem={ordem} />
           </TabsContent>
           
           <TabsContent value="fotos" className="space-y-6">
