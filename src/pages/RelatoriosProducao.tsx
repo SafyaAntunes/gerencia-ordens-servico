@@ -3,11 +3,14 @@ import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileBarChart, ActivitySquare, BarChart, Wrench } from "lucide-react";
+import { FileBarChart, ActivitySquare, BarChart, Wrench, Search, Clock } from "lucide-react";
 import { LogoutProps } from "@/types/props";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { OrdemServico } from "@/types/ordens";
+import { OrdemServico, EtapaOS } from "@/types/ordens";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { formatTime } from "@/utils/timerUtils";
 import { 
   ResponsiveContainer, 
   BarChart as RechartsBarChart, 
@@ -26,6 +29,9 @@ interface RelatoriosProducaoProps extends LogoutProps {}
 const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
   const [ordensDados, setOrdensDados] = useState<OrdemServico[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [ordemSelecionada, setOrdemSelecionada] = useState<OrdemServico | null>(null);
+  const [filteredOrdens, setFilteredOrdens] = useState<OrdemServico[]>([]);
   
   useEffect(() => {
     const fetchOrdens = async () => {
@@ -45,6 +51,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
         });
         
         setOrdensDados(ordens);
+        setFilteredOrdens(ordens);
       } catch (error) {
         console.error("Erro ao buscar ordens:", error);
       } finally {
@@ -54,6 +61,22 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     
     fetchOrdens();
   }, []);
+  
+  // Filtrar ordens com base no termo de pesquisa
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredOrdens(ordensDados);
+      return;
+    }
+    
+    const filtradas = ordensDados.filter(ordem => 
+      ordem.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      ordem.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ordem.cliente.nome.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    
+    setFilteredOrdens(filtradas);
+  }, [searchTerm, ordensDados]);
   
   // Preparar dados para gráficos baseados nas ordens reais
   const servicosPorTipo = (() => {
@@ -84,7 +107,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     const contagem: Record<string, number> = {
       orcamento: 0,
       aguardando_aprovacao: 0,
-      retifica: 0,
+      fabricacao: 0,
       aguardando_peca_cliente: 0,
       aguardando_peca_interno: 0,
       finalizado: 0,
@@ -102,7 +125,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
       switch (status) {
         case 'orcamento': nome = 'Orçamento'; break;
         case 'aguardando_aprovacao': nome = 'Aguardando'; break;
-        case 'retifica': nome = 'Em Fabricação'; break;
+        case 'fabricacao': nome = 'Em Fabricação'; break;
         case 'aguardando_peca_cliente': nome = 'Aguardando Peça (Cliente)'; break;
         case 'aguardando_peca_interno': nome = 'Aguardando Peça (Interno)'; break;
         case 'finalizado': nome = 'Finalizado'; break;
@@ -168,6 +191,183 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
   
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
   
+  // Função para buscar uma ordem específica
+  const buscarOrdem = async (id: string) => {
+    setIsLoading(true);
+    try {
+      const ordemRef = doc(db, "ordens", id);
+      const ordemDoc = await getDoc(ordemRef);
+      
+      if (ordemDoc.exists()) {
+        const data = ordemDoc.data();
+        const ordem = {
+          ...data,
+          id: ordemDoc.id,
+          dataAbertura: data.dataAbertura?.toDate() || new Date(),
+          dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
+        } as OrdemServico;
+        
+        setOrdemSelecionada(ordem);
+      } else {
+        setOrdemSelecionada(null);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar ordem:", error);
+      setOrdemSelecionada(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Renderizar detalhes da ordem selecionada
+  const renderOrdemDetalhes = () => {
+    if (!ordemSelecionada) return null;
+    
+    const renderTempoEtapa = (etapa: EtapaOS) => {
+      const etapaInfo = ordemSelecionada?.etapasAndamento[etapa];
+      if (!etapaInfo) return "Não iniciada";
+      
+      if (etapaInfo.concluido) {
+        if (etapaInfo.iniciado && etapaInfo.finalizado) {
+          const tempoTotal = etapaInfo.finalizado.getTime() - etapaInfo.iniciado.getTime();
+          return (
+            <div>
+              <div>Concluída em: {formatTime(tempoTotal)}</div>
+              <div className="text-xs text-gray-500">
+                Por: {etapaInfo.funcionarioNome || "Não atribuído"}
+              </div>
+            </div>
+          );
+        }
+        return "Concluída";
+      }
+      
+      if (etapaInfo.iniciado) {
+        const agora = new Date();
+        const tempoDecorrido = agora.getTime() - etapaInfo.iniciado.getTime();
+        return (
+          <div>
+            <div className="flex items-center">
+              <Clock className="h-4 w-4 mr-1 text-amber-500" />
+              <span>Em andamento: {formatTime(tempoDecorrido)}</span>
+            </div>
+            <div className="text-xs text-gray-500">
+              Por: {etapaInfo.funcionarioNome || "Não atribuído"}
+            </div>
+          </div>
+        );
+      }
+      
+      return "Não iniciada";
+    };
+    
+    return (
+      <div className="space-y-4 mt-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Detalhes da Ordem #{ordemSelecionada.id}</CardTitle>
+            <CardDescription>
+              {ordemSelecionada.nome} - Cliente: {ordemSelecionada.cliente.nome}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Tempos por Etapa</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Lavagem</CardTitle>
+                    </CardHeader>
+                    <CardContent>{renderTempoEtapa('lavagem')}</CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Inspeção Inicial</CardTitle>
+                    </CardHeader>
+                    <CardContent>{renderTempoEtapa('inspecao_inicial')}</CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Retífica</CardTitle>
+                    </CardHeader>
+                    <CardContent>{renderTempoEtapa('retifica')}</CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Montagem</CardTitle>
+                    </CardHeader>
+                    <CardContent>{renderTempoEtapa('montagem')}</CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Dinamômetro</CardTitle>
+                    </CardHeader>
+                    <CardContent>{renderTempoEtapa('dinamometro')}</CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Inspeção Final</CardTitle>
+                    </CardHeader>
+                    <CardContent>{renderTempoEtapa('inspecao_final')}</CardContent>
+                  </Card>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Tempos por Serviço</h3>
+                <div className="grid grid-cols-1 gap-4">
+                  {ordemSelecionada.servicos.map((servico, index) => (
+                    <Card key={index}>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">
+                          {(() => {
+                            switch(servico.tipo) {
+                              case 'bloco': return 'Bloco';
+                              case 'biela': return 'Biela';
+                              case 'cabecote': return 'Cabeçote';
+                              case 'virabrequim': return 'Virabrequim';
+                              case 'eixo_comando': return 'Eixo de Comando';
+                              case 'montagem': return 'Montagem';
+                              case 'dinamometro': return 'Dinamômetro';
+                              case 'lavagem': return 'Lavagem';
+                              default: return servico.tipo;
+                            }
+                          })()}
+                        </CardTitle>
+                        <CardDescription>{servico.descricao}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div>
+                          <div>Status: {servico.concluido ? 'Concluído' : 'Em andamento'}</div>
+                          {servico.concluido && servico.funcionarioNome && (
+                            <div className="text-xs text-gray-500">
+                              Concluído por: {servico.funcionarioNome}
+                            </div>
+                          )}
+                          {servico.dataConclusao && (
+                            <div className="text-xs text-gray-500">
+                              Data de conclusão: {new Date(servico.dataConclusao).toLocaleDateString('pt-BR')}
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+  
   if (isLoading) {
     return (
       <Layout onLogout={onLogout}>
@@ -187,6 +387,61 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
             Acompanhe as métricas e estatísticas de produção da empresa
           </p>
         </div>
+        
+        {/* Barra de pesquisa de ordens */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Pesquisar Ordem de Serviço</CardTitle>
+            <CardDescription>
+              Busque por ID, nome ou cliente para ver detalhes de tempo
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col space-y-4">
+              <div className="flex w-full items-center space-x-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Buscar por ID, nome ou cliente..."
+                    className="pl-8"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  disabled={!searchTerm.trim()}
+                  onClick={() => {
+                    if (filteredOrdens.length > 0) {
+                      buscarOrdem(filteredOrdens[0].id);
+                    }
+                  }}
+                >
+                  Buscar
+                </Button>
+              </div>
+              
+              {searchTerm && filteredOrdens.length > 0 && (
+                <div className="max-h-32 overflow-y-auto border rounded-md">
+                  {filteredOrdens.map((ordem) => (
+                    <div
+                      key={ordem.id}
+                      className="p-2 hover:bg-muted cursor-pointer border-b last:border-b-0"
+                      onClick={() => buscarOrdem(ordem.id)}
+                    >
+                      <div className="font-medium">OS #{ordem.id} - {ordem.nome}</div>
+                      <div className="text-sm text-muted-foreground">Cliente: {ordem.cliente.nome}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* Detalhes da ordem selecionada */}
+        {ordemSelecionada && renderOrdemDetalhes()}
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <Card>
