@@ -4,13 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OrdemServico, EtapaOS, PausaRegistro } from "@/types/ordens";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { User } from "lucide-react";
 
 interface PausaRelatorioProps {
   ordem: OrdemServico;
 }
 
 export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
-  const [todasPausas, setTodasPausas] = useState<PausaRegistro[]>([]);
+  const [todasPausas, setTodasPausas] = useState<(PausaRegistro & { 
+    etapa?: string; 
+    servico?: string;
+    funcionarioNome?: string;
+  })[]>([]);
   const [totalPausas, setTotalPausas] = useState(0);
   const [pausasEmAndamento, setPausasEmAndamento] = useState(0);
   const [tempoTotalEmPausa, setTempoTotalEmPausa] = useState(0);
@@ -23,13 +28,21 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
   
   const carregarPausas = () => {
     // Array para armazenar todas as pausas
-    let pausasAgregadas: PausaRegistro[] = [];
+    let pausasAgregadas: (PausaRegistro & { 
+      etapa?: string; 
+      servico?: string;
+      funcionarioNome?: string;
+    })[] = [];
     
     // Obter pausas das etapas
     Object.entries(ordem.etapasAndamento || {}).forEach(([etapaKey, info]) => {
       if (info?.pausas && info.pausas.length > 0) {
         info.pausas.forEach(pausa => {
-          pausasAgregadas.push(pausa);
+          pausasAgregadas.push({
+            ...pausa,
+            etapa: etapaKey,
+            funcionarioNome: info.funcionarioNome
+          });
         });
       }
     });
@@ -44,7 +57,11 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
           const parsed = JSON.parse(data);
           if (parsed.pausas && parsed.pausas.length > 0) {
             parsed.pausas.forEach((pausa: PausaRegistro) => {
-              pausasAgregadas.push(pausa);
+              pausasAgregadas.push({
+                ...pausa,
+                servico: servico.tipo,
+                funcionarioNome: servico.funcionarioNome
+              });
             });
           }
         } catch {
@@ -116,6 +133,23 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
       ? `${dias}d ${horas}h ${minutos}m ${segundos}s`
       : `${horas}h ${minutos}m ${segundos}s`;
   };
+
+  const formatarEtapa = (etapaKey: string): string => {
+    const labels: Record<string, string> = {
+      lavagem: "Lavagem",
+      inspecao_inicial: "Inspeção Inicial",
+      retifica: "Retífica",
+      montagem: "Montagem",
+      dinamometro: "Dinamômetro",
+      inspecao_final: "Inspeção Final",
+      bloco: "Bloco",
+      biela: "Biela",
+      cabecote: "Cabeçote",
+      virabrequim: "Virabrequim",
+      eixo_comando: "Eixo de Comando"
+    };
+    return labels[etapaKey] || etapaKey;
+  };
   
   return (
     <div className="space-y-6">
@@ -186,9 +220,23 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
                       </p>
                     </div>
                   </div>
-                  {pausa.motivo && (
-                    <p className="text-sm font-medium">Motivo: {pausa.motivo}</p>
-                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                    {pausa.motivo && (
+                      <p className="text-sm font-medium">Motivo: {pausa.motivo}</p>
+                    )}
+                    {(pausa.etapa || pausa.servico) && (
+                      <p className="text-sm text-muted-foreground">
+                        {pausa.etapa ? `Etapa: ${formatarEtapa(pausa.etapa)}` : 
+                         pausa.servico ? `Serviço: ${formatarEtapa(pausa.servico)}` : ''}
+                      </p>
+                    )}
+                    {pausa.funcionarioNome && (
+                      <p className="text-sm flex items-center">
+                        <User className="h-3 w-3 mr-1" />
+                        Funcionário: {pausa.funcionarioNome}
+                      </p>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

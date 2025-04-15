@@ -166,7 +166,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     }
   };
 
-  const handleServicoStatusChange = async (servicoTipo: TipoServico, concluido: boolean) => {
+  const handleServicoStatusChange = async (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => {
     if (!ordem?.id || !funcionario?.id) return;
     
     if (funcionario.nivelPermissao !== 'admin' && 
@@ -192,7 +192,10 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
           return { 
             ...servico, 
             concluido,
-            subatividades
+            subatividades,
+            funcionarioId: concluido ? (funcionarioId || funcionario.id) : undefined,
+            funcionarioNome: concluido ? (funcionarioNome || funcionario.nome) : undefined,
+            dataConclusao: concluido ? new Date() : undefined
           };
         }
         return servico;
@@ -252,7 +255,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     }
   };
 
-  const handleEtapaStatusChange = async (etapa: EtapaOS, concluida: boolean) => {
+  const handleEtapaStatusChange = async (etapa: EtapaOS, concluida: boolean, funcionarioId?: string, funcionarioNome?: string) => {
     if (!ordem?.id || !funcionario?.id) return;
     
     try {
@@ -261,8 +264,8 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         [etapa]: {
           ...ordem.etapasAndamento[etapa],
           concluido: concluida,
-          funcionarioId: funcionario.id,
-          funcionarioNome: funcionario.nome,
+          funcionarioId: funcionarioId || funcionario.id,
+          funcionarioNome: funcionarioNome || funcionario.nome,
           finalizado: concluida ? new Date() : undefined
         }
       };

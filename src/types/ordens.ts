@@ -44,6 +44,9 @@ export type Servico = {
   descricao: string;
   concluido: boolean;
   subatividades?: SubAtividade[];
+  funcionarioId?: string; // ID do funcionário que concluiu o serviço
+  funcionarioNome?: string; // Nome do funcionário que concluiu o serviço
+  dataConclusao?: Date; // Data de conclusão do serviço
 };
 
 export type StatusOS = 
@@ -119,4 +122,3 @@ export type OrdemServico = {
   lucroBruto?: number; // Lucro bruto (valorTotal - custoMaterial - custoRealMaoDeObra)
   margemLucro?: number; // Margem de lucro em porcentagem
 };
-

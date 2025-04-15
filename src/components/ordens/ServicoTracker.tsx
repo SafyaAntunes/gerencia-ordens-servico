@@ -5,7 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, Clock, Play, Pause, StopCircle, Clock4 } from "lucide-react";
+import { 
+  CheckCircle2, 
+  Clock, 
+  Play, 
+  Pause, 
+  StopCircle, 
+  Clock4,
+  User
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatTime } from "@/utils/timerUtils";
 import { Servico, SubAtividade, TipoServico } from "@/types/ordens";
@@ -14,6 +22,24 @@ import PausaDialog from "./PausaDialog";
 import { useOrdemTimer } from "@/hooks/useOrdemTimer";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { 
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { getDocs, collection } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { Funcionario } from "@/types/funcionarios";
 
 interface ServicoTrackerProps {
   servico: Servico;
@@ -21,7 +47,7 @@ interface ServicoTrackerProps {
   funcionarioId?: string;
   funcionarioNome?: string;
   onSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
-  onServicoStatusChange: (concluido: boolean) => void;
+  onServicoStatusChange: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
   className?: string;
 }
 
@@ -36,12 +62,19 @@ export default function ServicoTracker({
 }: ServicoTrackerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [pausaDialogOpen, setPausaDialogOpen] = useState(false);
+  const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
+  const [funcionarioSelecionadoId, setFuncionarioSelecionadoId] = useState<string>("");
+  const [funcionarioSelecionadoNome, setFuncionarioSelecionadoNome] = useState<string>("");
+  const [atribuirFuncionarioDialogOpen, setAtribuirFuncionarioDialogOpen] = useState(false);
   const { funcionario } = useAuth();
   
   // Verificar se o usuário tem permissão para este tipo de serviço
   const temPermissao = funcionario?.nivelPermissao === 'admin' || 
                       funcionario?.nivelPermissao === 'gerente' ||
                       (funcionario?.especialidades && funcionario.especialidades.includes(servico.tipo));
+  
+  const podeAtribuirFuncionario = funcionario?.nivelPermissao === 'admin' || 
+                                 funcionario?.nivelPermissao === 'gerente';
   
   const {
     isRunning,
@@ -59,6 +92,33 @@ export default function ServicoTracker({
     onFinish: () => {/* Removed auto-completion */},
     isEtapaConcluida: servico.concluido
   });
+
+  // Carregar funcionários para o dropdown de atribuição
+  useEffect(() => {
+    const carregarFuncionarios = async () => {
+      try {
+        const funcionariosRef = collection(db, "funcionarios");
+        const snapshot = await getDocs(funcionariosRef);
+        const funcionarios: Funcionario[] = [];
+        
+        snapshot.forEach((doc) => {
+          const data = doc.data() as Funcionario;
+          funcionarios.push({
+            ...data,
+            id: doc.id
+          });
+        });
+        
+        setFuncionariosOptions(funcionarios);
+      } catch (error) {
+        console.error("Erro ao carregar funcionários:", error);
+      }
+    };
+    
+    if (podeAtribuirFuncionario) {
+      carregarFuncionarios();
+    }
+  }, [podeAtribuirFuncionario]);
 
   const subatividadesFiltradas = servico.subatividades?.filter(item => item.selecionada) || [];
   
@@ -96,8 +156,6 @@ export default function ServicoTracker({
     };
     return labels[tipo] || tipo;
   };
-
-  // Removido o useEffect que automaticamente marca serviço como concluído
 
   const handleSubatividadeToggle = (subatividade: SubAtividade) => {
     if (!temPermissao) {
@@ -141,7 +199,30 @@ export default function ServicoTracker({
       handleFinish();
     }
     
-    onServicoStatusChange(true);
+    // Se o usuário for admin ou gerente e não tiver selecionado um funcionário,
+    // abrir o diálogo para selecionar o funcionário
+    if (podeAtribuirFuncionario) {
+      setAtribuirFuncionarioDialogOpen(true);
+    } else {
+      // Se não for admin/gerente, usar o usuário atual
+      onServicoStatusChange(true, funcionario.id, funcionario.nome);
+    }
+  };
+  
+  const handleConfirmarAtribuicao = () => {
+    if (funcionarioSelecionadoId) {
+      onServicoStatusChange(true, funcionarioSelecionadoId, funcionarioSelecionadoNome);
+    } else {
+      // Se nenhum funcionário for selecionado, usar o usuário atual
+      onServicoStatusChange(true, funcionario?.id, funcionario?.nome);
+    }
+    setAtribuirFuncionarioDialogOpen(false);
+  };
+
+  const handleFuncionarioChange = (value: string) => {
+    setFuncionarioSelecionadoId(value);
+    const funcionarioSelecionado = funcionariosOptions.find(f => f.id === value);
+    setFuncionarioSelecionadoNome(funcionarioSelecionado?.nome || "");
   };
   
   const servicoStatus = getServicoStatus();
@@ -186,6 +267,14 @@ export default function ServicoTracker({
                 )}
               </div>
             </div>
+            
+            {/* Mostrar funcionário que concluiu o serviço */}
+            {servico.concluido && servico.funcionarioNome && (
+              <div className="mt-2 flex items-center text-xs text-muted-foreground">
+                <User className="h-3 w-3 mr-1" />
+                <span>Concluído por: {servico.funcionarioNome}</span>
+              </div>
+            )}
           </CardHeader>
         </CollapsibleTrigger>
 
@@ -309,6 +398,49 @@ export default function ServicoTracker({
         onClose={handlePausaCancel}
         onConfirm={handlePausaConfirm}
       />
+      
+      {/* Dialog para atribuir funcionário */}
+      <Dialog open={atribuirFuncionarioDialogOpen} onOpenChange={setAtribuirFuncionarioDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Atribuir Funcionário</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="funcionario-select" className="block text-sm font-medium">
+                Selecione o funcionário que executou o serviço
+              </label>
+              
+              <Select onValueChange={handleFuncionarioChange} value={funcionarioSelecionadoId}>
+                <SelectTrigger id="funcionario-select" className="w-full">
+                  <SelectValue placeholder="Selecione um funcionário" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={funcionario?.id || ""}>
+                    {funcionario?.nome || "Eu mesmo"} (você)
+                  </SelectItem>
+                  {funcionariosOptions
+                    .filter(f => f.id !== funcionario?.id)
+                    .map(f => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.nome}
+                      </SelectItem>
+                    ))
+                  }
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAtribuirFuncionarioDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmarAtribuicao} className="bg-blue-500 hover:bg-blue-600">
+              Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
