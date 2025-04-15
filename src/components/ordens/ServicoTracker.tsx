@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, Clock, Play, Pause, StopCircle } from "lucide-react";
+import { CheckCircle2, Clock, Play, Pause, StopCircle, Clock4 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatTime } from "@/utils/timerUtils";
 import { Servico, SubAtividade, TipoServico } from "@/types/ordens";
@@ -67,6 +67,11 @@ export default function ServicoTracker({
   const progressPercentage = totalSubatividades > 0 
     ? Math.round((completedSubatividades / totalSubatividades) * 100)
     : 0;
+  
+  // Calcular o tempo total estimado para todas as subatividades
+  const tempoTotalEstimado = subatividadesFiltradas.reduce((total, sub) => {
+    return total + (sub.tempoEstimado || 0);
+  }, 0);
     
   const getServicoStatus = () => {
     if (servico.concluido) {
@@ -92,14 +97,7 @@ export default function ServicoTracker({
     return labels[tipo] || tipo;
   };
 
-  // Verificar se todas as subatividades foram concluídas para marcar o serviço como concluído
-  useEffect(() => {
-    if (subatividadesFiltradas.length > 0 && 
-        subatividadesFiltradas.every(sub => sub.concluida) && 
-        !servico.concluido) {
-      handleMarcarConcluido();
-    }
-  }, [subatividadesFiltradas]);
+  // Removido o useEffect que automaticamente marca serviço como concluído
 
   const handleSubatividadeToggle = (subatividade: SubAtividade) => {
     if (!temPermissao) {
@@ -174,9 +172,19 @@ export default function ServicoTracker({
             </div>
             <div className="mt-2">
               <Progress value={progressPercentage} className="h-2" />
-              <p className="text-xs text-right mt-1 text-muted-foreground">
-                {completedSubatividades} de {totalSubatividades} concluídas
-              </p>
+              <div className="flex justify-between mt-1">
+                <p className="text-xs text-muted-foreground">
+                  {completedSubatividades} de {totalSubatividades} concluídas
+                </p>
+                {tempoTotalEstimado > 0 && (
+                  <div className="flex items-center gap-1">
+                    <Clock4 className="h-3 w-3 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">
+                      {tempoTotalEstimado} {tempoTotalEstimado === 1 ? 'hora' : 'horas'} estimadas
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </CardHeader>
         </CollapsibleTrigger>
@@ -222,6 +230,11 @@ export default function ServicoTracker({
                           {subatividade.nome}
                         </Badge>
                       </div>
+                      {subatividade.tempoEstimado && (
+                        <span className="text-xs text-muted-foreground">
+                          {subatividade.tempoEstimado} {subatividade.tempoEstimado === 1 ? 'hora' : 'horas'}
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>

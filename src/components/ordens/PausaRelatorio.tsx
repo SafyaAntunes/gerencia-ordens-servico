@@ -10,7 +10,7 @@ interface PausaRelatorioProps {
 }
 
 export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
-  const [todasPausas, setTodasPausas] = useState<{pausa: PausaRegistro, origem: string}[]>([]);
+  const [todasPausas, setTodasPausas] = useState<PausaRegistro[]>([]);
   const [totalPausas, setTotalPausas] = useState(0);
   const [pausasEmAndamento, setPausasEmAndamento] = useState(0);
   const [tempoTotalEmPausa, setTempoTotalEmPausa] = useState(0);
@@ -22,18 +22,14 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
   }, [ordem]);
   
   const carregarPausas = () => {
-    // Array para armazenar todas as pausas com origem
-    let pausasAgregadas: {pausa: PausaRegistro, origem: string}[] = [];
+    // Array para armazenar todas as pausas
+    let pausasAgregadas: PausaRegistro[] = [];
     
     // Obter pausas das etapas
     Object.entries(ordem.etapasAndamento || {}).forEach(([etapaKey, info]) => {
       if (info?.pausas && info.pausas.length > 0) {
-        const etapa = etapaKey as EtapaOS;
         info.pausas.forEach(pausa => {
-          pausasAgregadas.push({
-            pausa,
-            origem: `Etapa: ${formatarEtapa(etapa)}`
-          });
+          pausasAgregadas.push(pausa);
         });
       }
     });
@@ -48,10 +44,7 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
           const parsed = JSON.parse(data);
           if (parsed.pausas && parsed.pausas.length > 0) {
             parsed.pausas.forEach((pausa: PausaRegistro) => {
-              pausasAgregadas.push({
-                pausa,
-                origem: `Serviço: ${formatarTipoServico(servico.tipo)}`
-              });
+              pausasAgregadas.push(pausa);
             });
           }
         } catch {
@@ -61,31 +54,31 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
     });
     
     // Ordenar pausas por data (mais recentes primeiro)
-    pausasAgregadas.sort((a, b) => b.pausa.inicio - a.pausa.inicio);
+    pausasAgregadas.sort((a, b) => b.inicio - a.inicio);
     
     setTodasPausas(pausasAgregadas);
     setTotalPausas(pausasAgregadas.length);
     
     // Contar pausas em andamento
-    const emAndamento = pausasAgregadas.filter(item => !item.pausa.fim).length;
+    const emAndamento = pausasAgregadas.filter(item => !item.fim).length;
     setPausasEmAndamento(emAndamento);
     
     // Calcular tempo total em pausa (apenas pausas finalizadas)
     const tempoTotal = pausasAgregadas
-      .filter(item => item.pausa.fim)
-      .reduce((acc, item) => acc + ((item.pausa.fim || 0) - item.pausa.inicio), 0);
+      .filter(item => item.fim)
+      .reduce((acc, item) => acc + ((item.fim || 0) - item.inicio), 0);
     
     setTempoTotalEmPausa(tempoTotal);
     
     // Agrupar pausas por motivo para estatísticas
     const porMotivo = pausasAgregadas.reduce((acc, item) => {
-      const motivo = item.pausa.motivo || "Sem motivo";
+      const motivo = item.motivo || "Sem motivo";
       if (!acc[motivo]) {
         acc[motivo] = { count: 0, tempo: 0 };
       }
       acc[motivo].count += 1;
-      if (item.pausa.fim) {
-        acc[motivo].tempo += (item.pausa.fim - item.pausa.inicio);
+      if (item.fim) {
+        acc[motivo].tempo += (item.fim - item.inicio);
       }
       return acc;
     }, {} as Record<string, { count: number, tempo: number }>);
@@ -122,22 +115,6 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
     return dias > 0 
       ? `${dias}d ${horas}h ${minutos}m ${segundos}s`
       : `${horas}h ${minutos}m ${segundos}s`;
-  };
-  
-  const formatarEtapa = (etapa: EtapaOS): string => {
-    const labels: Record<EtapaOS, string> = {
-      lavagem: "Lavagem",
-      inspecao_inicial: "Inspeção Inicial",
-      retifica: "Retífica",
-      montagem: "Montagem",
-      dinamometro: "Dinamômetro",
-      inspecao_final: "Inspeção Final"
-    };
-    return labels[etapa] || etapa;
-  };
-  
-  const formatarTipoServico = (tipo: string): string => {
-    return tipo.charAt(0).toUpperCase() + tipo.slice(1).replace('_', ' ');
   };
   
   return (
@@ -194,27 +171,24 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
         <CardContent>
           {todasPausas.length > 0 ? (
             <div className="space-y-4">
-              {todasPausas.map((item, idx) => (
+              {todasPausas.map((pausa, idx) => (
                 <div key={idx} className="bg-muted/30 p-4 rounded-lg">
                   <div className="flex justify-between mb-2">
                     <div>
                       <p className="font-medium">
-                        {formatarData(item.pausa.inicio)} - {formatarHora(item.pausa.inicio)}
-                        {item.pausa.fim ? ` até ${formatarHora(item.pausa.fim)}` : " (em andamento)"}
+                        {formatarData(pausa.inicio)} - {formatarHora(pausa.inicio)}
+                        {pausa.fim ? ` até ${formatarHora(pausa.fim)}` : " (em andamento)"}
                       </p>
                     </div>
                     <div>
                       <p className="font-medium">
-                        Duração: {calcularDuracao(item.pausa.inicio, item.pausa.fim)}
+                        Duração: {calcularDuracao(pausa.inicio, pausa.fim)}
                       </p>
                     </div>
                   </div>
-                  <div className="flex justify-between">
-                    <p className="text-sm text-muted-foreground">{item.origem}</p>
-                    {item.pausa.motivo && (
-                      <p className="text-sm font-medium">Motivo: {item.pausa.motivo}</p>
-                    )}
-                  </div>
+                  {pausa.motivo && (
+                    <p className="text-sm font-medium">Motivo: {pausa.motivo}</p>
+                  )}
                 </div>
               ))}
             </div>

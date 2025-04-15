@@ -24,7 +24,6 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
   const [selectedEtapa, setSelectedEtapa] = useState<EtapaOS | null>(null);
   const { funcionario } = useAuth();
 
-  // Função para obter o ícone da etapa
   const getEtapaIcon = (etapa: EtapaOS) => {
     switch (etapa) {
       case 'lavagem':
@@ -44,7 +43,16 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     }
   };
 
-  // Define quais etapas o usuário pode ver com base em suas permissões
+  const verificarEtapasDisponiveis = () => {
+    const temMontagem = ordem.servicos.some(s => s.tipo === 'montagem');
+    const temDinamometro = ordem.servicos.some(s => s.tipo === 'dinamometro');
+    
+    return {
+      montagem: temMontagem,
+      dinamometro: temDinamometro
+    };
+  };
+
   useEffect(() => {
     if (!ordem || !funcionario) {
       setEtapasAtivas([]);
@@ -52,27 +60,41 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
       return;
     }
     
-    // Define todas as etapas disponíveis
+    const etapasDisponiveis = verificarEtapasDisponiveis();
+    
     const allEtapas: EtapaOS[] = [
       'lavagem', 
       'inspecao_inicial', 
-      'retifica', 
-      'montagem', 
-      'dinamometro', 
-      'inspecao_final'
+      'retifica'
     ];
     
-    // Se for admin ou gerente, mostra todas as etapas
+    if (etapasDisponiveis.montagem) {
+      allEtapas.push('montagem');
+    }
+    
+    if (etapasDisponiveis.dinamometro) {
+      allEtapas.push('dinamometro');
+    }
+    
+    allEtapas.push('inspecao_final');
+    
     if (funcionario?.nivelPermissao === 'admin' || funcionario?.nivelPermissao === 'gerente') {
       setEtapasAtivas(allEtapas);
       if (!selectedEtapa && allEtapas.length > 0) {
         setSelectedEtapa(allEtapas[0]);
       }
     } else {
-      // Para técnicos, mostrar apenas etapas específicas, mas filtradas pelas especialidades
       const etapasTecnico: EtapaOS[] = ['inspecao_inicial', 'retifica', 'inspecao_final'];
+      
+      if (etapasDisponiveis.montagem && funcionario?.especialidades.includes('montagem')) {
+        etapasTecnico.push('montagem');
+      }
+      
+      if (etapasDisponiveis.dinamometro && funcionario?.especialidades.includes('dinamometro')) {
+        etapasTecnico.push('dinamometro');
+      }
+      
       const etapasPermitidas = etapasTecnico.filter(etapa => {
-        // Para retífica, verificar se o técnico tem permissão para algum dos serviços dessa etapa
         if (etapa === 'retifica') {
           return ordem.servicos.some(servico => 
             ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo as TipoServico) &&
@@ -84,7 +106,6 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
       
       setEtapasAtivas(etapasPermitidas);
       
-      // Se não tiver selecionado ou a seleção não está nas permitidas, seleciona a primeira
       if (!selectedEtapa && etapasPermitidas.length > 0) {
         setSelectedEtapa(etapasPermitidas[0]);
       } else if (selectedEtapa && !etapasPermitidas.includes(selectedEtapa)) {
@@ -92,16 +113,12 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
       }
     }
     
-    // Calcular o progresso total da ordem
     calcularProgressoTotal(ordem);
   }, [ordem, funcionario, selectedEtapa]);
 
-  // Função para calcular o progresso total - melhorada para sincronização precisa
   const calcularProgressoTotal = (ordemAtual: OrdemServico) => {
-    // Etapas relevantes para esta ordem
     const etapasPossiveis: EtapaOS[] = ["lavagem", "inspecao_inicial", "retifica", "montagem", "dinamometro", "inspecao_final"];
     
-    // Filtra apenas as etapas relevantes para esta ordem
     const etapasRelevantes = etapasPossiveis.filter(etapa => {
       if (etapa === "retifica") {
         return ordemAtual.servicos?.some(s => 
@@ -113,59 +130,45 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
       } else if (etapa === "lavagem") {
         return ordemAtual.servicos?.some(s => s.tipo === "lavagem");
       }
-      return true; // As etapas de inspeção são sempre relevantes
+      return true;
     });
     
-    // Contar os itens totais e concluídos
     const totalEtapas = etapasRelevantes.length;
     const etapasConcluidas = etapasRelevantes.filter(etapa => 
       ordemAtual.etapasAndamento?.[etapa]?.concluido
     ).length;
     
-    // Subetapas (serviços e subatividades)
     const servicosAtivos = ordemAtual.servicos?.filter(s => {
-      return s.subatividades?.some(sub => sub.selecionada) || true; // Considera todos os serviços
+      return s.subatividades?.some(sub => sub.selecionada) || true;
     }) || [];
     
     const totalServicos = servicosAtivos.length;
     const servicosConcluidos = servicosAtivos.filter(s => s.concluido).length;
     
-    // Cálculo ponderado do progresso
-    // Etapas têm peso 2, serviços têm peso 1
-    const pesoEtapas = 2;
-    const pesoServicos = 1;
-    
-    const totalItens = (totalEtapas * pesoEtapas) + (totalServicos * pesoServicos);
-    const itensConcluidos = (etapasConcluidas * pesoEtapas) + (servicosConcluidos * pesoServicos);
+    const totalItens = (totalEtapas * 2) + (totalServicos * 1);
+    const itensConcluidos = (etapasConcluidas * 2) + (servicosConcluidos * 1);
     
     const progresso = totalItens > 0 ? Math.round((itensConcluidos / totalItens) * 100) : 0;
     setProgressoTotal(progresso);
     
-    // Atualizar o progresso na base de dados
     if (ordemAtual.id && totalItens > 0) {
       const progressoFracao = itensConcluidos / totalItens;
       atualizarProgressoNoDB(ordemAtual.id, progressoFracao);
     }
   };
-  
-  // Função para atualizar o progresso no banco de dados
+
   const atualizarProgressoNoDB = async (ordenId: string, progresso: number) => {
     try {
       const ordemRef = doc(db, "ordens_servico", ordenId);
       await updateDoc(ordemRef, { progressoEtapas: progresso });
-      
-      // Não precisamos de toast para essa atualização silenciosa de progresso
     } catch (error) {
       console.error("Erro ao atualizar progresso da ordem:", error);
-      // Não mostramos erros para não poluir a interface
     }
   };
 
-  // Função para lidar com a troca de status do serviço
   const handleServicoStatusChange = async (servicoTipo: TipoServico, concluido: boolean) => {
     if (!ordem?.id || !funcionario?.id) return;
     
-    // Verificar se o usuário tem permissão para este tipo de serviço
     if (funcionario.nivelPermissao !== 'admin' && 
         funcionario.nivelPermissao !== 'gerente' && 
         !funcionario.especialidades.includes(servicoTipo)) {
@@ -174,10 +177,8 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     }
     
     try {
-      // Crie uma cópia dos serviços atuais
       const servicosAtualizados = ordem.servicos.map(servico => {
         if (servico.tipo === servicoTipo) {
-          // Se estiver marcando como concluído manualmente, todas as subatividades também serão marcadas
           let subatividades = servico.subatividades;
           if (concluido && subatividades) {
             subatividades = subatividades.map(sub => {
@@ -197,24 +198,18 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         return servico;
       });
       
-      // Atualize o Firestore
       const ordemRef = doc(db, "ordens", ordem.id);
       await updateDoc(ordemRef, { servicos: servicosAtualizados });
       
-      // Atualize o estado local
       const ordemAtualizada = {
         ...ordem,
         servicos: servicosAtualizados
       };
       
-      // Verificar se todos os serviços de uma etapa foram concluídos
-      verificarEtapaConcluida(ordemAtualizada, servicoTipo);
-      
       if (onOrdemUpdate) {
         onOrdemUpdate(ordemAtualizada);
       }
       
-      // Exiba um toast de sucesso
       toast.success(`Serviço ${servicoTipo} ${concluido ? 'concluído' : 'reaberto'}`);
     } catch (error) {
       console.error("Erro ao atualizar status do serviço:", error);
@@ -222,11 +217,9 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     }
   };
 
-  // Função para verificar se todos os serviços de uma etapa foram concluídos
   const verificarEtapaConcluida = async (ordemAtualizada: OrdemServico, servicoTipo: TipoServico) => {
     let etapa: EtapaOS | null = null;
     
-    // Determinar a qual etapa o serviço pertence
     if (['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servicoTipo)) {
       etapa = 'retifica';
     } else if (servicoTipo === 'montagem') {
@@ -239,7 +232,6 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     
     if (!etapa) return;
     
-    // Obter os serviços dessa etapa
     const servicosEtapa = ordemAtualizada.servicos.filter(s => {
       if (etapa === 'retifica') {
         return ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(s.tipo as TipoServico);
@@ -247,29 +239,23 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
       return s.tipo === etapa;
     });
     
-    // Verificar se há serviços ativos (com subatividades selecionadas)
     const servicosAtivos = servicosEtapa.filter(s => 
       s.subatividades && s.subatividades.some(sub => sub.selecionada)
     );
     
-    // Se não há serviços ativos, não prosseguir
     if (servicosAtivos.length === 0) return;
     
-    // Verificar se todos os serviços ativos estão concluídos
     const todosConcluidos = servicosAtivos.every(s => s.concluido);
     
-    // Se todos estão concluídos, marcar a etapa como concluída
     if (todosConcluidos && !ordemAtualizada.etapasAndamento[etapa]?.concluido) {
       await handleEtapaStatusChange(etapa, true);
     }
   };
 
-  // Função para lidar com a troca de status de uma etapa
   const handleEtapaStatusChange = async (etapa: EtapaOS, concluida: boolean) => {
     if (!ordem?.id || !funcionario?.id) return;
     
     try {
-      // Atualize a etapa na ordem
       const etapasAndamento = {
         ...ordem.etapasAndamento,
         [etapa]: {
@@ -281,11 +267,9 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         }
       };
       
-      // Atualize o Firestore
       const ordemRef = doc(db, "ordens", ordem.id);
       await updateDoc(ordemRef, { etapasAndamento });
       
-      // Atualize o estado local
       const ordemAtualizada = {
         ...ordem,
         etapasAndamento
@@ -297,7 +281,6 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         onOrdemUpdate(ordemAtualizada);
       }
       
-      // Exiba um toast de sucesso
       toast.success(`Etapa ${formatarEtapa(etapa)} ${concluida ? 'concluída' : 'reaberta'}`);
     } catch (error) {
       console.error("Erro ao atualizar status da etapa:", error);
@@ -305,11 +288,9 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     }
   };
 
-  // Função para lidar com a troca de status de uma subatividade
   const handleSubatividadeToggle = async (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => {
     if (!ordem?.id) return;
     
-    // Verificar se o usuário tem permissão para este tipo de serviço
     if (funcionario?.nivelPermissao !== 'admin' && 
         funcionario?.nivelPermissao !== 'gerente' && 
         !funcionario?.especialidades.includes(servicoTipo)) {
@@ -318,11 +299,9 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     }
     
     try {
-      // Encontre o serviço atual
       const servicoAtual = ordem.servicos.find(s => s.tipo === servicoTipo);
       if (!servicoAtual || !servicoAtual.subatividades) return;
       
-      // Atualize a subatividade
       const servicosAtualizados = ordem.servicos.map(servico => {
         if (servico.tipo === servicoTipo && servico.subatividades) {
           const subatividades = servico.subatividades.map(sub => {
@@ -332,34 +311,21 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
             return sub;
           });
           
-          // Verificar se todas as subatividades selecionadas estão concluídas
-          const selecionadas = subatividades.filter(sub => sub.selecionada);
-          const todasConcluidas = selecionadas.length > 0 && selecionadas.every(sub => sub.concluida);
-          
-          // Se todas estiverem concluídas, marcar o serviço como concluído
-          const concluido = todasConcluidas;
-          
           return { 
             ...servico, 
-            subatividades,
-            concluido 
+            subatividades
           };
         }
         return servico;
       });
       
-      // Atualize o Firestore
       const ordemRef = doc(db, "ordens", ordem.id);
       await updateDoc(ordemRef, { servicos: servicosAtualizados });
       
-      // Atualize o estado local
       const ordemAtualizada = {
         ...ordem,
         servicos: servicosAtualizados
       };
-      
-      // Verificar se todos os serviços de uma etapa foram concluídos após atualizar uma subatividade
-      verificarEtapaConcluida(ordemAtualizada, servicoTipo);
       
       if (onOrdemUpdate) {
         onOrdemUpdate(ordemAtualizada);
@@ -370,7 +336,6 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     }
   };
 
-  // Função para formatação dos nomes das etapas
   const formatarEtapa = (etapa: EtapaOS): string => {
     const labels: Record<EtapaOS, string> = {
       lavagem: "Lavagem",
@@ -383,11 +348,9 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     return labels[etapa] || etapa;
   };
 
-  // Organiza os serviços por etapas
   const getServicosParaEtapa = (etapa: EtapaOS): Servico[] => {
     switch (etapa) {
       case 'retifica':
-        // Filtra os serviços de retífica para funcionários que não são admin ou gerente
         if (funcionario?.nivelPermissao !== 'admin' && funcionario?.nivelPermissao !== 'gerente') {
           return ordem.servicos.filter(servico => 
             ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo) &&
@@ -409,16 +372,13 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     }
   };
 
-  // Verifica se a etapa "retifica" está habilitada com base no status da ordem
   const isRetificaHabilitada = () => {
     return ordem.status === 'fabricacao';
   };
 
-  // Verifica se a etapa "inspecao_final" está habilitada com base na conclusão de etapas anteriores
   const isInspecaoFinalHabilitada = () => {
     const { etapasAndamento } = ordem;
     
-    // Verificar se pelo menos uma das etapas intermediárias foi concluída para habilitar a inspeção final
     return (
       etapasAndamento['retifica']?.concluido === true ||
       etapasAndamento['montagem']?.concluido === true ||
@@ -426,12 +386,10 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     );
   };
 
-  // Filtra apenas os serviços ativos
   const servicosAtivos = ordem.servicos.filter(servico => 
     servico.subatividades && servico.subatividades.some(sub => sub.selecionada)
   );
 
-  // Se não houver serviços selecionados, exiba uma mensagem
   if (servicosAtivos.length === 0) {
     return (
       <Card className="w-full">
@@ -450,7 +408,8 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     );
   }
 
-  // Exibe o painel de tracker com o novo layout de botões horizontais
+  const etapasDisponiveis = verificarEtapasDisponiveis();
+
   return (
     <div className="space-y-6">
       <Card className="w-full">
@@ -461,7 +420,6 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Barra de progresso total */}
           <div className="mb-6">
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm font-medium">Progresso Total</span>
@@ -470,13 +428,13 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
             <Progress value={progressoTotal} className="h-3" />
           </div>
 
-          {/* Botões horizontais para etapas - agora centralizados */}
           <div className="flex flex-wrap justify-center gap-2 mb-6">
             {etapasAtivas.map(etapa => {
-              // Verifica se a etapa está desabilitada
               const isDisabled = 
                 (etapa === 'retifica' && !isRetificaHabilitada()) ||
-                (etapa === 'inspecao_final' && !isInspecaoFinalHabilitada());
+                (etapa === 'inspecao_final' && !isInspecaoFinalHabilitada()) ||
+                (etapa === 'montagem' && !etapasDisponiveis.montagem) ||
+                (etapa === 'dinamometro' && !etapasDisponiveis.dinamometro);
               
               return (
                 <Button
@@ -498,10 +456,8 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
             })}
           </div>
 
-          {/* Separator */}
           <Separator className="my-4" />
 
-          {/* Conteúdo da etapa selecionada */}
           {selectedEtapa && funcionario && (
             <EtapaCard 
               key={selectedEtapa}
