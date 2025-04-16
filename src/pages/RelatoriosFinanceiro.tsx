@@ -1031,7 +1031,7 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
             
             <Card className="mt-6">
               <CardHeader>
-                <CardTitle>Receitas e Despesas Anuais</Title>
+                <CardTitle>Receitas e Despesas Anuais</CardTitle>
                 <CardDescription>
                   Comparativo dos últimos 3 anos
                 </CardDescription>
