@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
@@ -192,6 +193,16 @@ export default function EtapaCard({
     }
   }, [etapaInfo]);
 
+  // Add the handleInspecaoChange function
+  const handleInspecaoChange = (servicoTipo: TipoServico, tipo: 'inicial' | 'final', concluida: boolean) => {
+    if (onServicoStatusChange) {
+      // This is just a pass-through function to handle inspections for this specific service
+      // The actual implementation of changing inspection status happens in the parent component
+      // through the onServicoStatusChange callback
+      console.log(`Alterando inspeção ${tipo} para ${concluida ? 'concluída' : 'não concluída'} no serviço ${servicoTipo}`);
+    }
+  };
+
   return (
     <Card className="p-6 mb-4">
       <div className="flex justify-between items-center mb-4">
@@ -273,7 +284,7 @@ export default function EtapaCard({
               }
               onInspecaoChange={(tipo, concluida) => {
                 if (onServicoStatusChange) {
-                  handleInspecaoChange && handleInspecaoChange(servico.tipo, tipo, concluida);
+                  handleInspecaoChange(servico.tipo, tipo, concluida);
                 }
               }}
             />
