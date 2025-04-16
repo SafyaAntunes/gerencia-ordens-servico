@@ -146,11 +146,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <NavItem icon={Calendar} label="Agenda" to="/agenda" />
             )}
             
-            {/* Subatividades - Gerente ou superior */}
-            {hasPermission('gerente') && (
-              <NavItem icon={ClipboardList} label="Subatividades" to="/subatividades" />
-            )}
-            
             {/* Relatórios - Produção para Gerente ou superior, Financeiro para Admin */}
             {hasPermission('gerente') && (
               <>
@@ -218,11 +213,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             {/* Agenda - Gerente ou superior */}
             {hasPermission('gerente') && (
               <NavItem icon={Calendar} label="Agenda" to="/agenda" isCollapsed={isCollapsed} />
-            )}
-            
-            {/* Subatividades - Gerente ou superior */}
-            {hasPermission('gerente') && (
-              <NavItem icon={ClipboardList} label="Subatividades" to="/subatividades" isCollapsed={isCollapsed} />
             )}
             
             {/* Relatórios - Produção para Gerente ou superior, Financeiro para Admin */}

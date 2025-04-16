@@ -10,6 +10,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { getClientes } from "@/services/clienteService";
 import { Cliente } from "@/types/clientes";
+import { getSubatividades } from "@/services/subatividadeService";
 
 const toTitleCase = (str: string) => {
   return str
@@ -86,17 +87,42 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         }
       }
       
-      // Inicializar serviços sem subatividades iniciais
-      const servicos = (values.servicosTipos || []).map((tipo: TipoServico) => ({
-        tipo,
-        descricao: values.servicosDescricoes?.[tipo] || "",
-        concluido: false,
-        subatividades: [], // Iniciar sem subatividades
-        inspecao: {
-          inicial: false,
-          final: false
-        }
-      }));
+      // Carregar subatividades para incluir nos serviços
+      let todasSubatividades = {};
+      try {
+        todasSubatividades = await getSubatividades();
+      } catch (error) {
+        console.error("Erro ao carregar subatividades:", error);
+      }
+      
+      // Inicializar serviços com subatividades
+      const servicos = (values.servicosTipos || []).map((tipo: TipoServico) => {
+        const tipoSubatividades = (todasSubatividades as any)[tipo] || [];
+        
+        // Mapear apenas as subatividades selecionadas
+        const subatividadesSelecionadas = values.subatividades && values.subatividades[tipo] 
+          ? tipoSubatividades.map((sub: any) => ({
+              ...sub,
+              selecionada: values.subatividades[tipo].includes(sub.id),
+              concluida: false
+            }))
+          : tipoSubatividades.map((sub: any) => ({
+              ...sub,
+              selecionada: false,
+              concluida: false
+            }));
+        
+        return {
+          tipo,
+          descricao: values.servicosDescricoes?.[tipo] || "",
+          concluido: false,
+          subatividades: subatividadesSelecionadas,
+          inspecao: {
+            inicial: false,
+            final: false
+          }
+        };
+      });
 
       let etapas: EtapaOS[] = ["lavagem", "inspecao_inicial"];
       
@@ -169,7 +195,7 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         onCancel={() => navigate("/ordens")}
         clientes={clientes}
         isLoadingClientes={loading}
-        hideSubatividades={true} // Esconder seleção de subatividades na criação
+        hideSubatividades={false} // Mostrar seleção de subatividades na criação
       />
     </Layout>
   );

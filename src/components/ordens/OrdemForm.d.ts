@@ -1,5 +1,6 @@
 
 import { OrdemServico } from "@/types/ordens";
+import { Cliente } from "@/types/clientes";
 
 interface OrdemFormProps {
   onSubmit: (values: any) => void;
@@ -8,6 +9,9 @@ interface OrdemFormProps {
   defaultFotosEntrada?: any[];
   defaultFotosSaida?: any[];
   onCancel?: () => void;
+  clientes?: Cliente[];
+  isLoadingClientes?: boolean;
+  hideSubatividades?: boolean;
 }
 
 declare const OrdemForm: React.FC<OrdemFormProps>;

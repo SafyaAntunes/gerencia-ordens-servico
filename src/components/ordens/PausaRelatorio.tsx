@@ -15,6 +15,7 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
     etapa?: string; 
     servico?: string;
     funcionarioNome?: string;
+    dataFormatada?: string;
   })[]>([]);
   const [totalPausas, setTotalPausas] = useState(0);
   const [pausasEmAndamento, setPausasEmAndamento] = useState(0);
@@ -32,6 +33,7 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
       etapa?: string; 
       servico?: string;
       funcionarioNome?: string;
+      dataFormatada?: string;
     })[] = [];
     
     // Obter pausas das etapas
@@ -41,7 +43,8 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
           pausasAgregadas.push({
             ...pausa,
             etapa: etapaKey,
-            funcionarioNome: info.funcionarioNome
+            funcionarioNome: info.funcionarioNome,
+            dataFormatada: pausa.inicio ? format(new Date(pausa.inicio), "dd/MM/yyyy", { locale: ptBR }) : ""
           });
         });
       }
@@ -49,6 +52,7 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
     
     // Obter pausas dos serviços (do localStorage)
     ordem.servicos.forEach(servico => {
+      // Verificar storage para serviços específicos
       const storageKey = `timer_${ordem.id}_retifica_${servico.tipo}`;
       const data = localStorage.getItem(storageKey);
       
@@ -60,12 +64,41 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
               pausasAgregadas.push({
                 ...pausa,
                 servico: servico.tipo,
-                funcionarioNome: servico.funcionarioNome
+                funcionarioNome: servico.funcionarioNome,
+                dataFormatada: pausa.inicio ? format(new Date(pausa.inicio), "dd/MM/yyyy", { locale: ptBR }) : ""
               });
             });
           }
         } catch {
           // Ignorar erro de parsing
+        }
+      }
+      
+      // Também verificar storage para o serviço como uma etapa
+      const etapaKey = servico.tipo === 'montagem' ? 'montagem' : 
+                     servico.tipo === 'dinamometro' ? 'dinamometro' : 
+                     servico.tipo === 'lavagem' ? 'lavagem' : null;
+                     
+      if (etapaKey) {
+        const etapaStorageKey = `timer_${ordem.id}_${etapaKey}`;
+        const etapaData = localStorage.getItem(etapaStorageKey);
+        
+        if (etapaData) {
+          try {
+            const parsed = JSON.parse(etapaData);
+            if (parsed.pausas && parsed.pausas.length > 0) {
+              parsed.pausas.forEach((pausa: PausaRegistro) => {
+                pausasAgregadas.push({
+                  ...pausa,
+                  etapa: etapaKey,
+                  funcionarioNome: servico.funcionarioNome,
+                  dataFormatada: pausa.inicio ? format(new Date(pausa.inicio), "dd/MM/yyyy", { locale: ptBR }) : ""
+                });
+              });
+            }
+          } catch {
+            // Ignorar erro de parsing
+          }
         }
       }
     });
@@ -151,6 +184,16 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
     return labels[etapaKey] || etapaKey;
   };
   
+  // Agrupar pausas por data
+  const pausasPorData = todasPausas.reduce((groups, pausa) => {
+    const data = pausa.dataFormatada || formatarData(pausa.inicio);
+    if (!groups[data]) {
+      groups[data] = [];
+    }
+    groups[data].push(pausa);
+    return groups;
+  }, {} as Record<string, typeof todasPausas>);
+  
   return (
     <div className="space-y-6">
       <Card>
@@ -204,39 +247,45 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
         </CardHeader>
         <CardContent>
           {todasPausas.length > 0 ? (
-            <div className="space-y-4">
-              {todasPausas.map((pausa, idx) => (
-                <div key={idx} className="bg-muted/30 p-4 rounded-lg">
-                  <div className="flex justify-between mb-2">
-                    <div>
-                      <p className="font-medium">
-                        {formatarData(pausa.inicio)} - {formatarHora(pausa.inicio)}
-                        {pausa.fim ? ` até ${formatarHora(pausa.fim)}` : " (em andamento)"}
-                      </p>
+            <div className="space-y-8">
+              {Object.entries(pausasPorData).map(([data, pausas]) => (
+                <div key={data} className="space-y-4">
+                  <h3 className="font-medium text-lg border-b pb-2">{data}</h3>
+                  
+                  {pausas.map((pausa, idx) => (
+                    <div key={`${data}-${idx}`} className="bg-muted/30 p-4 rounded-lg">
+                      <div className="flex justify-between mb-2">
+                        <div>
+                          <p className="font-medium">
+                            {formatarHora(pausa.inicio)}
+                            {pausa.fim ? ` até ${formatarHora(pausa.fim)}` : " (em andamento)"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="font-medium">
+                            Duração: {calcularDuracao(pausa.inicio, pausa.fim)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                        {pausa.motivo && (
+                          <p className="text-sm font-medium">Motivo: {pausa.motivo}</p>
+                        )}
+                        {(pausa.etapa || pausa.servico) && (
+                          <p className="text-sm text-muted-foreground">
+                            {pausa.etapa ? `Etapa: ${formatarEtapa(pausa.etapa)}` : 
+                             pausa.servico ? `Serviço: ${formatarEtapa(pausa.servico)}` : ''}
+                          </p>
+                        )}
+                        {pausa.funcionarioNome && (
+                          <p className="text-sm flex items-center">
+                            <User className="h-3 w-3 mr-1" />
+                            Funcionário: {pausa.funcionarioNome}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">
-                        Duração: {calcularDuracao(pausa.inicio, pausa.fim)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                    {pausa.motivo && (
-                      <p className="text-sm font-medium">Motivo: {pausa.motivo}</p>
-                    )}
-                    {(pausa.etapa || pausa.servico) && (
-                      <p className="text-sm text-muted-foreground">
-                        {pausa.etapa ? `Etapa: ${formatarEtapa(pausa.etapa)}` : 
-                         pausa.servico ? `Serviço: ${formatarEtapa(pausa.servico)}` : ''}
-                      </p>
-                    )}
-                    {pausa.funcionarioNome && (
-                      <p className="text-sm flex items-center">
-                        <User className="h-3 w-3 mr-1" />
-                        Funcionário: {pausa.funcionarioNome}
-                      </p>
-                    )}
-                  </div>
+                  ))}
                 </div>
               ))}
             </div>
