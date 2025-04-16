@@ -46,10 +46,18 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
   const verificarEtapasDisponiveis = () => {
     const temMontagem = ordem.servicos.some(s => s.tipo === 'montagem');
     const temDinamometro = ordem.servicos.some(s => s.tipo === 'dinamometro');
+    const temLavagem = ordem.servicos.some(s => s.tipo === 'lavagem');
+    const temRetifica = ordem.servicos.some(s => 
+      ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(s.tipo as TipoServico)
+    );
     
     return {
+      lavagem: temLavagem,
+      retifica: temRetifica,
       montagem: temMontagem,
-      dinamometro: temDinamometro
+      dinamometro: temDinamometro,
+      inspecao_inicial: true,
+      inspecao_final: true
     };
   };
 
@@ -62,21 +70,9 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     
     const etapasDisponiveis = verificarEtapasDisponiveis();
     
-    const allEtapas: EtapaOS[] = [
-      'lavagem', 
-      'inspecao_inicial', 
-      'retifica'
-    ];
-    
-    if (etapasDisponiveis.montagem) {
-      allEtapas.push('montagem');
-    }
-    
-    if (etapasDisponiveis.dinamometro) {
-      allEtapas.push('dinamometro');
-    }
-    
-    allEtapas.push('inspecao_final');
+    const allEtapas: EtapaOS[] = Object.entries(etapasDisponiveis)
+      .filter(([_, existe]) => existe)
+      .map(([etapa]) => etapa as EtapaOS);
     
     if (funcionario?.nivelPermissao === 'admin' || funcionario?.nivelPermissao === 'gerente') {
       setEtapasAtivas(allEtapas);
@@ -84,7 +80,16 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         setSelectedEtapa(allEtapas[0]);
       }
     } else {
-      const etapasTecnico: EtapaOS[] = ['inspecao_inicial', 'retifica', 'inspecao_final'];
+      const etapasTecnico: EtapaOS[] = [];
+      
+      if (etapasDisponiveis.inspecao_inicial) etapasTecnico.push('inspecao_inicial');
+      
+      if (etapasDisponiveis.retifica && ordem.servicos.some(servico => 
+        ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo as TipoServico) &&
+        funcionario?.especialidades.includes(servico.tipo)
+      )) {
+        etapasTecnico.push('retifica');
+      }
       
       if (etapasDisponiveis.montagem && funcionario?.especialidades.includes('montagem')) {
         etapasTecnico.push('montagem');
@@ -94,22 +99,18 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         etapasTecnico.push('dinamometro');
       }
       
-      const etapasPermitidas = etapasTecnico.filter(etapa => {
-        if (etapa === 'retifica') {
-          return ordem.servicos.some(servico => 
-            ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo as TipoServico) &&
-            funcionario?.especialidades.includes(servico.tipo)
-          );
-        }
-        return true;
-      });
+      if (etapasDisponiveis.lavagem && funcionario?.especialidades.includes('lavagem')) {
+        etapasTecnico.push('lavagem');
+      }
       
-      setEtapasAtivas(etapasPermitidas);
+      if (etapasDisponiveis.inspecao_final) etapasTecnico.push('inspecao_final');
       
-      if (!selectedEtapa && etapasPermitidas.length > 0) {
-        setSelectedEtapa(etapasPermitidas[0]);
-      } else if (selectedEtapa && !etapasPermitidas.includes(selectedEtapa)) {
-        setSelectedEtapa(etapasPermitidas.length > 0 ? etapasPermitidas[0] : null);
+      setEtapasAtivas(etapasTecnico);
+      
+      if (!selectedEtapa && etapasTecnico.length > 0) {
+        setSelectedEtapa(etapasTecnico[0]);
+      } else if (selectedEtapa && !etapasTecnico.includes(selectedEtapa)) {
+        setSelectedEtapa(etapasTecnico.length > 0 ? etapasTecnico[0] : null);
       }
     }
     
@@ -117,21 +118,11 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
   }, [ordem, funcionario, selectedEtapa]);
 
   const calcularProgressoTotal = (ordemAtual: OrdemServico) => {
-    const etapasPossiveis: EtapaOS[] = ["lavagem", "inspecao_inicial", "retifica", "montagem", "dinamometro", "inspecao_final"];
+    const etapasDisponiveis = verificarEtapasDisponiveis();
     
-    const etapasRelevantes = etapasPossiveis.filter(etapa => {
-      if (etapa === "retifica") {
-        return ordemAtual.servicos?.some(s => 
-          ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo));
-      } else if (etapa === "montagem") {
-        return ordemAtual.servicos?.some(s => s.tipo === "montagem");
-      } else if (etapa === "dinamometro") {
-        return ordemAtual.servicos?.some(s => s.tipo === "dinamometro");
-      } else if (etapa === "lavagem") {
-        return ordemAtual.servicos?.some(s => s.tipo === "lavagem");
-      }
-      return true;
-    });
+    const etapasRelevantes = Object.entries(etapasDisponiveis)
+      .filter(([_, existe]) => existe)
+      .map(([etapa]) => etapa as EtapaOS);
     
     const totalEtapas = etapasRelevantes.length;
     const etapasConcluidas = etapasRelevantes.filter(etapa => 
@@ -437,7 +428,8 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
                 (etapa === 'retifica' && !isRetificaHabilitada()) ||
                 (etapa === 'inspecao_final' && !isInspecaoFinalHabilitada()) ||
                 (etapa === 'montagem' && !etapasDisponiveis.montagem) ||
-                (etapa === 'dinamometro' && !etapasDisponiveis.dinamometro);
+                (etapa === 'dinamometro' && !etapasDisponiveis.dinamometro) ||
+                (etapa === 'lavagem' && !etapasDisponiveis.lavagem);
               
               return (
                 <Button

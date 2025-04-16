@@ -56,9 +56,46 @@ export async function saveSubatividade(subatividade: SubAtividade, tipoServico: 
   }
 }
 
+// Verificar se uma subatividade está em uso em alguma ordem de serviço
+export async function verificarSubatividadeEmUso(id: string): Promise<boolean> {
+  try {
+    const ordensRef = collection(db, 'ordens');
+    const snapshot = await getDocs(ordensRef);
+    
+    // Verifica se a subatividade está em alguma ordem de serviço
+    for (const docSnap of snapshot.docs) {
+      const ordem = docSnap.data();
+      
+      if (ordem.servicos && Array.isArray(ordem.servicos)) {
+        for (const servico of ordem.servicos) {
+          if (servico.subatividades && Array.isArray(servico.subatividades)) {
+            if (servico.subatividades.some(sub => sub.id === id && sub.selecionada)) {
+              // Se encontrou a subatividade em uso, retorna true
+              return true;
+            }
+          }
+        }
+      }
+    }
+    
+    // Se não encontrou a subatividade em uso, retorna false
+    return false;
+  } catch (error) {
+    console.error('Erro ao verificar se subatividade está em uso:', error);
+    throw error;
+  }
+}
+
 // Excluir uma subatividade
 export async function deleteSubatividade(id: string, tipoServico: TipoServico): Promise<void> {
   try {
+    // Verifica se a subatividade está em uso
+    const emUso = await verificarSubatividadeEmUso(id);
+    
+    if (emUso) {
+      throw new Error('Esta subatividade está em uso em ordens de serviço em andamento e não pode ser excluída.');
+    }
+    
     const subatividadeRef = doc(db, 'subatividades', id);
     await deleteDoc(subatividadeRef);
   } catch (error) {
