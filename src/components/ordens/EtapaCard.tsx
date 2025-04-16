@@ -73,6 +73,7 @@ export default function EtapaCard({
   const podeAtribuirFuncionario = funcionario?.nivelPermissao === 'admin' || 
                                  funcionario?.nivelPermissao === 'gerente';
   
+  // Carregar funcionários para o dropdown de atribuição
   useEffect(() => {
     const carregarFuncionarios = async () => {
       try {
@@ -119,6 +120,7 @@ export default function EtapaCard({
     }
   })();
 
+  // Verificar e atualizar o progresso com base nos serviços
   useEffect(() => {
     if (etapaServicos.length === 0) return;
     
@@ -126,6 +128,7 @@ export default function EtapaCard({
     const percentualProgresso = Math.round((servicosConcluidos / etapaServicos.length) * 100);
     setProgresso(percentualProgresso);
     
+    // Se todos os serviços estiverem concluídos, marcar a etapa como concluída automaticamente
     if (servicosConcluidos === etapaServicos.length && !etapaInfo?.concluido && onEtapaStatusChange) {
       onEtapaStatusChange(etapa, true, funcionario?.id, funcionario?.nome);
     }
@@ -135,6 +138,7 @@ export default function EtapaCard({
   
   const handleEtapaConcluida = (tempoTotal: number) => {
     if (onEtapaStatusChange) {
+      // Se o usuário for admin ou gerente, abrir o diálogo para selecionar o funcionário
       if (podeAtribuirFuncionario) {
         setAtribuirFuncionarioDialogOpen(true);
       } else {
@@ -149,6 +153,7 @@ export default function EtapaCard({
       return;
     }
     
+    // Se o usuário for admin ou gerente, abrir o diálogo para selecionar o funcionário
     if (podeAtribuirFuncionario) {
       setAtribuirFuncionarioDialogOpen(true);
     } else {
@@ -163,6 +168,7 @@ export default function EtapaCard({
       if (funcionarioSelecionadoId) {
         onEtapaStatusChange(etapa, true, funcionarioSelecionadoId, funcionarioSelecionadoNome);
       } else {
+        // Se nenhum funcionário for selecionado, usar o usuário atual
         onEtapaStatusChange(etapa, true, funcionario?.id, funcionario?.nome);
       }
     }
@@ -185,6 +191,7 @@ export default function EtapaCard({
     }
   };
   
+  // Adicionado para atualizar o status quando o cronômetro estiver ativo
   useEffect(() => {
     if (etapaInfo?.iniciado && !etapaInfo?.concluido) {
       setIsAtivo(true);
@@ -192,16 +199,6 @@ export default function EtapaCard({
       setIsAtivo(false);
     }
   }, [etapaInfo]);
-
-  // Add the handleInspecaoChange function
-  const handleInspecaoChange = (servicoTipo: TipoServico, tipo: 'inicial' | 'final', concluida: boolean) => {
-    if (onServicoStatusChange) {
-      // This is just a pass-through function to handle inspections for this specific service
-      // The actual implementation of changing inspection status happens in the parent component
-      // through the onServicoStatusChange callback
-      console.log(`Alterando inspeção ${tipo} para ${concluida ? 'concluída' : 'não concluída'} no serviço ${servicoTipo}`);
-    }
-  };
 
   return (
     <Card className="p-6 mb-4">
@@ -222,6 +219,7 @@ export default function EtapaCard({
         </div>
       </div>
       
+      {/* Mostrar funcionário que concluiu a etapa */}
       {etapaInfo?.concluido && etapaInfo?.funcionarioNome && (
         <div className="mb-4 flex items-center text-sm text-muted-foreground">
           <User className="h-4 w-4 mr-1" />
@@ -282,16 +280,12 @@ export default function EtapaCard({
                   (concluido, funcId, funcNome) => onServicoStatusChange(servico.tipo, concluido, funcId, funcNome) : 
                   () => {}
               }
-              onInspecaoChange={(tipo, concluida) => {
-                if (onServicoStatusChange) {
-                  handleInspecaoChange(servico.tipo, tipo, concluida);
-                }
-              }}
             />
           ))}
         </div>
       )}
       
+      {/* Dialog para atribuir funcionário */}
       <Dialog open={atribuirFuncionarioDialogOpen} onOpenChange={setAtribuirFuncionarioDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>

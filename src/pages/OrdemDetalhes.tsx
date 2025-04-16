@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -7,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ChevronLeft, Edit, ClipboardCheck, Trash, BarChart } from "lucide-react";
 import { OrdemServico, StatusOS, TipoServico, SubAtividade, EtapaOS } from "@/types/ordens";
-import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import OrdemForm from "@/components/ordens/OrdemForm";
@@ -94,22 +93,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
             dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
           } as OrdemServico;
           
-          // Garantir que todos os serviços tenham a estrutura de inspeção
-          if (ordemFormatada.servicos) {
-            ordemFormatada.servicos = ordemFormatada.servicos.map(servico => {
-              if (!servico.inspecao) {
-                return {
-                  ...servico,
-                  inspecao: {
-                    inicial: false,
-                    final: false
-                  }
-                };
-              }
-              return servico;
-            });
-          }
-          
           setOrdem(ordemFormatada);
           
           if (ordemFormatada.motorId && ordemFormatada.cliente?.id) {
@@ -153,18 +136,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
   const handleStatusChange = async (newStatus: StatusOS) => {
     if (!id || !ordem) return;
     
-    // Verificar se todas as inspeções foram concluídas para permitir "finalizado" ou "entregue"
-    if ((newStatus === 'finalizado' || newStatus === 'entregue') && ordem.servicos.length > 0) {
-      const todasInspecoesConcluidas = ordem.servicos.every(
-        servico => servico.inspecao?.inicial && servico.inspecao?.final
-      );
-      
-      if (!todasInspecoesConcluidas) {
-        toast.error("Todas as inspeções iniciais e finais devem ser concluídas antes de finalizar a ordem");
-        return;
-      }
-    }
-    
     try {
       const orderRef = doc(db, "ordens", id);
       await updateDoc(orderRef, { status: newStatus });
@@ -189,7 +160,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
         if (servico.tipo === servicoTipo && servico.subatividades) {
           const subatividades = servico.subatividades.map(sub => {
             if (sub.id === subatividadeId) {
-              return { ...sub, concluida: checked };
+              return { ...sub, selecionada: checked };
             }
             return sub;
           });
@@ -212,62 +183,13 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
     }
   };
   
-  const handleInspecaoChange = async (servicoTipo: TipoServico, tipo: 'inicial' | 'final', concluida: boolean) => {
+  const handleServicoStatusChange = async (servicoTipo: TipoServico, concluido: boolean) => {
     if (!id || !ordem) return;
     
     try {
       const servicos = ordem.servicos.map(servico => {
         if (servico.tipo === servicoTipo) {
-          return { 
-            ...servico, 
-            inspecao: {
-              ...servico.inspecao,
-              [tipo]: concluida,
-              [`data${tipo === 'inicial' ? 'InspecaoInicial' : 'InspecaoFinal'}`]: concluida ? new Date() : undefined,
-              responsavelId: concluida ? funcionario?.id : servico.inspecao?.responsavelId,
-              responsavelNome: concluida ? funcionario?.nome : servico.inspecao?.responsavelNome,
-            }
-          };
-        }
-        return servico;
-      });
-      
-      const orderRef = doc(db, "ordens", id);
-      await updateDoc(orderRef, { servicos });
-      
-      setOrdem({
-        ...ordem,
-        servicos
-      });
-      
-      toast.success(`Inspeção ${tipo === 'inicial' ? 'inicial' : 'final'} ${concluida ? 'concluída' : 'desmarcada'}`);
-    } catch (error) {
-      console.error("Error updating inspecao:", error);
-      toast.error("Erro ao atualizar inspeção");
-    }
-  };
-  
-  const handleServicoStatusChange = async (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => {
-    if (!id || !ordem) return;
-    
-    try {
-      const servico = ordem.servicos.find(s => s.tipo === servicoTipo);
-      
-      // Verificar se as inspeções foram concluídas
-      if (concluido && (!servico?.inspecao?.inicial || !servico?.inspecao?.final)) {
-        toast.error("As inspeções inicial e final devem ser concluídas antes de finalizar o serviço");
-        return;
-      }
-      
-      const servicos = ordem.servicos.map(servico => {
-        if (servico.tipo === servicoTipo) {
-          return { 
-            ...servico, 
-            concluido,
-            funcionarioId: concluido ? funcionarioId : undefined,
-            funcionarioNome: concluido ? funcionarioNome : undefined,
-            dataConclusao: concluido ? new Date() : undefined
-          };
+          return { ...servico, concluido };
         }
         return servico;
       });
@@ -310,27 +232,6 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
         return imageUrls;
       };
       
-      // Criar estrutura de serviços com objetos de inspeção
-      const servicos = (values.servicosTipos || []).map((tipo: string) => {
-        // Verificar se o serviço já existe na ordem atual
-        const servicoExistente = ordem?.servicos?.find(s => s.tipo === tipo);
-        
-        return {
-          tipo,
-          descricao: values.servicosDescricoes?.[tipo] || "",
-          concluido: servicoExistente?.concluido || false,
-          subatividades: servicoExistente?.subatividades || [],
-          funcionarioId: servicoExistente?.funcionarioId,
-          funcionarioNome: servicoExistente?.funcionarioNome,
-          dataConclusao: servicoExistente?.dataConclusao,
-          // Manter inspeções existentes ou criar novas vazias
-          inspecao: servicoExistente?.inspecao || {
-            inicial: false,
-            final: false
-          }
-        };
-      });
-      
       const updatedOrder: Partial<OrdemServico> = {
         nome: values.nome,
         cliente: {
@@ -341,7 +242,12 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
         dataPrevistaEntrega: values.dataPrevistaEntrega,
         prioridade: values.prioridade,
         motorId: values.motorId,
-        servicos
+        servicos: (values.servicosTipos || []).map((tipo: string) => ({
+          tipo,
+          descricao: values.servicosDescricoes?.[tipo] || "",
+          concluido: false,
+          subatividades: values.servicosSubatividades?.[tipo] || []
+        }))
       };
       
       if (values.fotosEntrada && values.fotosEntrada.length > 0) {
@@ -402,8 +308,12 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
         acc[s.tipo] = s.descricao;
         return acc;
       }, {} as Record<string, string>) || {},
-      // Não incluir subatividades na edição do formulário
-      servicosSubatividades: {}
+      servicosSubatividades: ordem.servicos?.reduce((acc, s) => {
+        if (s.subatividades) {
+          acc[s.tipo] = s.subatividades;
+        }
+        return acc;
+      }, {} as Record<string, SubAtividade[]>) || {}
     };
   };
 

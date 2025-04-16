@@ -141,7 +141,6 @@ type OrdemFormProps = {
   onCancel?: () => void;
   clientes?: Cliente[];
   isLoadingClientes?: boolean;
-  hideSubatividades?: boolean;
 };
 
 const tiposServico: { value: TipoServico; label: string }[] = [
@@ -163,7 +162,6 @@ export default function OrdemForm({
   onCancel,
   clientes = [],
   isLoadingClientes = false,
-  hideSubatividades = false,
 }: OrdemFormProps) {
   const [servicosDescricoes, setServicosDescricoes] = useState<Record<string, string>>({});
   const [servicosSubatividades, setServicosSubatividades] = useState<Record<string, SubAtividade[]>>({});
@@ -679,7 +677,7 @@ export default function OrdemForm({
                                         />
                                       </div>
                                       
-                                      {!hideSubatividades && servicosSubatividades[tipo.value] && (
+                                      {servicosSubatividades[tipo.value] && (
                                         <ServicoSubatividades
                                           tipoServico={tipo.value}
                                           subatividades={servicosSubatividades[tipo.value]}

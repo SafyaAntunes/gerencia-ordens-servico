@@ -28,8 +28,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Building, Mail, Save, User, Key, ClipboardList } from "lucide-react";
-import SubatividadesConfig from "./SubatividadesConfig";
+import { Building, Mail, Save, User, Key } from "lucide-react";
 
 interface ConfiguracoesProps {
   onLogout: () => void;
@@ -143,10 +142,6 @@ export default function Configuracoes({ onLogout }: ConfiguracoesProps) {
             <TabsTrigger value="notificacoes" className="flex items-center gap-2">
               <Mail className="h-4 w-4" />
               Notificações
-            </TabsTrigger>
-            <TabsTrigger value="subatividades" className="flex items-center gap-2">
-              <ClipboardList className="h-4 w-4" />
-              Subatividades
             </TabsTrigger>
           </TabsList>
           
@@ -421,10 +416,6 @@ export default function Configuracoes({ onLogout }: ConfiguracoesProps) {
                 </div>
               </CardFooter>
             </Card>
-          </TabsContent>
-          
-          <TabsContent value="subatividades">
-            <SubatividadesConfig onLogout={onLogout} />
           </TabsContent>
         </Tabs>
       </div>
