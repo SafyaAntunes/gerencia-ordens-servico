@@ -27,7 +27,6 @@ interface SubatividadeListProps {
 
 export function SubatividadeList({ subatividades, isLoading, onEdit, onDelete }: SubatividadeListProps) {
   const [subatividadeToDelete, setSubatividadeToDelete] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -49,19 +48,10 @@ export function SubatividadeList({ subatividades, isLoading, onEdit, onDelete }:
     );
   }
 
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = () => {
     if (subatividadeToDelete) {
-      try {
-        await onDelete(subatividadeToDelete);
-        setSubatividadeToDelete(null);
-        setErrorMessage(null);
-      } catch (error) {
-        if (error instanceof Error) {
-          setErrorMessage(error.message);
-        } else {
-          setErrorMessage("Ocorreu um erro ao excluir a subatividade.");
-        }
-      }
+      onDelete(subatividadeToDelete);
+      setSubatividadeToDelete(null);
     }
   };
 
@@ -92,10 +82,7 @@ export function SubatividadeList({ subatividades, isLoading, onEdit, onDelete }:
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => {
-                      setSubatividadeToDelete(subatividade.id);
-                      setErrorMessage(null);
-                    }}
+                    onClick={() => setSubatividadeToDelete(subatividade.id)}
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
@@ -111,20 +98,14 @@ export function SubatividadeList({ subatividades, isLoading, onEdit, onDelete }:
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
             <AlertDialogDescription>
-              {errorMessage ? (
-                <div className="text-destructive">{errorMessage}</div>
-              ) : (
-                "Tem certeza que deseja excluir esta subatividade? Esta ação não pode ser desfeita."
-              )}
+              Tem certeza que deseja excluir esta subatividade? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setErrorMessage(null)}>Cancelar</AlertDialogCancel>
-            {!errorMessage && (
-              <AlertDialogAction onClick={handleConfirmDelete}>
-                Excluir
-              </AlertDialogAction>
-            )}
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete}>
+              Excluir
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

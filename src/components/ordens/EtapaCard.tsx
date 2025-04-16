@@ -1,15 +1,33 @@
 
-import { useState } from "react";
-import { Servico, TipoServico, EtapaOS } from "@/types/ordens";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
-import { Calendar, CheckCircle, Clock, X } from "lucide-react";
-import { formatDistanceToNow, format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { useState, useEffect } from "react";
+import { Card } from "@/components/ui/card";
+import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
+import { formatTime } from "@/utils/timerUtils";
+import { Progress } from "../ui/progress";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { CheckCircle2, User } from "lucide-react";
+import ServicoTracker from "./ServicoTracker";
+import OrdemCronometro from "./OrdemCronometro";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import { 
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { Funcionario } from "@/types/funcionarios";
 
 interface EtapaCardProps {
   ordemId: string;
@@ -17,249 +35,298 @@ interface EtapaCardProps {
   etapaNome: string;
   funcionarioId: string;
   funcionarioNome?: string;
-  servicos: Servico[];
+  servicos?: Servico[];
   etapaInfo?: {
     concluido?: boolean;
-    funcionarioId?: string;
-    funcionarioNome?: string;
     iniciado?: Date;
     finalizado?: Date;
+    usarCronometro?: boolean;
+    pausas?: { inicio: number; fim?: number; motivo?: string }[];
+    funcionarioId?: string;
+    funcionarioNome?: string;
   };
-  onSubatividadeToggle: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
-  onServicoStatusChange: (servicoTipo: TipoServico, concluido: boolean) => void;
-  onEtapaStatusChange: (etapa: EtapaOS, concluida: boolean) => void;
+  onSubatividadeToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
+  onServicoStatusChange?: (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
+  onEtapaStatusChange?: (etapa: EtapaOS, concluida: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
 }
 
-const EtapaCard = ({
+export default function EtapaCard({
   ordemId,
   etapa,
   etapaNome,
   funcionarioId,
   funcionarioNome,
-  servicos,
+  servicos = [],
   etapaInfo,
   onSubatividadeToggle,
   onServicoStatusChange,
   onEtapaStatusChange
-}: EtapaCardProps) => {
-  const [confirming, setConfirming] = useState(false);
+}: EtapaCardProps) {
+  const [progresso, setProgresso] = useState(0);
+  const [isAtivo, setIsAtivo] = useState(false);
+  const [atribuirFuncionarioDialogOpen, setAtribuirFuncionarioDialogOpen] = useState(false);
+  const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
+  const [funcionarioSelecionadoId, setFuncionarioSelecionadoId] = useState<string>("");
+  const [funcionarioSelecionadoNome, setFuncionarioSelecionadoNome] = useState<string>("");
+  const { funcionario } = useAuth();
   
-  const temSubatividade = servicos.some(s => s.subatividades && s.subatividades.length > 0);
-  const todosSelecionados = servicos.every(s => !s.subatividades || s.subatividades.every(sub => sub.concluida));
-  const todosServicosAtivos = servicos.filter(s => 
-    s.subatividades && s.subatividades.some(sub => sub.selecionada)
-  );
-  const todoServicosConluidos = todosServicosAtivos.length > 0 && todosServicosAtivos.every(s => s.concluido);
+  const podeAtribuirFuncionario = funcionario?.nivelPermissao === 'admin' || 
+                                 funcionario?.nivelPermissao === 'gerente';
+  
+  // Carregar funcionários para o dropdown de atribuição
+  useEffect(() => {
+    const carregarFuncionarios = async () => {
+      try {
+        const funcionariosRef = collection(db, "funcionarios");
+        const snapshot = await getDocs(funcionariosRef);
+        const funcionarios: Funcionario[] = [];
+        
+        snapshot.forEach((doc) => {
+          const data = doc.data() as Funcionario;
+          funcionarios.push({
+            ...data,
+            id: doc.id
+          });
+        });
+        
+        setFuncionariosOptions(funcionarios);
+      } catch (error) {
+        console.error("Erro ao carregar funcionários:", error);
+      }
+    };
+    
+    if (podeAtribuirFuncionario) {
+      carregarFuncionarios();
+    }
+  }, [podeAtribuirFuncionario]);
+  
+  const etapaServicos = (() => {
+    switch(etapa) {
+      case 'retifica':
+        return servicos.filter(servico => 
+          ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo)
+        );
+      case 'montagem':
+        return servicos.filter(servico => servico.tipo === 'montagem');
+      case 'dinamometro':
+        return servicos.filter(servico => servico.tipo === 'dinamometro');
+      case 'lavagem':
+        return servicos.filter(servico => servico.tipo === 'lavagem');
+      case 'inspecao_inicial':
+      case 'inspecao_final':
+        return [];
+      default:
+        return [];
+    }
+  })();
 
-  const handleToggleEtapa = (concluida: boolean) => {
-    if (concluida && !confirming) {
-      setConfirming(true);
+  // Verificar e atualizar o progresso com base nos serviços
+  useEffect(() => {
+    if (etapaServicos.length === 0) return;
+    
+    const servicosConcluidos = etapaServicos.filter(servico => servico.concluido).length;
+    const percentualProgresso = Math.round((servicosConcluidos / etapaServicos.length) * 100);
+    setProgresso(percentualProgresso);
+    
+    // Se todos os serviços estiverem concluídos, marcar a etapa como concluída automaticamente
+    if (servicosConcluidos === etapaServicos.length && !etapaInfo?.concluido && onEtapaStatusChange) {
+      onEtapaStatusChange(etapa, true, funcionario?.id, funcionario?.nome);
+    }
+  }, [etapaServicos, etapaInfo, onEtapaStatusChange]);
+
+  const etapaComCronometro = ['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa);
+  
+  const handleEtapaConcluida = (tempoTotal: number) => {
+    if (onEtapaStatusChange) {
+      // Se o usuário for admin ou gerente, abrir o diálogo para selecionar o funcionário
+      if (podeAtribuirFuncionario) {
+        setAtribuirFuncionarioDialogOpen(true);
+      } else {
+        onEtapaStatusChange(etapa, true, funcionario?.id, funcionario?.nome);
+      }
+    }
+  };
+
+  const handleMarcarConcluido = () => {
+    if (!funcionario?.id) {
+      toast.error("É necessário estar logado para finalizar uma etapa");
       return;
     }
     
-    onEtapaStatusChange(etapa, concluida);
-    setConfirming(false);
+    // Se o usuário for admin ou gerente, abrir o diálogo para selecionar o funcionário
+    if (podeAtribuirFuncionario) {
+      setAtribuirFuncionarioDialogOpen(true);
+    } else {
+      if (onEtapaStatusChange) {
+        onEtapaStatusChange(etapa, true, funcionario.id, funcionario.nome);
+      }
+    }
+  };
+  
+  const handleConfirmarAtribuicao = () => {
+    if (onEtapaStatusChange) {
+      if (funcionarioSelecionadoId) {
+        onEtapaStatusChange(etapa, true, funcionarioSelecionadoId, funcionarioSelecionadoNome);
+      } else {
+        // Se nenhum funcionário for selecionado, usar o usuário atual
+        onEtapaStatusChange(etapa, true, funcionario?.id, funcionario?.nome);
+      }
+    }
+    setAtribuirFuncionarioDialogOpen(false);
   };
 
+  const handleFuncionarioChange = (value: string) => {
+    setFuncionarioSelecionadoId(value);
+    const funcionarioSelecionado = funcionariosOptions.find(f => f.id === value);
+    setFuncionarioSelecionadoNome(funcionarioSelecionado?.nome || "");
+  };
+  
+  const getEtapaStatus = () => {
+    if (etapaInfo?.concluido) {
+      return "concluido";
+    } else if (etapaInfo?.iniciado) {
+      return "em_andamento";
+    } else {
+      return "nao_iniciado";
+    }
+  };
+  
+  // Adicionado para atualizar o status quando o cronômetro estiver ativo
+  useEffect(() => {
+    if (etapaInfo?.iniciado && !etapaInfo?.concluido) {
+      setIsAtivo(true);
+    } else {
+      setIsAtivo(false);
+    }
+  }, [etapaInfo]);
+
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-center">
-          <CardTitle className="text-lg">{etapaNome}</CardTitle>
-          <Badge variant={etapaInfo?.concluido ? "success" : "outline"}>
-            {etapaInfo?.concluido ? "Concluída" : "Em andamento"}
-          </Badge>
+    <Card className="p-6 mb-4">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-xl font-semibold">{etapaNome}</h3>
+        <div className="flex items-center gap-2">
+          {getEtapaStatus() === "concluido" && (
+            <Badge variant="success">
+              Concluído
+            </Badge>
+          )}
+          {getEtapaStatus() === "em_andamento" && (
+            <Badge variant="outline">Em andamento</Badge>
+          )}
+          {getEtapaStatus() === "nao_iniciado" && (
+            <Badge variant="outline" className="bg-gray-100">Não iniciado</Badge>
+          )}
         </div>
-        
-        <CardDescription>
-          {etapaInfo?.funcionarioNome && etapaInfo?.concluido && (
-            <div className="flex items-center text-sm mt-1">
-              <span className="font-medium text-muted-foreground mr-1">
-                Concluída por:
-              </span>
-              <span>{etapaInfo.funcionarioNome}</span>
-            </div>
-          )}
+      </div>
+      
+      {/* Mostrar funcionário que concluiu a etapa */}
+      {etapaInfo?.concluido && etapaInfo?.funcionarioNome && (
+        <div className="mb-4 flex items-center text-sm text-muted-foreground">
+          <User className="h-4 w-4 mr-1" />
+          <span>Concluído por: {etapaInfo.funcionarioNome}</span>
+        </div>
+      )}
+      
+      {etapaServicos.length > 0 && (
+        <div className="mb-4">
+          <Progress value={progresso} className="h-2" />
+        </div>
+      )}
+      
+      {etapaComCronometro && (
+        <div className="p-4 border rounded-md mb-4">
+          <OrdemCronometro
+            ordemId={ordemId}
+            funcionarioId={funcionarioId}
+            funcionarioNome={funcionarioNome}
+            etapa={etapa}
+            onFinish={handleEtapaConcluida}
+            isEtapaConcluida={etapaInfo?.concluido}
+            onStart={() => setIsAtivo(true)}
+          />
           
-          {etapaInfo?.finalizado && (
-            <div className="flex items-center text-sm">
-              <Calendar className="h-3 w-3 mr-1 text-muted-foreground" />
-              <span className="text-muted-foreground">
-                {format(new Date(etapaInfo.finalizado), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-              </span>
+          {!etapaInfo?.concluido && (
+            <div className="mt-4">
+              <Button 
+                variant="default" 
+                size="sm" 
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                onClick={handleMarcarConcluido}
+              >
+                <CheckCircle2 className="h-4 w-4 mr-1" />
+                Marcar Etapa como Concluída
+              </Button>
             </div>
           )}
-        </CardDescription>
-      </CardHeader>
-
-      <CardContent className="pb-2">
-        {servicos.length > 0 ? (
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium">
-              Serviços desta etapa:
-            </h3>
-            
-            <Accordion type="multiple" className="w-full">
-              {servicos.map((servico, index) => {
-                const hasSubatividades = servico.subatividades && servico.subatividades.some(s => s.selecionada);
-                
-                return (
-                  <AccordionItem 
-                    key={`${servico.tipo}-${index}`} 
-                    value={`${servico.tipo}-${index}`}
-                    className={`${servico.concluido ? 'border-green-100 bg-green-50' : ''}`}
-                  >
-                    <AccordionTrigger className="py-2">
-                      <div className="flex items-center justify-between w-full pr-4">
-                        <div className="flex items-center">
-                          <div className={`w-2 h-2 rounded-full mr-2 ${servico.concluido ? 'bg-green-500' : 'bg-orange-500'}`} />
-                          <span>{servico.tipo.charAt(0).toUpperCase() + servico.tipo.slice(1).replace('_', ' ')}</span>
-                        </div>
-                        
-                        {servico.concluido && (
-                          <Badge variant="outline" className="bg-green-100 ml-2 text-xs">
-                            Concluído
-                          </Badge>
-                        )}
-                      </div>
-                    </AccordionTrigger>
-                    
-                    <AccordionContent>
-                      {servico.funcionarioNome && servico.concluido && (
-                        <div className="mb-2 text-sm flex flex-col">
-                          <span className="text-muted-foreground">
-                            Concluído por: <span className="font-medium">{servico.funcionarioNome}</span>
-                          </span>
-                          {servico.dataConclusao && (
-                            <span className="text-xs text-muted-foreground flex items-center">
-                              <Clock className="h-3 w-3 mr-1" />
-                              {format(new Date(servico.dataConclusao), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      
-                      {hasSubatividades ? (
-                        <div className="space-y-2 py-1">
-                          {servico.subatividades
-                            .filter(sub => sub.selecionada)
-                            .map((sub) => (
-                              <div key={sub.id} className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={`${servico.tipo}-${sub.id}`}
-                                  checked={sub.concluida}
-                                  onCheckedChange={(checked) => 
-                                    onSubatividadeToggle(servico.tipo as TipoServico, sub.id, !!checked)
-                                  }
-                                  disabled={etapaInfo?.concluido}
-                                />
-                                <label
-                                  htmlFor={`${servico.tipo}-${sub.id}`}
-                                  className={`text-sm ${sub.concluida ? 'line-through text-muted-foreground' : ''}`}
-                                >
-                                  {sub.nome}
-                                </label>
-                              </div>
-                            ))}
-                          
-                          <div className="flex justify-end pt-2">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant={servico.concluido ? "destructive" : "default"}
-                              onClick={() => onServicoStatusChange(servico.tipo as TipoServico, !servico.concluido)}
-                              disabled={etapaInfo?.concluido}
-                            >
-                              {servico.concluido ? (
-                                <>
-                                  <X className="h-4 w-4 mr-1" />
-                                  Reabrir
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle className="h-4 w-4 mr-1" />
-                                  Marcar concluído
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="py-1 text-sm text-muted-foreground italic">
-                          Não há subatividades selecionadas para este serviço.
-                        </div>
-                      )}
-                      
-                      {servico.descricao && (
-                        <div className="mt-2 text-sm">
-                          <Separator className="my-1" />
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {servico.descricao}
-                          </p>
-                        </div>
-                      )}
-                    </AccordionContent>
-                  </AccordionItem>
-                );
-              })}
-            </Accordion>
-          </div>
-        ) : (
-          <div className="py-2 text-sm text-muted-foreground italic">
-            Não há serviços associados a esta etapa.
-          </div>
-        )}
-      </CardContent>
-
-      <CardFooter className="pt-2">
-        {confirming ? (
-          <div className="w-full space-y-2">
-            <p className="text-sm font-medium">
-              Tem certeza que deseja marcar esta etapa como concluída?
-            </p>
-            <div className="flex justify-end space-x-2">
-              <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>
-                Cancelar
-              </Button>
-              <Button 
-                size="sm" 
-                onClick={() => handleToggleEtapa(true)}
-              >
-                Confirmar
-              </Button>
+        </div>
+      )}
+      
+      {etapaServicos.length > 0 && (
+        <div className="space-y-4">
+          {etapaServicos.map((servico, i) => (
+            <ServicoTracker
+              key={`${servico.tipo}-${i}`}
+              servico={servico}
+              ordemId={ordemId}
+              funcionarioId={funcionarioId}
+              funcionarioNome={funcionarioNome}
+              onSubatividadeToggle={
+                onSubatividadeToggle ? 
+                  (subId, checked) => onSubatividadeToggle(servico.tipo, subId, checked) : 
+                  () => {}
+              }
+              onServicoStatusChange={
+                onServicoStatusChange ? 
+                  (concluido, funcId, funcNome) => onServicoStatusChange(servico.tipo, concluido, funcId, funcNome) : 
+                  () => {}
+              }
+            />
+          ))}
+        </div>
+      )}
+      
+      {/* Dialog para atribuir funcionário */}
+      <Dialog open={atribuirFuncionarioDialogOpen} onOpenChange={setAtribuirFuncionarioDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Atribuir Funcionário</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="funcionario-select-etapa" className="block text-sm font-medium">
+                Selecione o funcionário que executou esta etapa
+              </label>
+              
+              <Select onValueChange={handleFuncionarioChange} value={funcionarioSelecionadoId}>
+                <SelectTrigger id="funcionario-select-etapa" className="w-full">
+                  <SelectValue placeholder="Selecione um funcionário" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={funcionario?.id || ""}>
+                    {funcionario?.nome || "Eu mesmo"} (você)
+                  </SelectItem>
+                  {funcionariosOptions
+                    .filter(f => f.id !== funcionario?.id)
+                    .map(f => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.nome}
+                      </SelectItem>
+                    ))
+                  }
+                </SelectContent>
+              </Select>
             </div>
           </div>
-        ) : (
-          <div className="w-full">
-            <Button 
-              className="w-full" 
-              variant={etapaInfo?.concluido ? "destructive" : "default"}
-              onClick={() => handleToggleEtapa(!etapaInfo?.concluido)}
-              disabled={!etapaInfo?.concluido && (!temSubatividade || !todoServicosConluidos)}
-            >
-              {etapaInfo?.concluido ? (
-                <>
-                  <X className="mr-2 h-4 w-4" />
-                  Reabrir Etapa
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Concluir Etapa
-                </>
-              )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAtribuirFuncionarioDialogOpen(false)}>
+              Cancelar
             </Button>
-            
-            {!etapaInfo?.concluido && (!temSubatividade || !todoServicosConluidos) && (
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                Todos os serviços devem ser concluídos antes de finalizar a etapa.
-              </p>
-            )}
-          </div>
-        )}
-      </CardFooter>
+            <Button onClick={handleConfirmarAtribuicao} className="bg-blue-500 hover:bg-blue-600">
+              Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
-};
-
-export default EtapaCard;
+}

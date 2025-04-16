@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Layout from "@/components/layout/Layout";
 import { SubatividadeForm } from "@/components/subatividades/SubatividadeForm";
@@ -108,22 +107,13 @@ export default function SubatividadesConfig({ onLogout }: { onLogout?: () => voi
         ...prev,
         [tipoServico]: prev[tipoServico].filter(s => s.id !== id)
       }));
-      return true;
     } catch (error) {
       console.error("Erro ao excluir subatividade:", error);
-      let errorMessage = "Não foi possível excluir a subatividade.";
-      
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      
       toast({
         title: "Erro ao excluir",
-        description: errorMessage,
+        description: "Não foi possível excluir a subatividade.",
         variant: "destructive"
       });
-      
-      throw error; // Re-throw para o componente SubatividadeList capturar
     }
   };
 
