@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +38,7 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
   const [ordemSelecionada, setOrdemSelecionada] = useState<OrdemServico | null>(null);
   const [filteredOrdens, setFilteredOrdens] = useState<OrdemServico[]>([]);
   const [activeTab, setActiveTab] = useState("mensal");
+  const [tipoSelecionado, setTipoSelecionado] = useState<TipoServico>("bloco");
   const [subatividades, setSubatividades] = useState<Record<TipoServico, SubAtividade[]>>({
     bloco: [],
     biela: [],
@@ -729,18 +731,7 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
     );
   };
   
-  if (isLoading) {
-    return (
-      <Layout onLogout={onLogout}>
-        <div className="flex items-center justify-center h-full">
-          <p>Carregando dados dos relatórios...</p>
-        </div>
-      </Layout>
-    );
-  }
-  
   const renderSubatividadeConfig = () => {
-    const [tipoSelecionado, setTipoSelecionado] = useState<TipoServico>("bloco");
     const subatividadesTipo = subatividades[tipoSelecionado] || [];
     
     return (
@@ -832,6 +823,16 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
       </div>
     );
   };
+  
+  if (isLoading) {
+    return (
+      <Layout onLogout={onLogout}>
+        <div className="flex items-center justify-center h-full">
+          <p>Carregando dados dos relatórios...</p>
+        </div>
+      </Layout>
+    );
+  }
   
   return (
     <Layout onLogout={onLogout}>
