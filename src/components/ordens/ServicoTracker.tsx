@@ -12,7 +12,8 @@ import {
   Pause, 
   StopCircle, 
   Clock4,
-  User
+  User,
+  Microscope
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatTime } from "@/utils/timerUtils";
@@ -48,6 +49,7 @@ interface ServicoTrackerProps {
   funcionarioNome?: string;
   onSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
   onServicoStatusChange: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
+  onInspecaoChange: (tipo: 'inicial' | 'final', concluida: boolean) => void;
   className?: string;
 }
 
@@ -58,6 +60,7 @@ export default function ServicoTracker({
   funcionarioNome,
   onSubatividadeToggle,
   onServicoStatusChange,
+  onInspecaoChange,
   className,
 }: ServicoTrackerProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -195,6 +198,17 @@ export default function ServicoTracker({
       return;
     }
     
+    // Verificar se as inspeções inicial e final foram realizadas
+    if (!servico.inspecao?.inicial) {
+      toast.error("É necessário realizar a inspeção inicial antes de concluir o serviço");
+      return;
+    }
+    
+    if (!servico.inspecao?.final) {
+      toast.error("É necessário realizar a inspeção final antes de concluir o serviço");
+      return;
+    }
+    
     if (isRunning || isPaused) {
       handleFinish();
     }
@@ -223,6 +237,15 @@ export default function ServicoTracker({
     setFuncionarioSelecionadoId(value);
     const funcionarioSelecionado = funcionariosOptions.find(f => f.id === value);
     setFuncionarioSelecionadoNome(funcionarioSelecionado?.nome || "");
+  };
+  
+  const handleInspecaoChange = (tipo: 'inicial' | 'final') => {
+    if (!temPermissao) {
+      toast.error("Você não tem permissão para editar este tipo de serviço");
+      return;
+    }
+    
+    onInspecaoChange(tipo, !servico.inspecao?.[tipo]);
   };
   
   const servicoStatus = getServicoStatus();
@@ -255,7 +278,7 @@ export default function ServicoTracker({
               <Progress value={progressPercentage} className="h-2" />
               <div className="flex justify-between mt-1">
                 <p className="text-xs text-muted-foreground">
-                  {completedSubatividades} de {totalSubatividades} concluídas
+                  {completedSubatividades} de {totalSubatividades} subatividades concluídas
                 </p>
                 {tempoTotalEstimado > 0 && (
                   <div className="flex items-center gap-1">
@@ -275,6 +298,22 @@ export default function ServicoTracker({
                 <span>Concluído por: {servico.funcionarioNome}</span>
               </div>
             )}
+            
+            {/* Status das inspeções */}
+            <div className="mt-2 flex items-center gap-4">
+              <div className="flex items-center text-xs">
+                <Microscope className="h-3 w-3 mr-1" />
+                <span className={servico.inspecao?.inicial ? "text-green-600" : "text-muted-foreground"}>
+                  Inspeção Inicial: {servico.inspecao?.inicial ? "Realizada" : "Pendente"}
+                </span>
+              </div>
+              <div className="flex items-center text-xs">
+                <Microscope className="h-3 w-3 mr-1" />
+                <span className={servico.inspecao?.final ? "text-green-600" : "text-muted-foreground"}>
+                  Inspeção Final: {servico.inspecao?.final ? "Realizada" : "Pendente"}
+                </span>
+              </div>
+            </div>
           </CardHeader>
         </CollapsibleTrigger>
 
@@ -282,6 +321,53 @@ export default function ServicoTracker({
           {servico.descricao && (
             <CardContent className="pt-0 pb-3">
               <p className="text-sm text-muted-foreground">{servico.descricao}</p>
+            </CardContent>
+          )}
+          
+          {/* Seção de inspeções */}
+          <CardContent className="pt-0 pb-3">
+            <h4 className="font-medium mb-2">Inspeções</h4>
+            <div className="flex flex-col space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Inspeção Inicial</span>
+                <Button 
+                  variant={servico.inspecao?.inicial ? "outline" : "default"}
+                  size="sm"
+                  onClick={() => handleInspecaoChange('inicial')}
+                  disabled={!temPermissao}
+                  className={servico.inspecao?.inicial ? "border-green-500 text-green-500" : ""}
+                >
+                  {servico.inspecao?.inicial ? "Realizada" : "Marcar como realizada"}
+                </Button>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Inspeção Final</span>
+                <Button 
+                  variant={servico.inspecao?.final ? "outline" : "default"}
+                  size="sm"
+                  onClick={() => handleInspecaoChange('final')}
+                  disabled={!temPermissao}
+                  className={servico.inspecao?.final ? "border-green-500 text-green-500" : ""}
+                >
+                  {servico.inspecao?.final ? "Realizada" : "Marcar como realizada"}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+          
+          {/* Seção de adição de subatividades */}
+          {temPermissao && (
+            <CardContent className="pt-0 pb-3">
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="font-medium">Subatividades</h4>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => window.location.href = `/ordens/${ordemId}/subatividades/${servico.tipo}`}
+                >
+                  Gerenciar Subatividades
+                </Button>
+              </div>
             </CardContent>
           )}
           
@@ -384,6 +470,7 @@ export default function ServicoTracker({
                 size="sm" 
                 onClick={handleMarcarConcluido}
                 className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                disabled={!servico.inspecao?.inicial || !servico.inspecao?.final}
               >
                 <CheckCircle2 className="h-4 w-4 mr-1" />
                 Marcar Concluído

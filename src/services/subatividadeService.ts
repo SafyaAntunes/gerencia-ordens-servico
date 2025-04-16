@@ -28,6 +28,7 @@ export async function getSubatividades(): Promise<Record<TipoServico, SubAtivida
         id: data.id,
         nome: data.nome,
         selecionada: false,
+        concluida: false,
         precoHora: data.precoHora || 0,
       };
       
@@ -129,5 +130,44 @@ export async function getSubatividadesByTipo(tipoServico: TipoServico): Promise<
   } catch (error) {
     console.error(`Erro ao buscar subatividades do tipo ${tipoServico}:`, error);
     throw error;
+  }
+}
+
+// Atualizar o status de uma subatividade (concluída ou não)
+export async function updateSubatividadeStatus(
+  ordemId: string,
+  servicoTipo: TipoServico,
+  subatividadeId: string,
+  concluida: boolean
+): Promise<boolean> {
+  try {
+    const ordemRef = doc(db, 'ordens', ordemId);
+    const ordemDoc = await getDocs(query(collection(db, 'ordens'), where('id', '==', ordemId)));
+    
+    if (ordemDoc.empty) {
+      toast.error("Ordem de serviço não encontrada");
+      return false;
+    }
+    
+    const ordemData = ordemDoc.docs[0].data();
+    const servicos = ordemData.servicos.map((servico: any) => {
+      if (servico.tipo === servicoTipo && servico.subatividades) {
+        const updatedSubatividades = servico.subatividades.map((sub: SubAtividade) => {
+          if (sub.id === subatividadeId) {
+            return { ...sub, concluida };
+          }
+          return sub;
+        });
+        
+        return { ...servico, subatividades: updatedSubatividades };
+      }
+      return servico;
+    });
+    
+    await setDoc(ordemRef, { ...ordemData, servicos }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error('Erro ao atualizar status da subatividade:', error);
+    return false;
   }
 }

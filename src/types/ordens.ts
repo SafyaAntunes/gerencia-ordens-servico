@@ -39,6 +39,16 @@ export type SubAtividade = {
   tempoEstimado?: number; // Tempo estimado em horas
 };
 
+export type ServicoInspecao = {
+  inicial: boolean; // Indica se a inspeção inicial foi realizada
+  final: boolean;   // Indica se a inspeção final foi realizada
+  observacoes?: string; // Observações da inspeção
+  responsavelId?: string; // ID do funcionário responsável pela inspeção
+  responsavelNome?: string; // Nome do funcionário responsável pela inspeção
+  dataInspecaoInicial?: Date; // Data da inspeção inicial
+  dataInspecaoFinal?: Date; // Data da inspeção final
+};
+
 export type Servico = {
   tipo: TipoServico;
   descricao: string;
@@ -47,6 +57,7 @@ export type Servico = {
   funcionarioId?: string; // ID do funcionário que concluiu o serviço
   funcionarioNome?: string; // Nome do funcionário que concluiu o serviço
   dataConclusao?: Date; // Data de conclusão do serviço
+  inspecao: ServicoInspecao; // Inspeções específicas para o serviço
 };
 
 export type StatusOS = 

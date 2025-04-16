@@ -18,6 +18,7 @@ import RelatoriosFinanceiro from "./pages/RelatoriosFinanceiro";
 import Configuracoes from "./pages/Configuracoes";
 import Login from "./pages/Login";
 import SubatividadesConfig from "./pages/SubatividadesConfig";
+import SubatividadesServico from "./pages/SubatividadesServico";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 
 // Authentication guard component
@@ -94,6 +95,13 @@ const AppRoutes = () => {
       <Route path="/ordens/:id" element={
         <PrivateRoute requiredPermission="tecnico">
           <OrdemDetalhes onLogout={handleLogout} />
+        </PrivateRoute>
+      } />
+      
+      {/* Gerenciamento de subatividades de uma ordem específica */}
+      <Route path="/ordens/:ordemId/subatividades/:tipoServico" element={
+        <PrivateRoute requiredPermission="tecnico">
+          <SubatividadesServico />
         </PrivateRoute>
       } />
       
