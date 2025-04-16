@@ -2,6 +2,7 @@
 import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, setDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { SubAtividade, TipoServico } from '@/types/ordens';
+import { toast } from 'sonner';
 
 // Obter todas as subatividades agrupadas por tipo de serviço
 export async function getSubatividades(): Promise<Record<TipoServico, SubAtividade[]>> {
@@ -56,14 +57,49 @@ export async function saveSubatividade(subatividade: SubAtividade, tipoServico: 
   }
 }
 
-// Excluir uma subatividade
-export async function deleteSubatividade(id: string, tipoServico: TipoServico): Promise<void> {
+// Verificar se uma subatividade está em uso em alguma ordem de serviço
+async function verificarSubatividadeEmUso(id: string): Promise<boolean> {
   try {
+    const ordensRef = collection(db, 'ordens');
+    const snapshot = await getDocs(ordensRef);
+    
+    for (const doc of snapshot.docs) {
+      const ordem = doc.data();
+      
+      // Verifica se algum serviço da ordem contém a subatividade
+      for (const servico of ordem.servicos || []) {
+        const subatividades = servico.subatividades || [];
+        if (subatividades.some(sub => sub.id === id && sub.selecionada)) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Erro ao verificar uso da subatividade:', error);
+    throw error;
+  }
+}
+
+// Excluir uma subatividade
+export async function deleteSubatividade(id: string, tipoServico: TipoServico): Promise<boolean> {
+  try {
+    // Verificar se está em uso
+    const emUso = await verificarSubatividadeEmUso(id);
+    
+    if (emUso) {
+      toast.error("Não é possível excluir esta subatividade pois ela está em uso em ordens de serviço ativas");
+      return false;
+    }
+    
     const subatividadeRef = doc(db, 'subatividades', id);
     await deleteDoc(subatividadeRef);
+    return true;
   } catch (error) {
     console.error('Erro ao excluir subatividade:', error);
-    throw error;
+    toast.error("Erro ao excluir subatividade");
+    return false;
   }
 }
 
