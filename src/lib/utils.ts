@@ -38,3 +38,26 @@ export function formatDateTime(date: Date | null | undefined, locale = 'pt-BR'):
   
   return `${dateObj.toLocaleDateString(locale)} ${dateObj.getHours().toString().padStart(2, '0')}:${dateObj.getMinutes().toString().padStart(2, '0')}`;
 }
+
+// Format time as hours, minutes, seconds
+export function formatTime(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+  
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+}
+
+// Format duration in a human readable format (e.g. 2h 30min)
+export function formatDuration(seconds: number): string {
+  if (seconds <= 0) return '0 min';
+  
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes > 0 ? `${minutes}min` : ''}`;
+  } else {
+    return `${minutes}min`;
+  }
+}

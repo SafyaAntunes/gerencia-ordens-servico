@@ -51,8 +51,10 @@ export async function saveSubatividade(subatividade: SubAtividade, tipoServico: 
       ...subatividade,
       tipoServico,
     });
+    toast.success("Subatividade salva com sucesso!");
   } catch (error) {
     console.error('Erro ao salvar subatividade:', error);
+    toast.error("Erro ao salvar subatividade");
     throw error;
   }
 }
@@ -95,6 +97,7 @@ export async function deleteSubatividade(id: string, tipoServico: TipoServico): 
     
     const subatividadeRef = doc(db, 'subatividades', id);
     await deleteDoc(subatividadeRef);
+    toast.success("Subatividade excluída com sucesso!");
     return true;
   } catch (error) {
     console.error('Erro ao excluir subatividade:', error);
