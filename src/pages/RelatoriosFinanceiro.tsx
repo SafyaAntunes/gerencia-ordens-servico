@@ -3,17 +3,14 @@ import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileBarChart, TrendingUp, Clock, Search, AlertCircle, CheckCircle, Layers } from "lucide-react";
+import { FileBarChart, TrendingUp, Clock, Search, AlertCircle, CheckCircle } from "lucide-react";
 import { LogoutProps } from "@/types/props";
 import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { OrdemServico, EtapaOS, SubAtividade, TipoServico } from "@/types/ordens";
+import { OrdemServico, EtapaOS } from "@/types/ordens";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
-import { getSubatividades } from "@/services/subatividadeService";
 import { 
   ResponsiveContainer, 
   BarChart as RechartsBarChart, 
@@ -21,16 +18,10 @@ import {
   XAxis, 
   YAxis, 
   Tooltip, 
-  Legend,
-  PieChart,
-  Pie,
-  Cell
+  Legend
 } from "recharts";
 
 interface RelatoriosFinanceiroProps extends LogoutProps {}
-
-// Cores para o gráfico de pizza
-const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088FE'];
 
 const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
   const [ordensDados, setOrdensDados] = useState<OrdemServico[]>([]);
@@ -39,16 +30,6 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
   const [ordemSelecionada, setOrdemSelecionada] = useState<OrdemServico | null>(null);
   const [filteredOrdens, setFilteredOrdens] = useState<OrdemServico[]>([]);
   const [activeTab, setActiveTab] = useState("mensal");
-  const [subatividades, setSubatividades] = useState<Record<TipoServico, SubAtividade[]>>({
-    bloco: [],
-    biela: [],
-    cabecote: [],
-    virabrequim: [],
-    eixo_comando: [],
-    montagem: [],
-    dinamometro: [],
-    lavagem: [],
-  });
   
   useEffect(() => {
     const fetchOrdens = async () => {
@@ -76,17 +57,7 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
       }
     };
     
-    const fetchSubatividades = async () => {
-      try {
-        const subatividadesData = await getSubatividades();
-        setSubatividades(subatividadesData);
-      } catch (error) {
-        console.error("Erro ao buscar subatividades:", error);
-      }
-    };
-    
     fetchOrdens();
-    fetchSubatividades();
   }, []);
   
   // Filtrar ordens com base no termo de pesquisa
@@ -282,159 +253,12 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
     });
     
     const margemLucro = ((valorTotal - custoTotal) / valorTotal) * 100;
-    const lucroBruto = valorTotal - custoTotal;
     
     return {
       custoTotal,
       valorTotal,
-      lucro: lucroBruto,
-      margemLucro,
-      payback: custoTotal > 0 ? valorTotal / custoTotal : 0
-    };
-  };
-  
-  // Calcular o tempo previsto e o tempo real gasto na OS
-  const calcularTempoOS = (ordem: OrdemServico) => {
-    // Tempo previsto total (em horas) - simulado
-    const tempoPrevisto = 15; // 15 horas
-    
-    // Calcular tempo real com base nas etapas concluídas
-    let tempoRealTotal = 0;
-    const etapas = ordem.etapasAndamento || {};
-    
-    Object.entries(etapas).forEach(([_, etapa]) => {
-      if (etapa.iniciado && etapa.finalizado) {
-        const horasGastas = (etapa.finalizado.getTime() - etapa.iniciado.getTime()) / 3600000;
-        tempoRealTotal += horasGastas;
-      }
-    });
-    
-    // Calcular eficiência
-    const eficiencia = tempoPrevisto > 0 ? (tempoPrevisto / (tempoRealTotal || tempoPrevisto)) * 100 : 0;
-    
-    return {
-      tempoPrevisto,
-      tempoReal: tempoRealTotal,
-      eficiencia: Math.min(eficiencia, 100) // Limitar a 100%
-    };
-  };
-  
-  // Função para preparar dados do gráfico de subatividades
-  const prepararDadosSubatividades = (ordem: OrdemServico) => {
-    // Dados para o gráfico de custos por subatividade
-    const dadosCustos: { name: string; value: number; color: string }[] = [];
-    // Dados para o gráfico de lucro por subatividade
-    const dadosLucro: { name: string; lucro: number }[] = [];
-    // Dados para a tabela de subatividades
-    const tabelaSubatividades: {
-      grupo: string;
-      servico: string;
-      subatividade: string;
-      valor: number;
-      custo: number;
-      lucro: number;
-      margem: number;
-    }[] = [];
-    
-    // Se não houver serviços, retornar arrays vazios
-    if (!ordem.servicos || ordem.servicos.length === 0) {
-      return { dadosCustos, dadosLucro, tabelaSubatividades };
-    }
-    
-    // Mapear subatividades mais lucrativas e onerosas
-    let subatividadeMaisLucrativa = { nome: "", lucro: 0 };
-    let subatividadeMaisOnerosa = { nome: "", custo: 0 };
-    
-    // Para cada serviço na ordem
-    ordem.servicos.forEach((servico) => {
-      // Nome do serviço baseado no tipo
-      const nomeServico = (() => {
-        switch (servico.tipo) {
-          case "bloco": return "Planejamento";
-          case "biela": return "Jateamento";
-          case "cabecote": return "Retífica";
-          case "virabrequim": return "Retífica";
-          case "eixo_comando": return "Acabamento";
-          case "montagem": return "Montagem";
-          case "dinamometro": return "Dinamômetro";
-          case "lavagem": return "Lavagem";
-          default: return servico.tipo;
-        }
-      })();
-      
-      // Para cada subatividade no serviço
-      (servico.subatividades || []).forEach((subatividade) => {
-        // Simular valor e custo para cada subatividade
-        const custoHora = subatividade.precoHora || 100;
-        const horasGastas = Math.random() * 2 + 0.5; // Entre 0.5 e 2.5 horas
-        const custo = custoHora * horasGastas;
-        const valor = custo * 1.4; // 40% de margem
-        const lucro = valor - custo;
-        const margem = (lucro / valor) * 100;
-        
-        // Adicionar à tabela
-        tabelaSubatividades.push({
-          grupo: (() => {
-            switch (servico.tipo) {
-              case "bloco": return "Bloco";
-              case "biela": return "Biela";
-              case "cabecote": return "Cabeçote";
-              case "virabrequim": return "Virabrequim";
-              case "eixo_comando": return "Eixo Comando";
-              case "montagem": return "Montagem";
-              case "dinamometro": return "Dinamômetro";
-              case "lavagem": return "Lavagem";
-              default: return servico.tipo;
-            }
-          })(),
-          servico: nomeServico,
-          subatividade: subatividade.nome,
-          valor,
-          custo,
-          lucro,
-          margem
-        });
-        
-        // Verificar se é a mais lucrativa ou onerosa
-        if (lucro > subatividadeMaisLucrativa.lucro) {
-          subatividadeMaisLucrativa = { nome: subatividade.nome, lucro };
-        }
-        
-        if (custo > subatividadeMaisOnerosa.custo) {
-          subatividadeMaisOnerosa = { nome: subatividade.nome, custo };
-        }
-        
-        // Adicionar aos dados do gráfico de custos
-        const indexCusto = dadosCustos.findIndex(item => item.name === subatividade.nome);
-        if (indexCusto === -1) {
-          dadosCustos.push({
-            name: subatividade.nome,
-            value: custo,
-            color: COLORS[dadosCustos.length % COLORS.length]
-          });
-        } else {
-          dadosCustos[indexCusto].value += custo;
-        }
-        
-        // Adicionar aos dados do gráfico de lucro
-        const indexLucro = dadosLucro.findIndex(item => item.name === subatividade.nome);
-        if (indexLucro === -1) {
-          dadosLucro.push({
-            name: subatividade.nome,
-            lucro
-          });
-        } else {
-          dadosLucro[indexLucro].lucro += lucro;
-        }
-      });
-    });
-    
-    return { 
-      dadosCustos, 
-      dadosLucro, 
-      tabelaSubatividades,
-      subatividadeMaisLucrativa,
-      subatividadeMaisOnerosa
+      lucro: valorTotal - custoTotal,
+      margemLucro
     };
   };
   
@@ -452,266 +276,53 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
     ];
     
     const totaisOrdem = calcularTotaisOrdem(ordemSelecionada);
-    const temposOS = calcularTempoOS(ordemSelecionada);
-    const dadosSubatividades = prepararDadosSubatividades(ordemSelecionada);
-    
-    // Número de etapas concluídas
-    const etapasConcluidas = Object.values(ordemSelecionada.etapasAndamento || {})
-      .filter(etapa => etapa.concluido).length;
     
     return (
-      <div className="space-y-6 mt-6">
-        {/* Resumo da OS */}
+      <div className="space-y-4 mt-6">
         <Card>
           <CardHeader>
-            <CardTitle>Resumo da Ordem de Serviço</CardTitle>
+            <CardTitle>Análise Financeira da Ordem #{ordemSelecionada.id}</CardTitle>
             <CardDescription>
-              OS #{ordemSelecionada.id} - {ordemSelecionada.nome} | Cliente: {ordemSelecionada.cliente.nome}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Data de Abertura</p>
-                <p className="font-medium">{formatDate(ordemSelecionada.dataAbertura)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Status Geral</p>
-                <p className="font-medium flex items-center">
-                  <Badge variant={ordemSelecionada.status === "concluida" ? "success" : "default"} className="mr-1">
-                    {ordemSelecionada.status === "concluida" ? "Concluída" : "Em andamento"}
-                  </Badge>
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Responsável Geral</p>
-                <p className="font-medium">{ordemSelecionada.responsavel?.nome || "Não atribuído"}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Data Estimada de Entrega</p>
-                <p className="font-medium">{formatDate(ordemSelecionada.dataPrevistaEntrega)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        {/* Produtividade da OS */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Produtividade da OS</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Tempo Total Previsto</p>
-                <p className="font-medium">{temposOS.tempoPrevisto}h</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Tempo Real Gasto</p>
-                <p className="font-medium">{temposOS.tempoReal.toFixed(2)}h</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Eficiência</p>
-                <p className="font-medium">{temposOS.eficiencia.toFixed(0)}%</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Etapas Concluídas</p>
-                <p className="font-medium">{etapasConcluidas} de 6</p>
-              </div>
-            </div>
-            
-            <div className="mt-2">
-              <p className="text-sm text-muted-foreground mb-1">Progresso de Eficiência</p>
-              <Progress value={temposOS.eficiencia} className="h-2" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        {/* Indicador de Rentabilidade */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Indicador de Rentabilidade da OS</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Custo Total Real</p>
-                <p className="text-2xl font-bold">
-                  {formatCurrency(totaisOrdem.custoTotal)}
-                </p>
-              </div>
-              
-              <div>
-                <p className="text-sm text-muted-foreground">Valor Faturado ao Cliente</p>
-                <p className="text-2xl font-bold">
-                  {formatCurrency(totaisOrdem.valorTotal)}
-                </p>
-              </div>
-              
-              <div>
-                <p className="text-sm text-muted-foreground">Lucro Bruto</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {formatCurrency(totaisOrdem.lucro)}
-                </p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Margem de Lucro</p>
-                <p className={`text-xl font-bold ${totaisOrdem.margemLucro >= 30 ? 'text-green-600' : 'text-amber-600'}`}>
-                  {totaisOrdem.margemLucro.toFixed(2)}%
-                </p>
-              </div>
-              
-              <div>
-                <p className="text-sm text-muted-foreground">Payback</p>
-                <p className="text-xl font-bold">
-                  {totaisOrdem.payback.toFixed(2)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        {/* Relatório Financeiro */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div>
-              <CardTitle>Relatório Financeiro</CardTitle>
-              <CardDescription>
-                Detalhamento financeiro por subatividade
-              </CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-8">
-              {/* Tabela de subatividades */}
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-muted">
-                      <th className="p-2 text-left">Grupo</th>
-                      <th className="p-2 text-left">Serviço</th>
-                      <th className="p-2 text-left">Subatividade</th>
-                      <th className="p-2 text-right">Valor (R$)</th>
-                      <th className="p-2 text-right">Custo (R$)</th>
-                      <th className="p-2 text-right">Lucro (R$)</th>
-                      <th className="p-2 text-right">Margem (%)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dadosSubatividades.tabelaSubatividades.map((item, index) => (
-                      <tr key={index} className="border-b">
-                        <td className="p-2">{item.grupo}</td>
-                        <td className="p-2">{item.servico}</td>
-                        <td className="p-2">{item.subatividade}</td>
-                        <td className="p-2 text-right">{formatCurrency(item.valor)}</td>
-                        <td className="p-2 text-right">{formatCurrency(item.custo)}</td>
-                        <td className="p-2 text-right">{formatCurrency(item.lucro)}</td>
-                        <td className={`p-2 text-right ${item.margem >= 30 ? 'text-green-600' : 'text-amber-600'}`}>
-                          {item.margem.toFixed(2)}%
-                        </td>
-                      </tr>
-                    ))}
-                    <tr className="bg-muted font-medium">
-                      <td colSpan={3} className="p-2 text-right">Total</td>
-                      <td className="p-2 text-right">
-                        {formatCurrency(dadosSubatividades.tabelaSubatividades.reduce((sum, item) => sum + item.valor, 0))}
-                      </td>
-                      <td className="p-2 text-right">
-                        {formatCurrency(dadosSubatividades.tabelaSubatividades.reduce((sum, item) => sum + item.custo, 0))}
-                      </td>
-                      <td className="p-2 text-right">
-                        {formatCurrency(dadosSubatividades.tabelaSubatividades.reduce((sum, item) => sum + item.lucro, 0))}
-                      </td>
-                      <td className="p-2 text-right">
-                        {(dadosSubatividades.tabelaSubatividades.reduce((sum, item) => sum + item.lucro, 0) / 
-                          dadosSubatividades.tabelaSubatividades.reduce((sum, item) => sum + item.valor, 0) * 100).toFixed(2)}%
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              
-              {/* Métricas de subatividades */}
-              <div className="space-y-2">
-                <div className="flex flex-col sm:flex-row sm:space-x-4">
-                  <div className="mb-2 sm:mb-0">
-                    <p className="text-sm font-medium flex items-center">
-                      <span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>
-                      Subatividade mais lucrativa:
-                    </p>
-                    <p className="ml-5 font-bold">
-                      {dadosSubatividades.subatividadeMaisLucrativa.nome} ({formatCurrency(dadosSubatividades.subatividadeMaisLucrativa.lucro)})
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium flex items-center">
-                      <span className="inline-block w-3 h-3 bg-red-500 rounded-full mr-2"></span>
-                      Subatividade mais onerosa:
-                    </p>
-                    <p className="ml-5 font-bold">
-                      {dadosSubatividades.subatividadeMaisOnerosa.nome} ({formatCurrency(dadosSubatividades.subatividadeMaisOnerosa.custo)})
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Gráficos de análise */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Gráfico de distribuição de custos */}
-                <div className="h-[300px]">
-                  <h3 className="text-sm font-medium mb-4">Distribuição de Custos</h3>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={dadosSubatividades.dadosCustos}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {dadosSubatividades.dadosCustos.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                
-                {/* Gráfico de lucro por subatividade */}
-                <div className="h-[300px]">
-                  <h3 className="text-sm font-medium mb-4">Lucro por Subatividade</h3>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RechartsBarChart
-                      data={dadosSubatividades.dadosLucro}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                      <Bar dataKey="lucro" fill="#82ca9d" />
-                    </RechartsBarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Custos por Etapa</CardTitle>
-            <CardDescription>
-              Análise de custos e margens por etapa do processo
+              {ordemSelecionada.nome} - Cliente: {ordemSelecionada.cliente.nome}
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Valor Total</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold">
+                    R$ {totaisOrdem.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Custo Total</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold">
+                    R$ {totaisOrdem.custoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Margem de Lucro</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className={`text-2xl font-bold ${totaisOrdem.margemLucro >= 30 ? 'text-green-600' : 'text-amber-600'}`}>
+                    {totaisOrdem.margemLucro.toFixed(2)}%
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <h3 className="text-lg font-semibold mb-4">Custos por Etapa</h3>
             <div className="space-y-6">
               {etapas.map(etapa => {
                 const custo = calcularCustoEtapa(etapa.id, ordemSelecionada);
@@ -741,13 +352,13 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
                       <div>
                         <p className="text-sm text-muted-foreground">Custo Real/Estimado</p>
                         <p className="font-medium">
-                          {formatCurrency(custo)}
+                          R$ {custo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Valor Cobrado</p>
                         <p className="font-medium">
-                          {formatCurrency(valor)}
+                          R$ {valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
                       </div>
                       <div>
@@ -791,101 +402,6 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
       </Layout>
     );
   }
-  
-  // Adicionar página de subatividades ao relatório financeiro
-  const renderSubatividadeConfig = () => {
-    const [tipoSelecionado, setTipoSelecionado] = useState<TipoServico>("bloco");
-    const subatividadesTipo = subatividades[tipoSelecionado] || [];
-    
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Layers className="h-5 w-5" />
-              Análise de Subatividades
-            </CardTitle>
-            <CardDescription>
-              Visualize o desempenho financeiro de cada subatividade
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="bloco" onValueChange={(value) => setTipoSelecionado(value as TipoServico)}>
-              <TabsList className="mb-4 flex flex-wrap">
-                <TabsTrigger value="bloco">Bloco</TabsTrigger>
-                <TabsTrigger value="biela">Biela</TabsTrigger>
-                <TabsTrigger value="cabecote">Cabeçote</TabsTrigger>
-                <TabsTrigger value="virabrequim">Virabrequim</TabsTrigger>
-                <TabsTrigger value="eixo_comando">Eixo Comando</TabsTrigger>
-                <TabsTrigger value="montagem">Montagem</TabsTrigger>
-                <TabsTrigger value="dinamometro">Dinamômetro</TabsTrigger>
-                <TabsTrigger value="lavagem">Lavagem</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value={tipoSelecionado}>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-2">Subatividade</th>
-                        <th className="text-right p-2">Preço Hora</th>
-                        <th className="text-right p-2">Rentabilidade Média</th>
-                        <th className="text-right p-2">Utilização</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {subatividadesTipo.length > 0 ? (
-                        subatividadesTipo.map((sub, index) => (
-                          <tr key={sub.id} className="border-b">
-                            <td className="p-2">{sub.nome}</td>
-                            <td className="text-right p-2">{formatCurrency(sub.precoHora || 0)}</td>
-                            <td className="text-right p-2">{(Math.random() * 30 + 20).toFixed(2)}%</td>
-                            <td className="text-right p-2">{Math.floor(Math.random() * 50 + 10)} ordens</td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={4} className="py-4 text-center text-muted-foreground">
-                            Nenhuma subatividade cadastrada para este tipo de serviço
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-                
-                <div className="mt-6">
-                  <h3 className="text-lg font-medium mb-4">Análise de Rentabilidade</h3>
-                  
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RechartsBarChart
-                        data={subatividadesTipo.map(sub => ({
-                          name: sub.nome,
-                          precoHora: sub.precoHora || 0,
-                          custoHora: (sub.precoHora || 0) * 0.6,
-                          lucroHora: (sub.precoHora || 0) * 0.4
-                        }))}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                      >
-                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-                        <YAxis />
-                        <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                        <Legend />
-                        <Bar dataKey="precoHora" name="Preço Hora" fill="#8884d8" />
-                        <Bar dataKey="custoHora" name="Custo Hora" fill="#f43f5e" />
-                        <Bar dataKey="lucroHora" name="Lucro Hora" fill="#4ade80" />
-                      </RechartsBarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  };
   
   return (
     <Layout onLogout={onLogout}>
@@ -952,12 +468,10 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
         {/* Detalhes financeiros da ordem selecionada */}
         {ordemSelecionada && renderOrdemDetalhesFinanceiros()}
         
-        {/* Página de análise de subatividades */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="mb-6">
             <TabsTrigger value="mensal">Mensal</TabsTrigger>
             <TabsTrigger value="anual">Anual</TabsTrigger>
-            <TabsTrigger value="subatividades">Subatividades</TabsTrigger>
           </TabsList>
           
           <TabsContent value="mensal">
@@ -972,7 +486,7 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold">
-                    {formatCurrency(totalReceitasMensais)}
+                    R$ {totalReceitasMensais.toLocaleString('pt-BR')}
                   </p>
                 </CardContent>
               </Card>
@@ -987,7 +501,7 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold">
-                    {formatCurrency(totalDespesasMensais)}
+                    R$ {totalDespesasMensais.toLocaleString('pt-BR')}
                   </p>
                 </CardContent>
               </Card>
@@ -1002,7 +516,7 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold text-green-600">
-                    {formatCurrency(lucroMensal)}
+                    R$ {lucroMensal.toLocaleString('pt-BR')}
                   </p>
                 </CardContent>
               </Card>
@@ -1028,7 +542,7 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
                   >
                     <XAxis dataKey="mes" />
                     <YAxis />
-                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                    <Tooltip formatter={(value) => `R$ ${Number(value).toLocaleString('pt-BR')}`} />
                     <Legend />
                     <Bar dataKey="receita" name="Receita" fill="#4f46e5" />
                     <Bar dataKey="despesas" name="Despesas" fill="#f43f5e" />
@@ -1050,7 +564,7 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold">
-                    {formatCurrency(totalReceitasAnuais)}
+                    R$ {totalReceitasAnuais.toLocaleString('pt-BR')}
                   </p>
                 </CardContent>
               </Card>
@@ -1065,7 +579,7 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold">
-                    {formatCurrency(totalDespesasAnuais)}
+                    R$ {totalDespesasAnuais.toLocaleString('pt-BR')}
                   </p>
                 </CardContent>
               </Card>
@@ -1080,7 +594,7 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold text-green-600">
-                    {formatCurrency(lucroAnual)}
+                    R$ {lucroAnual.toLocaleString('pt-BR')}
                   </p>
                 </CardContent>
               </Card>
@@ -1106,7 +620,7 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
                   >
                     <XAxis dataKey="ano" />
                     <YAxis />
-                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                    <Tooltip formatter={(value) => `R$ ${Number(value).toLocaleString('pt-BR')}`} />
                     <Legend />
                     <Bar dataKey="receita" name="Receita" fill="#4f46e5" />
                     <Bar dataKey="despesas" name="Despesas" fill="#f43f5e" />
@@ -1114,10 +628,6 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
                 </ResponsiveContainer>
               </CardContent>
             </Card>
-          </TabsContent>
-          
-          <TabsContent value="subatividades">
-            {renderSubatividadeConfig()}
           </TabsContent>
         </Tabs>
       </div>
