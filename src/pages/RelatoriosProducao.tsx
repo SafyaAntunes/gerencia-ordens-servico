@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,11 +53,40 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
         
         querySnapshot.forEach((doc) => {
           const data = doc.data();
+          
+          // Ensure dates are properly converted to Date objects
+          const dataAbertura = data.dataAbertura?.toDate ? data.dataAbertura.toDate() : 
+                              data.dataAbertura instanceof Date ? data.dataAbertura : 
+                              data.dataAbertura ? new Date(data.dataAbertura) : new Date();
+                              
+          const dataPrevistaEntrega = data.dataPrevistaEntrega?.toDate ? data.dataPrevistaEntrega.toDate() : 
+                                     data.dataPrevistaEntrega instanceof Date ? data.dataPrevistaEntrega : 
+                                     data.dataPrevistaEntrega ? new Date(data.dataPrevistaEntrega) : new Date();
+          
+          // Convert etapasAndamento timestamps to Date objects
+          const etapasAndamento: any = {};
+          
+          if (data.etapasAndamento) {
+            Object.entries(data.etapasAndamento).forEach(([etapa, info]: [string, any]) => {
+              etapasAndamento[etapa] = {
+                ...info,
+                iniciado: info.iniciado?.toDate ? info.iniciado.toDate() : 
+                          info.iniciado instanceof Date ? info.iniciado : 
+                          info.iniciado ? new Date(info.iniciado) : undefined,
+                          
+                finalizado: info.finalizado?.toDate ? info.finalizado.toDate() : 
+                           info.finalizado instanceof Date ? info.finalizado : 
+                           info.finalizado ? new Date(info.finalizado) : undefined
+              };
+            });
+          }
+          
           ordens.push({
             ...data,
             id: doc.id,
-            dataAbertura: data.dataAbertura?.toDate() || new Date(),
-            dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
+            dataAbertura,
+            dataPrevistaEntrega,
+            etapasAndamento
           } as OrdemServico);
         });
         
@@ -227,11 +255,51 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
       
       if (ordemDoc.exists()) {
         const data = ordemDoc.data();
+        
+        // Ensure dates are properly converted to Date objects
+        const dataAbertura = data.dataAbertura?.toDate ? data.dataAbertura.toDate() : 
+                            data.dataAbertura instanceof Date ? data.dataAbertura : 
+                            data.dataAbertura ? new Date(data.dataAbertura) : new Date();
+                            
+        const dataPrevistaEntrega = data.dataPrevistaEntrega?.toDate ? data.dataPrevistaEntrega.toDate() : 
+                                   data.dataPrevistaEntrega instanceof Date ? data.dataPrevistaEntrega : 
+                                   data.dataPrevistaEntrega ? new Date(data.dataPrevistaEntrega) : new Date();
+        
+        // Convert etapasAndamento timestamps to Date objects
+        const etapasAndamento: any = {};
+        
+        if (data.etapasAndamento) {
+          Object.entries(data.etapasAndamento).forEach(([etapa, info]: [string, any]) => {
+            etapasAndamento[etapa] = {
+              ...info,
+              iniciado: info.iniciado?.toDate ? info.iniciado.toDate() : 
+                        info.iniciado instanceof Date ? info.iniciado : 
+                        info.iniciado ? new Date(info.iniciado) : undefined,
+                        
+              finalizado: info.finalizado?.toDate ? info.finalizado.toDate() : 
+                         info.finalizado instanceof Date ? info.finalizado : 
+                         info.finalizado ? new Date(info.finalizado) : undefined
+            };
+          });
+        }
+        
+        // Convert servicos.dataConclusao timestamps to Date objects  
+        const servicos = data.servicos || [];
+        
+        const servicosFormatados = servicos.map((servico: any) => ({
+          ...servico,
+          dataConclusao: servico.dataConclusao?.toDate ? servico.dataConclusao.toDate() : 
+                        servico.dataConclusao instanceof Date ? servico.dataConclusao : 
+                        servico.dataConclusao ? new Date(servico.dataConclusao) : undefined
+        }));
+        
         const ordem = {
           ...data,
           id: ordemDoc.id,
-          dataAbertura: data.dataAbertura?.toDate() || new Date(),
-          dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
+          dataAbertura,
+          dataPrevistaEntrega,
+          etapasAndamento,
+          servicos: servicosFormatados
         } as OrdemServico;
         
         setOrdemSelecionada(ordem);
@@ -348,6 +416,24 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     }
   };
   
+  // Formatador de data
+  const formatarData = (data: Date | null | undefined) => {
+    if (!data) return "-";
+    
+    // Ensure data is a Date object
+    const dateObj = data instanceof Date ? data : new Date(data);
+    return dateObj.toLocaleDateString('pt-BR');
+  };
+  
+  // Formatador de data e hora
+  const formatarDataHora = (data: Date | null | undefined) => {
+    if (!data) return "-";
+    
+    // Ensure data is a Date object
+    const dateObj = data instanceof Date ? data : new Date(data);
+    return `${dateObj.toLocaleDateString('pt-BR')} ${dateObj.getHours().toString().padStart(2, '0')}:${dateObj.getMinutes().toString().padStart(2, '0')}`;
+  };
+  
   // Formatar etapa para exibição
   const formatarEtapa = (etapa: EtapaOS) => {
     const mapeamento: Record<EtapaOS, string> = {
@@ -376,16 +462,6 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     };
     
     return mapeamento[tipo] || tipo;
-  };
-  
-  // Formatador de data
-  const formatarData = (data: Date) => {
-    return data.toLocaleDateString('pt-BR');
-  };
-  
-  // Formatador de data e hora
-  const formatarDataHora = (data: Date) => {
-    return `${data.toLocaleDateString('pt-BR')} ${data.getHours().toString().padStart(2, '0')}:${data.getMinutes().toString().padStart(2, '0')}`;
   };
   
   // Formatador de status
@@ -549,10 +625,13 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
         // Calcular duração
         let duracao = "";
         if (etapaInfo.iniciado && etapaInfo.finalizado) {
-          const duracacoMs = etapaInfo.finalizado.getTime() - etapaInfo.iniciado.getTime();
+          const iniciado = etapaInfo.iniciado instanceof Date ? etapaInfo.iniciado : new Date(etapaInfo.iniciado);
+          const finalizado = etapaInfo.finalizado instanceof Date ? etapaInfo.finalizado : new Date(etapaInfo.finalizado);
+          const duracacoMs = finalizado.getTime() - iniciado.getTime();
           duracao = formatTime(duracacoMs);
         } else if (etapaInfo.iniciado) {
-          const duracacoMs = new Date().getTime() - etapaInfo.iniciado.getTime();
+          const iniciado = etapaInfo.iniciado instanceof Date ? etapaInfo.iniciado : new Date(etapaInfo.iniciado);
+          const duracacoMs = new Date().getTime() - iniciado.getTime();
           duracao = formatTime(duracacoMs) + " (em andamento)";
         } else {
           duracao = "Não iniciada";

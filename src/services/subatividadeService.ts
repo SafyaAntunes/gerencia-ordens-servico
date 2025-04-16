@@ -69,7 +69,7 @@ async function verificarSubatividadeEmUso(id: string): Promise<boolean> {
       // Verifica se algum serviço da ordem contém a subatividade
       for (const servico of ordem.servicos || []) {
         const subatividades = servico.subatividades || [];
-        if (subatividades.some(sub => sub.id === id && sub.selecionada)) {
+        if (subatividades.some(sub => sub.id === id)) {
           return true;
         }
       }
@@ -89,7 +89,7 @@ export async function deleteSubatividade(id: string, tipoServico: TipoServico): 
     const emUso = await verificarSubatividadeEmUso(id);
     
     if (emUso) {
-      toast.error("Não é possível excluir esta subatividade pois ela está em uso em ordens de serviço ativas");
+      toast.error("Não é possível excluir esta subatividade pois ela está em uso em ordens de serviço");
       return false;
     }
     
