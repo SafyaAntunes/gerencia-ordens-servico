@@ -17,7 +17,6 @@ import RelatoriosProducao from "./pages/RelatoriosProducao";
 import RelatoriosFinanceiro from "./pages/RelatoriosFinanceiro";
 import Configuracoes from "./pages/Configuracoes";
 import Login from "./pages/Login";
-import SubatividadesConfig from "./pages/SubatividadesConfig";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 
 // Authentication guard component
@@ -137,11 +136,9 @@ const AppRoutes = () => {
         </PrivateRoute>
       } />
       
-      {/* Subatividades - Gerente ou superior */}
+      {/* Redirecionar /subatividades para /configuracoes */}
       <Route path="/subatividades" element={
-        <PrivateRoute requiredPermission="gerente">
-          <SubatividadesConfig onLogout={handleLogout} />
-        </PrivateRoute>
+        <Navigate to="/configuracoes" replace />
       } />
       
       {/* Relatórios de Produção - gerentes ou superior */}

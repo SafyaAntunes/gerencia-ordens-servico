@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Layout from "@/components/layout/Layout";
 import { SubatividadeForm } from "@/components/subatividades/SubatividadeForm";
@@ -35,7 +36,12 @@ const tiposServico: TipoServico[] = [
   "lavagem"
 ];
 
-export default function SubatividadesConfig({ onLogout }: { onLogout?: () => void }) {
+interface SubatividadesConfigProps {
+  onLogout?: () => void;
+  isEmbedded?: boolean; // New prop to indicate if the component is embedded in another page
+}
+
+export default function SubatividadesConfig({ onLogout, isEmbedded = false }: SubatividadesConfigProps) {
   const [subatividades, setSubatividades] = useState<Record<TipoServico, SubAtividade[]>>({} as Record<TipoServico, SubAtividade[]>);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState<TipoServico>("bloco");
@@ -121,87 +127,99 @@ export default function SubatividadesConfig({ onLogout }: { onLogout?: () => voi
     setIsEditing(subatividade);
   };
 
-  return (
-    <Layout onLogout={onLogout}>
-      <div className="container mx-auto py-6 space-y-6">
+  // Content of the component
+  const content = (
+    <div className="container mx-auto py-6 space-y-6">
+      {!isEmbedded && (
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold tracking-tight">Configuração de Subatividades</h1>
         </div>
+      )}
 
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Importante</AlertTitle>
-          <AlertDescription>
-            Defina as subatividades para cada tipo de serviço junto com seus preços por hora.
-            Essas informações serão usadas para calcular os custos nas ordens de serviço.
-          </AlertDescription>
-        </Alert>
+      <Alert>
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Importante</AlertTitle>
+        <AlertDescription>
+          Defina as subatividades para cada tipo de serviço junto com seus preços por hora.
+          Essas informações serão usadas para calcular os custos nas ordens de serviço.
+        </AlertDescription>
+      </Alert>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          <Card className="md:col-span-1">
-            <CardHeader>
-              <CardTitle>Nova Subatividade</CardTitle>
-              <CardDescription>
-                Adicione ou edite uma subatividade para o tipo de serviço selecionado
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <SubatividadeForm 
-                onSave={(data) => handleSaveSubatividade(data, selectedTab)} 
-                tipoServico={selectedTab}
-                initialData={isEditing}
-                onCancel={() => setIsEditing(null)}
-              />
-            </CardContent>
-          </Card>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <Card className="md:col-span-1">
+          <CardHeader>
+            <CardTitle>Nova Subatividade</CardTitle>
+            <CardDescription>
+              Adicione ou edite uma subatividade para o tipo de serviço selecionado
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SubatividadeForm 
+              onSave={(data) => handleSaveSubatividade(data, selectedTab)} 
+              tipoServico={selectedTab}
+              initialData={isEditing}
+              onCancel={() => setIsEditing(null)}
+            />
+          </CardContent>
+        </Card>
 
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ClipboardList className="h-5 w-5" />
-                Lista de Subatividades
-              </CardTitle>
-              <CardDescription>
-                Gerencie as subatividades cadastradas por tipo de serviço
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Tabs 
-                defaultValue="bloco" 
-                value={selectedTab}
-                onValueChange={(value) => setSelectedTab(value as TipoServico)}
-                className="w-full"
-              >
-                <TabsList className="grid grid-cols-4 mb-4">
-                  {tiposServico.slice(0, 4).map(tipo => (
-                    <TabsTrigger key={tipo} value={tipo}>
-                      {tipoServicoNames[tipo]}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-                <TabsList className="grid grid-cols-4 mb-6">
-                  {tiposServico.slice(4).map(tipo => (
-                    <TabsTrigger key={tipo} value={tipo}>
-                      {tipoServicoNames[tipo]}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-
-                {tiposServico.map(tipo => (
-                  <TabsContent key={tipo} value={tipo} className="space-y-4">
-                    <SubatividadeList 
-                      subatividades={subatividades[tipo] || []}
-                      isLoading={isLoading}
-                      onEdit={handleEditSubatividade}
-                      onDelete={(id) => handleDeleteSubatividade(id, tipo)}
-                    />
-                  </TabsContent>
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5" />
+              Lista de Subatividades
+            </CardTitle>
+            <CardDescription>
+              Gerencie as subatividades cadastradas por tipo de serviço
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs 
+              defaultValue="bloco" 
+              value={selectedTab}
+              onValueChange={(value) => setSelectedTab(value as TipoServico)}
+              className="w-full"
+            >
+              <TabsList className="grid grid-cols-4 mb-4">
+                {tiposServico.slice(0, 4).map(tipo => (
+                  <TabsTrigger key={tipo} value={tipo}>
+                    {tipoServicoNames[tipo]}
+                  </TabsTrigger>
                 ))}
-              </Tabs>
-            </CardContent>
-          </Card>
-        </div>
+              </TabsList>
+              <TabsList className="grid grid-cols-4 mb-6">
+                {tiposServico.slice(4).map(tipo => (
+                  <TabsTrigger key={tipo} value={tipo}>
+                    {tipoServicoNames[tipo]}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+
+              {tiposServico.map(tipo => (
+                <TabsContent key={tipo} value={tipo} className="space-y-4">
+                  <SubatividadeList 
+                    subatividades={subatividades[tipo] || []}
+                    isLoading={isLoading}
+                    onEdit={handleEditSubatividade}
+                    onDelete={(id) => handleDeleteSubatividade(id, tipo)}
+                  />
+                </TabsContent>
+              ))}
+            </Tabs>
+          </CardContent>
+        </Card>
       </div>
+    </div>
+  );
+
+  // Return the component based on whether it's embedded or not
+  if (isEmbedded) {
+    return content;
+  }
+
+  return (
+    <Layout onLogout={onLogout}>
+      {content}
     </Layout>
   );
 }

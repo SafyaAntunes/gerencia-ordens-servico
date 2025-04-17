@@ -12,7 +12,6 @@ import {
   ChevronRight,
   UserSquare,
   Wrench,
-  ClipboardList,
   DollarSign
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -146,10 +145,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <NavItem icon={Calendar} label="Agenda" to="/agenda" />
             )}
             
-            {/* Subatividades - Gerente ou superior */}
-            {hasPermission('gerente') && (
-              <NavItem icon={ClipboardList} label="Subatividades" to="/subatividades" />
-            )}
+            {/* Removed Subatividades menu item */}
             
             {/* Relatórios - Produção para Gerente ou superior, Financeiro para Admin */}
             {hasPermission('gerente') && (
@@ -220,10 +216,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <NavItem icon={Calendar} label="Agenda" to="/agenda" isCollapsed={isCollapsed} />
             )}
             
-            {/* Subatividades - Gerente ou superior */}
-            {hasPermission('gerente') && (
-              <NavItem icon={ClipboardList} label="Subatividades" to="/subatividades" isCollapsed={isCollapsed} />
-            )}
+            {/* Removed Subatividades menu item */}
             
             {/* Relatórios - Produção para Gerente ou superior, Financeiro para Admin */}
             {hasPermission('gerente') && (
