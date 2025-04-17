@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileBarChart, TrendingUp, Clock, Search, AlertCircle, CheckCircle } from "lucide-react";
+import { FileBarChart, TrendingUp, Clock, Search, AlertCircle, CheckCircle, Filter } from "lucide-react";
 import { LogoutProps } from "@/types/props";
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { OrdemServico, EtapaOS } from "@/types/ordens";
 import { Progress } from "@/components/ui/progress";
@@ -20,6 +19,8 @@ import {
   Tooltip, 
   Legend
 } from "recharts";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatCurrency } from "@/lib/utils";
 
 interface RelatoriosFinanceiroProps extends LogoutProps {}
 
@@ -30,6 +31,7 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
   const [ordemSelecionada, setOrdemSelecionada] = useState<OrdemServico | null>(null);
   const [filteredOrdens, setFilteredOrdens] = useState<OrdemServico[]>([]);
   const [activeTab, setActiveTab] = useState("mensal");
+  const [searchType, setSearchType] = useState<"id" | "cliente" | "nome" | "status" | "margem">("id");
   
   useEffect(() => {
     const fetchOrdens = async () => {
@@ -60,51 +62,76 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
     fetchOrdens();
   }, []);
   
-  // Filtrar ordens com base no termo de pesquisa
+  const getStatusLabel = (status: string): string => {
+    switch (status) {
+      case 'orcamento': return 'Orçamento';
+      case 'aguardando_aprovacao': return 'Aguardando Aprovação';
+      case 'fabricacao': return 'Em Fabricação';
+      case 'aguardando_peca_cliente': return 'Aguardando Peça (Cliente)';
+      case 'aguardando_peca_interno': return 'Aguardando Peça (Interno)';
+      case 'finalizado': return 'Finalizado';
+      case 'entregue': return 'Entregue';
+      default: return status;
+    }
+  };
+  
   useEffect(() => {
     if (!searchTerm.trim()) {
       setFilteredOrdens(ordensDados);
       return;
     }
     
-    const filtradas = ordensDados.filter(ordem => 
-      ordem.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      ordem.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ordem.cliente.nome.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const searchTermLower = searchTerm.toLowerCase();
+    
+    const filtradas = ordensDados.filter(ordem => {
+      switch (searchType) {
+        case "id":
+          return ordem.id.toLowerCase().includes(searchTermLower);
+        case "cliente":
+          return ordem.cliente.nome.toLowerCase().includes(searchTermLower);
+        case "nome":
+          return ordem.nome.toLowerCase().includes(searchTermLower);
+        case "status":
+          const statusLabel = getStatusLabel(ordem.status).toLowerCase();
+          return statusLabel.includes(searchTermLower);
+        case "margem":
+          const margemProcurada = parseFloat(searchTerm);
+          if (isNaN(margemProcurada)) return false;
+          
+          const totaisOrdem = calcularTotaisOrdem(ordem);
+          const margemAtual = totaisOrdem.margemLucro;
+          return Math.abs(margemAtual - margemProcurada) <= 5;
+        default:
+          return false;
+      }
+    });
     
     setFilteredOrdens(filtradas);
-  }, [searchTerm, ordensDados]);
+  }, [searchTerm, ordensDados, searchType]);
   
-  // Gerar dados financeiros baseados nas ordens reais
-  // Como não temos dados financeiros reais, vamos simular baseado no número de serviços
   const dadosMensais = (() => {
     const meses: Record<string, { receita: number, despesas: number }> = {};
     const hoje = new Date();
     
-    // Inicializar últimos 6 meses
     for (let i = 5; i >= 0; i--) {
       const data = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
       const mesAno = `${data.getMonth() + 1}/${data.getFullYear()}`;
       meses[mesAno] = { receita: 0, despesas: 0 };
     }
     
-    // Preencher com dados simulados baseados nas ordens
     ordensDados.forEach(ordem => {
       if (ordem.dataAbertura) {
         const data = new Date(ordem.dataAbertura);
         const mesAno = `${data.getMonth() + 1}/${data.getFullYear()}`;
         
         if (meses[mesAno]) {
-          // Simular receita baseada nos serviços
           const valorServicos = ordem.servicos?.length || 0;
-          meses[mesAno].receita += valorServicos * 5000; // Valor médio por serviço
-          meses[mesAno].despesas += valorServicos * 3000; // Custo médio por serviço
+          meses[mesAno].receita += valorServicos * 5000;
+          meses[mesAno].despesas += valorServicos * 3000;
         }
       }
     });
     
-    // Converter para array e formatar nome do mês
     return Object.entries(meses).map(([mesAno, dados]) => {
       const [mes, ano] = mesAno.split('/');
       const nomeMes = new Date(parseInt(ano), parseInt(mes) - 1, 1)
@@ -122,27 +149,23 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
     const anos: Record<number, { receita: number, despesas: number }> = {};
     const anoAtual = new Date().getFullYear();
     
-    // Inicializar últimos 3 anos
     for (let i = 2; i >= 0; i--) {
       const ano = anoAtual - i;
       anos[ano] = { receita: 0, despesas: 0 };
     }
     
-    // Preencher com dados simulados
     ordensDados.forEach(ordem => {
       if (ordem.dataAbertura) {
         const ano = new Date(ordem.dataAbertura).getFullYear();
         
         if (anos[ano]) {
-          // Simular receita baseada nos serviços
           const valorServicos = ordem.servicos?.length || 0;
-          anos[ano].receita += valorServicos * 5000; // Valor médio por serviço
-          anos[ano].despesas += valorServicos * 3000; // Custo médio por serviço
+          anos[ano].receita += valorServicos * 5000;
+          anos[ano].despesas += valorServicos * 3000;
         }
       }
     });
     
-    // Converter para array
     return Object.entries(anos).map(([ano, dados]) => ({
       ano: parseInt(ano),
       receita: dados.receita,
@@ -164,7 +187,6 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
   const totalDespesasAnuais = calcularTotal(dadosAnuais, "despesas");
   const lucroAnual = calcularLucro(totalReceitasAnuais, totalDespesasAnuais);
   
-  // Função para buscar uma ordem específica
   const buscarOrdem = async (id: string) => {
     setIsLoading(true);
     try {
@@ -192,55 +214,45 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
     }
   };
   
-  // Função para calcular custo estimado por etapa
   const calcularCustoEtapa = (etapa: EtapaOS, ordem: OrdemServico): number => {
-    const custoHora = 120; // Custo por hora em R$
+    const custoHora = 120;
     
-    // Simulação: cada etapa tem um tempo médio diferente
     const tempoMedioPorEtapa: Record<EtapaOS, number> = {
-      lavagem: 1, // 1 hora
-      inspecao_inicial: 2, // 2 horas
-      retifica: 8, // 8 horas
-      montagem: 6, // 6 horas
-      dinamometro: 3, // 3 horas
-      inspecao_final: 1 // 1 hora
+      lavagem: 1,
+      inspecao_inicial: 2,
+      retifica: 8,
+      montagem: 6,
+      dinamometro: 3,
+      inspecao_final: 1
     };
     
     const etapaInfo = ordem.etapasAndamento[etapa];
     
-    // Se a etapa não foi iniciada, retornar custo estimado
     if (!etapaInfo || !etapaInfo.iniciado) {
       return tempoMedioPorEtapa[etapa] * custoHora;
     }
     
-    // Se a etapa foi concluída, calcular com base no tempo real
     if (etapaInfo.concluido && etapaInfo.iniciado && etapaInfo.finalizado) {
-      const tempoReal = (etapaInfo.finalizado.getTime() - etapaInfo.iniciado.getTime()) / 3600000; // Converter para horas
+      const tempoReal = (etapaInfo.finalizado.getTime() - etapaInfo.iniciado.getTime()) / 3600000;
       return tempoReal * custoHora;
     }
     
-    // Se está em andamento, calcular tempo até agora
-    const tempoAteAgora = (new Date().getTime() - etapaInfo.iniciado.getTime()) / 3600000; // Converter para horas
+    const tempoAteAgora = (new Date().getTime() - etapaInfo.iniciado.getTime()) / 3600000;
     return tempoAteAgora * custoHora;
   };
   
-  // Função para calcular valor estimado por etapa (quanto deveria cobrar)
   const calcularValorEtapa = (etapa: EtapaOS, ordem: OrdemServico): number => {
     const custoEtapa = calcularCustoEtapa(etapa, ordem);
-    // Margem de 60% sobre o custo
     return custoEtapa * 1.6;
   };
   
-  // Função para verificar se etapa está dentro do orçamento
   const etapaDentroOrcamento = (etapa: EtapaOS, ordem: OrdemServico): boolean => {
     const custoEtapa = calcularCustoEtapa(etapa, ordem);
     const valorEstimado = calcularValorEtapa(etapa, ordem);
     
-    // Se o custo está abaixo de 80% do valor estimado, está bem
     return custoEtapa < (valorEstimado * 0.8);
   };
   
-  // Calcular total e margem geral da ordem
   const calcularTotaisOrdem = (ordem: OrdemServico) => {
     const etapas: EtapaOS[] = ['lavagem', 'inspecao_inicial', 'retifica', 'montagem', 'dinamometro', 'inspecao_final'];
     
@@ -262,7 +274,6 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
     };
   };
   
-  // Renderizar detalhes financeiros da ordem selecionada
   const renderOrdemDetalhesFinanceiros = () => {
     if (!ordemSelecionada) return null;
     
@@ -413,27 +424,50 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
           </p>
         </div>
         
-        {/* Barra de pesquisa de ordens */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Pesquisar Ordem de Serviço</CardTitle>
             <CardDescription>
-              Busque por ID, nome ou cliente para ver análise financeira detalhada
+              Pesquise por diferentes critérios para análise financeira detalhada
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col space-y-4">
-              <div className="flex w-full items-center space-x-2">
-                <div className="relative flex-1">
+              <div className="flex flex-col sm:flex-row w-full items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                <Select 
+                  value={searchType} 
+                  onValueChange={(value) => setSearchType(value as any)}
+                  defaultValue="id"
+                >
+                  <SelectTrigger className="sm:w-[180px]">
+                    <SelectValue placeholder="Tipo de pesquisa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="id">Número da OS</SelectItem>
+                    <SelectItem value="cliente">Nome do Cliente</SelectItem>
+                    <SelectItem value="nome">Descrição da OS</SelectItem>
+                    <SelectItem value="status">Status</SelectItem>
+                    <SelectItem value="margem">Margem de Lucro (%)</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <div className="relative flex-1 w-full">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="search"
-                    placeholder="Buscar por ID, nome ou cliente..."
+                    placeholder={`Pesquisar por ${
+                      searchType === "id" ? "número da OS" : 
+                      searchType === "cliente" ? "nome do cliente" : 
+                      searchType === "nome" ? "descrição da OS" : 
+                      searchType === "status" ? "status" :
+                      "margem de lucro aproximada"
+                    }...`}
                     className="pl-8"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
+                
                 <Button
                   type="button"
                   disabled={!searchTerm.trim()}
@@ -448,24 +482,41 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
               </div>
               
               {searchTerm && filteredOrdens.length > 0 && (
-                <div className="max-h-32 overflow-y-auto border rounded-md">
-                  {filteredOrdens.map((ordem) => (
-                    <div
-                      key={ordem.id}
-                      className="p-2 hover:bg-muted cursor-pointer border-b last:border-b-0"
-                      onClick={() => buscarOrdem(ordem.id)}
-                    >
-                      <div className="font-medium">OS #{ordem.id} - {ordem.nome}</div>
-                      <div className="text-sm text-muted-foreground">Cliente: {ordem.cliente.nome}</div>
-                    </div>
-                  ))}
+                <div className="max-h-60 overflow-y-auto border rounded-md">
+                  {filteredOrdens.map((ordem) => {
+                    const totaisOrdem = calcularTotaisOrdem(ordem);
+                    
+                    return (
+                      <div
+                        key={ordem.id}
+                        className="p-2 hover:bg-muted cursor-pointer border-b last:border-b-0"
+                        onClick={() => buscarOrdem(ordem.id)}
+                      >
+                        <div className="font-medium">OS #{ordem.id} - {ordem.nome}</div>
+                        <div className="text-sm text-muted-foreground">Cliente: {ordem.cliente.nome}</div>
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Status: {getStatusLabel(ordem.status)}</span>
+                          <span>
+                            Margem: <span className={totaisOrdem.margemLucro >= 30 ? 'text-green-600' : 'text-amber-600'}>
+                              {totaisOrdem.margemLucro.toFixed(2)}%
+                            </span>
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              
+              {searchTerm && filteredOrdens.length === 0 && (
+                <div className="text-sm text-muted-foreground p-2 border rounded-md">
+                  Nenhuma ordem encontrada com os critérios informados.
                 </div>
               )}
             </div>
           </CardContent>
         </Card>
         
-        {/* Detalhes financeiros da ordem selecionada */}
         {ordemSelecionada && renderOrdemDetalhesFinanceiros()}
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -486,7 +537,7 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold">
-                    R$ {totalReceitasMensais.toLocaleString('pt-BR')}
+                    {formatCurrency(totalReceitasMensais)}
                   </p>
                 </CardContent>
               </Card>
@@ -501,7 +552,7 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold">
-                    R$ {totalDespesasMensais.toLocaleString('pt-BR')}
+                    {formatCurrency(totalDespesasMensais)}
                   </p>
                 </CardContent>
               </Card>
@@ -516,7 +567,7 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold text-green-600">
-                    R$ {lucroMensal.toLocaleString('pt-BR')}
+                    {formatCurrency(lucroMensal)}
                   </p>
                 </CardContent>
               </Card>
@@ -564,7 +615,7 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold">
-                    R$ {totalReceitasAnuais.toLocaleString('pt-BR')}
+                    {formatCurrency(totalReceitasAnuais)}
                   </p>
                 </CardContent>
               </Card>
@@ -579,7 +630,7 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold">
-                    R$ {totalDespesasAnuais.toLocaleString('pt-BR')}
+                    {formatCurrency(totalDespesasAnuais)}
                   </p>
                 </CardContent>
               </Card>
@@ -594,7 +645,7 @@ const RelatoriosFinanceiro = ({ onLogout }: RelatoriosFinanceiroProps) => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold text-green-600">
-                    R$ {lucroAnual.toLocaleString('pt-BR')}
+                    {formatCurrency(lucroAnual)}
                   </p>
                 </CardContent>
               </Card>
