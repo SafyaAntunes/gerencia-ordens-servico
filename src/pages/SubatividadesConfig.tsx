@@ -1,268 +1,368 @@
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { v4 as uuidv4 } from "uuid";
 import Layout from "@/components/layout/Layout";
 import { SubatividadeForm } from "@/components/subatividades/SubatividadeForm";
-import { getSubatividades, saveSubatividade, deleteSubatividade } from "@/services/subatividadeService";
-import { SubAtividade, TipoServico, TipoAtividade } from "@/types/ordens";
-import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SubatividadeList } from "@/components/subatividades/SubatividadeList";
-import { AlertTriangle, ClipboardList, Droplet, Search, FileSearch } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-
-// Mapeia os tipos de serviço para nomes amigáveis
-const tipoServicoNames: Record<TipoServico | TipoAtividade, string> = {
-  bloco: "Bloco",
-  biela: "Biela",
-  cabecote: "Cabeçote",
-  virabrequim: "Virabrequim",
-  eixo_comando: "Eixo de Comando",
-  montagem: "Montagem",
-  dinamometro: "Dinamômetro",
-  lavagem: "Lavagem",
-  inspecao_inicial: "Inspeção Inicial",
-  inspecao_final: "Inspeção Final"
-};
-
-// Define a lista de tipos de serviço para as abas
-const tiposServico: TipoServico[] = [
-  "bloco",
-  "biela",
-  "cabecote",
-  "virabrequim",
-  "eixo_comando",
-  "montagem",
-  "dinamometro",
-  "lavagem"
-];
-
-// Define a lista de tipos de atividade para as abas
-const tiposAtividade: TipoAtividade[] = [
-  "lavagem",
-  "inspecao_inicial",
-  "inspecao_final"
-];
+import SubatividadeList from "@/components/subatividades/SubatividadeList";
+import { TipoServico, SubAtividade, TipoAtividade } from "@/types/ordens";
+import { Button } from "@/components/ui/button";
+import { Plus, Save, Loader2 } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useServicoSubatividades } from "@/hooks/useServicoSubatividades";
+import { getSubatividades, saveSubatividades } from "@/services/subatividadeService";
 
 interface SubatividadesConfigProps {
   onLogout?: () => void;
-  isEmbedded?: boolean; // Prop to indicate if the component is embedded in another page
+  isEmbedded?: boolean;
+  tipoFixo?: TipoAtividade | TipoServico;
+  titulo?: string;
+  descricao?: string;
+  porServico?: boolean;
 }
 
-export default function SubatividadesConfig({ onLogout, isEmbedded = false }: SubatividadesConfigProps) {
-  const [subatividades, setSubatividades] = useState<Record<TipoServico | TipoAtividade, SubAtividade[]>>({} as Record<TipoServico | TipoAtividade, SubAtividade[]>);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedTab, setSelectedTab] = useState<TipoServico | TipoAtividade>("bloco");
-  const [isEditing, setIsEditing] = useState<SubAtividade | null>(null);
-  const { toast } = useToast();
+export default function SubatividadesConfig({ 
+  onLogout, 
+  isEmbedded = false,
+  tipoFixo,
+  titulo = "Configuração de Subatividades",
+  descricao = "Gerencie as subatividades para cada tipo de serviço",
+  porServico = false 
+}: SubatividadesConfigProps) {
+  const navigate = useNavigate();
+  const [selectedTipo, setSelectedTipo] = useState<TipoServico | TipoAtividade | string>(
+    tipoFixo || "bloco"
+  );
+  const [selectedServicoTipo, setSelectedServicoTipo] = useState<TipoServico | string>(
+    porServico ? "bloco" : ""
+  );
+  const [subatividades, setSubatividades] = useState<SubAtividade[]>([]);
+  const [subatividadesMap, setSubatividadesMap] = useState<Record<string, SubAtividade[]>>({});
+  const [editingSubatividade, setEditingSubatividade] = useState<SubAtividade | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { defaultSubatividades, defaultAtividadesEspecificas } = useServicoSubatividades();
 
+  // Lista de tipos de serviço ou atividade
+  const tiposServico: { value: string; label: string }[] = [
+    { value: "bloco", label: "Bloco" },
+    { value: "biela", label: "Biela" },
+    { value: "cabecote", label: "Cabeçote" },
+    { value: "virabrequim", label: "Virabrequim" },
+    { value: "eixo_comando", label: "Eixo de Comando" },
+    { value: "montagem", label: "Montagem" },
+    { value: "dinamometro", label: "Dinamômetro" },
+    { value: "lavagem", label: "Lavagem" },
+  ];
+
+  const tiposAtividade: { value: string; label: string }[] = [
+    { value: "lavagem", label: "Lavagem" },
+    { value: "inspecao_inicial", label: "Inspeção Inicial" },
+    { value: "inspecao_final", label: "Inspeção Final" }
+  ];
+
+  // Carregar subatividades do Firebase
   useEffect(() => {
-    loadSubatividades();
-  }, []);
+    const fetchSubatividades = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getSubatividades();
+        setSubatividadesMap(data);
+        
+        // Se for uma configuração por serviço (para tipos de atividade)
+        if (porServico && tipoFixo && selectedServicoTipo) {
+          const tipoAtividade = tipoFixo as TipoAtividade;
+          const servicoTipo = selectedServicoTipo as TipoServico;
+          
+          // Filtrar apenas as subatividades para este tipo de serviço
+          const filtradas = data[tipoAtividade]?.filter(
+            s => !s.servicoTipo || s.servicoTipo === servicoTipo
+          ) || [];
+          
+          setSubatividades(filtradas);
+          
+          // Se não houver subatividades, criar a partir dos defaults
+          if (filtradas.length === 0 && defaultAtividadesEspecificas[tipoAtividade]?.[servicoTipo]) {
+            const defaults = defaultAtividadesEspecificas[tipoAtividade][servicoTipo].map(nome => ({
+              id: uuidv4(),
+              nome,
+              selecionada: false,
+              precoHora: 70, // Preço padrão
+              servicoTipo
+            }));
+            
+            setSubatividades(defaults);
+          }
+        } else if (selectedTipo) {
+          // Configuração normal (não é por serviço)
+          setSubatividades(data[selectedTipo as string] || []);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar subatividades:", error);
+        toast.error("Erro ao carregar subatividades");
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const loadSubatividades = async () => {
-    setIsLoading(true);
+    fetchSubatividades();
+  }, [selectedTipo, selectedServicoTipo, tipoFixo, porServico]);
+
+  const handleTipoChange = (value: string) => {
+    setSelectedTipo(value);
+    setEditingSubatividade(null);
+  };
+
+  const handleServicoTipoChange = (value: string) => {
+    setSelectedServicoTipo(value as TipoServico);
+    setEditingSubatividade(null);
+  };
+
+  const handleAddDefault = () => {
+    let defaultsToAdd: string[] = [];
+    
+    if (porServico && tipoFixo && selectedServicoTipo) {
+      // Adicionar defaults para atividades específicas do serviço
+      const tipoAtividade = tipoFixo as TipoAtividade;
+      const servicoTipo = selectedServicoTipo as TipoServico;
+      
+      defaultsToAdd = defaultAtividadesEspecificas[tipoAtividade]?.[servicoTipo] || [];
+    } else {
+      // Adicionar defaults normais
+      defaultsToAdd = defaultSubatividades[selectedTipo as TipoServico] || [];
+    }
+    
+    const novosDefault = defaultsToAdd
+      .filter(nome => !subatividades.some(s => s.nome.toLowerCase() === nome.toLowerCase()))
+      .map(nome => ({
+        id: uuidv4(),
+        nome,
+        selecionada: false,
+        precoHora: 70, // Preço padrão
+        servicoTipo: porServico ? selectedServicoTipo as TipoServico : undefined
+      }));
+    
+    if (novosDefault.length > 0) {
+      setSubatividades(prev => [...prev, ...novosDefault]);
+      toast.success(`${novosDefault.length} subatividades padrão adicionadas`);
+    } else {
+      toast.info("Todas as subatividades padrão já estão na lista");
+    }
+  };
+  
+  const handleSave = async () => {
+    setIsSaving(true);
     try {
-      const data = await getSubatividades();
-      setSubatividades(data);
+      const novoMap = { ...subatividadesMap };
+      
+      if (porServico && tipoFixo) {
+        // Salvar por serviço (para tipos de atividade)
+        const tipoAtividade = tipoFixo as TipoAtividade;
+        
+        // Manter subatividades existentes que não são deste serviço
+        const existentes = novoMap[tipoAtividade] || [];
+        const outrasSubatividades = existentes.filter(
+          s => s.servicoTipo !== selectedServicoTipo
+        );
+        
+        // Adicionar as novas subatividades com o tipo de serviço marcado
+        const subatividadesComTipo = subatividades.map(s => ({
+          ...s,
+          servicoTipo: selectedServicoTipo as TipoServico
+        }));
+        
+        novoMap[tipoAtividade] = [...outrasSubatividades, ...subatividadesComTipo];
+      } else {
+        // Salvamento normal
+        novoMap[selectedTipo] = subatividades;
+      }
+      
+      await saveSubatividades(novoMap);
+      toast.success("Subatividades salvas com sucesso");
     } catch (error) {
-      console.error("Erro ao carregar subatividades:", error);
-      toast({
-        title: "Erro ao carregar subatividades",
-        description: "Não foi possível carregar a lista de subatividades.",
-        variant: "destructive"
-      });
+      console.error("Erro ao salvar subatividades:", error);
+      toast.error("Erro ao salvar subatividades");
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
-  const handleSaveSubatividade = async (data: SubAtividade, tipoServico: TipoServico | TipoAtividade) => {
-    try {
-      await saveSubatividade(data, tipoServico);
-      toast({
-        title: "Subatividade salva",
-        description: "A subatividade foi salva com sucesso.",
-        variant: "default"
-      });
-      
-      // Atualiza a lista local
-      setSubatividades(prev => ({
-        ...prev,
-        [tipoServico]: prev[tipoServico]
-          ? prev[tipoServico].some(s => s.id === data.id)
-            ? prev[tipoServico].map(s => s.id === data.id ? data : s)
-            : [...prev[tipoServico], data]
-          : [data]
-      }));
-      
-      setIsEditing(null);
-    } catch (error) {
-      console.error("Erro ao salvar subatividade:", error);
-      toast({
-        title: "Erro ao salvar",
-        description: "Não foi possível salvar a subatividade.",
-        variant: "destructive"
-      });
+  const handleEdit = (sub: SubAtividade) => {
+    setEditingSubatividade(sub);
+  };
+
+  const handleDelete = (id: string) => {
+    setSubatividades(prev => prev.filter(sub => sub.id !== id));
+    
+    if (editingSubatividade?.id === id) {
+      setEditingSubatividade(null);
     }
   };
 
-  const handleDeleteSubatividade = async (id: string, tipoServico: TipoServico | TipoAtividade) => {
-    try {
-      await deleteSubatividade(id, tipoServico);
-      toast({
-        title: "Subatividade excluída",
-        description: "A subatividade foi excluída com sucesso.",
-        variant: "default"
-      });
-      
-      // Atualiza a lista local
-      setSubatividades(prev => ({
-        ...prev,
-        [tipoServico]: prev[tipoServico].filter(s => s.id !== id)
-      }));
-    } catch (error) {
-      console.error("Erro ao excluir subatividade:", error);
-      toast({
-        title: "Erro ao excluir",
-        description: "Não foi possível excluir a subatividade.",
-        variant: "destructive"
-      });
+  const handleCancelEdit = () => {
+    setEditingSubatividade(null);
+  };
+
+  const handleSaveSubatividade = (data: SubAtividade) => {
+    if (editingSubatividade) {
+      // Editando uma existente
+      setSubatividades(prev =>
+        prev.map(sub => (sub.id === data.id ? data : sub))
+      );
+      setEditingSubatividade(null);
+    } else {
+      // Adicionando uma nova
+      setSubatividades(prev => [...prev, {
+        ...data,
+        servicoTipo: porServico ? selectedServicoTipo as TipoServico : undefined
+      }]);
     }
   };
 
-  const handleEditSubatividade = (subatividade: SubAtividade) => {
-    setIsEditing(subatividade);
-  };
-
-  // Get the appropriate icon for the activity type
-  const getActivityIcon = (tipo: TipoServico | TipoAtividade) => {
-    switch(tipo) {
-      case 'lavagem':
-        return <Droplet className="h-4 w-4" />;
-      case 'inspecao_inicial':
-        return <Search className="h-4 w-4" />;
-      case 'inspecao_final':
-        return <FileSearch className="h-4 w-4" />;
-      default:
-        return null;
-    }
-  };
-
-  // Content of the component
   const content = (
-    <div className="container mx-auto py-6 space-y-6">
-      {!isEmbedded && (
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold tracking-tight">Configuração de Subatividades</h1>
-        </div>
-      )}
-
-      <Alert>
-        <AlertTriangle className="h-4 w-4" />
-        <AlertTitle>Importante</AlertTitle>
-        <AlertDescription>
-          Defina as subatividades para cada tipo de serviço junto com seus preços por hora.
-          Essas informações serão usadas para calcular os custos nas ordens de serviço.
-        </AlertDescription>
-      </Alert>
-
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <Card className="md:col-span-1">
-          <CardHeader>
-            <CardTitle>Nova Subatividade</CardTitle>
-            <CardDescription>
-              Adicione ou edite uma subatividade para o tipo de serviço selecionado
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SubatividadeForm 
-              onSave={(data) => handleSaveSubatividade(data, selectedTab)} 
-              tipoServico={selectedTab}
-              initialData={isEditing}
-              onCancel={() => setIsEditing(null)}
-            />
-          </CardContent>
-        </Card>
-
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ClipboardList className="h-5 w-5" />
-              Lista de Subatividades
-            </CardTitle>
-            <CardDescription>
-              Gerencie as subatividades cadastradas por tipo de serviço
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs 
-              defaultValue="bloco" 
-              value={selectedTab}
-              onValueChange={(value) => setSelectedTab(value as TipoServico | TipoAtividade)}
-              className="w-full"
-            >
-              <TabsList className="grid grid-cols-4 mb-2">
-                <TabsTrigger key="servicos" value="servicos" disabled className="font-semibold text-primary">
-                  Serviços
-                </TabsTrigger>
-              </TabsList>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>{titulo}</CardTitle>
+          <CardDescription>{descricao}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {!tipoFixo && (
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Tipo de Serviço
+                </label>
+                <Select 
+                  value={selectedTipo as string} 
+                  onValueChange={handleTipoChange}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione o tipo de serviço" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tiposServico.map((tipo) => (
+                      <SelectItem key={tipo.value} value={tipo.value}>
+                        {tipo.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            
+            {porServico && (
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Serviço
+                </label>
+                <Select 
+                  value={selectedServicoTipo as string} 
+                  onValueChange={handleServicoTipoChange}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione o serviço" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tiposServico.map((tipo) => (
+                      <SelectItem key={tipo.value} value={tipo.value}>
+                        {tipo.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleAddDefault}
+                disabled={isLoading}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Adicionar Padrões
+              </Button>
               
-              <TabsList className="grid grid-cols-4 mb-4">
-                {tiposServico.slice(0, 4).map(tipo => (
-                  <TabsTrigger key={tipo} value={tipo}>
-                    {tipoServicoNames[tipo]}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              <TabsList className="grid grid-cols-4 mb-4">
-                {tiposServico.slice(4).map(tipo => (
-                  <TabsTrigger key={tipo} value={tipo}>
-                    {tipoServicoNames[tipo]}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              
-              <TabsList className="grid grid-cols-3 mb-2">
-                <TabsTrigger key="etapas" value="etapas" disabled className="font-semibold text-primary">
-                  Etapas
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsList className="grid grid-cols-3 mb-6">
-                {tiposAtividade.map(tipo => (
-                  <TabsTrigger key={tipo} value={tipo} className="flex items-center gap-2">
-                    {getActivityIcon(tipo)}
-                    {tipoServicoNames[tipo]}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-
-              {[...tiposServico, ...tiposAtividade].map(tipo => (
-                <TabsContent key={tipo} value={tipo} className="space-y-4">
-                  <SubatividadeList 
-                    subatividades={subatividades[tipo] || []}
-                    isLoading={isLoading}
-                    onEdit={handleEditSubatividade}
-                    onDelete={(id) => handleDeleteSubatividade(id, tipo)}
+              <Button 
+                variant="default" 
+                size="sm"
+                onClick={handleSave}
+                disabled={isSaving || isLoading}
+              >
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-1" />
+                )}
+                Salvar Alterações
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="md:col-span-1">
+                <CardHeader className="py-4">
+                  <CardTitle className="text-lg">
+                    {editingSubatividade ? "Editar Subatividade" : "Nova Subatividade"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <SubatividadeForm
+                    onSave={handleSaveSubatividade}
+                    tipoServico={
+                      porServico 
+                        ? selectedServicoTipo as TipoServico 
+                        : (tipoFixo || selectedTipo) as TipoServico | TipoAtividade
+                    }
+                    initialData={editingSubatividade}
+                    onCancel={handleCancelEdit}
                   />
-                </TabsContent>
-              ))}
-            </Tabs>
-          </CardContent>
-        </Card>
-      </div>
+                </CardContent>
+              </Card>
+              
+              <div className="md:col-span-1">
+                <h3 className="text-lg font-semibold mb-4">Subatividades</h3>
+                {isLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : subatividades.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">
+                    Nenhuma subatividade configurada. Adicione uma nova ou use o botão "Adicionar Padrões".
+                  </p>
+                ) : (
+                  <SubatividadeList
+                    subatividades={subatividades}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 
-  // Return the component based on whether it's embedded or not
   if (isEmbedded) {
     return content;
   }
 
-  return (
-    <Layout onLogout={onLogout}>
-      {content}
-    </Layout>
-  );
+  return <Layout onLogout={onLogout}>{content}</Layout>;
 }

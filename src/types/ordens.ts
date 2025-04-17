@@ -42,6 +42,7 @@ export type SubAtividade = {
   concluida?: boolean;
   precoHora?: number; // Preço por hora da subatividade
   tempoEstimado?: number; // Tempo estimado em horas
+  servicoTipo?: TipoServico; // A qual tipo de serviço esta subatividade se relaciona
 };
 
 export type Servico = {
@@ -49,6 +50,11 @@ export type Servico = {
   descricao: string;
   concluido: boolean;
   subatividades?: SubAtividade[];
+  atividadesRelacionadas?: {
+    lavagem?: SubAtividade[];
+    inspecao_inicial?: SubAtividade[];
+    inspecao_final?: SubAtividade[];
+  };
   funcionarioId?: string; // ID do funcionário que concluiu o serviço
   funcionarioNome?: string; // Nome do funcionário que concluiu o serviço
   dataConclusao?: Date; // Data de conclusão do serviço
@@ -117,6 +123,7 @@ export type OrdemServico = {
       pausas?: PausaRegistro[];
       precoHora?: number;
       tempoEstimado?: number;
+      servicoTipo?: TipoServico; // Para associar etapas específicas a serviços
     }
   };
   tempoRegistros: TempoRegistro[];

@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import Layout from "@/components/layout/Layout";
 import OrdemForm from "@/components/ordens/OrdemForm";
 import { Prioridade, TipoServico, OrdemServico, SubAtividade, EtapaOS, TipoAtividade } from "@/types/ordens";
-import { collection, addDoc, doc, setDoc, getDoc } from "firebase/firestore";
+import { collection, addDoc, doc, setDoc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { getClientes } from "@/services/clienteService";
@@ -100,6 +100,19 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         });
       }
       
+      // Calcular custo de mão de obra para atividades específicas de cada serviço
+      if (values.atividadesEspecificas) {
+        Object.entries(values.atividadesEspecificas).forEach(([servicoTipo, atividades]: [string, any]) => {
+          Object.entries(atividades).forEach(([tipoAtividade, subs]: [string, any]) => {
+            (subs as SubAtividade[]).forEach(sub => {
+              if (sub.selecionada && sub.precoHora && sub.tempoEstimado) {
+                custoEstimadoMaoDeObra += sub.precoHora * sub.tempoEstimado;
+              }
+            });
+          });
+        });
+      }
+      
       // Calcular custo de mão de obra para as etapas
       if (values.etapasTempoPreco) {
         Object.entries(values.etapasTempoPreco).forEach(([etapa, dados]: [string, any]) => {
@@ -120,12 +133,38 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         });
       }
       
-      const servicos = (values.servicosTipos || []).map((tipo: TipoServico) => ({
-        tipo,
-        descricao: values.servicosDescricoes?.[tipo] || "",
-        concluido: false,
-        subatividades: formattedServicoSubatividades[tipo] || []
-      }));
+      // Preparar as atividades específicas para cada serviço
+      const formattedAtividadesEspecificas: Record<string, Record<string, SubAtividade[]>> = {};
+      
+      if (values.atividadesEspecificas) {
+        Object.entries(values.atividadesEspecificas).forEach(([servicoTipo, atividades]) => {
+          formattedAtividadesEspecificas[servicoTipo] = {};
+          
+          Object.entries(atividades).forEach(([tipoAtividade, subatividades]) => {
+            formattedAtividadesEspecificas[servicoTipo][tipoAtividade] = (subatividades as SubAtividade[]).map(sub => ({
+              ...sub,
+              nome: toTitleCase(sub.nome),
+              servicoTipo: servicoTipo as TipoServico
+            }));
+          });
+        });
+      }
+      
+      const servicos = (values.servicosTipos || []).map((tipo: TipoServico) => {
+        const servicoObj: any = {
+          tipo,
+          descricao: values.servicosDescricoes?.[tipo] || "",
+          concluido: false,
+          subatividades: formattedServicoSubatividades[tipo] || []
+        };
+        
+        // Adicionar atividades específicas para este serviço, se existirem
+        if (formattedAtividadesEspecificas[tipo]) {
+          servicoObj.atividadesRelacionadas = formattedAtividadesEspecificas[tipo];
+        }
+        
+        return servicoObj;
+      });
 
       // Determinar as etapas necessárias
       let etapas: EtapaOS[] = ["lavagem", "inspecao_inicial"];
