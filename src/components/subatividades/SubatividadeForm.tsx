@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -7,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { SubAtividade, TipoServico } from '@/types/ordens';
+import { SubAtividade, TipoServico, TipoAtividade } from '@/types/ordens';
 import { CurrencyInput } from '@/components/ui/currency-input';
 
 // Esquema de validação
@@ -22,7 +21,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 interface SubatividadeFormProps {
   onSave: (data: SubAtividade) => void;
-  tipoServico: TipoServico;
+  tipoServico: TipoServico | TipoAtividade;
   initialData: SubAtividade | null;
   onCancel: () => void;
 }
