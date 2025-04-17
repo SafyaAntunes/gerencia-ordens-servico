@@ -1,15 +1,15 @@
 
 import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, setDoc, deleteDoc, query, where } from 'firebase/firestore';
-import { SubAtividade, TipoServico } from '@/types/ordens';
+import { SubAtividade, TipoServico, TipoAtividade } from '@/types/ordens';
 
 // Obter todas as subatividades agrupadas por tipo de serviço
-export async function getSubatividades(): Promise<Record<TipoServico, SubAtividade[]>> {
+export async function getSubatividades(): Promise<Record<TipoServico | TipoAtividade, SubAtividade[]>> {
   try {
     const subatividadesRef = collection(db, 'subatividades');
     const snapshot = await getDocs(subatividadesRef);
     
-    const result: Record<TipoServico, SubAtividade[]> = {
+    const result: Record<TipoServico | TipoAtividade, SubAtividade[]> = {
       bloco: [],
       biela: [],
       cabecote: [],
@@ -18,11 +18,13 @@ export async function getSubatividades(): Promise<Record<TipoServico, SubAtivida
       montagem: [],
       dinamometro: [],
       lavagem: [],
+      inspecao_inicial: [],
+      inspecao_final: [],
     };
     
     snapshot.forEach((doc) => {
       const data = doc.data();
-      const tipoServico = data.tipoServico as TipoServico;
+      const tipoServico = data.tipoServico as TipoServico | TipoAtividade;
       const subatividade: SubAtividade = {
         id: data.id,
         nome: data.nome,
@@ -43,7 +45,7 @@ export async function getSubatividades(): Promise<Record<TipoServico, SubAtivida
 }
 
 // Salvar uma subatividade
-export async function saveSubatividade(subatividade: SubAtividade, tipoServico: TipoServico): Promise<void> {
+export async function saveSubatividade(subatividade: SubAtividade, tipoServico: TipoServico | TipoAtividade): Promise<void> {
   try {
     const subatividadeRef = doc(db, 'subatividades', subatividade.id);
     await setDoc(subatividadeRef, {
@@ -57,7 +59,7 @@ export async function saveSubatividade(subatividade: SubAtividade, tipoServico: 
 }
 
 // Excluir uma subatividade
-export async function deleteSubatividade(id: string, tipoServico: TipoServico): Promise<void> {
+export async function deleteSubatividade(id: string, tipoServico: TipoServico | TipoAtividade): Promise<void> {
   try {
     const subatividadeRef = doc(db, 'subatividades', id);
     await deleteDoc(subatividadeRef);
@@ -68,7 +70,7 @@ export async function deleteSubatividade(id: string, tipoServico: TipoServico): 
 }
 
 // Obter subatividades por tipo de serviço
-export async function getSubatividadesByTipo(tipoServico: TipoServico): Promise<SubAtividade[]> {
+export async function getSubatividadesByTipo(tipoServico: TipoServico | TipoAtividade): Promise<SubAtividade[]> {
   try {
     const subatividadesRef = collection(db, 'subatividades');
     const q = query(subatividadesRef, where('tipoServico', '==', tipoServico));

@@ -30,6 +30,11 @@ export type TipoServico =
   | 'dinamometro'
   | 'lavagem';
 
+export type TipoAtividade =
+  | 'lavagem'
+  | 'inspecao_inicial'
+  | 'inspecao_final';
+
 export type SubAtividade = {
   id: string;
   nome: string;
@@ -110,6 +115,8 @@ export type OrdemServico = {
       finalizado?: Date;
       usarCronometro?: boolean;
       pausas?: PausaRegistro[];
+      precoHora?: number;
+      tempoEstimado?: number;
     }
   };
   tempoRegistros: TempoRegistro[];

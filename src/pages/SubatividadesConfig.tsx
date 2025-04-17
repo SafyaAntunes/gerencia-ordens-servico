@@ -3,17 +3,16 @@ import React, { useState, useEffect } from 'react';
 import Layout from "@/components/layout/Layout";
 import { SubatividadeForm } from "@/components/subatividades/SubatividadeForm";
 import { getSubatividades, saveSubatividade, deleteSubatividade } from "@/services/subatividadeService";
-import { SubAtividade, TipoServico } from "@/types/ordens";
+import { SubAtividade, TipoServico, TipoAtividade } from "@/types/ordens";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { SubatividadeList } from "@/components/subatividades/SubatividadeList";
-import { AlertTriangle, ClipboardList } from "lucide-react";
+import { AlertTriangle, ClipboardList, Droplet, Search, FileSearch } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // Mapeia os tipos de serviço para nomes amigáveis
-const tipoServicoNames: Record<TipoServico, string> = {
+const tipoServicoNames: Record<TipoServico | TipoAtividade, string> = {
   bloco: "Bloco",
   biela: "Biela",
   cabecote: "Cabeçote",
@@ -21,7 +20,9 @@ const tipoServicoNames: Record<TipoServico, string> = {
   eixo_comando: "Eixo de Comando",
   montagem: "Montagem",
   dinamometro: "Dinamômetro",
-  lavagem: "Lavagem"
+  lavagem: "Lavagem",
+  inspecao_inicial: "Inspeção Inicial",
+  inspecao_final: "Inspeção Final"
 };
 
 // Define a lista de tipos de serviço para as abas
@@ -36,15 +37,22 @@ const tiposServico: TipoServico[] = [
   "lavagem"
 ];
 
+// Define a lista de tipos de atividade para as abas
+const tiposAtividade: TipoAtividade[] = [
+  "lavagem",
+  "inspecao_inicial",
+  "inspecao_final"
+];
+
 interface SubatividadesConfigProps {
   onLogout?: () => void;
-  isEmbedded?: boolean; // New prop to indicate if the component is embedded in another page
+  isEmbedded?: boolean; // Prop to indicate if the component is embedded in another page
 }
 
 export default function SubatividadesConfig({ onLogout, isEmbedded = false }: SubatividadesConfigProps) {
-  const [subatividades, setSubatividades] = useState<Record<TipoServico, SubAtividade[]>>({} as Record<TipoServico, SubAtividade[]>);
+  const [subatividades, setSubatividades] = useState<Record<TipoServico | TipoAtividade, SubAtividade[]>>({} as Record<TipoServico | TipoAtividade, SubAtividade[]>);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedTab, setSelectedTab] = useState<TipoServico>("bloco");
+  const [selectedTab, setSelectedTab] = useState<TipoServico | TipoAtividade>("bloco");
   const [isEditing, setIsEditing] = useState<SubAtividade | null>(null);
   const { toast } = useToast();
 
@@ -69,7 +77,7 @@ export default function SubatividadesConfig({ onLogout, isEmbedded = false }: Su
     }
   };
 
-  const handleSaveSubatividade = async (data: SubAtividade, tipoServico: TipoServico) => {
+  const handleSaveSubatividade = async (data: SubAtividade, tipoServico: TipoServico | TipoAtividade) => {
     try {
       await saveSubatividade(data, tipoServico);
       toast({
@@ -99,7 +107,7 @@ export default function SubatividadesConfig({ onLogout, isEmbedded = false }: Su
     }
   };
 
-  const handleDeleteSubatividade = async (id: string, tipoServico: TipoServico) => {
+  const handleDeleteSubatividade = async (id: string, tipoServico: TipoServico | TipoAtividade) => {
     try {
       await deleteSubatividade(id, tipoServico);
       toast({
@@ -125,6 +133,20 @@ export default function SubatividadesConfig({ onLogout, isEmbedded = false }: Su
 
   const handleEditSubatividade = (subatividade: SubAtividade) => {
     setIsEditing(subatividade);
+  };
+
+  // Get the appropriate icon for the activity type
+  const getActivityIcon = (tipo: TipoServico | TipoAtividade) => {
+    switch(tipo) {
+      case 'lavagem':
+        return <Droplet className="h-4 w-4" />;
+      case 'inspecao_inicial':
+        return <Search className="h-4 w-4" />;
+      case 'inspecao_final':
+        return <FileSearch className="h-4 w-4" />;
+      default:
+        return null;
+    }
   };
 
   // Content of the component
@@ -177,9 +199,15 @@ export default function SubatividadesConfig({ onLogout, isEmbedded = false }: Su
             <Tabs 
               defaultValue="bloco" 
               value={selectedTab}
-              onValueChange={(value) => setSelectedTab(value as TipoServico)}
+              onValueChange={(value) => setSelectedTab(value as TipoServico | TipoAtividade)}
               className="w-full"
             >
+              <TabsList className="grid grid-cols-4 mb-2">
+                <TabsTrigger key="servicos" value="servicos" disabled className="font-semibold text-primary">
+                  Serviços
+                </TabsTrigger>
+              </TabsList>
+              
               <TabsList className="grid grid-cols-4 mb-4">
                 {tiposServico.slice(0, 4).map(tipo => (
                   <TabsTrigger key={tipo} value={tipo}>
@@ -187,15 +215,30 @@ export default function SubatividadesConfig({ onLogout, isEmbedded = false }: Su
                   </TabsTrigger>
                 ))}
               </TabsList>
-              <TabsList className="grid grid-cols-4 mb-6">
+              <TabsList className="grid grid-cols-4 mb-4">
                 {tiposServico.slice(4).map(tipo => (
                   <TabsTrigger key={tipo} value={tipo}>
                     {tipoServicoNames[tipo]}
                   </TabsTrigger>
                 ))}
               </TabsList>
+              
+              <TabsList className="grid grid-cols-3 mb-2">
+                <TabsTrigger key="etapas" value="etapas" disabled className="font-semibold text-primary">
+                  Etapas
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsList className="grid grid-cols-3 mb-6">
+                {tiposAtividade.map(tipo => (
+                  <TabsTrigger key={tipo} value={tipo} className="flex items-center gap-2">
+                    {getActivityIcon(tipo)}
+                    {tipoServicoNames[tipo]}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
 
-              {tiposServico.map(tipo => (
+              {[...tiposServico, ...tiposAtividade].map(tipo => (
                 <TabsContent key={tipo} value={tipo} className="space-y-4">
                   <SubatividadeList 
                     subatividades={subatividades[tipo] || []}

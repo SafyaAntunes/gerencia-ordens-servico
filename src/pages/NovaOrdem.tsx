@@ -1,13 +1,15 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import Layout from "@/components/layout/Layout";
 import OrdemForm from "@/components/ordens/OrdemForm";
-import { Prioridade, TipoServico, OrdemServico, SubAtividade, EtapaOS } from "@/types/ordens";
+import { Prioridade, TipoServico, OrdemServico, SubAtividade, EtapaOS, TipoAtividade } from "@/types/ordens";
 import { collection, addDoc, doc, setDoc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { getClientes } from "@/services/clienteService";
+import { getSubatividadesByTipo } from "@/services/subatividadeService";
 import { Cliente } from "@/types/clientes";
 
 const toTitleCase = (str: string) => {
@@ -87,6 +89,7 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
       
       let custoEstimadoMaoDeObra = 0;
       
+      // Calcular custo de mão de obra para as subatividades dos serviços
       if (values.servicosSubatividades) {
         Object.entries(values.servicosSubatividades).forEach(([tipo, subs]: [string, any]) => {
           (subs as SubAtividade[]).forEach(sub => {
@@ -94,6 +97,15 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
               custoEstimadoMaoDeObra += sub.precoHora * sub.tempoEstimado;
             }
           });
+        });
+      }
+      
+      // Calcular custo de mão de obra para as etapas
+      if (values.etapasTempoPreco) {
+        Object.entries(values.etapasTempoPreco).forEach(([etapa, dados]: [string, any]) => {
+          if (dados.precoHora && dados.tempoEstimado) {
+            custoEstimadoMaoDeObra += dados.precoHora * dados.tempoEstimado;
+          }
         });
       }
       
@@ -115,6 +127,7 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         subatividades: formattedServicoSubatividades[tipo] || []
       }));
 
+      // Determinar as etapas necessárias
       let etapas: EtapaOS[] = ["lavagem", "inspecao_inicial"];
       
       if (servicos.some(s => ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo))) {
@@ -133,11 +146,16 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
 
       const etapasAndamento: Record<string, any> = {};
       
+      // Configurar cada etapa com os tempos estimados e preços por hora
       etapas.forEach(etapa => {
+        const etapaConfig = values.etapasTempoPreco?.[etapa] || {};
+        
         etapasAndamento[etapa] = { 
           concluido: false,
           usarCronometro: true,
-          pausas: []
+          pausas: [],
+          precoHora: etapaConfig.precoHora || 0,
+          tempoEstimado: etapaConfig.tempoEstimado || 0
         };
       });
 

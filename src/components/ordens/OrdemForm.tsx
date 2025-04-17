@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Check, Plus, X, Camera, UserPlus, User } from "lucide-react";
+import { CalendarIcon, Check, Plus, X, Camera, UserPlus, User, Clock, Droplet, Search, FileSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -40,7 +41,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { Prioridade, TipoServico, Motor, SubAtividade } from "@/types/ordens";
+import { Prioridade, TipoServico, Motor, SubAtividade, TipoAtividade, EtapaOS } from "@/types/ordens";
 import { Cliente } from "@/types/clientes";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FotosForm from "./FotosForm";
@@ -48,7 +49,9 @@ import { ServicoSubatividades } from "./ServicoSubatividades";
 import ClienteForm from "@/components/clientes/ClienteForm";
 import { v4 as uuidv4 } from "uuid";
 import { saveCliente, getMotores } from "@/services/clienteService";
+import { getSubatividades, getSubatividadesByTipo } from "@/services/subatividadeService";
 import { toast } from "sonner";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const SUBATIVIDADES: Record<TipoServico, string[]> = {
   bloco: [
@@ -117,6 +120,22 @@ const SUBATIVIDADES: Record<TipoServico, string[]> = {
   ]
 };
 
+// Mapeamento de etapas para ícones e nomes amigáveis
+const ETAPAS_CONFIG = {
+  lavagem: {
+    icon: <Droplet className="h-4 w-4 mr-2" />,
+    label: "Lavagem"
+  },
+  inspecao_inicial: {
+    icon: <Search className="h-4 w-4 mr-2" />,
+    label: "Inspeção Inicial"
+  },
+  inspecao_final: {
+    icon: <FileSearch className="h-4 w-4 mr-2" />,
+    label: "Inspeção Final"
+  }
+};
+
 const formSchema = z.object({
   id: z.string().min(1, { message: "Número da OS é obrigatório" }),
   nome: z.string().min(2, { message: "Nome deve ter pelo menos 2 caracteres" }),
@@ -128,6 +147,10 @@ const formSchema = z.object({
   servicosTipos: z.array(z.string()).optional(),
   servicosDescricoes: z.record(z.string()).optional(),
   servicosSubatividades: z.record(z.array(z.any())).optional(),
+  etapasTempoPreco: z.record(z.object({
+    precoHora: z.number().optional(),
+    tempoEstimado: z.number().optional()
+  })).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -173,6 +196,20 @@ export default function OrdemForm({
   const [isNovoClienteOpen, setIsNovoClienteOpen] = useState(false);
   const [isSubmittingCliente, setIsSubmittingCliente] = useState(false);
   const [isLoadingMotores, setIsLoadingMotores] = useState(false);
+  const [etapasConfig, setEtapasConfig] = useState<Record<TipoAtividade, SubAtividade[]>>({
+    lavagem: [],
+    inspecao_inicial: [],
+    inspecao_final: []
+  });
+  const [isLoadingEtapas, setIsLoadingEtapas] = useState(false);
+  const [etapasTempoPreco, setEtapasTempoPreco] = useState<Record<EtapaOS, {precoHora?: number, tempoEstimado?: number}>>({
+    lavagem: {precoHora: 0, tempoEstimado: 0},
+    inspecao_inicial: {precoHora: 0, tempoEstimado: 0},
+    inspecao_final: {precoHora: 0, tempoEstimado: 0},
+    retifica: {precoHora: 0, tempoEstimado: 0},
+    montagem: {precoHora: 0, tempoEstimado: 0},
+    dinamometro: {precoHora: 0, tempoEstimado: 0}
+  });
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -187,8 +224,52 @@ export default function OrdemForm({
       servicosTipos: defaultValues?.servicosTipos || [],
       servicosDescricoes: defaultValues?.servicosDescricoes || {},
       servicosSubatividades: defaultValues?.servicosSubatividades || {},
+      etapasTempoPreco: defaultValues?.etapasTempoPreco || {},
     },
   });
+  
+  // Carregar configurações de preço por hora para as etapas
+  useEffect(() => {
+    const fetchEtapasConfig = async () => {
+      setIsLoadingEtapas(true);
+      try {
+        const etapasData = await getSubatividades();
+        
+        // Apenas precisamos das etapas lavagem, inspecao_inicial e inspecao_final
+        const tiposAtividade: TipoAtividade[] = ['lavagem', 'inspecao_inicial', 'inspecao_final'];
+        
+        // Para cada tipo de atividade, atualize o preço padrão se houver subatividades
+        tiposAtividade.forEach((tipo) => {
+          if (etapasData[tipo] && etapasData[tipo].length > 0) {
+            // Use o preço da primeira subatividade como preço padrão
+            const defaultPreco = etapasData[tipo][0].precoHora || 0;
+            
+            setEtapasTempoPreco(prev => ({
+              ...prev,
+              [tipo]: { 
+                ...prev[tipo],
+                precoHora: defaultPreco 
+              }
+            }));
+          }
+          
+          // Guarde as subatividades para referência
+          if (etapasData[tipo]) {
+            setEtapasConfig(prev => ({
+              ...prev,
+              [tipo]: etapasData[tipo]
+            }));
+          }
+        });
+      } catch (error) {
+        console.error("Erro ao buscar configurações de etapas:", error);
+      } finally {
+        setIsLoadingEtapas(false);
+      }
+    };
+    
+    fetchEtapasConfig();
+  }, []);
   
   useEffect(() => {
     const processDefaultFotos = () => {
@@ -246,7 +327,14 @@ export default function OrdemForm({
     if (defaultValues?.servicosDescricoes) {
       setServicosDescricoes(defaultValues.servicosDescricoes);
     }
-  }, [defaultValues?.servicosSubatividades, defaultValues?.servicosDescricoes]);
+    
+    if (defaultValues?.etapasTempoPreco) {
+      setEtapasTempoPreco(prev => ({
+        ...prev,
+        ...defaultValues.etapasTempoPreco as any
+      }));
+    }
+  }, [defaultValues?.servicosSubatividades, defaultValues?.servicosDescricoes, defaultValues?.etapasTempoPreco]);
   
   useEffect(() => {
     const tiposList = form.watch("servicosTipos") || [];
@@ -292,11 +380,22 @@ export default function OrdemForm({
     }));
   };
   
+  const handleEtapaTempoPrecoChange = (etapa: EtapaOS, field: 'precoHora' | 'tempoEstimado', value: number) => {
+    setEtapasTempoPreco(prev => ({
+      ...prev,
+      [etapa]: {
+        ...prev[etapa],
+        [field]: value
+      }
+    }));
+  };
+  
   const handleFormSubmit = (values: FormValues) => {
     const formData = {
       ...values,
       servicosDescricoes,
       servicosSubatividades,
+      etapasTempoPreco,
       fotosEntrada,
       fotosSaida
     };
@@ -352,8 +451,12 @@ export default function OrdemForm({
           onValueChange={setActiveTab}
           className="w-full"
         >
-          <TabsList className="grid grid-cols-2">
+          <TabsList className="grid grid-cols-3">
             <TabsTrigger value="dados">Dados da OS</TabsTrigger>
+            <TabsTrigger value="etapas" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Tempos de Etapas
+            </TabsTrigger>
             <TabsTrigger value="fotos" className="flex items-center gap-2">
               <Camera className="h-4 w-4" />
               Fotos
@@ -699,6 +802,91 @@ export default function OrdemForm({
                 />
               </div>
             </div>
+          </TabsContent>
+          
+          <TabsContent value="etapas" className="space-y-6 pt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Clock className="h-5 w-5 mr-2" />
+                  Tempos e Valores das Etapas
+                </CardTitle>
+                <CardDescription>
+                  Configure os valores por hora e o tempo estimado para cada etapa do processo
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {isLoadingEtapas ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    <span className="ml-3">Carregando configurações de etapas...</span>
+                  </div>
+                ) : (
+                  <>
+                    {/* Etapas com configuração de subatividades */}
+                    {(['lavagem', 'inspecao_inicial', 'inspecao_final'] as const).map((etapa) => (
+                      <div key={etapa} className="border rounded-md p-4">
+                        <div className="flex items-center mb-3">
+                          {ETAPAS_CONFIG[etapa].icon}
+                          <h3 className="text-lg font-semibold">{ETAPAS_CONFIG[etapa].label}</h3>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm font-medium">Valor por hora (R$)</label>
+                            <Input
+                              type="number"
+                              placeholder="0.00"
+                              min={0}
+                              step={0.01}
+                              value={etapasTempoPreco[etapa]?.precoHora || 0}
+                              onChange={(e) => handleEtapaTempoPrecoChange(
+                                etapa, 
+                                'precoHora', 
+                                parseFloat(e.target.value) || 0
+                              )}
+                              className="mt-1"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Valor cobrado por hora de trabalho
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <label className="text-sm font-medium">Tempo estimado (horas)</label>
+                            <Input
+                              type="number"
+                              placeholder="0.0"
+                              min={0}
+                              step={0.5}
+                              value={etapasTempoPreco[etapa]?.tempoEstimado || 0}
+                              onChange={(e) => handleEtapaTempoPrecoChange(
+                                etapa, 
+                                'tempoEstimado', 
+                                parseFloat(e.target.value) || 0
+                              )}
+                              className="mt-1"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Tempo previsto para completar esta etapa
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-2 px-3 py-2 bg-muted rounded-md text-sm">
+                          <div className="flex justify-between">
+                            <span>Valor estimado:</span>
+                            <span className="font-medium">
+                              R$ {((etapasTempoPreco[etapa]?.precoHora || 0) * (etapasTempoPreco[etapa]?.tempoEstimado || 0)).toFixed(2).replace('.', ',')}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
           
           <TabsContent value="fotos" className="pt-4">
