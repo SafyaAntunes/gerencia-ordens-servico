@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import Layout from "@/components/layout/Layout";
 import { SubatividadeForm } from "@/components/subatividades/SubatividadeForm";
-import SubatividadeList from "@/components/subatividades/SubatividadeList";
+import { SubatividadeList } from "@/components/subatividades/SubatividadeList";
 import { TipoServico, SubAtividade, TipoAtividade } from "@/types/ordens";
 import { Button } from "@/components/ui/button";
 import { Plus, Save, Loader2 } from "lucide-react";
@@ -24,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useServicoSubatividades } from "@/hooks/useServicoSubatividades";
-import { getSubatividades, saveSubatividades } from "@/services/subatividadeService";
+import { getSubatividades, saveSubatividade } from "@/services/subatividadeService";
 
 interface SubatividadesConfigProps {
   onLogout?: () => void;
@@ -57,7 +56,6 @@ export default function SubatividadesConfig({
   const [isLoading, setIsLoading] = useState(false);
   const { defaultSubatividades, defaultAtividadesEspecificas } = useServicoSubatividades();
 
-  // Lista de tipos de serviço ou atividade
   const tiposServico: { value: string; label: string }[] = [
     { value: "bloco", label: "Bloco" },
     { value: "biela", label: "Biela" },
@@ -75,7 +73,6 @@ export default function SubatividadesConfig({
     { value: "inspecao_final", label: "Inspeção Final" }
   ];
 
-  // Carregar subatividades do Firebase
   useEffect(() => {
     const fetchSubatividades = async () => {
       setIsLoading(true);
@@ -83,32 +80,28 @@ export default function SubatividadesConfig({
         const data = await getSubatividades();
         setSubatividadesMap(data);
         
-        // Se for uma configuração por serviço (para tipos de atividade)
         if (porServico && tipoFixo && selectedServicoTipo) {
           const tipoAtividade = tipoFixo as TipoAtividade;
           const servicoTipo = selectedServicoTipo as TipoServico;
           
-          // Filtrar apenas as subatividades para este tipo de serviço
           const filtradas = data[tipoAtividade]?.filter(
             s => !s.servicoTipo || s.servicoTipo === servicoTipo
           ) || [];
           
           setSubatividades(filtradas);
           
-          // Se não houver subatividades, criar a partir dos defaults
           if (filtradas.length === 0 && defaultAtividadesEspecificas[tipoAtividade]?.[servicoTipo]) {
             const defaults = defaultAtividadesEspecificas[tipoAtividade][servicoTipo].map(nome => ({
               id: uuidv4(),
               nome,
               selecionada: false,
-              precoHora: 70, // Preço padrão
+              precoHora: 70,
               servicoTipo
             }));
             
             setSubatividades(defaults);
           }
         } else if (selectedTipo) {
-          // Configuração normal (não é por serviço)
           setSubatividades(data[selectedTipo as string] || []);
         }
       } catch (error) {
@@ -136,13 +129,11 @@ export default function SubatividadesConfig({
     let defaultsToAdd: string[] = [];
     
     if (porServico && tipoFixo && selectedServicoTipo) {
-      // Adicionar defaults para atividades específicas do serviço
       const tipoAtividade = tipoFixo as TipoAtividade;
       const servicoTipo = selectedServicoTipo as TipoServico;
       
       defaultsToAdd = defaultAtividadesEspecificas[tipoAtividade]?.[servicoTipo] || [];
     } else {
-      // Adicionar defaults normais
       defaultsToAdd = defaultSubatividades[selectedTipo as TipoServico] || [];
     }
     
@@ -152,7 +143,7 @@ export default function SubatividadesConfig({
         id: uuidv4(),
         nome,
         selecionada: false,
-        precoHora: 70, // Preço padrão
+        precoHora: 70,
         servicoTipo: porServico ? selectedServicoTipo as TipoServico : undefined
       }));
     
@@ -163,23 +154,20 @@ export default function SubatividadesConfig({
       toast.info("Todas as subatividades padrão já estão na lista");
     }
   };
-  
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
       const novoMap = { ...subatividadesMap };
       
       if (porServico && tipoFixo) {
-        // Salvar por serviço (para tipos de atividade)
         const tipoAtividade = tipoFixo as TipoAtividade;
         
-        // Manter subatividades existentes que não são deste serviço
         const existentes = novoMap[tipoAtividade] || [];
         const outrasSubatividades = existentes.filter(
           s => s.servicoTipo !== selectedServicoTipo
         );
         
-        // Adicionar as novas subatividades com o tipo de serviço marcado
         const subatividadesComTipo = subatividades.map(s => ({
           ...s,
           servicoTipo: selectedServicoTipo as TipoServico
@@ -187,11 +175,16 @@ export default function SubatividadesConfig({
         
         novoMap[tipoAtividade] = [...outrasSubatividades, ...subatividadesComTipo];
       } else {
-        // Salvamento normal
         novoMap[selectedTipo] = subatividades;
       }
       
-      await saveSubatividades(novoMap);
+      for (const tipo in novoMap) {
+        const subatividades = novoMap[tipo as TipoServico | TipoAtividade];
+        for (const sub of subatividades) {
+          await saveSubatividade(sub, tipo as TipoServico | TipoAtividade);
+        }
+      }
+      
       toast.success("Subatividades salvas com sucesso");
     } catch (error) {
       console.error("Erro ao salvar subatividades:", error);
@@ -219,13 +212,11 @@ export default function SubatividadesConfig({
 
   const handleSaveSubatividade = (data: SubAtividade) => {
     if (editingSubatividade) {
-      // Editando uma existente
       setSubatividades(prev =>
         prev.map(sub => (sub.id === data.id ? data : sub))
       );
       setEditingSubatividade(null);
     } else {
-      // Adicionando uma nova
       setSubatividades(prev => [...prev, {
         ...data,
         servicoTipo: porServico ? selectedServicoTipo as TipoServico : undefined

@@ -4,9 +4,10 @@ import { Input } from "@/components/ui/input";
 
 interface CurrencyInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value"> {
   value: number;
-  onValueChange: (value: number) => void;
+  onValueChange?: (value: number) => void;
   locale?: string;
   currency?: string;
+  readOnly?: boolean;
 }
 
 export function CurrencyInput({
@@ -14,6 +15,7 @@ export function CurrencyInput({
   onValueChange,
   locale = "pt-BR",
   currency = "BRL",
+  readOnly = false,
   ...props
 }: CurrencyInputProps) {
   const [displayValue, setDisplayValue] = React.useState("");
@@ -28,6 +30,8 @@ export function CurrencyInput({
   }, [value, locale]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (readOnly) return;
+    
     // Remove tudo exceto números e ponto
     let input = e.target.value.replace(/[^\d]/g, "");
     
@@ -35,7 +39,9 @@ export function CurrencyInput({
     const numericValue = parseFloat(input) / 100;
     
     // Atualiza o valor
-    onValueChange(numericValue);
+    if (onValueChange) {
+      onValueChange(numericValue);
+    }
     
     // Formata para exibição
     const formatted = numericValue.toLocaleString(locale, {
@@ -55,6 +61,7 @@ export function CurrencyInput({
         value={displayValue}
         onChange={handleChange}
         inputMode="numeric"
+        readOnly={readOnly}
       />
     </div>
   );
