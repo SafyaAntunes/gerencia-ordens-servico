@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -341,6 +342,7 @@ export default function SubatividadesConfig({
                     subatividades={subatividades}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
+                    isLoading={isLoading}
                   />
                 )}
               </div>
