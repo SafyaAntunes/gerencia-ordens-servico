@@ -40,9 +40,9 @@ export type SubAtividade = {
   nome: string;
   selecionada: boolean;
   concluida?: boolean;
-  precoHora?: number;
-  tempoEstimado?: number;
-  servicoTipo?: TipoServico;
+  precoHora?: number; // Preço por hora da subatividade
+  tempoEstimado?: number; // Tempo estimado em horas
+  servicoTipo?: TipoServico; // A qual tipo de serviço esta subatividade se relaciona
 };
 
 export type Servico = {
@@ -55,15 +55,15 @@ export type Servico = {
     inspecao_inicial?: SubAtividade[];
     inspecao_final?: SubAtividade[];
   };
-  funcionarioId?: string;
-  funcionarioNome?: string;
-  dataConclusao?: Date;
+  funcionarioId?: string; // ID do funcionário que concluiu o serviço
+  funcionarioNome?: string; // Nome do funcionário que concluiu o serviço
+  dataConclusao?: Date; // Data de conclusão do serviço
 };
 
 export type StatusOS = 
   | 'orcamento'
   | 'aguardando_aprovacao'
-  | 'fabricacao'
+  | 'fabricacao'  // Alterado de 'retifica' para 'fabricacao'
   | 'aguardando_peca_cliente'
   | 'aguardando_peca_interno'
   | 'finalizado'
@@ -96,8 +96,8 @@ export type FotoBase64 = {
 };
 
 export type PausaRegistro = {
-  inicio: Date;
-  fim?: Date;
+  inicio: number;
+  fim?: number;
   motivo?: string;
 };
 
@@ -105,16 +105,16 @@ export type OrdemServico = {
   id: string;
   nome: string;
   cliente: Cliente;
-  motorId?: string;
+  motorId?: string; // Referência ao motor selecionado
   dataAbertura: Date;
   dataPrevistaEntrega: Date;
   prioridade: Prioridade;
   servicos: Servico[];
   status: StatusOS;
-  progressoEtapas?: number;
+  progressoEtapas?: number; // Valor entre 0 e 1 representando o percentual de conclusão
   etapasAndamento: {
     [key in EtapaOS]?: {
-      concluido?: boolean;
+      concluido: boolean;
       funcionarioId?: string;
       funcionarioNome?: string;
       iniciado?: Date;
@@ -123,16 +123,16 @@ export type OrdemServico = {
       pausas?: PausaRegistro[];
       precoHora?: number;
       tempoEstimado?: number;
-      servicoTipo?: TipoServico;
+      servicoTipo?: TipoServico; // Para associar etapas específicas a serviços
     }
   };
   tempoRegistros: TempoRegistro[];
   fotosEntrada?: FotoBase64[] | any[];
   fotosSaida?: FotoBase64[] | any[];
-  valorTotal?: number;
-  custoMaterial?: number;
-  custoEstimadoMaoDeObra?: number;
-  custoRealMaoDeObra?: number;
-  lucroBruto?: number;
-  margemLucro?: number;
+  valorTotal?: number; // Valor total do orçamento
+  custoMaterial?: number; // Custo com materiais
+  custoEstimadoMaoDeObra?: number; // Custo estimado da mão de obra
+  custoRealMaoDeObra?: number; // Custo real da mão de obra
+  lucroBruto?: number; // Lucro bruto (valorTotal - custoMaterial - custoRealMaoDeObra)
+  margemLucro?: number; // Margem de lucro em porcentagem
 };
