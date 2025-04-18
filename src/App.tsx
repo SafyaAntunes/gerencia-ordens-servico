@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,6 +17,7 @@ import RelatoriosProducao from "./pages/RelatoriosProducao";
 import RelatoriosFinanceiro from "./pages/RelatoriosFinanceiro";
 import Configuracoes from "./pages/Configuracoes";
 import Login from "./pages/Login";
+import Procedimentos from "./pages/Procedimentos"; // Add this import
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 
 // Authentication guard component
