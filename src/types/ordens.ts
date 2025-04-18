@@ -1,4 +1,3 @@
-
 export type Cliente = {
   id: string;
   nome: string;
@@ -96,12 +95,11 @@ export type FotoBase64 = {
 };
 
 export type PausaRegistro = {
-  inicio: number;
-  fim?: number;
+  inicio: Date;
+  fim?: Date;
   motivo?: string;
 };
 
-// Update the type to make PausaRegistro compatible with the expected structure in etapasAndamento
 export type OrdemServico = {
   id: string;
   nome: string;
@@ -121,7 +119,7 @@ export type OrdemServico = {
       iniciado?: Date;
       finalizado?: Date;
       usarCronometro?: boolean;
-      pausas?: PausaRegistro[];  // This needs to be compatible with PausaRegistro
+      pausas?: PausaRegistro[];
       precoHora?: number;
       tempoEstimado?: number;
       servicoTipo?: TipoServico;

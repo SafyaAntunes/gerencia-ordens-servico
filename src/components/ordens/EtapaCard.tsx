@@ -90,40 +90,56 @@ export default function EtapaCard({
                     isEtapaConcluida={etapaInfo?.concluido}
                   />
                 </div>
+                <ServicoTracker
+                  key={servico.tipo}
+                  servico={servico}
+                  ordemId={ordemId}
+                  funcionarioId={funcionarioId}
+                  funcionarioNome={funcionarioNome}
+                  onSubatividadeToggle={(subId, checked) => 
+                    onSubatividadeToggle(servico.tipo, subId, checked)
+                  }
+                  onServicoStatusChange={(concluido, funcId, funcNome) => 
+                    onServicoStatusChange(servico.tipo, concluido, funcId, funcNome)
+                  }
+                  className="mt-4"
+                />
                 {index < servicos.length - 1 && <Separator className="my-4" />}
               </div>
             ))}
           </div>
         ) : (
-          <OrdemCronometro
-            ordemId={ordemId}
-            funcionarioId={funcionarioId}
-            funcionarioNome={funcionarioNome}
-            etapa={etapa}
-            onStart={() => {}}
-            onPause={() => {}}
-            onResume={() => {}}
-            onFinish={() => {}}
-            isEtapaConcluida={etapaInfo?.concluido}
-          />
-        )}
+          <>
+            <OrdemCronometro
+              ordemId={ordemId}
+              funcionarioId={funcionarioId}
+              funcionarioNome={funcionarioNome}
+              etapa={etapa}
+              onStart={() => {}}
+              onPause={() => {}}
+              onResume={() => {}}
+              onFinish={() => {}}
+              isEtapaConcluida={etapaInfo?.concluido}
+            />
 
-        {servicos.map((servico) => (
-          <ServicoTracker
-            key={servico.tipo}
-            servico={servico}
-            ordemId={ordemId}
-            funcionarioId={funcionarioId}
-            funcionarioNome={funcionarioNome}
-            onSubatividadeToggle={(subId, checked) => 
-              onSubatividadeToggle(servico.tipo, subId, checked)
-            }
-            onServicoStatusChange={(concluido, funcId, funcNome) => 
-              onServicoStatusChange(servico.tipo, concluido, funcId, funcNome)
-            }
-            className="mt-4"
-          />
-        ))}
+            {servicos.map((servico) => (
+              <ServicoTracker
+                key={servico.tipo}
+                servico={servico}
+                ordemId={ordemId}
+                funcionarioId={funcionarioId}
+                funcionarioNome={funcionarioNome}
+                onSubatividadeToggle={(subId, checked) => 
+                  onSubatividadeToggle(servico.tipo, subId, checked)
+                }
+                onServicoStatusChange={(concluido, funcId, funcNome) => 
+                  onServicoStatusChange(servico.tipo, concluido, funcId, funcNome)
+                }
+                className="mt-4"
+              />
+            ))}
+          </>
+        )}
       </CardContent>
     </Card>
   );
