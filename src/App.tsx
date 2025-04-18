@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -164,6 +163,13 @@ const AppRoutes = () => {
       <Route path="/configuracoes" element={
         <PrivateRoute requiredPermission="admin">
           <Configuracoes onLogout={handleLogout} />
+        </PrivateRoute>
+      } />
+      
+      {/* POPs - gerentes ou superior */}
+      <Route path="/procedimentos" element={
+        <PrivateRoute requiredPermission="gerente">
+          <Procedimentos onLogout={handleLogout} />
         </PrivateRoute>
       } />
       
