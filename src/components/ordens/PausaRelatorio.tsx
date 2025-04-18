@@ -56,9 +56,11 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
         try {
           const parsed = JSON.parse(data);
           if (parsed.pausas && parsed.pausas.length > 0) {
-            parsed.pausas.forEach((pausa: PausaRegistro) => {
+            parsed.pausas.forEach((pausa: any) => {
               pausasAgregadas.push({
-                ...pausa,
+                inicio: new Date(pausa.inicio),
+                fim: pausa.fim ? new Date(pausa.fim) : undefined,
+                motivo: pausa.motivo,
                 servico: servico.tipo,
                 funcionarioNome: servico.funcionarioNome
               });
@@ -71,7 +73,11 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
     });
     
     // Ordenar pausas por data (mais recentes primeiro)
-    pausasAgregadas.sort((a, b) => b.inicio - a.inicio);
+    pausasAgregadas.sort((a, b) => {
+      const timeA = a.inicio instanceof Date ? a.inicio.getTime() : 0;
+      const timeB = b.inicio instanceof Date ? b.inicio.getTime() : 0;
+      return timeB - timeA;
+    });
     
     setTodasPausas(pausasAgregadas);
     setTotalPausas(pausasAgregadas.length);
@@ -83,7 +89,11 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
     // Calcular tempo total em pausa (apenas pausas finalizadas)
     const tempoTotal = pausasAgregadas
       .filter(item => item.fim)
-      .reduce((acc, item) => acc + ((item.fim || 0) - item.inicio), 0);
+      .reduce((acc, item) => {
+        const inicioMs = item.inicio instanceof Date ? item.inicio.getTime() : 0;
+        const fimMs = item.fim instanceof Date ? item.fim.getTime() : 0;
+        return acc + (fimMs - inicioMs);
+      }, 0);
     
     setTempoTotalEmPausa(tempoTotal);
     
@@ -95,7 +105,9 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
       }
       acc[motivo].count += 1;
       if (item.fim) {
-        acc[motivo].tempo += (item.fim - item.inicio);
+        const inicioMs = item.inicio instanceof Date ? item.inicio.getTime() : 0;
+        const fimMs = item.fim instanceof Date ? item.fim.getTime() : 0;
+        acc[motivo].tempo += (fimMs - inicioMs);
       }
       return acc;
     }, {} as Record<string, { count: number, tempo: number }>);
@@ -104,18 +116,21 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
   };
   
   // Funções para formatar tempo e dados
-  const formatarHora = (timestamp: number) => {
-    return format(new Date(timestamp), "HH:mm:ss", { locale: ptBR });
+  const formatarHora = (timestamp: Date) => {
+    return format(timestamp, "HH:mm:ss", { locale: ptBR });
   };
   
-  const formatarData = (timestamp: number) => {
-    return format(new Date(timestamp), "dd/MM/yyyy", { locale: ptBR });
+  const formatarData = (timestamp: Date) => {
+    return format(timestamp, "dd/MM/yyyy", { locale: ptBR });
   };
   
-  const calcularDuracao = (inicio: number, fim?: number) => {
+  const calcularDuracao = (inicio: Date, fim?: Date) => {
     if (!fim) return "Em andamento";
     
-    const duracaoMs = fim - inicio;
+    const inicioMs = inicio.getTime();
+    const fimMs = fim.getTime();
+    const duracaoMs = fimMs - inicioMs;
+    
     const segundos = Math.floor((duracaoMs / 1000) % 60);
     const minutos = Math.floor((duracaoMs / (1000 * 60)) % 60);
     const horas = Math.floor(duracaoMs / (1000 * 60 * 60));
@@ -250,3 +265,4 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
     </div>
   );
 }
+
