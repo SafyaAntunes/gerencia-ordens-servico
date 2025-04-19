@@ -61,12 +61,90 @@ export default function SubatividadesConfig({
     tempoEstimado?: number;
     configuracoesServico?: Record<TipoServico, { precoHora: number; tempoEstimado: number; }>;
   }>>({
-    lavagem: { precoHora: 0, tempoEstimado: 0 },
-    inspecao_inicial: { precoHora: 0, tempoEstimado: 0 },
-    inspecao_final: { precoHora: 0, tempoEstimado: 0 },
-    retifica: { precoHora: 0, tempoEstimado: 0 },
-    montagem: { precoHora: 0, tempoEstimado: 0 },
-    dinamometro: { precoHora: 0, tempoEstimado: 0 }
+    lavagem: { 
+      precoHora: 0, 
+      tempoEstimado: 0,
+      configuracoesServico: {
+        bloco: { precoHora: 0, tempoEstimado: 0 },
+        biela: { precoHora: 0, tempoEstimado: 0 },
+        cabecote: { precoHora: 0, tempoEstimado: 0 },
+        virabrequim: { precoHora: 0, tempoEstimado: 0 },
+        eixo_comando: { precoHora: 0, tempoEstimado: 0 },
+        montagem: { precoHora: 0, tempoEstimado: 0 },
+        dinamometro: { precoHora: 0, tempoEstimado: 0 },
+        lavagem: { precoHora: 0, tempoEstimado: 0 }
+      }
+    },
+    inspecao_inicial: { 
+      precoHora: 0, 
+      tempoEstimado: 0,
+      configuracoesServico: {
+        bloco: { precoHora: 0, tempoEstimado: 0 },
+        biela: { precoHora: 0, tempoEstimado: 0 },
+        cabecote: { precoHora: 0, tempoEstimado: 0 },
+        virabrequim: { precoHora: 0, tempoEstimado: 0 },
+        eixo_comando: { precoHora: 0, tempoEstimado: 0 },
+        montagem: { precoHora: 0, tempoEstimado: 0 },
+        dinamometro: { precoHora: 0, tempoEstimado: 0 },
+        lavagem: { precoHora: 0, tempoEstimado: 0 }
+      }
+    },
+    inspecao_final: { 
+      precoHora: 0, 
+      tempoEstimado: 0,
+      configuracoesServico: {
+        bloco: { precoHora: 0, tempoEstimado: 0 },
+        biela: { precoHora: 0, tempoEstimado: 0 },
+        cabecote: { precoHora: 0, tempoEstimado: 0 },
+        virabrequim: { precoHora: 0, tempoEstimado: 0 },
+        eixo_comando: { precoHora: 0, tempoEstimado: 0 },
+        montagem: { precoHora: 0, tempoEstimado: 0 },
+        dinamometro: { precoHora: 0, tempoEstimado: 0 },
+        lavagem: { precoHora: 0, tempoEstimado: 0 }
+      }
+    },
+    retifica: { 
+      precoHora: 0, 
+      tempoEstimado: 0,
+      configuracoesServico: {
+        bloco: { precoHora: 0, tempoEstimado: 0 },
+        biela: { precoHora: 0, tempoEstimado: 0 },
+        cabecote: { precoHora: 0, tempoEstimado: 0 },
+        virabrequim: { precoHora: 0, tempoEstimado: 0 },
+        eixo_comando: { precoHora: 0, tempoEstimado: 0 },
+        montagem: { precoHora: 0, tempoEstimado: 0 },
+        dinamometro: { precoHora: 0, tempoEstimado: 0 },
+        lavagem: { precoHora: 0, tempoEstimado: 0 }
+      }
+    },
+    montagem: { 
+      precoHora: 0, 
+      tempoEstimado: 0,
+      configuracoesServico: {
+        bloco: { precoHora: 0, tempoEstimado: 0 },
+        biela: { precoHora: 0, tempoEstimado: 0 },
+        cabecote: { precoHora: 0, tempoEstimado: 0 },
+        virabrequim: { precoHora: 0, tempoEstimado: 0 },
+        eixo_comando: { precoHora: 0, tempoEstimado: 0 },
+        montagem: { precoHora: 0, tempoEstimado: 0 },
+        dinamometro: { precoHora: 0, tempoEstimado: 0 },
+        lavagem: { precoHora: 0, tempoEstimado: 0 }
+      }
+    },
+    dinamometro: { 
+      precoHora: 0, 
+      tempoEstimado: 0,
+      configuracoesServico: {
+        bloco: { precoHora: 0, tempoEstimado: 0 },
+        biela: { precoHora: 0, tempoEstimado: 0 },
+        cabecote: { precoHora: 0, tempoEstimado: 0 },
+        virabrequim: { precoHora: 0, tempoEstimado: 0 },
+        eixo_comando: { precoHora: 0, tempoEstimado: 0 },
+        montagem: { precoHora: 0, tempoEstimado: 0 },
+        dinamometro: { precoHora: 0, tempoEstimado: 0 },
+        lavagem: { precoHora: 0, tempoEstimado: 0 }
+      }
+    }
   });
 
   const tiposServico: { value: string; label: string }[] = [
@@ -249,19 +327,34 @@ export default function SubatividadesConfig({
       if (servicoTipo) {
         // Se um tipo de serviço específico foi fornecido, atualize a configuração específica
         if (!newState[etapa].configuracoesServico) {
-          newState[etapa].configuracoesServico = {};
-        }
-        if (!newState[etapa].configuracoesServico[servicoTipo]) {
-          newState[etapa].configuracoesServico[servicoTipo] = {
-            precoHora: 0,
-            tempoEstimado: 0
+          newState[etapa].configuracoesServico = {
+            bloco: { precoHora: 0, tempoEstimado: 0 },
+            biela: { precoHora: 0, tempoEstimado: 0 },
+            cabecote: { precoHora: 0, tempoEstimado: 0 },
+            virabrequim: { precoHora: 0, tempoEstimado: 0 },
+            eixo_comando: { precoHora: 0, tempoEstimado: 0 },
+            montagem: { precoHora: 0, tempoEstimado: 0 },
+            dinamometro: { precoHora: 0, tempoEstimado: 0 },
+            lavagem: { precoHora: 0, tempoEstimado: 0 }
           };
         }
+        
         newState[etapa].configuracoesServico[servicoTipo][field] = value;
       } else {
         // Caso contrário, atualize o valor padrão
         if (!newState[etapa]) {
-          newState[etapa] = {};
+          newState[etapa] = {
+            configuracoesServico: {
+              bloco: { precoHora: 0, tempoEstimado: 0 },
+              biela: { precoHora: 0, tempoEstimado: 0 },
+              cabecote: { precoHora: 0, tempoEstimado: 0 },
+              virabrequim: { precoHora: 0, tempoEstimado: 0 },
+              eixo_comando: { precoHora: 0, tempoEstimado: 0 },
+              montagem: { precoHora: 0, tempoEstimado: 0 },
+              dinamometro: { precoHora: 0, tempoEstimado: 0 },
+              lavagem: { precoHora: 0, tempoEstimado: 0 }
+            }
+          };
         }
         newState[etapa][field] = value;
       }
