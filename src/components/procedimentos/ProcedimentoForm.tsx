@@ -85,21 +85,34 @@ export default function ProcedimentoForm({ tipo, procedimento, isLoading }: Proc
           </div>
           
           {isEditing ? (
-            <Textarea
-              value={conteudo}
-              onChange={(e) => setConteudo(e.target.value)}
-              placeholder="Digite cada passo do procedimento em uma nova linha..."
-              className="min-h-[300px] font-mono text-sm"
-            />
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Digite cada passo do procedimento em uma nova linha. Cada linha será um passo do procedimento.
+              </p>
+              <Textarea
+                value={conteudo}
+                onChange={(e) => setConteudo(e.target.value)}
+                placeholder="Digite cada passo do procedimento em uma nova linha..."
+                className="min-h-[300px] font-mono text-sm"
+              />
+            </div>
           ) : (
-            <div className="space-y-3 p-4 bg-muted rounded-lg">
+            <div className="space-y-4 p-4 bg-muted rounded-lg">
               {steps.length > 0 ? (
                 steps.map((step, index) => (
-                  <div key={index} className="flex gap-3">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm">
-                      {index + 1}
-                    </span>
-                    <p className="text-sm pt-1">{step}</p>
+                  <div key={index} className="flex gap-4">
+                    <div className="flex flex-col items-center">
+                      <span className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
+                        {index + 1}
+                      </span>
+                      <div className="w-px h-full bg-border flex-1 my-2" />
+                    </div>
+                    <div className="space-y-1 pb-4">
+                      <p className="font-medium text-sm text-muted-foreground">
+                        Passo {index + 1}
+                      </p>
+                      <p className="text-sm">{step}</p>
+                    </div>
                   </div>
                 ))
               ) : (
