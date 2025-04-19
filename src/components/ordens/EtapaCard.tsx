@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
@@ -73,7 +72,42 @@ export default function EtapaCard({
   const podeAtribuirFuncionario = funcionario?.nivelPermissao === 'admin' || 
                                  funcionario?.nivelPermissao === 'gerente';
   
-  // Carregar funcionários para o dropdown de atribuição
+  const formatarTituloEtapa = (etapa: EtapaOS, servico: TipoServico): string => {
+    const etapaLabel = formatarEtapa(etapa);
+    const servicoLabel = {
+      bloco: "Bloco",
+      biela: "Biela",
+      cabecote: "Cabeçote",
+      virabrequim: "Virabrequim",
+      eixo_comando: "Eixo de Comando",
+      montagem: "Montagem",
+      dinamometro: "Dinamômetro",
+      lavagem: "Lavagem"
+    }[servico];
+
+    return `${etapaLabel} - ${servicoLabel}`;
+  };
+
+  const etapaServicos = (() => {
+    switch(etapa) {
+      case 'retifica':
+        return servicos.filter(servico => 
+          ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo)
+        );
+      case 'montagem':
+        return servicos.filter(servico => servico.tipo === 'montagem');
+      case 'dinamometro':
+        return servicos.filter(servico => servico.tipo === 'dinamometro');
+      case 'lavagem':
+        return servicos.filter(servico => servico.tipo === 'lavagem');
+      case 'inspecao_inicial':
+      case 'inspecao_final':
+        return [];
+      default:
+        return [];
+    }
+  })();
+
   useEffect(() => {
     const carregarFuncionarios = async () => {
       try {
@@ -100,27 +134,6 @@ export default function EtapaCard({
     }
   }, [podeAtribuirFuncionario]);
   
-  const etapaServicos = (() => {
-    switch(etapa) {
-      case 'retifica':
-        return servicos.filter(servico => 
-          ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo)
-        );
-      case 'montagem':
-        return servicos.filter(servico => servico.tipo === 'montagem');
-      case 'dinamometro':
-        return servicos.filter(servico => servico.tipo === 'dinamometro');
-      case 'lavagem':
-        return servicos.filter(servico => servico.tipo === 'lavagem');
-      case 'inspecao_inicial':
-      case 'inspecao_final':
-        return [];
-      default:
-        return [];
-    }
-  })();
-
-  // Verificar e atualizar o progresso com base nos serviços
   useEffect(() => {
     if (etapaServicos.length === 0) return;
     
@@ -128,7 +141,6 @@ export default function EtapaCard({
     const percentualProgresso = Math.round((servicosConcluidos / etapaServicos.length) * 100);
     setProgresso(percentualProgresso);
     
-    // Se todos os serviços estiverem concluídos, marcar a etapa como concluída automaticamente
     if (servicosConcluidos === etapaServicos.length && !etapaInfo?.concluido && onEtapaStatusChange) {
       onEtapaStatusChange(etapa, true, funcionario?.id, funcionario?.nome);
     }
@@ -138,7 +150,6 @@ export default function EtapaCard({
   
   const handleEtapaConcluida = (tempoTotal: number) => {
     if (onEtapaStatusChange) {
-      // Se o usuário for admin ou gerente, abrir o diálogo para selecionar o funcionário
       if (podeAtribuirFuncionario) {
         setAtribuirFuncionarioDialogOpen(true);
       } else {
@@ -153,7 +164,6 @@ export default function EtapaCard({
       return;
     }
     
-    // Se o usuário for admin ou gerente, abrir o diálogo para selecionar o funcionário
     if (podeAtribuirFuncionario) {
       setAtribuirFuncionarioDialogOpen(true);
     } else {
@@ -168,7 +178,6 @@ export default function EtapaCard({
       if (funcionarioSelecionadoId) {
         onEtapaStatusChange(etapa, true, funcionarioSelecionadoId, funcionarioSelecionadoNome);
       } else {
-        // Se nenhum funcionário for selecionado, usar o usuário atual
         onEtapaStatusChange(etapa, true, funcionario?.id, funcionario?.nome);
       }
     }
@@ -191,7 +200,6 @@ export default function EtapaCard({
     }
   };
   
-  // Adicionado para atualizar o status quando o cronômetro estiver ativo
   useEffect(() => {
     if (etapaInfo?.iniciado && !etapaInfo?.concluido) {
       setIsAtivo(true);
@@ -203,7 +211,11 @@ export default function EtapaCard({
   return (
     <Card className="p-6 mb-4">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-semibold">{etapaNome}</h3>
+        <h3 className="text-xl font-semibold">
+          {servicos.length === 1 
+            ? formatarTituloEtapa(etapa, servicos[0].tipo)
+            : etapaNome}
+        </h3>
         <div className="flex items-center gap-2">
           {getEtapaStatus() === "concluido" && (
             <Badge variant="success">
@@ -219,7 +231,6 @@ export default function EtapaCard({
         </div>
       </div>
       
-      {/* Mostrar funcionário que concluiu a etapa */}
       {etapaInfo?.concluido && etapaInfo?.funcionarioNome && (
         <div className="mb-4 flex items-center text-sm text-muted-foreground">
           <User className="h-4 w-4 mr-1" />
@@ -285,7 +296,6 @@ export default function EtapaCard({
         </div>
       )}
       
-      {/* Dialog para atribuir funcionário */}
       <Dialog open={atribuirFuncionarioDialogOpen} onOpenChange={setAtribuirFuncionarioDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
