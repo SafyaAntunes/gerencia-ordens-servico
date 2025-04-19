@@ -84,23 +84,22 @@ export default function EtapaCard({
     return labels[etapa] || etapa;
   };
   
-  const formatarTituloEtapa = (etapa: EtapaOS, servico: TipoServico): string => {
-    const etapaLabel = formatarEtapa(etapa);
-    const servicoLabel = {
-      bloco: "Bloco",
-      biela: "Biela",
-      cabecote: "Cabeçote",
-      virabrequim: "Virabrequim",
-      eixo_comando: "Eixo de Comando",
+  const formatarTipoServico = (tipo: TipoServico): string => {
+    return {
+      bloco: "BLOCO",
+      biela: "BIELA",
+      cabecote: "CABEÇOTE",
+      virabrequim: "VIRABREQUIM",
+      eixo_comando: "EIXO DE COMANDO",
       montagem: "Montagem",
       dinamometro: "Dinamômetro",
       lavagem: "Lavagem"
-    }[servico];
+    }[tipo] || tipo;
+  };
 
-    if (['inspecao_inicial', 'inspecao_final'].includes(etapa)) {
-      return `${etapaLabel} - ${servicoLabel}`;
-    }
-    return etapaLabel;
+  const formatarTituloEtapa = (etapa: EtapaOS, servico: TipoServico): string => {
+    const etapaLabel = formatarEtapa(etapa);
+    return `${etapaLabel} ${formatarTipoServico(servico)}`;
   };
 
   const etapaServicos = (() => {
@@ -222,6 +221,65 @@ export default function EtapaCard({
       setIsAtivo(false);
     }
   }, [etapaInfo]);
+
+  if (['inspecao_inicial', 'inspecao_final'].includes(etapa) && servicos.length > 0) {
+    return (
+      <div className="space-y-4">
+        {servicos.map((servico, index) => (
+          <Card key={`${servico.tipo}-${index}`} className="p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold">
+                {formatarTituloEtapa(etapa, servico.tipo)}
+              </h3>
+              <div className="flex items-center gap-2">
+                {etapaInfo?.concluido ? (
+                  <Badge variant="success">Concluído</Badge>
+                ) : etapaInfo?.iniciado ? (
+                  <Badge variant="outline">Em andamento</Badge>
+                ) : (
+                  <Badge variant="outline" className="bg-gray-100">Não iniciado</Badge>
+                )}
+              </div>
+            </div>
+            
+            {etapaInfo?.concluido && etapaInfo?.funcionarioNome && (
+              <div className="mb-4 flex items-center text-sm text-muted-foreground">
+                <User className="h-4 w-4 mr-1" />
+                <span>Concluído por: {etapaInfo.funcionarioNome}</span>
+              </div>
+            )}
+
+            <div className="p-4 border rounded-md">
+              <OrdemCronometro
+                ordemId={ordemId}
+                funcionarioId={funcionarioId}
+                funcionarioNome={funcionarioNome}
+                etapa={etapa}
+                tipoServico={servico.tipo}
+                onFinish={handleEtapaConcluida}
+                isEtapaConcluida={etapaInfo?.concluido}
+                onStart={() => setIsAtivo(true)}
+              />
+              
+              {!etapaInfo?.concluido && (
+                <div className="mt-4">
+                  <Button 
+                    variant="default" 
+                    size="sm" 
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                    onClick={handleMarcarConcluido}
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-1" />
+                    Marcar Etapa como Concluída
+                  </Button>
+                </div>
+              )}
+            </div>
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <Card className="p-6 mb-4">
