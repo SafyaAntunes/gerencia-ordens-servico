@@ -72,6 +72,18 @@ export default function EtapaCard({
   const podeAtribuirFuncionario = funcionario?.nivelPermissao === 'admin' || 
                                  funcionario?.nivelPermissao === 'gerente';
   
+  const formatarEtapa = (etapa: EtapaOS): string => {
+    const labels: Record<EtapaOS, string> = {
+      lavagem: "Lavagem",
+      inspecao_inicial: "Inspeção Inicial",
+      retifica: "Retífica",
+      montagem: "Montagem",
+      dinamometro: "Dinamômetro",
+      inspecao_final: "Inspeção Final"
+    };
+    return labels[etapa] || etapa;
+  };
+  
   const formatarTituloEtapa = (etapa: EtapaOS, servico: TipoServico): string => {
     const etapaLabel = formatarEtapa(etapa);
     const servicoLabel = {
