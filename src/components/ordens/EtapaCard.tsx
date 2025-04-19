@@ -97,7 +97,10 @@ export default function EtapaCard({
       lavagem: "Lavagem"
     }[servico];
 
-    return `${etapaLabel} - ${servicoLabel}`;
+    if (['inspecao_inicial', 'inspecao_final'].includes(etapa)) {
+      return `${etapaLabel} - ${servicoLabel}`;
+    }
+    return etapaLabel;
   };
 
   const etapaServicos = (() => {
@@ -224,7 +227,7 @@ export default function EtapaCard({
     <Card className="p-6 mb-4">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xl font-semibold">
-          {servicos.length === 1 
+          {servicos.length === 1 && ['inspecao_inicial', 'inspecao_final'].includes(etapa)
             ? formatarTituloEtapa(etapa, servicos[0].tipo)
             : etapaNome}
         </h3>
