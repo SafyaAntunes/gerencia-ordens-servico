@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +42,10 @@ import { Progress } from "@/components/ui/progress";
 import { format, formatDistance, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import ProgressoRelatorio from "@/components/ordens/ProgressoRelatorio";
+import RelatorioResumoCards from "@/components/relatorios/RelatorioResumoCards";
+import RelatorioGraficos from "@/components/relatorios/RelatorioGraficos";
+import OSDetalhesSection from "@/components/relatorios/OSDetalhesSection";
+import { getStatusLabel, calcularPercentualConclusao, calcularTempoTotal, calcularTempoEstimado } from "@/utils/relatoriosProducaoUtils";
 
 interface RelatoriosProducaoProps extends LogoutProps {}
 
@@ -109,19 +112,6 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     
     setFilteredOrdens(filtradas);
   }, [searchTerm, ordensDados, searchType]);
-  
-  const getStatusLabel = (status: string): string => {
-    switch (status) {
-      case 'orcamento': return 'Orçamento';
-      case 'aguardando_aprovacao': return 'Aguardando Aprovação';
-      case 'fabricacao': return 'Em Fabricação';
-      case 'aguardando_peca_cliente': return 'Aguardando Peça (Cliente)';
-      case 'aguardando_peca_interno': return 'Aguardando Peça (Interno)';
-      case 'finalizado': return 'Finalizado';
-      case 'entregue': return 'Entregue';
-      default: return status;
-    }
-  };
   
   const servicosPorTipo = (() => {
     const contagem: Record<string, number> = {};
@@ -252,159 +242,6 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     }
   };
   
-  const calcularPercentualConclusao = (ordem: OrdemServico): number => {
-    if (!ordem) return 0;
-    
-    // Calcular o percentual de etapas concluídas
-    const etapas: EtapaOS[] = ["lavagem", "inspecao_inicial", "retifica", "montagem", "dinamometro", "inspecao_final"];
-    const etapasConcluidas = etapas.filter(etapa => ordem.etapasAndamento[etapa]?.concluido).length;
-    const percentualEtapas = (etapasConcluidas / etapas.length) * 100;
-    
-    // Calcular o percentual de serviços concluídos
-    const totalServicos = ordem.servicos.length;
-    const servicosConcluidos = ordem.servicos.filter(servico => servico.concluido).length;
-    const percentualServicos = totalServicos > 0 ? (servicosConcluidos / totalServicos) * 100 : 0;
-    
-    // Média ponderada: etapas têm peso 2, serviços têm peso 1
-    return Math.round((percentualEtapas * 2 + percentualServicos * 1) / 3);
-  };
-  
-  const calcularTempoTotal = (ordem: OrdemServico): number => {
-    let tempoTotal = 0;
-    
-    // Somar o tempo de todas as etapas que têm registro
-    Object.values(ordem.etapasAndamento).forEach(etapa => {
-      if (etapa.iniciado && etapa.finalizado) {
-        const inicio = new Date(etapa.iniciado).getTime();
-        const fim = new Date(etapa.finalizado).getTime();
-        tempoTotal += fim - inicio;
-      }
-    });
-    
-    return tempoTotal;
-  };
-  
-  const calcularTempoEstimado = (ordem: OrdemServico): number => {
-    let tempoEstimado = 0;
-    
-    // Calcular tempo estimado baseado nas subatividades selecionadas
-    ordem.servicos.forEach(servico => {
-      if (servico.subatividades) {
-        servico.subatividades
-          .filter(sub => sub.selecionada)
-          .forEach(sub => {
-            if (sub.tempoEstimado) {
-              // Converter horas para milissegundos
-              tempoEstimado += sub.tempoEstimado * 60 * 60 * 1000;
-            }
-          });
-      }
-    });
-    
-    return tempoEstimado;
-  };
-  
-  const verificarEtapasParadas = (ordem: OrdemServico): { etapa: string; tempoParado: number }[] => {
-    const etapasParadas: { etapa: string; tempoParado: number }[] = [];
-    const etapasNomes: Record<EtapaOS, string> = {
-      lavagem: "Lavagem",
-      inspecao_inicial: "Inspeção Inicial",
-      retifica: "Retífica",
-      montagem: "Montagem",
-      dinamometro: "Dinamômetro",
-      inspecao_final: "Inspeção Final"
-    };
-    
-    // Verificar etapas iniciadas mas não concluídas
-    Object.entries(ordem.etapasAndamento).forEach(([etapaKey, etapaInfo]) => {
-      if (etapaInfo.iniciado && !etapaInfo.concluido) {
-        const iniciado = new Date(etapaInfo.iniciado).getTime();
-        const agora = new Date().getTime();
-        const tempoParado = agora - iniciado;
-        
-        // Se estiver parada há mais de 2 dias (172800000 ms)
-        if (tempoParado > 172800000) {
-          etapasParadas.push({
-            etapa: etapasNomes[etapaKey as EtapaOS] || etapaKey,
-            tempoParado
-          });
-        }
-      }
-    });
-    
-    return etapasParadas;
-  };
-  
-  const contarPessoasTrabalhando = (ordem: OrdemServico): number => {
-    // Conjunto para armazenar IDs únicos de funcionários trabalhando atualmente
-    const funcionariosAtivos = new Set<string>();
-    
-    // Verificar etapas em andamento
-    Object.values(ordem.etapasAndamento).forEach(etapaInfo => {
-      if (etapaInfo.iniciado && !etapaInfo.concluido && etapaInfo.funcionarioId) {
-        funcionariosAtivos.add(etapaInfo.funcionarioId);
-      }
-    });
-    
-    return funcionariosAtivos.size;
-  };
-  
-  const verificarAtrasos = (ordem: OrdemServico): { tipo: 'etapa' | 'ordem'; nome: string; atraso: number }[] => {
-    const atrasos: { tipo: 'etapa' | 'ordem'; nome: string; atraso: number }[] = [];
-    const etapasNomes: Record<EtapaOS, string> = {
-      lavagem: "Lavagem",
-      inspecao_inicial: "Inspeção Inicial",
-      retifica: "Retífica",
-      montagem: "Montagem",
-      dinamometro: "Dinamômetro",
-      inspecao_final: "Inspeção Final"
-    };
-    
-    // Verificar atraso na entrega da ordem
-    const hoje = new Date();
-    const dataEntrega = new Date(ordem.dataPrevistaEntrega);
-    
-    if (hoje > dataEntrega && ordem.status !== 'entregue' && ordem.status !== 'finalizado') {
-      const atraso = hoje.getTime() - dataEntrega.getTime();
-      atrasos.push({
-        tipo: 'ordem',
-        nome: 'Data de Entrega',
-        atraso
-      });
-    }
-    
-    // Verificar atrasos nas etapas
-    Object.entries(ordem.etapasAndamento).forEach(([etapaKey, etapaInfo]) => {
-      if (etapaInfo.iniciado && !etapaInfo.concluido && etapaInfo.tempoEstimado) {
-        const iniciado = new Date(etapaInfo.iniciado).getTime();
-        const tempoEstimadoMs = etapaInfo.tempoEstimado * 60 * 60 * 1000; // Horas para ms
-        const tempoLimite = iniciado + tempoEstimadoMs;
-        const agora = new Date().getTime();
-        
-        if (agora > tempoLimite) {
-          atrasos.push({
-            tipo: 'etapa',
-            nome: etapasNomes[etapaKey as EtapaOS] || etapaKey,
-            atraso: agora - tempoLimite
-          });
-        }
-      }
-    });
-    
-    return atrasos;
-  };
-  
-  const formatarTempoParado = (ms: number): string => {
-    const dias = Math.floor(ms / (1000 * 60 * 60 * 24));
-    const horas = Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    
-    if (dias > 0) {
-      return `${dias} dia${dias > 1 ? 's' : ''} ${horas > 0 ? `e ${horas} hora${horas > 1 ? 's' : ''}` : ''}`;
-    }
-    
-    return `${horas} hora${horas > 1 ? 's' : ''}`;
-  };
-  
   const renderOrdemDetalhes = () => {
     if (!ordemSelecionada) return null;
     
@@ -428,7 +265,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
           return (
             <div>
               <div className="flex items-center gap-1">
-                <span>Concluída em: {formatTime(tempoTotal)}</span>
+                <span>Conclu��da em: {formatTime(tempoTotal)}</span>
                 {tempoEstimadoMs > 0 && (
                   <Badge variant={emAtraso ? "destructive" : "success"} className="ml-2">
                     {emAtraso ? (
@@ -717,7 +554,6 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
               <h3 className="text-lg font-semibold mb-2">Tempos por Serviço</h3>
               <div className="grid grid-cols-1 gap-4">
                 {ordemSelecionada.servicos.map((servico, index) => {
-                  // Encontrar o tempo total do serviço nas etapas
                   const etapaRelacionada = Object.entries(ordemSelecionada.etapasAndamento)
                     .find(([_, etapaInfo]) => etapaInfo.servicoTipo === servico.tipo);
                   
@@ -725,7 +561,6 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
                     ? new Date(etapaRelacionada[1].finalizado).getTime() - new Date(etapaRelacionada[1].iniciado).getTime()
                     : 0;
                   
-                  // Calcular tempo estimado baseado nas subatividades selecionadas
                   let tempoEstimadoServico = 0;
                   if (servico.subatividades) {
                     servico.subatividades
@@ -850,7 +685,6 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
           </CardContent>
         </Card>
         
-        {/* Componente de Progresso com visualização gráfica */}
         <ProgressoRelatorio ordem={ordemSelecionada} />
       </div>
     );
@@ -957,153 +791,29 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
           </CardContent>
         </Card>
         
-        {ordemSelecionada && renderOrdemDetalhes()}
+        {ordemSelecionada && (
+          <OSDetalhesSection
+            ordemSelecionada={ordemSelecionada}
+            atrasos={verificarAtrasos(ordemSelecionada)}
+            etapasParadas={verificarEtapasParadas(ordemSelecionada)}
+            pessoasTrabalhando={contarPessoasTrabalhando(ordemSelecionada)}
+          />
+        )}
         
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Total de Serviços</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center">
-                <Wrench className="h-5 w-5 mr-2 text-muted-foreground" />
-                <p className="text-2xl font-bold">{totalServicos}</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Total de Ordens</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center">
-                <FileBarChart className="h-5 w-5 mr-2 text-muted-foreground" />
-                <p className="text-2xl font-bold">{totalOrdens}</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Ordens Finalizadas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center">
-                <ActivitySquare className="h-5 w-5 mr-2 text-muted-foreground" />
-                <p className="text-2xl font-bold">{totalOrdensFinalizadas + totalOrdensEntregues}</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Taxa de Finalização</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center">
-                <BarChart className="h-5 w-5 mr-2 text-muted-foreground" />
-                <p className="text-2xl font-bold">{taxaFinalizacao.toFixed(2)}%</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <RelatorioResumoCards
+          totalServicos={totalServicos}
+          totalOrdens={totalOrdens}
+          totalOrdensFinalizadas={totalOrdensFinalizadas}
+          totalOrdensEntregues={totalOrdensEntregues}
+          taxaFinalizacao={taxaFinalizacao}
+        />
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Serviços por Tipo</CardTitle>
-              <CardDescription>
-                Distribuição dos serviços por tipo
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={servicosPorTipo}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={true}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="quantidade"
-                    nameKey="nome"
-                  >
-                    {servicosPorTipo.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [value, "Quantidade"]} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Ordens por Status</CardTitle>
-              <CardDescription>
-                Distribuição das ordens de serviço por status
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={ordensPorStatus}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={true}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="quantidade"
-                    nameKey="nome"
-                  >
-                    {ordensPorStatus.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [value, "Quantidade"]} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-          
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle>Produtividade Mensal</CardTitle>
-              <CardDescription>
-                Ordens concluídas e tempo médio por mês
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <RechartsBarChart
-                  data={produtividadeMensal}
-                  margin={{
-                    top: 20,
-                    right: 30,
-                    left: 20,
-                    bottom: 5,
-                  }}
-                >
-                  <XAxis dataKey="mes" />
-                  <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
-                  <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
-                  <Tooltip />
-                  <Legend />
-                  <Bar yAxisId="left" dataKey="ordens" name="Ordens Concluídas" fill="#8884d8" />
-                  <Bar yAxisId="right" dataKey="tempo_medio" name="Tempo Médio (dias)" fill="#82ca9d" />
-                </RechartsBarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
+        <RelatorioGraficos
+          servicosPorTipo={servicosPorTipo}
+          ordensPorStatus={ordensPorStatus}
+          produtividadeMensal={produtividadeMensal}
+          COLORS={COLORS}
+        />
       </div>
     </Layout>
   );
