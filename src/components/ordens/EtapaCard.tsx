@@ -27,6 +27,8 @@ import {
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Funcionario } from "@/types/funcionarios";
+import InspecaoEtapaSection from "./InspecaoEtapaSection";
+import AtribuirFuncionarioDialog from "./AtribuirFuncionarioDialog";
 
 interface EtapaCardProps {
   ordemId: string;
@@ -222,62 +224,23 @@ export default function EtapaCard({
     }
   }, [etapaInfo]);
 
-  if (['inspecao_inicial', 'inspecao_final'].includes(etapa) && servicos.length > 0) {
+  if (
+    ["inspecao_inicial", "inspecao_final"].includes(etapa) &&
+    servicos.length > 0
+  ) {
     return (
-      <div className="space-y-4">
-        {servicos.map((servico, index) => (
-          <Card key={`${servico.tipo}-${index}`} className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">
-                {formatarTituloEtapa(etapa, servico.tipo)}
-              </h3>
-              <div className="flex items-center gap-2">
-                {etapaInfo?.concluido ? (
-                  <Badge variant="success">Concluído</Badge>
-                ) : etapaInfo?.iniciado ? (
-                  <Badge variant="outline">Em andamento</Badge>
-                ) : (
-                  <Badge variant="outline" className="bg-gray-100">Não iniciado</Badge>
-                )}
-              </div>
-            </div>
-            
-            {etapaInfo?.concluido && etapaInfo?.funcionarioNome && (
-              <div className="mb-4 flex items-center text-sm text-muted-foreground">
-                <User className="h-4 w-4 mr-1" />
-                <span>Concluído por: {etapaInfo.funcionarioNome}</span>
-              </div>
-            )}
-
-            <div className="p-4 border rounded-md">
-              <OrdemCronometro
-                ordemId={ordemId}
-                funcionarioId={funcionarioId}
-                funcionarioNome={funcionarioNome}
-                etapa={etapa}
-                tipoServico={servico.tipo}
-                onFinish={handleEtapaConcluida}
-                isEtapaConcluida={etapaInfo?.concluido}
-                onStart={() => setIsAtivo(true)}
-              />
-              
-              {!etapaInfo?.concluido && (
-                <div className="mt-4">
-                  <Button 
-                    variant="default" 
-                    size="sm" 
-                    className="w-full bg-blue-500 hover:bg-blue-600 text-white"
-                    onClick={handleMarcarConcluido}
-                  >
-                    <CheckCircle2 className="h-4 w-4 mr-1" />
-                    Marcar Etapa como Concluída
-                  </Button>
-                </div>
-              )}
-            </div>
-          </Card>
-        ))}
-      </div>
+      <InspecaoEtapaSection
+        ordemId={ordemId}
+        etapa={etapa}
+        servicos={servicos}
+        etapaInfo={etapaInfo}
+        funcionarioId={funcionarioId}
+        funcionarioNome={funcionarioNome}
+        onEtapaConcluida={handleEtapaConcluida}
+        handleMarcarConcluido={handleMarcarConcluido}
+        isAtivo={isAtivo}
+        setIsAtivo={setIsAtivo}
+      />
     );
   }
 
@@ -369,47 +332,16 @@ export default function EtapaCard({
         </div>
       )}
       
-      <Dialog open={atribuirFuncionarioDialogOpen} onOpenChange={setAtribuirFuncionarioDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Atribuir Funcionário</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <label htmlFor="funcionario-select-etapa" className="block text-sm font-medium">
-                Selecione o funcionário que executou esta etapa
-              </label>
-              
-              <Select onValueChange={handleFuncionarioChange} value={funcionarioSelecionadoId}>
-                <SelectTrigger id="funcionario-select-etapa" className="w-full">
-                  <SelectValue placeholder="Selecione um funcionário" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={funcionario?.id || ""}>
-                    {funcionario?.nome || "Eu mesmo"} (você)
-                  </SelectItem>
-                  {funcionariosOptions
-                    .filter(f => f.id !== funcionario?.id)
-                    .map(f => (
-                      <SelectItem key={f.id} value={f.id}>
-                        {f.nome}
-                      </SelectItem>
-                    ))
-                  }
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAtribuirFuncionarioDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleConfirmarAtribuicao} className="bg-blue-500 hover:bg-blue-600">
-              Confirmar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AtribuirFuncionarioDialog
+        open={atribuirFuncionarioDialogOpen}
+        onOpenChange={setAtribuirFuncionarioDialogOpen}
+        funcionariosOptions={funcionariosOptions}
+        funcionarioSelecionadoId={funcionarioSelecionadoId}
+        setFuncionarioSelecionadoId={setFuncionarioSelecionadoId}
+        funcionarioSelecionadoNome={funcionarioSelecionadoNome}
+        setFuncionarioSelecionadoNome={setFuncionarioSelecionadoNome}
+        onConfirmarAtribuicao={handleConfirmarAtribuicao}
+      />
     </Card>
   );
 }
