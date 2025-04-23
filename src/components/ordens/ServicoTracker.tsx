@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,7 +34,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { getDocs, collection } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -49,6 +47,7 @@ interface ServicoTrackerProps {
   onSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
   onServicoStatusChange: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
   className?: string;
+  etapa?: string;
 }
 
 export default function ServicoTracker({
@@ -59,6 +58,7 @@ export default function ServicoTracker({
   onSubatividadeToggle,
   onServicoStatusChange,
   className,
+  etapa,
 }: ServicoTrackerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [pausaDialogOpen, setPausaDialogOpen] = useState(false);
@@ -68,7 +68,6 @@ export default function ServicoTracker({
   const [atribuirFuncionarioDialogOpen, setAtribuirFuncionarioDialogOpen] = useState(false);
   const { funcionario } = useAuth();
   
-  // Verificar se o usuário tem permissão para este tipo de serviço
   const temPermissao = funcionario?.nivelPermissao === 'admin' || 
                       funcionario?.nivelPermissao === 'gerente' ||
                       (funcionario?.especialidades && funcionario.especialidades.includes(servico.tipo));
@@ -87,13 +86,12 @@ export default function ServicoTracker({
     handleFinish
   } = useOrdemTimer({
     ordemId,
-    etapa: 'retifica',
+    etapa: etapa || 'retifica',
     tipoServico: servico.tipo,
     onFinish: () => {/* Removed auto-completion */},
     isEtapaConcluida: servico.concluido
   });
 
-  // Carregar funcionários para o dropdown de atribuição
   useEffect(() => {
     const carregarFuncionarios = async () => {
       try {
@@ -128,7 +126,6 @@ export default function ServicoTracker({
     ? Math.round((completedSubatividades / totalSubatividades) * 100)
     : 0;
   
-  // Calcular o tempo total estimado para todas as subatividades
   const tempoTotalEstimado = subatividadesFiltradas.reduce((total, sub) => {
     return total + (sub.tempoEstimado || 0);
   }, 0);
@@ -199,12 +196,9 @@ export default function ServicoTracker({
       handleFinish();
     }
     
-    // Se o usuário for admin ou gerente e não tiver selecionado um funcionário,
-    // abrir o diálogo para selecionar o funcionário
     if (podeAtribuirFuncionario) {
       setAtribuirFuncionarioDialogOpen(true);
     } else {
-      // Se não for admin/gerente, usar o usuário atual
       onServicoStatusChange(true, funcionario.id, funcionario.nome);
     }
   };
@@ -213,7 +207,6 @@ export default function ServicoTracker({
     if (funcionarioSelecionadoId) {
       onServicoStatusChange(true, funcionarioSelecionadoId, funcionarioSelecionadoNome);
     } else {
-      // Se nenhum funcionário for selecionado, usar o usuário atual
       onServicoStatusChange(true, funcionario?.id, funcionario?.nome);
     }
     setAtribuirFuncionarioDialogOpen(false);
@@ -268,7 +261,6 @@ export default function ServicoTracker({
               </div>
             </div>
             
-            {/* Mostrar funcionário que concluiu o serviço */}
             {servico.concluido && servico.funcionarioNome && (
               <div className="mt-2 flex items-center text-xs text-muted-foreground">
                 <User className="h-3 w-3 mr-1" />
@@ -399,7 +391,6 @@ export default function ServicoTracker({
         onConfirm={handlePausaConfirm}
       />
       
-      {/* Dialog para atribuir funcionário */}
       <Dialog open={atribuirFuncionarioDialogOpen} onOpenChange={setAtribuirFuncionarioDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>

@@ -311,21 +311,34 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     etapa: EtapaOS, 
     concluida: boolean, 
     funcionarioId?: string, 
-    funcionarioNome?: string
+    funcionarioNome?: string,
+    servicoTipo?: TipoServico
   ) => {
     if (!ordem?.id || !funcionario?.id) return;
     
     try {
-      const etapasAndamento = {
-        ...ordem.etapasAndamento,
-        [etapa]: {
-          ...ordem.etapasAndamento[etapa],
+      let etapasAndamento = { ...ordem.etapasAndamento };
+      
+      if ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final') && servicoTipo) {
+        const etapaKey = `${etapa}_${servicoTipo}` as any;
+        
+        etapasAndamento[etapaKey] = {
+          ...etapasAndamento[etapaKey],
+          concluido: concluida,
+          funcionarioId: funcionarioId || funcionario.id,
+          funcionarioNome: funcionarioNome || funcionario.nome,
+          finalizado: concluida ? new Date() : undefined,
+          servicoTipo: servicoTipo
+        };
+      } else {
+        etapasAndamento[etapa] = {
+          ...etapasAndamento[etapa],
           concluido: concluida,
           funcionarioId: funcionarioId || funcionario.id,
           funcionarioNome: funcionarioNome || funcionario.nome,
           finalizado: concluida ? new Date() : undefined
-        }
-      };
+        };
+      }
       
       const ordemRef = doc(db, "ordens", ordem.id);
       await updateDoc(ordemRef, { etapasAndamento });
@@ -339,7 +352,8 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         onOrdemUpdate(ordemAtualizada);
       }
       
-      toast.success(`Etapa ${etapaNomesBR[etapa] || etapa} ${concluida ? 'concluída' : 'reaberta'}`);
+      const servicoMsg = servicoTipo ? ` - ${formatServicoTipo(servicoTipo)}` : '';
+      toast.success(`Etapa ${etapaNomesBR[etapa] || etapa}${servicoMsg} ${concluida ? 'concluída' : 'reaberta'}`);
     } catch (error) {
       console.error("Erro ao atualizar status da etapa:", error);
       toast.error("Erro ao atualizar status da etapa");
@@ -353,6 +367,31 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     montagem: "Montagem",
     dinamometro: "Dinamômetro",
     inspecao_final: "Inspeção Final"
+  };
+
+  const formatServicoTipo = (tipo: TipoServico): string => {
+    const labels: Record<TipoServico, string> = {
+      bloco: "Bloco",
+      biela: "Biela",
+      cabecote: "Cabeçote",
+      virabrequim: "Virabrequim",
+      eixo_comando: "Eixo de Comando",
+      montagem: "Montagem",
+      dinamometro: "Dinamômetro",
+      lavagem: "Lavagem"
+    };
+    return labels[tipo] || tipo;
+  };
+
+  const getEtapaInfo = (etapa: EtapaOS, servicoTipo?: TipoServico) => {
+    if ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final') && servicoTipo) {
+      const etapaKey = `${etapa}_${servicoTipo}` as any;
+      return ordem.etapasAndamento[etapaKey] || { 
+        concluido: false,
+        servicoTipo: servicoTipo 
+      };
+    }
+    return ordem.etapasAndamento[etapa];
   };
 
   const servicosAtivos = ordem.servicos.filter(servico =>
@@ -440,7 +479,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
                         funcionarioId={funcionario?.id || ""}
                         funcionarioNome={funcionario?.nome}
                         servicos={[servico]}
-                        etapaInfo={ordem.etapasAndamento[selectedEtapa]}
+                        etapaInfo={getEtapaInfo(selectedEtapa, servico.tipo)}
                         servicoTipo={servico.tipo}
                         onSubatividadeToggle={(servicoTipo, subId, checked) => {
                           handleSubatividadeToggle(servicoTipo, subId, checked);
@@ -461,7 +500,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
                         funcionarioId={funcionario?.id || ""}
                         funcionarioNome={funcionario?.nome}
                         servicos={getServicosParaEtapa(selectedEtapa)}
-                        etapaInfo={ordem.etapasAndamento[selectedEtapa]}
+                        etapaInfo={getEtapaInfo(selectedEtapa)}
                         onSubatividadeToggle={(servicoTipo, subId, checked) => {
                           handleSubatividadeToggle(servicoTipo, subId, checked);
                         }}

@@ -43,11 +43,12 @@ interface EtapaCardProps {
     pausas?: { inicio: number; fim?: number; motivo?: string }[];
     funcionarioId?: string;
     funcionarioNome?: string;
+    servicoTipo?: TipoServico;
   };
   servicoTipo?: TipoServico;
   onSubatividadeToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
   onServicoStatusChange?: (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
-  onEtapaStatusChange?: (etapa: EtapaOS, concluida: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
+  onEtapaStatusChange?: (etapa: EtapaOS, concluida: boolean, funcionarioId?: string, funcionarioNome?: string, servicoTipo?: TipoServico) => void;
 }
 
 export default function EtapaCard({
@@ -104,6 +105,7 @@ export default function EtapaCard({
     if ((etapa === "inspecao_inicial" || etapa === "inspecao_final") && servicoTipo) {
       return servicos.filter(servico => servico.tipo === servicoTipo);
     }
+    
     switch(etapa) {
       case 'retifica':
         return servicos.filter(servico => 
@@ -115,9 +117,6 @@ export default function EtapaCard({
         return servicos.filter(servico => servico.tipo === 'dinamometro');
       case 'lavagem':
         return servicos.filter(servico => servico.tipo === 'lavagem');
-      case 'inspecao_inicial':
-      case 'inspecao_final':
-        return [];
       default:
         return [];
     }
@@ -135,6 +134,13 @@ export default function EtapaCard({
     }
   }, [etapaServicos, etapaInfo, onEtapaStatusChange]);
 
+  const isEtapaConcluida = () => {
+    if ((etapa === "inspecao_inicial" || etapa === "inspecao_final") && servicoTipo) {
+      return etapaInfo?.concluido && etapaInfo?.servicoTipo === servicoTipo;
+    }
+    return etapaInfo?.concluido;
+  };
+
   const etapaComCronometro = ['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa);
   
   const handleEtapaConcluida = (tempoTotal: number) => {
@@ -142,7 +148,13 @@ export default function EtapaCard({
       if (podeAtribuirFuncionario) {
         setAtribuirFuncionarioDialogOpen(true);
       } else {
-        onEtapaStatusChange(etapa, true, funcionario?.id, funcionario?.nome);
+        onEtapaStatusChange(
+          etapa, 
+          true, 
+          funcionario?.id, 
+          funcionario?.nome,
+          (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+        );
       }
     }
   };
@@ -157,18 +169,29 @@ export default function EtapaCard({
       setAtribuirFuncionarioDialogOpen(true);
     } else {
       if (onEtapaStatusChange) {
-        onEtapaStatusChange(etapa, true, funcionario.id, funcionario.nome);
+        onEtapaStatusChange(
+          etapa, 
+          true, 
+          funcionario.id, 
+          funcionario.nome,
+          (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+        );
       }
     }
   };
   
   const handleConfirmarAtribuicao = () => {
     if (onEtapaStatusChange) {
-      if (funcionarioSelecionadoId) {
-        onEtapaStatusChange(etapa, true, funcionarioSelecionadoId, funcionarioSelecionadoNome);
-      } else {
-        onEtapaStatusChange(etapa, true, funcionario?.id, funcionario?.nome);
-      }
+      const funcId = funcionarioSelecionadoId || funcionario?.id;
+      const funcNome = funcionarioSelecionadoNome || funcionario?.nome;
+      
+      onEtapaStatusChange(
+        etapa, 
+        true, 
+        funcId, 
+        funcNome,
+        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+      );
     }
     setAtribuirFuncionarioDialogOpen(false);
   };
@@ -180,7 +203,7 @@ export default function EtapaCard({
   };
   
   const getEtapaStatus = () => {
-    if (etapaInfo?.concluido) {
+    if (isEtapaConcluida()) {
       return "concluido";
     } else if (etapaInfo?.iniciado) {
       return "em_andamento";
@@ -216,7 +239,7 @@ export default function EtapaCard({
         </div>
       </div>
       
-      {etapaInfo?.concluido && etapaInfo?.funcionarioNome && (
+      {isEtapaConcluida() && etapaInfo?.funcionarioNome && (
         <div className="mb-4 flex items-center text-sm text-muted-foreground">
           <User className="h-4 w-4 mr-1" />
           <span>Concluído por: {etapaInfo.funcionarioNome}</span>
@@ -237,11 +260,12 @@ export default function EtapaCard({
             funcionarioNome={funcionarioNome}
             etapa={etapa}
             onFinish={handleEtapaConcluida}
-            isEtapaConcluida={etapaInfo?.concluido}
+            isEtapaConcluida={isEtapaConcluida()}
             onStart={() => setIsAtivo(true)}
+            tipoServico={servicoTipo}
           />
           
-          {!etapaInfo?.concluido && (
+          {!isEtapaConcluida() && (
             <div className="mt-4">
               <Button 
                 variant="default" 
@@ -266,6 +290,7 @@ export default function EtapaCard({
               ordemId={ordemId}
               funcionarioId={funcionarioId}
               funcionarioNome={funcionarioNome}
+              etapa={etapa}
               onSubatividadeToggle={
                 onSubatividadeToggle ? 
                   (subId, checked) => onSubatividadeToggle(servico.tipo, subId, checked) : 
