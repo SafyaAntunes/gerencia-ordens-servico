@@ -182,7 +182,19 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
   
   const formatarData = (data: string | Date) => {
     if (!data) return "N/A";
-    return format(new Date(data), "dd/MM/yyyy", { locale: ptBR });
+    
+    try {
+      const dateObj = data instanceof Date ? data : new Date(data);
+      
+      if (isNaN(dateObj.getTime())) {
+        return "Data inválida";
+      }
+      
+      return format(dateObj, "dd/MM/yyyy", { locale: ptBR });
+    } catch (error) {
+      console.error("Erro ao formatar data:", error, data);
+      return "Erro na data";
+    }
   };
   
   const calcularDadosResumo = () => {
