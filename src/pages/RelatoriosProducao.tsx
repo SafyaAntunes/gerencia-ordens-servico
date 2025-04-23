@@ -18,9 +18,9 @@ import {
   HourglassIcon
 } from "lucide-react";
 import { LogoutProps } from "@/types/props";
-import { collection, getDocs, doc, getDoc, query, where } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where, DocumentData } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { OrdemServico, EtapaOS } from "@/types/ordens";
+import { OrdemServico, EtapaOS, Cliente } from "@/types/ordens";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatTime } from "@/utils/timerUtils";
@@ -59,12 +59,21 @@ import {
 
 interface RelatoriosProducaoProps extends LogoutProps {}
 
+interface ExtendedOrdemServico extends OrdemServico {
+  dataAbertura: Date;
+  dataFinalizacao?: Date;
+  dataCriacao?: Date | string;
+  identificacao?: string;
+  descricao?: string;
+  funcionariosData?: any[];
+}
+
 const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
-  const [ordens, setOrdens] = useState<OrdemServico[]>([]);
-  const [filteredOrdens, setFilteredOrdens] = useState<OrdemServico[]>([]);
+  const [ordens, setOrdens] = useState<ExtendedOrdemServico[]>([]);
+  const [filteredOrdens, setFilteredOrdens] = useState<ExtendedOrdemServico[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
-  const [selectedOrdem, setSelectedOrdem] = useState<OrdemServico | null>(null);
+  const [selectedOrdem, setSelectedOrdem] = useState<ExtendedOrdemServico | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [periodo, setPeriodo] = useState<string>("30dias");
   
@@ -80,18 +89,29 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
         const ordensRef = collection(db, "ordens");
         const querySnapshot = await getDocs(ordensRef);
         
-        const ordensData: OrdemServico[] = [];
+        const ordensData: ExtendedOrdemServico[] = [];
         for (const docSnap of querySnapshot.docs) {
-          const data = docSnap.data() as OrdemServico;
-          const ordemCompleta = { id: docSnap.id, ...data } as OrdemServico;
+          const data = docSnap.data() as DocumentData;
+          const ordemCompleta = { 
+            id: docSnap.id, 
+            ...data,
+            dataAbertura: new Date(data.dataAbertura?.toDate?.() || data.dataAbertura || new Date()),
+            dataCriacao: data.dataCriacao?.toDate?.() || data.dataCriacao || new Date(),
+          } as ExtendedOrdemServico;
           
           // Buscar detalhes do cliente
-          if (data.clienteId) {
-            const clienteRef = doc(db, "clientes", data.clienteId);
+          if (data.cliente?.id) {
+            const clienteRef = doc(db, "clientes", data.cliente.id);
             const clienteSnap = await getDoc(clienteRef);
             if (clienteSnap.exists()) {
-              ordemCompleta.cliente = clienteSnap.data();
-              ordemCompleta.cliente.id = clienteSnap.id;
+              const clienteData = clienteSnap.data();
+              ordemCompleta.cliente = {
+                id: clienteSnap.id,
+                nome: clienteData.nome || "Sem nome",
+                telefone: clienteData.telefone || "",
+                email: clienteData.email || "",
+                ...clienteData
+              } as Cliente;
             }
           }
           
@@ -119,15 +139,15 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     if (periodo === "7dias") {
       const sevenDaysAgo = new Date(now);
       sevenDaysAgo.setDate(now.getDate() - 7);
-      filtered = filtered.filter(ordem => new Date(ordem.dataCriacao) >= sevenDaysAgo);
+      filtered = filtered.filter(ordem => ordem.dataCriacao && new Date(ordem.dataCriacao) >= sevenDaysAgo);
     } else if (periodo === "30dias") {
       const thirtyDaysAgo = new Date(now);
       thirtyDaysAgo.setDate(now.getDate() - 30);
-      filtered = filtered.filter(ordem => new Date(ordem.dataCriacao) >= thirtyDaysAgo);
+      filtered = filtered.filter(ordem => ordem.dataCriacao && new Date(ordem.dataCriacao) >= thirtyDaysAgo);
     } else if (periodo === "90dias") {
       const ninetyDaysAgo = new Date(now);
       ninetyDaysAgo.setDate(now.getDate() - 90);
-      filtered = filtered.filter(ordem => new Date(ordem.dataCriacao) >= ninetyDaysAgo);
+      filtered = filtered.filter(ordem => ordem.dataCriacao && new Date(ordem.dataCriacao) >= ninetyDaysAgo);
     }
     
     // Aplicar filtro de status
@@ -213,7 +233,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     filteredOrdens.forEach(ordem => {
       if (ordem.servicos && Array.isArray(ordem.servicos)) {
         ordem.servicos.forEach(servico => {
-          const tipoServico = servico.nome || "Sem nome";
+          const tipoServico = servico.tipo || "Sem tipo";
           servicosPorTipoMap.set(
             tipoServico, 
             (servicosPorTipoMap.get(tipoServico) || 0) + 1
@@ -312,7 +332,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
   };
   
   // Handler para selecionar ordem para detalhes
-  const handleSelectOrdem = async (ordem: OrdemServico) => {
+  const handleSelectOrdem = async (ordem: ExtendedOrdemServico) => {
     setSelectedOrdem(ordem);
     
     // Buscar detalhes adicionais se necessário
@@ -346,7 +366,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
         // Atualizar a ordem com os dados dos funcionários
         setSelectedOrdem({
           ...ordem,
-          funcionariosData
+          funcionariosData: funcionariosData
         });
       } catch (error) {
         console.error("Erro ao buscar dados dos funcionários:", error);
@@ -354,7 +374,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     }
   };
   
-  const analisarOrdemServico = (ordem: OrdemServico) => {
+  const analisarOrdemServico = (ordem: ExtendedOrdemServico) => {
     if (!ordem) return null;
     
     // Calcular etapas paradas há muito tempo (mais de 24h)
@@ -568,7 +588,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
                             <div className="grid grid-cols-2 gap-2 text-sm">
                               <div>
                                 <span className="text-muted-foreground">Criação:</span>
-                                <p>{formatarData(ordem.dataCriacao)}</p>
+                                <p>{ordem.dataCriacao ? formatarData(ordem.dataCriacao) : "N/A"}</p>
                               </div>
                               <div>
                                 <span className="text-muted-foreground">Previsão:</span>
@@ -633,9 +653,10 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
           <TabsContent value="detalhes" className="space-y-4 mt-4">
             {selectedOrdem ? (
               <OSDetalhesSection 
-                ordem={selectedOrdem} 
-                analise={analisarOrdemServico(selectedOrdem)} 
-                formatarData={formatarData}
+                ordemSelecionada={selectedOrdem} 
+                atrasos={verificarAtrasos(selectedOrdem)} 
+                etapasParadas={verificarEtapasParadas(selectedOrdem)}
+                pessoasTrabalhando={contarPessoasTrabalhando(selectedOrdem)}
               />
             ) : (
               <Card>
