@@ -22,7 +22,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
   const [etapasAtivas, setEtapasAtivas] = useState<EtapaOS[]>([]);
   const [progressoTotal, setProgressoTotal] = useState(0);
   const [selectedEtapa, setSelectedEtapa] = useState<EtapaOS | null>(null);
-  const [selectedServicoTipo, setSelectedServicoTipo] = useState<TipoServico | null>(null); // NOVO
+  const [selectedServicoTipo, setSelectedServicoTipo] = useState<TipoServico | null>(null);
   const { funcionario } = useAuth();
 
   const getEtapaIcon = (etapa: EtapaOS) => {
@@ -72,11 +72,9 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     allEtapas.push('inspecao_final');
 
     setEtapasAtivas(allEtapas);
-    // Seleciona a primeira etapa disponível
     if (!selectedEtapa && allEtapas.length > 0) {
       setSelectedEtapa(allEtapas[0]);
     }
-    // Reset servico escolhido ao trocar etapa
     setSelectedServicoTipo(null);
     calcularProgressoTotal(ordem);
   }, [ordem, funcionario]);
@@ -131,7 +129,6 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     }
   };
 
-  // Adaptação do método para seleção de subatividade/serviço por etapa agora considera o tipo de serviço em inspeções
   const handleServicoStatusChange = async (
     servicoTipo: TipoServico, 
     concluido: boolean, 
@@ -191,7 +188,6 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     }
   };
 
-  // Adaptação para inspeção inicial/final: “dividir” por serviço
   const getServicosParaEtapa = (etapa: EtapaOS): Servico[] => {
     switch (etapa) {
       case 'retifica':
@@ -213,7 +209,6 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         return ordem.servicos.filter(servico => servico.tipo === 'lavagem');
       case 'inspecao_inicial':
       case 'inspecao_final':
-        // Vamos mostrar inspeção relacionada a cada serviço existente
         return ordem.servicos.filter(servico =>
           ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo)
         );
@@ -231,7 +226,6 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
       dinamometro: "Dinamômetro",
       inspecao_final: "Inspeção Final"
     };
-    // Para etapas de inspeção, exibe o serviço junto
     if (
       (etapa === "inspecao_inicial" || etapa === "inspecao_final") 
       && servicoTipo
@@ -313,7 +307,54 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     );
   };
 
-  // Se não houver serviços ativos, mostra mensagem padrão
+  const handleEtapaStatusChange = async (
+    etapa: EtapaOS, 
+    concluida: boolean, 
+    funcionarioId?: string, 
+    funcionarioNome?: string
+  ) => {
+    if (!ordem?.id || !funcionario?.id) return;
+    
+    try {
+      const etapasAndamento = {
+        ...ordem.etapasAndamento,
+        [etapa]: {
+          ...ordem.etapasAndamento[etapa],
+          concluido: concluida,
+          funcionarioId: funcionarioId || funcionario.id,
+          funcionarioNome: funcionarioNome || funcionario.nome,
+          finalizado: concluida ? new Date() : undefined
+        }
+      };
+      
+      const ordemRef = doc(db, "ordens", ordem.id);
+      await updateDoc(ordemRef, { etapasAndamento });
+      
+      const ordemAtualizada = {
+        ...ordem,
+        etapasAndamento
+      };
+      
+      if (onOrdemUpdate) {
+        onOrdemUpdate(ordemAtualizada);
+      }
+      
+      toast.success(`Etapa ${etapaNomesBR[etapa] || etapa} ${concluida ? 'concluída' : 'reaberta'}`);
+    } catch (error) {
+      console.error("Erro ao atualizar status da etapa:", error);
+      toast.error("Erro ao atualizar status da etapa");
+    }
+  };
+
+  const etapaNomesBR: Record<EtapaOS, string> = {
+    lavagem: "Lavagem",
+    inspecao_inicial: "Inspeção Inicial",
+    retifica: "Retífica",
+    montagem: "Montagem",
+    dinamometro: "Dinamômetro",
+    inspecao_final: "Inspeção Final"
+  };
+
   const servicosAtivos = ordem.servicos.filter(servico =>
     servico.subatividades && servico.subatividades.some(sub => sub.selecionada)
   );
@@ -386,7 +427,6 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
           <Separator className="my-4" />
 
           {selectedEtapa &&
-            // Para etapas inspeção mostramos cards por serviço! (senão igual antes)
             (
               (selectedEtapa === "inspecao_inicial" || selectedEtapa === "inspecao_final") ?
                 (
