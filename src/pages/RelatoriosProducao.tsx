@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -99,7 +98,6 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
             dataCriacao: data.dataCriacao?.toDate?.() || data.dataCriacao || new Date(),
           } as ExtendedOrdemServico;
           
-          // Buscar detalhes do cliente
           if (data.cliente?.id) {
             const clienteRef = doc(db, "clientes", data.cliente.id);
             const clienteSnap = await getDoc(clienteRef);
@@ -133,7 +131,6 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
   useEffect(() => {
     let filtered = [...ordens];
     
-    // Filtrar período
     const now = new Date();
     
     if (periodo === "7dias") {
@@ -150,12 +147,10 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
       filtered = filtered.filter(ordem => ordem.dataCriacao && new Date(ordem.dataCriacao) >= ninetyDaysAgo);
     }
     
-    // Aplicar filtro de status
-    if (statusFilter) {
+    if (statusFilter && statusFilter !== "all") {
       filtered = filtered.filter(ordem => ordem.status === statusFilter);
     }
     
-    // Aplicar busca
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -170,7 +165,6 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     setFilteredOrdens(filtered);
   }, [ordens, searchTerm, statusFilter, periodo]);
   
-  // Mapa de status para exibição
   const statusMap = {
     aguardando_aprovacao: "Aguardando Aprovação",
     aguardando_peca_cliente: "Aguardando Peça (Cliente)",
@@ -181,19 +175,16 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     orcamento: "Orçamento"
   };
   
-  // Função para buscar funcionário pelo ID
   const buscarNomeFuncionario = (funcionarioId: string, listaFuncionarios: any[]) => {
     const funcionario = listaFuncionarios.find(func => func.id === funcionarioId);
     return funcionario ? funcionario.nome : "Não atribuído";
   };
   
-  // Formatando data para exibição
   const formatarData = (data: string | Date) => {
     if (!data) return "N/A";
     return format(new Date(data), "dd/MM/yyyy", { locale: ptBR });
   };
   
-  // Calcular métricas para os cards de resumo
   const calcularDadosResumo = () => {
     let totalServicos = 0;
     let totalOrdens = filteredOrdens.length;
@@ -225,9 +216,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     };
   };
   
-  // Preparar dados para gráficos
   const prepararDadosGraficos = () => {
-    // Serviços por tipo
     const servicosPorTipoMap = new Map<string, number>();
     
     filteredOrdens.forEach(ordem => {
@@ -250,7 +239,6 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
       }))
       .sort((a, b) => b.quantidade - a.quantidade);
     
-    // Ordens por status
     const ordensPorStatusMap = new Map<string, number>();
     
     filteredOrdens.forEach(ordem => {
@@ -268,8 +256,6 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
       }))
       .sort((a, b) => b.quantidade - a.quantidade);
     
-    // Produtividade mensal (últimos 6 meses)
-    const now = new Date();
     const produtividadeMensal: {
       mes: string;
       ordens: number;
@@ -315,7 +301,6 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     return { servicosPorTipo, ordensPorStatus, produtividadeMensal };
   };
   
-  // Função para verificar se um serviço está em atraso
   const verificarServicoEmAtraso = (servico: any) => {
     if (!servico.dataInicio || !servico.tempoEstimado) return false;
     
@@ -331,22 +316,17 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     return Date.now() > estimadoFim;
   };
   
-  // Handler para selecionar ordem para detalhes
   const handleSelectOrdem = async (ordem: ExtendedOrdemServico) => {
     setSelectedOrdem(ordem);
     
-    // Buscar detalhes adicionais se necessário
-    // Por exemplo, dados do funcionário
     const funcionariosIds = new Set<string>();
     
-    // Coletar todos os IDs de funcionários associados à ordem
     Object.values(ordem.etapasAndamento || {}).forEach(etapa => {
       if (etapa.funcionarioId) {
         funcionariosIds.add(etapa.funcionarioId);
       }
     });
     
-    // Buscar dados dos funcionários
     if (funcionariosIds.size > 0) {
       try {
         const funcionariosData: any[] = [];
@@ -363,7 +343,6 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
           }
         }
         
-        // Atualizar a ordem com os dados dos funcionários
         setSelectedOrdem({
           ...ordem,
           funcionariosData: funcionariosData
@@ -377,30 +356,15 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
   const analisarOrdemServico = (ordem: ExtendedOrdemServico) => {
     if (!ordem) return null;
     
-    // Calcular etapas paradas há muito tempo (mais de 24h)
     const etapasParadas = verificarEtapasParadas(ordem);
-    
-    // Contar pessoas trabalhando simultaneamente
     const pessoasTrabalhando = contarPessoasTrabalhando(ordem);
-    
-    // Verificar atrasos
     const atrasos = verificarAtrasos(ordem);
-    
-    // Calcular percentual de conclusão
     const percentualConclusao = calcularPercentualConclusao(ordem);
-    
-    // Calcular tempo total gasto
     const tempoTotalMs = calcularTempoTotal(ordem);
     const tempoTotalHoras = tempoTotalMs / (1000 * 60 * 60);
-    
-    // Calcular tempo estimado total
     const tempoEstimadoMs = calcularTempoEstimado(ordem);
     const tempoEstimadoHoras = tempoEstimadoMs / (1000 * 60 * 60);
-    
-    // Verificar se está dentro do prazo
     const dentroDoPrazo = tempoTotalMs <= tempoEstimadoMs;
-    
-    // Calcular diferença entre tempo real e estimado
     const diferencaTempo = Math.abs(tempoTotalHoras - tempoEstimadoHoras);
     
     return {
@@ -473,7 +437,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
                   <SelectValue placeholder="Filtrar por status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os status</SelectItem>
+                  <SelectItem value="all">Todos os status</SelectItem>
                   <SelectItem value="orcamento">Orçamento</SelectItem>
                   <SelectItem value="aguardando_aprovacao">Aguardando Aprovação</SelectItem>
                   <SelectItem value="fabricacao">Em Fabricação</SelectItem>
@@ -527,7 +491,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
                   <SelectValue placeholder="Filtrar por status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os status</SelectItem>
+                  <SelectItem value="all">Todos os status</SelectItem>
                   <SelectItem value="orcamento">Orçamento</SelectItem>
                   <SelectItem value="aguardando_aprovacao">Aguardando Aprovação</SelectItem>
                   <SelectItem value="fabricacao">Em Fabricação</SelectItem>

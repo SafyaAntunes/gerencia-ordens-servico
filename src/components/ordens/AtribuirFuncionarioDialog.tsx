@@ -57,18 +57,24 @@ export default function AtribuirFuncionarioDialog({
             <label htmlFor="funcionario-select-etapa" className="block text-sm font-medium">
               Selecione o funcionário que executou esta etapa
             </label>
-            <Select onValueChange={handleFuncionarioChange} value={funcionarioSelecionadoId}>
+            <Select onValueChange={handleFuncionarioChange} value={funcionarioSelecionadoId || "self"}>
               <SelectTrigger id="funcionario-select-etapa" className="w-full">
                 <SelectValue placeholder="Selecione um funcionário" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={funcionario?.id || ""}>
-                  {funcionario?.nome || "Eu mesmo"} (você)
-                </SelectItem>
+                {funcionario?.id ? (
+                  <SelectItem value="self">
+                    {funcionario?.nome || "Eu mesmo"} (você)
+                  </SelectItem>
+                ) : (
+                  <SelectItem value="unknown-user">
+                    Usuário atual
+                  </SelectItem>
+                )}
                 {funcionariosOptions
                   .filter(f => f.id !== funcionario?.id)
                   .map(f => (
-                    <SelectItem key={f.id} value={f.id}>
+                    <SelectItem key={f.id} value={f.id || `funcionario-${f.nome}`}>
                       {f.nome}
                     </SelectItem>
                   ))
@@ -89,4 +95,3 @@ export default function AtribuirFuncionarioDialog({
     </Dialog>
   );
 }
-
