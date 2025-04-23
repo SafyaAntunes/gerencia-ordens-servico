@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
@@ -45,6 +44,7 @@ interface EtapaCardProps {
     funcionarioId?: string;
     funcionarioNome?: string;
   };
+  servicoTipo?: TipoServico;
   onSubatividadeToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
   onServicoStatusChange?: (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
   onEtapaStatusChange?: (etapa: EtapaOS, concluida: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
@@ -58,6 +58,7 @@ export default function EtapaCard({
   funcionarioNome,
   servicos = [],
   etapaInfo,
+  servicoTipo,
   onSubatividadeToggle,
   onServicoStatusChange,
   onEtapaStatusChange
@@ -73,7 +74,6 @@ export default function EtapaCard({
   const podeAtribuirFuncionario = funcionario?.nivelPermissao === 'admin' || 
                                  funcionario?.nivelPermissao === 'gerente';
   
-  // Carregar funcionários para o dropdown de atribuição
   useEffect(() => {
     const carregarFuncionarios = async () => {
       try {
@@ -101,6 +101,9 @@ export default function EtapaCard({
   }, [podeAtribuirFuncionario]);
   
   const etapaServicos = (() => {
+    if ((etapa === "inspecao_inicial" || etapa === "inspecao_final") && servicoTipo) {
+      return servicos.filter(servico => servico.tipo === servicoTipo);
+    }
     switch(etapa) {
       case 'retifica':
         return servicos.filter(servico => 
@@ -120,7 +123,6 @@ export default function EtapaCard({
     }
   })();
 
-  // Verificar e atualizar o progresso com base nos serviços
   useEffect(() => {
     if (etapaServicos.length === 0) return;
     
@@ -128,7 +130,6 @@ export default function EtapaCard({
     const percentualProgresso = Math.round((servicosConcluidos / etapaServicos.length) * 100);
     setProgresso(percentualProgresso);
     
-    // Se todos os serviços estiverem concluídos, marcar a etapa como concluída automaticamente
     if (servicosConcluidos === etapaServicos.length && !etapaInfo?.concluido && onEtapaStatusChange) {
       onEtapaStatusChange(etapa, true, funcionario?.id, funcionario?.nome);
     }
@@ -138,7 +139,6 @@ export default function EtapaCard({
   
   const handleEtapaConcluida = (tempoTotal: number) => {
     if (onEtapaStatusChange) {
-      // Se o usuário for admin ou gerente, abrir o diálogo para selecionar o funcionário
       if (podeAtribuirFuncionario) {
         setAtribuirFuncionarioDialogOpen(true);
       } else {
@@ -153,7 +153,6 @@ export default function EtapaCard({
       return;
     }
     
-    // Se o usuário for admin ou gerente, abrir o diálogo para selecionar o funcionário
     if (podeAtribuirFuncionario) {
       setAtribuirFuncionarioDialogOpen(true);
     } else {
@@ -168,7 +167,6 @@ export default function EtapaCard({
       if (funcionarioSelecionadoId) {
         onEtapaStatusChange(etapa, true, funcionarioSelecionadoId, funcionarioSelecionadoNome);
       } else {
-        // Se nenhum funcionário for selecionado, usar o usuário atual
         onEtapaStatusChange(etapa, true, funcionario?.id, funcionario?.nome);
       }
     }
@@ -191,7 +189,6 @@ export default function EtapaCard({
     }
   };
   
-  // Adicionado para atualizar o status quando o cronômetro estiver ativo
   useEffect(() => {
     if (etapaInfo?.iniciado && !etapaInfo?.concluido) {
       setIsAtivo(true);
@@ -219,7 +216,6 @@ export default function EtapaCard({
         </div>
       </div>
       
-      {/* Mostrar funcionário que concluiu a etapa */}
       {etapaInfo?.concluido && etapaInfo?.funcionarioNome && (
         <div className="mb-4 flex items-center text-sm text-muted-foreground">
           <User className="h-4 w-4 mr-1" />
@@ -285,7 +281,6 @@ export default function EtapaCard({
         </div>
       )}
       
-      {/* Dialog para atribuir funcionário */}
       <Dialog open={atribuirFuncionarioDialogOpen} onOpenChange={setAtribuirFuncionarioDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>

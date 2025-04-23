@@ -22,6 +22,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
   const [etapasAtivas, setEtapasAtivas] = useState<EtapaOS[]>([]);
   const [progressoTotal, setProgressoTotal] = useState(0);
   const [selectedEtapa, setSelectedEtapa] = useState<EtapaOS | null>(null);
+  const [selectedServicoTipo, setSelectedServicoTipo] = useState<TipoServico | null>(null); // NOVO
   const { funcionario } = useAuth();
 
   const getEtapaIcon = (etapa: EtapaOS) => {
@@ -46,7 +47,6 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
   const verificarEtapasDisponiveis = () => {
     const temMontagem = ordem.servicos.some(s => s.tipo === 'montagem');
     const temDinamometro = ordem.servicos.some(s => s.tipo === 'dinamometro');
-    
     return {
       montagem: temMontagem,
       dinamometro: temDinamometro
@@ -57,64 +57,29 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     if (!ordem || !funcionario) {
       setEtapasAtivas([]);
       setSelectedEtapa(null);
+      setSelectedServicoTipo(null);
       return;
     }
-    
+
     const etapasDisponiveis = verificarEtapasDisponiveis();
-    
     const allEtapas: EtapaOS[] = [
-      'lavagem', 
-      'inspecao_inicial', 
+      'lavagem',
+      'inspecao_inicial',
       'retifica'
     ];
-    
-    if (etapasDisponiveis.montagem) {
-      allEtapas.push('montagem');
-    }
-    
-    if (etapasDisponiveis.dinamometro) {
-      allEtapas.push('dinamometro');
-    }
-    
+    if (etapasDisponiveis.montagem) allEtapas.push('montagem');
+    if (etapasDisponiveis.dinamometro) allEtapas.push('dinamometro');
     allEtapas.push('inspecao_final');
-    
-    if (funcionario?.nivelPermissao === 'admin' || funcionario?.nivelPermissao === 'gerente') {
-      setEtapasAtivas(allEtapas);
-      if (!selectedEtapa && allEtapas.length > 0) {
-        setSelectedEtapa(allEtapas[0]);
-      }
-    } else {
-      const etapasTecnico: EtapaOS[] = ['inspecao_inicial', 'retifica', 'inspecao_final'];
-      
-      if (etapasDisponiveis.montagem && funcionario?.especialidades.includes('montagem')) {
-        etapasTecnico.push('montagem');
-      }
-      
-      if (etapasDisponiveis.dinamometro && funcionario?.especialidades.includes('dinamometro')) {
-        etapasTecnico.push('dinamometro');
-      }
-      
-      const etapasPermitidas = etapasTecnico.filter(etapa => {
-        if (etapa === 'retifica') {
-          return ordem.servicos.some(servico => 
-            ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo as TipoServico) &&
-            funcionario?.especialidades.includes(servico.tipo)
-          );
-        }
-        return true;
-      });
-      
-      setEtapasAtivas(etapasPermitidas);
-      
-      if (!selectedEtapa && etapasPermitidas.length > 0) {
-        setSelectedEtapa(etapasPermitidas[0]);
-      } else if (selectedEtapa && !etapasPermitidas.includes(selectedEtapa)) {
-        setSelectedEtapa(etapasPermitidas.length > 0 ? etapasPermitidas[0] : null);
-      }
+
+    setEtapasAtivas(allEtapas);
+    // Seleciona a primeira etapa disponível
+    if (!selectedEtapa && allEtapas.length > 0) {
+      setSelectedEtapa(allEtapas[0]);
     }
-    
+    // Reset servico escolhido ao trocar etapa
+    setSelectedServicoTipo(null);
     calcularProgressoTotal(ordem);
-  }, [ordem, funcionario, selectedEtapa]);
+  }, [ordem, funcionario]);
 
   const calcularProgressoTotal = (ordemAtual: OrdemServico) => {
     const etapasPossiveis: EtapaOS[] = ["lavagem", "inspecao_inicial", "retifica", "montagem", "dinamometro", "inspecao_final"];
@@ -166,7 +131,13 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     }
   };
 
-  const handleServicoStatusChange = async (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => {
+  // Adaptação do método para seleção de subatividade/serviço por etapa agora considera o tipo de serviço em inspeções
+  const handleServicoStatusChange = async (
+    servicoTipo: TipoServico, 
+    concluido: boolean, 
+    funcionarioId?: string, 
+    funcionarioNome?: string
+  ) => {
     if (!ordem?.id || !funcionario?.id) return;
     
     if (funcionario.nivelPermissao !== 'admin' && 
@@ -220,75 +191,64 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     }
   };
 
-  const verificarEtapaConcluida = async (ordemAtualizada: OrdemServico, servicoTipo: TipoServico) => {
-    let etapa: EtapaOS | null = null;
-    
-    if (['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servicoTipo)) {
-      etapa = 'retifica';
-    } else if (servicoTipo === 'montagem') {
-      etapa = 'montagem';
-    } else if (servicoTipo === 'dinamometro') {
-      etapa = 'dinamometro';
-    } else if (servicoTipo === 'lavagem') {
-      etapa = 'lavagem';
-    }
-    
-    if (!etapa) return;
-    
-    const servicosEtapa = ordemAtualizada.servicos.filter(s => {
-      if (etapa === 'retifica') {
-        return ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(s.tipo as TipoServico);
-      }
-      return s.tipo === etapa;
-    });
-    
-    const servicosAtivos = servicosEtapa.filter(s => 
-      s.subatividades && s.subatividades.some(sub => sub.selecionada)
-    );
-    
-    if (servicosAtivos.length === 0) return;
-    
-    const todosConcluidos = servicosAtivos.every(s => s.concluido);
-    
-    if (todosConcluidos && !ordemAtualizada.etapasAndamento[etapa]?.concluido) {
-      await handleEtapaStatusChange(etapa, true);
+  // Adaptação para inspeção inicial/final: “dividir” por serviço
+  const getServicosParaEtapa = (etapa: EtapaOS): Servico[] => {
+    switch (etapa) {
+      case 'retifica':
+        if (funcionario?.nivelPermissao !== 'admin' && funcionario?.nivelPermissao !== 'gerente') {
+          return ordem.servicos.filter(servico =>
+            ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo) &&
+            funcionario?.especialidades.includes(servico.tipo)
+          );
+        } else {
+          return ordem.servicos.filter(servico =>
+            ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo)
+          );
+        }
+      case 'montagem':
+        return ordem.servicos.filter(servico => servico.tipo === 'montagem');
+      case 'dinamometro':
+        return ordem.servicos.filter(servico => servico.tipo === 'dinamometro');
+      case 'lavagem':
+        return ordem.servicos.filter(servico => servico.tipo === 'lavagem');
+      case 'inspecao_inicial':
+      case 'inspecao_final':
+        // Vamos mostrar inspeção relacionada a cada serviço existente
+        return ordem.servicos.filter(servico =>
+          ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo)
+        );
+      default:
+        return [];
     }
   };
 
-  const handleEtapaStatusChange = async (etapa: EtapaOS, concluida: boolean, funcionarioId?: string, funcionarioNome?: string) => {
-    if (!ordem?.id || !funcionario?.id) return;
-    
-    try {
-      const etapasAndamento = {
-        ...ordem.etapasAndamento,
-        [etapa]: {
-          ...ordem.etapasAndamento[etapa],
-          concluido: concluida,
-          funcionarioId: funcionarioId || funcionario.id,
-          funcionarioNome: funcionarioNome || funcionario.nome,
-          finalizado: concluida ? new Date() : undefined
-        }
+  const getEtapaTitulo = (etapa: EtapaOS, servicoTipo?: TipoServico) => {
+    const etapaLabel: Record<EtapaOS, string> = {
+      lavagem: "Lavagem",
+      inspecao_inicial: "Inspeção Inicial",
+      retifica: "Retífica",
+      montagem: "Montagem",
+      dinamometro: "Dinamômetro",
+      inspecao_final: "Inspeção Final"
+    };
+    // Para etapas de inspeção, exibe o serviço junto
+    if (
+      (etapa === "inspecao_inicial" || etapa === "inspecao_final") 
+      && servicoTipo
+    ) {
+      const tipoLabel: Record<TipoServico, string> = {
+        bloco: "Bloco",
+        biela: "Biela",
+        cabecote: "Cabeçote",
+        virabrequim: "Virabrequim",
+        eixo_comando: "Eixo de Comando",
+        montagem: "Montagem",
+        dinamometro: "Dinamômetro",
+        lavagem: "Lavagem"
       };
-      
-      const ordemRef = doc(db, "ordens", ordem.id);
-      await updateDoc(ordemRef, { etapasAndamento });
-      
-      const ordemAtualizada = {
-        ...ordem,
-        etapasAndamento
-      };
-      
-      calcularProgressoTotal(ordemAtualizada);
-      
-      if (onOrdemUpdate) {
-        onOrdemUpdate(ordemAtualizada);
-      }
-      
-      toast.success(`Etapa ${formatarEtapa(etapa)} ${concluida ? 'concluída' : 'reaberta'}`);
-    } catch (error) {
-      console.error("Erro ao atualizar status da etapa:", error);
-      toast.error("Erro ao atualizar status da etapa");
+      return `${etapaLabel[etapa]} - ${tipoLabel[servicoTipo]}`;
     }
+    return etapaLabel[etapa];
   };
 
   const handleSubatividadeToggle = async (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => {
@@ -339,42 +299,6 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     }
   };
 
-  const formatarEtapa = (etapa: EtapaOS): string => {
-    const labels: Record<EtapaOS, string> = {
-      lavagem: "Lavagem",
-      inspecao_inicial: "Inspeção Inicial",
-      retifica: "Retífica",
-      montagem: "Montagem",
-      dinamometro: "Dinamômetro",
-      inspecao_final: "Inspeção Final"
-    };
-    return labels[etapa] || etapa;
-  };
-
-  const getServicosParaEtapa = (etapa: EtapaOS): Servico[] => {
-    switch (etapa) {
-      case 'retifica':
-        if (funcionario?.nivelPermissao !== 'admin' && funcionario?.nivelPermissao !== 'gerente') {
-          return ordem.servicos.filter(servico => 
-            ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo) &&
-            funcionario?.especialidades.includes(servico.tipo)
-          );
-        } else {
-          return ordem.servicos.filter(servico => 
-            ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo)
-          );
-        }
-      case 'montagem':
-        return ordem.servicos.filter(servico => servico.tipo === 'montagem');
-      case 'dinamometro':
-        return ordem.servicos.filter(servico => servico.tipo === 'dinamometro');
-      case 'lavagem': 
-        return ordem.servicos.filter(servico => servico.tipo === 'lavagem');
-      default:
-        return [];
-    }
-  };
-
   const isRetificaHabilitada = () => {
     return ordem.status === 'fabricacao';
   };
@@ -389,10 +313,10 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     );
   };
 
-  const servicosAtivos = ordem.servicos.filter(servico => 
+  // Se não houver serviços ativos, mostra mensagem padrão
+  const servicosAtivos = ordem.servicos.filter(servico =>
     servico.subatividades && servico.subatividades.some(sub => sub.selecionada)
   );
-
   if (servicosAtivos.length === 0) {
     return (
       <Card className="w-full">
@@ -410,7 +334,6 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
       </Card>
     );
   }
-
   const etapasDisponiveis = verificarEtapasDisponiveis();
 
   return (
@@ -430,25 +353,27 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
             </div>
             <Progress value={progressoTotal} className="h-3" />
           </div>
-
           <div className="flex flex-wrap justify-center gap-2 mb-6">
             {etapasAtivas.map(etapa => {
-              const isDisabled = 
+              const isDisabled =
                 (etapa === 'retifica' && !isRetificaHabilitada()) ||
                 (etapa === 'inspecao_final' && !isInspecaoFinalHabilitada()) ||
                 (etapa === 'montagem' && !etapasDisponiveis.montagem) ||
                 (etapa === 'dinamometro' && !etapasDisponiveis.dinamometro);
-              
+
               return (
                 <Button
                   key={etapa}
                   variant={selectedEtapa === etapa ? "default" : "outline"}
                   className="flex items-center"
-                  onClick={() => !isDisabled && setSelectedEtapa(etapa)}
+                  onClick={() => {
+                    !isDisabled && setSelectedEtapa(etapa);
+                    setSelectedServicoTipo(null);
+                  }}
                   disabled={isDisabled}
                 >
                   {getEtapaIcon(etapa)}
-                  {formatarEtapa(etapa)}
+                  {getEtapaTitulo(etapa)}
                   {isDisabled && (
                     <Badge variant="outline" className="ml-2 text-xs bg-opacity-50">
                       Bloqueado
@@ -458,26 +383,56 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
               );
             })}
           </div>
-
           <Separator className="my-4" />
 
-          {selectedEtapa && funcionario && (
-            <EtapaCard 
-              key={selectedEtapa}
-              ordemId={ordem.id}
-              etapa={selectedEtapa}
-              etapaNome={formatarEtapa(selectedEtapa)}
-              funcionarioId={funcionario?.id || ""}
-              funcionarioNome={funcionario?.nome}
-              servicos={getServicosParaEtapa(selectedEtapa)}
-              etapaInfo={ordem.etapasAndamento[selectedEtapa]}
-              onSubatividadeToggle={(servicoTipo, subId, checked) => {
-                handleSubatividadeToggle(servicoTipo, subId, checked);
-              }}
-              onServicoStatusChange={handleServicoStatusChange}
-              onEtapaStatusChange={handleEtapaStatusChange}
-            />
-          )}
+          {selectedEtapa &&
+            // Para etapas inspeção mostramos cards por serviço! (senão igual antes)
+            (
+              (selectedEtapa === "inspecao_inicial" || selectedEtapa === "inspecao_final") ?
+                (
+                  <div className="grid gap-4">
+                    {getServicosParaEtapa(selectedEtapa).map(servico => (
+                      <EtapaCard
+                        key={`${selectedEtapa}-${servico.tipo}`}
+                        ordemId={ordem.id}
+                        etapa={selectedEtapa}
+                        etapaNome={getEtapaTitulo(selectedEtapa, servico.tipo)}
+                        funcionarioId={funcionario?.id || ""}
+                        funcionarioNome={funcionario?.nome}
+                        servicos={[servico]}
+                        etapaInfo={ordem.etapasAndamento[selectedEtapa]}
+                        servicoTipo={servico.tipo}
+                        onSubatividadeToggle={(servicoTipo, subId, checked) => {
+                          handleSubatividadeToggle(servicoTipo, subId, checked);
+                        }}
+                        onServicoStatusChange={handleServicoStatusChange}
+                        onEtapaStatusChange={handleEtapaStatusChange}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div>
+                    {selectedEtapa && funcionario && (
+                      <EtapaCard
+                        key={selectedEtapa}
+                        ordemId={ordem.id}
+                        etapa={selectedEtapa}
+                        etapaNome={getEtapaTitulo(selectedEtapa)}
+                        funcionarioId={funcionario?.id || ""}
+                        funcionarioNome={funcionario?.nome}
+                        servicos={getServicosParaEtapa(selectedEtapa)}
+                        etapaInfo={ordem.etapasAndamento[selectedEtapa]}
+                        onSubatividadeToggle={(servicoTipo, subId, checked) => {
+                          handleSubatividadeToggle(servicoTipo, subId, checked);
+                        }}
+                        onServicoStatusChange={handleServicoStatusChange}
+                        onEtapaStatusChange={handleEtapaStatusChange}
+                      />
+                    )}
+                  </div>
+                )
+            )
+          }
         </CardContent>
       </Card>
     </div>
