@@ -217,6 +217,8 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
   };
   
   const prepararDadosGraficos = () => {
+    const now = new Date();
+    
     const servicosPorTipoMap = new Map<string, number>();
     
     filteredOrdens.forEach(ordem => {
