@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/firebase';
-import { collection, getDocs, doc, setDoc, deleteDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, deleteDoc, query, where, writeBatch } from 'firebase/firestore';
 import { SubAtividade, TipoServico, TipoAtividade } from '@/types/ordens';
 
 // Obter todas as subatividades agrupadas por tipo de serviço
@@ -54,6 +54,36 @@ export async function saveSubatividade(subatividade: SubAtividade, tipoServico: 
     });
   } catch (error) {
     console.error('Erro ao salvar subatividade:', error);
+    throw error;
+  }
+}
+
+// Salvar múltiplas subatividades
+export async function saveSubatividades(subatividadesMap: Record<TipoServico | TipoAtividade, SubAtividade[]>): Promise<void> {
+  try {
+    const batch = writeBatch(db);
+    
+    // Primeiro, exclui todas as subatividades existentes
+    const subatividadesRef = collection(db, 'subatividades');
+    const snapshot = await getDocs(subatividadesRef);
+    snapshot.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+    
+    // Depois, adiciona as novas subatividades
+    Object.entries(subatividadesMap).forEach(([tipoServico, subatividades]) => {
+      subatividades.forEach((subatividade) => {
+        const subatividadeRef = doc(db, 'subatividades', subatividade.id);
+        batch.set(subatividadeRef, {
+          ...subatividade,
+          tipoServico,
+        });
+      });
+    });
+    
+    await batch.commit();
+  } catch (error) {
+    console.error('Erro ao salvar subatividades:', error);
     throw error;
   }
 }

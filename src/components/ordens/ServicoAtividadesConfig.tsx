@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CurrencyInput } from "@/components/ui/currency-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useServicoSubatividades } from "@/hooks/useServicoSubatividades";
 
@@ -154,9 +153,9 @@ export default function ServicoAtividadesConfig({
                       Preço por hora (R$)
                     </Label>
                     <div className="h-8">
-                      <CurrencyInput
+                      <Input
                         id={`price-${sub.id}`}
-                        value={sub.precoHora || 0}
+                        value={sub.precoHora ? `R$ ${sub.precoHora.toFixed(2)}` : "R$ 0.00"}
                         readOnly
                         placeholder="Configurado nas configurações"
                         className="text-sm h-full"
