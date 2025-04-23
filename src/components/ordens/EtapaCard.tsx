@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
@@ -48,6 +49,19 @@ interface EtapaCardProps {
   onServicoStatusChange?: (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
   onEtapaStatusChange?: (etapa: EtapaOS, concluida: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
 }
+
+// Função para formatar o nome da etapa
+export const formatarEtapa = (etapa: EtapaOS): string => {
+  const labels: Record<EtapaOS, string> = {
+    lavagem: "Lavagem",
+    inspecao_inicial: "Inspeção Inicial",
+    retifica: "Retífica",
+    montagem: "Montagem",
+    dinamometro: "Dinamômetro",
+    inspecao_final: "Inspeção Final"
+  };
+  return labels[etapa] || etapa;
+};
 
 export default function EtapaCard({
   ordemId,
