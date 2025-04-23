@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -128,22 +129,66 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     fetchOrdens();
   }, []);
   
+  // Função para pesquisar ordem de serviço específica
+  const handlePesquisaOS = () => {
+    if (!searchTerm.trim()) {
+      setFilteredOrdens(ordens);
+      setSelectedOrdem(null);
+      return;
+    }
+    
+    const searchLower = searchTerm.toLowerCase();
+    
+    // Busca exata pelo ID ou parcial pelo nome/identificação
+    const osEncontrada = ordens.find(ordem => 
+      ordem.id?.toLowerCase() === searchLower || 
+      ordem.id?.toLowerCase().includes(searchLower)
+    );
+    
+    if (osEncontrada) {
+      setFilteredOrdens([osEncontrada]);
+      handleSelectOrdem(osEncontrada);
+      // Automaticamente muda para a aba de detalhes
+      setTimeout(() => {
+        document.querySelector('[data-value="detalhes"]')?.dispatchEvent(new MouseEvent('click'));
+      }, 100);
+    } else {
+      // Se não encontrar pelo ID exato, busca por outros campos
+      const resultados = ordens.filter(ordem =>
+        ordem.id?.toLowerCase().includes(searchLower) ||
+        ordem.identificacao?.toLowerCase().includes(searchLower) ||
+        ordem.cliente?.nome?.toLowerCase().includes(searchLower) ||
+        ordem.descricao?.toLowerCase().includes(searchLower)
+      );
+      
+      setFilteredOrdens(resultados);
+      setSelectedOrdem(null);
+    }
+  };
+  
+  // Executar pesquisa ao pressionar Enter
+  const handleKeyPress = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter') {
+      handlePesquisaOS();
+    }
+  };
+  
   useEffect(() => {
     let filtered = [...ordens];
     
-    const now = new Date();
+    const dataAtual = new Date();
     
     if (periodo === "7dias") {
-      const sevenDaysAgo = new Date(now);
-      sevenDaysAgo.setDate(now.getDate() - 7);
+      const sevenDaysAgo = new Date(dataAtual);
+      sevenDaysAgo.setDate(dataAtual.getDate() - 7);
       filtered = filtered.filter(ordem => ordem.dataCriacao && new Date(ordem.dataCriacao) >= sevenDaysAgo);
     } else if (periodo === "30dias") {
-      const thirtyDaysAgo = new Date(now);
-      thirtyDaysAgo.setDate(now.getDate() - 30);
+      const thirtyDaysAgo = new Date(dataAtual);
+      thirtyDaysAgo.setDate(dataAtual.getDate() - 30);
       filtered = filtered.filter(ordem => ordem.dataCriacao && new Date(ordem.dataCriacao) >= thirtyDaysAgo);
     } else if (periodo === "90dias") {
-      const ninetyDaysAgo = new Date(now);
-      ninetyDaysAgo.setDate(now.getDate() - 90);
+      const ninetyDaysAgo = new Date(dataAtual);
+      ninetyDaysAgo.setDate(dataAtual.getDate() - 90);
       filtered = filtered.filter(ordem => ordem.dataCriacao && new Date(ordem.dataCriacao) >= ninetyDaysAgo);
     }
     
@@ -163,7 +208,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     }
     
     setFilteredOrdens(filtered);
-  }, [ordens, searchTerm, statusFilter, periodo]);
+  }, [ordens, statusFilter, periodo]);
   
   const statusMap = {
     aguardando_aprovacao: "Aguardando Aprovação",
@@ -229,7 +274,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
   };
   
   const prepararDadosGraficos = () => {
-    const now = new Date();
+    const dataAtual = new Date();
     
     const servicosPorTipoMap = new Map<string, number>();
     
@@ -277,8 +322,8 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     }[] = [];
     
     for (let i = 5; i >= 0; i--) {
-      const dataAlvo = new Date(now);
-      dataAlvo.setMonth(now.getMonth() - i);
+      const dataAlvo = new Date(dataAtual);
+      dataAlvo.setMonth(dataAtual.getMonth() - i);
       
       const mes = format(dataAlvo, "MMM", { locale: ptBR });
       const ordensDoMes = filteredOrdens.filter(ordem => {
@@ -405,6 +450,24 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
           </div>
         </div>
         
+        {/* Barra de pesquisa principal */}
+        <div className="w-full flex gap-2 mt-4">
+          <div className="relative flex-grow">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Pesquisar por número da OS, cliente ou descrição"
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyPress={handleKeyPress}
+            />
+          </div>
+          <Button onClick={handlePesquisaOS}>
+            Pesquisar
+          </Button>
+        </div>
+        
         <Tabs defaultValue="resumo" className="mt-6">
           <TabsList className="grid grid-cols-3 w-full max-w-md">
             <TabsTrigger value="resumo">
@@ -434,17 +497,6 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
                   <SelectItem value="todos">Todos os tempos</SelectItem>
                 </SelectContent>
               </Select>
-              
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Buscar ordens..."
-                  className="pl-8"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
               
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
@@ -476,7 +528,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
           </TabsContent>
           
           <TabsContent value="ordens" className="space-y-4 mt-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <Select value={periodo} onValueChange={setPeriodo}>
                 <SelectTrigger>
                   <SelectValue placeholder="Período" />
@@ -488,17 +540,6 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
                   <SelectItem value="todos">Todos os tempos</SelectItem>
                 </SelectContent>
               </Select>
-              
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Buscar ordens..."
-                  className="pl-8"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
               
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
@@ -641,7 +682,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
                 <CardHeader>
                   <CardTitle>Detalhes da Ordem de Serviço</CardTitle>
                   <CardDescription>
-                    Selecione uma ordem na aba "Ordens" para visualizar os detalhes completos
+                    Pesquise uma ordem no campo acima ou selecione uma ordem na aba "Ordens" para visualizar os detalhes completos
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex justify-center py-8">
