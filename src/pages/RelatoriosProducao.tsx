@@ -847,7 +847,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center">
-                    <BarChart className="h-5 w-5 mr-2 text-muted-foreground" />
+                    <BarChartIcon className="h-5 w-5 mr-2 text-muted-foreground" />
                     <p className="text-2xl font-bold">{taxaFinalizacao.toFixed(2)}%</p>
                   </div>
                 </CardContent>
