@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import Layout from "@/components/layout/Layout";
 import { SubatividadeForm } from "@/components/subatividades/SubatividadeForm";
-import SubatividadeList from "@/components/subatividades/SubatividadeList";
+import { SubatividadeList } from "@/components/subatividades/SubatividadeList";
 import { TipoServico, SubAtividade, TipoAtividade } from "@/types/ordens";
 import { Button } from "@/components/ui/button";
 import { Plus, Save, Loader2 } from "lucide-react";
