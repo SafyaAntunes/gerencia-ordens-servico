@@ -59,7 +59,7 @@ export async function saveSubatividade(subatividade: SubAtividade, tipoServico: 
 }
 
 // Salvar múltiplas subatividades
-export async function saveSubatividades(subatividadesMap: Record<TipoServico | TipoAtividade, SubAtividade[]>): Promise<void> {
+export async function saveSubatividades(subatividadesMap: Partial<Record<TipoServico | TipoAtividade, SubAtividade[]>>): Promise<void> {
   try {
     const batch = writeBatch(db);
     
@@ -70,8 +70,29 @@ export async function saveSubatividades(subatividadesMap: Record<TipoServico | T
       batch.delete(doc.ref);
     });
     
+    // Inicialize um objeto com todas as chaves possíveis como arrays vazios
+    const completeMap: Record<TipoServico | TipoAtividade, SubAtividade[]> = {
+      bloco: [],
+      biela: [],
+      cabecote: [],
+      virabrequim: [],
+      eixo_comando: [],
+      montagem: [],
+      dinamometro: [],
+      lavagem: [],
+      inspecao_inicial: [],
+      inspecao_final: [],
+    };
+    
+    // Combine o mapa parcial com o mapa completo
+    Object.entries(subatividadesMap).forEach(([key, value]) => {
+      if (key in completeMap && value) {
+        completeMap[key as TipoServico | TipoAtividade] = value;
+      }
+    });
+    
     // Depois, adiciona as novas subatividades
-    Object.entries(subatividadesMap).forEach(([tipoServico, subatividades]) => {
+    Object.entries(completeMap).forEach(([tipoServico, subatividades]) => {
       subatividades.forEach((subatividade) => {
         const subatividadeRef = doc(db, 'subatividades', subatividade.id);
         batch.set(subatividadeRef, {
