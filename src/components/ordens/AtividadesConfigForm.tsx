@@ -39,47 +39,41 @@ export default function AtividadesConfigForm({
         servicosTipos.forEach(servicoTipo => {
           // Verificar se já existe configuração para este serviço
           if (!novasAtividadesEspecificas[servicoTipo]) {
-            novasAtividadesEspecificas[servicoTipo] = {
-              lavagem: [],
-              inspecao_inicial: [],
-              inspecao_final: []
-            };
+            novasAtividadesEspecificas[servicoTipo] = {};
           }
           
           // Para cada tipo de atividade
           tiposAtividade.forEach(tipoAtividade => {
             // Verificar se já existe configuração para este tipo de atividade neste serviço
             if (!novasAtividadesEspecificas[servicoTipo][tipoAtividade]) {
-              novasAtividadesEspecificas[servicoTipo][tipoAtividade] = [];
-            }
-            
-            // Buscar subatividades cadastradas para este tipo de atividade
-            let subatividades: SubAtividade[] = [];
-            
-            if (atividadesData[tipoAtividade]) {
-              // Filtrar apenas as subatividades que têm servicoTipo igual ao atual
-              // ou que não têm servicoTipo definido (compatível com todos)
-              subatividades = atividadesData[tipoAtividade]
-                .filter(sub => !sub.servicoTipo || sub.servicoTipo === servicoTipo)
-                .map(sub => ({
-                  ...sub,
+              // Buscar subatividades cadastradas para este tipo de atividade
+              let subatividades: SubAtividade[] = [];
+              
+              if (atividadesData[tipoAtividade]) {
+                // Filtrar apenas as subatividades que têm servicoTipo igual ao atual
+                // ou que não têm servicoTipo definido (compatível com todos)
+                subatividades = atividadesData[tipoAtividade]
+                  .filter(sub => !sub.servicoTipo || sub.servicoTipo === servicoTipo)
+                  .map(sub => ({
+                    ...sub,
+                    selecionada: false,
+                    servicoTipo: servicoTipo
+                  }));
+              }
+              
+              // Se não houver subatividades cadastradas, usar as padrões
+              if (subatividades.length === 0 && defaultAtividadesEspecificas[tipoAtividade]?.[servicoTipo]) {
+                subatividades = defaultAtividadesEspecificas[tipoAtividade][servicoTipo].map(nome => ({
+                  id: uuidv4(),
+                  nome,
                   selecionada: false,
+                  precoHora: atividadesData[tipoAtividade]?.[0]?.precoHora || 0,
                   servicoTipo: servicoTipo
                 }));
+              }
+              
+              novasAtividadesEspecificas[servicoTipo][tipoAtividade] = subatividades;
             }
-            
-            // Se não houver subatividades cadastradas, usar as padrões
-            if (subatividades.length === 0 && defaultAtividadesEspecificas[tipoAtividade]?.[servicoTipo]) {
-              subatividades = defaultAtividadesEspecificas[tipoAtividade][servicoTipo].map(nome => ({
-                id: uuidv4(),
-                nome,
-                selecionada: false,
-                precoHora: atividadesData[tipoAtividade]?.[0]?.precoHora || 0,
-                servicoTipo: servicoTipo
-              }));
-            }
-            
-            novasAtividadesEspecificas[servicoTipo][tipoAtividade] = subatividades;
           });
         });
         
@@ -109,11 +103,7 @@ export default function AtividadesConfigForm({
     const novasAtividadesEspecificas = { ...atividadesEspecificas };
     
     if (!novasAtividadesEspecificas[servicoTipo]) {
-      novasAtividadesEspecificas[servicoTipo] = {
-        lavagem: [],
-        inspecao_inicial: [],
-        inspecao_final: []
-      };
+      novasAtividadesEspecificas[servicoTipo] = {};
     }
     
     novasAtividadesEspecificas[servicoTipo][tipoAtividade] = subatividades;
@@ -155,7 +145,7 @@ export default function AtividadesConfigForm({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Alert>
+          <Alert variant="warning">
             <AlertCircle className="h-4 w-4 mr-2" />
             <AlertDescription>
               Selecione pelo menos um serviço na aba anterior para configurar atividades específicas.

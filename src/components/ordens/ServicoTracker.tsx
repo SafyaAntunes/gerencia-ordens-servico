@@ -12,8 +12,7 @@ import {
   Pause, 
   StopCircle, 
   Clock4,
-  User,
-  BarChart as BarChartIcon
+  User
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatTime } from "@/utils/timerUtils";

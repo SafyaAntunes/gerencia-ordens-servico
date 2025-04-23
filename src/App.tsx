@@ -17,7 +17,6 @@ import RelatoriosProducao from "./pages/RelatoriosProducao";
 import RelatoriosFinanceiro from "./pages/RelatoriosFinanceiro";
 import Configuracoes from "./pages/Configuracoes";
 import Login from "./pages/Login";
-import Procedimentos from "./pages/Procedimentos"; // Add this import
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 
 // Authentication guard component
@@ -165,13 +164,6 @@ const AppRoutes = () => {
       <Route path="/configuracoes" element={
         <PrivateRoute requiredPermission="admin">
           <Configuracoes onLogout={handleLogout} />
-        </PrivateRoute>
-      } />
-      
-      {/* POPs - gerentes ou superior */}
-      <Route path="/procedimentos" element={
-        <PrivateRoute requiredPermission="gerente">
-          <Procedimentos onLogout={handleLogout} />
         </PrivateRoute>
       } />
       

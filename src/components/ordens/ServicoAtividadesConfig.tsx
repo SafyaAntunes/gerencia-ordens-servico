@@ -157,10 +157,9 @@ export default function ServicoAtividadesConfig({
                       <CurrencyInput
                         id={`price-${sub.id}`}
                         value={sub.precoHora || 0}
-                        onValueChange={(value) => value} // Add dummy onValueChange to satisfy prop requirements
+                        readOnly
                         placeholder="Configurado nas configurações"
                         className="text-sm h-full"
-                        readOnly
                       />
                     </div>
                   </div>

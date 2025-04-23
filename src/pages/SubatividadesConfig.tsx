@@ -1,13 +1,14 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import Layout from "@/components/layout/Layout";
 import { SubatividadeForm } from "@/components/subatividades/SubatividadeForm";
-import { SubatividadeList } from "@/components/subatividades/SubatividadeList";
-import { TipoServico, SubAtividade, TipoAtividade, EtapaOS } from "@/types/ordens";
+import SubatividadeList from "@/components/subatividades/SubatividadeList";
+import { TipoServico, SubAtividade, TipoAtividade } from "@/types/ordens";
 import { Button } from "@/components/ui/button";
-import { Plus, Save, Loader2, Clock } from "lucide-react";
+import { Plus, Save, Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -23,8 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useServicoSubatividades } from "@/hooks/useServicoSubatividades";
-import { getSubatividades, saveSubatividade } from "@/services/subatividadeService";
-import { Input } from "@/components/ui/input";
+import { getSubatividades, saveSubatividades } from "@/services/subatividadeService";
 
 interface SubatividadesConfigProps {
   onLogout?: () => void;
@@ -56,97 +56,8 @@ export default function SubatividadesConfig({
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { defaultSubatividades, defaultAtividadesEspecificas } = useServicoSubatividades();
-  const [etapasTempoPreco, setEtapasTempoPreco] = useState<Record<EtapaOS, {
-    precoHora?: number;
-    tempoEstimado?: number;
-    configuracoesServico?: Record<TipoServico, { precoHora: number; tempoEstimado: number; }>;
-  }>>({
-    lavagem: { 
-      precoHora: 0, 
-      tempoEstimado: 0,
-      configuracoesServico: {
-        bloco: { precoHora: 0, tempoEstimado: 0 },
-        biela: { precoHora: 0, tempoEstimado: 0 },
-        cabecote: { precoHora: 0, tempoEstimado: 0 },
-        virabrequim: { precoHora: 0, tempoEstimado: 0 },
-        eixo_comando: { precoHora: 0, tempoEstimado: 0 },
-        montagem: { precoHora: 0, tempoEstimado: 0 },
-        dinamometro: { precoHora: 0, tempoEstimado: 0 },
-        lavagem: { precoHora: 0, tempoEstimado: 0 }
-      }
-    },
-    inspecao_inicial: { 
-      precoHora: 0, 
-      tempoEstimado: 0,
-      configuracoesServico: {
-        bloco: { precoHora: 0, tempoEstimado: 0 },
-        biela: { precoHora: 0, tempoEstimado: 0 },
-        cabecote: { precoHora: 0, tempoEstimado: 0 },
-        virabrequim: { precoHora: 0, tempoEstimado: 0 },
-        eixo_comando: { precoHora: 0, tempoEstimado: 0 },
-        montagem: { precoHora: 0, tempoEstimado: 0 },
-        dinamometro: { precoHora: 0, tempoEstimado: 0 },
-        lavagem: { precoHora: 0, tempoEstimado: 0 }
-      }
-    },
-    inspecao_final: { 
-      precoHora: 0, 
-      tempoEstimado: 0,
-      configuracoesServico: {
-        bloco: { precoHora: 0, tempoEstimado: 0 },
-        biela: { precoHora: 0, tempoEstimado: 0 },
-        cabecote: { precoHora: 0, tempoEstimado: 0 },
-        virabrequim: { precoHora: 0, tempoEstimado: 0 },
-        eixo_comando: { precoHora: 0, tempoEstimado: 0 },
-        montagem: { precoHora: 0, tempoEstimado: 0 },
-        dinamometro: { precoHora: 0, tempoEstimado: 0 },
-        lavagem: { precoHora: 0, tempoEstimado: 0 }
-      }
-    },
-    retifica: { 
-      precoHora: 0, 
-      tempoEstimado: 0,
-      configuracoesServico: {
-        bloco: { precoHora: 0, tempoEstimado: 0 },
-        biela: { precoHora: 0, tempoEstimado: 0 },
-        cabecote: { precoHora: 0, tempoEstimado: 0 },
-        virabrequim: { precoHora: 0, tempoEstimado: 0 },
-        eixo_comando: { precoHora: 0, tempoEstimado: 0 },
-        montagem: { precoHora: 0, tempoEstimado: 0 },
-        dinamometro: { precoHora: 0, tempoEstimado: 0 },
-        lavagem: { precoHora: 0, tempoEstimado: 0 }
-      }
-    },
-    montagem: { 
-      precoHora: 0, 
-      tempoEstimado: 0,
-      configuracoesServico: {
-        bloco: { precoHora: 0, tempoEstimado: 0 },
-        biela: { precoHora: 0, tempoEstimado: 0 },
-        cabecote: { precoHora: 0, tempoEstimado: 0 },
-        virabrequim: { precoHora: 0, tempoEstimado: 0 },
-        eixo_comando: { precoHora: 0, tempoEstimado: 0 },
-        montagem: { precoHora: 0, tempoEstimado: 0 },
-        dinamometro: { precoHora: 0, tempoEstimado: 0 },
-        lavagem: { precoHora: 0, tempoEstimado: 0 }
-      }
-    },
-    dinamometro: { 
-      precoHora: 0, 
-      tempoEstimado: 0,
-      configuracoesServico: {
-        bloco: { precoHora: 0, tempoEstimado: 0 },
-        biela: { precoHora: 0, tempoEstimado: 0 },
-        cabecote: { precoHora: 0, tempoEstimado: 0 },
-        virabrequim: { precoHora: 0, tempoEstimado: 0 },
-        eixo_comando: { precoHora: 0, tempoEstimado: 0 },
-        montagem: { precoHora: 0, tempoEstimado: 0 },
-        dinamometro: { precoHora: 0, tempoEstimado: 0 },
-        lavagem: { precoHora: 0, tempoEstimado: 0 }
-      }
-    }
-  });
 
+  // Lista de tipos de serviço ou atividade
   const tiposServico: { value: string; label: string }[] = [
     { value: "bloco", label: "Bloco" },
     { value: "biela", label: "Biela" },
@@ -164,6 +75,7 @@ export default function SubatividadesConfig({
     { value: "inspecao_final", label: "Inspeção Final" }
   ];
 
+  // Carregar subatividades do Firebase
   useEffect(() => {
     const fetchSubatividades = async () => {
       setIsLoading(true);
@@ -171,28 +83,32 @@ export default function SubatividadesConfig({
         const data = await getSubatividades();
         setSubatividadesMap(data);
         
+        // Se for uma configuração por serviço (para tipos de atividade)
         if (porServico && tipoFixo && selectedServicoTipo) {
           const tipoAtividade = tipoFixo as TipoAtividade;
           const servicoTipo = selectedServicoTipo as TipoServico;
           
+          // Filtrar apenas as subatividades para este tipo de serviço
           const filtradas = data[tipoAtividade]?.filter(
             s => !s.servicoTipo || s.servicoTipo === servicoTipo
           ) || [];
           
           setSubatividades(filtradas);
           
+          // Se não houver subatividades, criar a partir dos defaults
           if (filtradas.length === 0 && defaultAtividadesEspecificas[tipoAtividade]?.[servicoTipo]) {
             const defaults = defaultAtividadesEspecificas[tipoAtividade][servicoTipo].map(nome => ({
               id: uuidv4(),
               nome,
               selecionada: false,
-              precoHora: 70,
+              precoHora: 70, // Preço padrão
               servicoTipo
             }));
             
             setSubatividades(defaults);
           }
         } else if (selectedTipo) {
+          // Configuração normal (não é por serviço)
           setSubatividades(data[selectedTipo as string] || []);
         }
       } catch (error) {
@@ -220,11 +136,13 @@ export default function SubatividadesConfig({
     let defaultsToAdd: string[] = [];
     
     if (porServico && tipoFixo && selectedServicoTipo) {
+      // Adicionar defaults para atividades específicas do serviço
       const tipoAtividade = tipoFixo as TipoAtividade;
       const servicoTipo = selectedServicoTipo as TipoServico;
       
       defaultsToAdd = defaultAtividadesEspecificas[tipoAtividade]?.[servicoTipo] || [];
     } else {
+      // Adicionar defaults normais
       defaultsToAdd = defaultSubatividades[selectedTipo as TipoServico] || [];
     }
     
@@ -234,7 +152,7 @@ export default function SubatividadesConfig({
         id: uuidv4(),
         nome,
         selecionada: false,
-        precoHora: 70,
+        precoHora: 70, // Preço padrão
         servicoTipo: porServico ? selectedServicoTipo as TipoServico : undefined
       }));
     
@@ -245,20 +163,23 @@ export default function SubatividadesConfig({
       toast.info("Todas as subatividades padrão já estão na lista");
     }
   };
-
+  
   const handleSave = async () => {
     setIsSaving(true);
     try {
       const novoMap = { ...subatividadesMap };
       
       if (porServico && tipoFixo) {
+        // Salvar por serviço (para tipos de atividade)
         const tipoAtividade = tipoFixo as TipoAtividade;
         
+        // Manter subatividades existentes que não são deste serviço
         const existentes = novoMap[tipoAtividade] || [];
         const outrasSubatividades = existentes.filter(
           s => s.servicoTipo !== selectedServicoTipo
         );
         
+        // Adicionar as novas subatividades com o tipo de serviço marcado
         const subatividadesComTipo = subatividades.map(s => ({
           ...s,
           servicoTipo: selectedServicoTipo as TipoServico
@@ -266,16 +187,11 @@ export default function SubatividadesConfig({
         
         novoMap[tipoAtividade] = [...outrasSubatividades, ...subatividadesComTipo];
       } else {
+        // Salvamento normal
         novoMap[selectedTipo] = subatividades;
       }
       
-      for (const tipo in novoMap) {
-        const subatividades = novoMap[tipo as TipoServico | TipoAtividade];
-        for (const sub of subatividades) {
-          await saveSubatividade(sub, tipo as TipoServico | TipoAtividade);
-        }
-      }
-      
+      await saveSubatividades(novoMap);
       toast.success("Subatividades salvas com sucesso");
     } catch (error) {
       console.error("Erro ao salvar subatividades:", error);
@@ -303,64 +219,18 @@ export default function SubatividadesConfig({
 
   const handleSaveSubatividade = (data: SubAtividade) => {
     if (editingSubatividade) {
+      // Editando uma existente
       setSubatividades(prev =>
         prev.map(sub => (sub.id === data.id ? data : sub))
       );
       setEditingSubatividade(null);
     } else {
+      // Adicionando uma nova
       setSubatividades(prev => [...prev, {
         ...data,
         servicoTipo: porServico ? selectedServicoTipo as TipoServico : undefined
       }]);
     }
-  };
-
-  const handleEtapaTempoPrecoChange = (
-    etapa: EtapaOS, 
-    field: 'precoHora' | 'tempoEstimado', 
-    value: number,
-    servicoTipo?: TipoServico
-  ) => {
-    setEtapasTempoPreco(prev => {
-      const newState = { ...prev };
-      
-      if (servicoTipo) {
-        // Se um tipo de serviço específico foi fornecido, atualize a configuração específica
-        if (!newState[etapa].configuracoesServico) {
-          newState[etapa].configuracoesServico = {
-            bloco: { precoHora: 0, tempoEstimado: 0 },
-            biela: { precoHora: 0, tempoEstimado: 0 },
-            cabecote: { precoHora: 0, tempoEstimado: 0 },
-            virabrequim: { precoHora: 0, tempoEstimado: 0 },
-            eixo_comando: { precoHora: 0, tempoEstimado: 0 },
-            montagem: { precoHora: 0, tempoEstimado: 0 },
-            dinamometro: { precoHora: 0, tempoEstimado: 0 },
-            lavagem: { precoHora: 0, tempoEstimado: 0 }
-          };
-        }
-        
-        newState[etapa].configuracoesServico[servicoTipo][field] = value;
-      } else {
-        // Caso contrário, atualize o valor padrão
-        if (!newState[etapa]) {
-          newState[etapa] = {
-            configuracoesServico: {
-              bloco: { precoHora: 0, tempoEstimado: 0 },
-              biela: { precoHora: 0, tempoEstimado: 0 },
-              cabecote: { precoHora: 0, tempoEstimado: 0 },
-              virabrequim: { precoHora: 0, tempoEstimado: 0 },
-              eixo_comando: { precoHora: 0, tempoEstimado: 0 },
-              montagem: { precoHora: 0, tempoEstimado: 0 },
-              dinamometro: { precoHora: 0, tempoEstimado: 0 },
-              lavagem: { precoHora: 0, tempoEstimado: 0 }
-            }
-          };
-        }
-        newState[etapa][field] = value;
-      }
-      
-      return newState;
-    });
   };
 
   const content = (
@@ -480,7 +350,6 @@ export default function SubatividadesConfig({
                     subatividades={subatividades}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
-                    isLoading={isLoading}
                   />
                 )}
               </div>
@@ -491,152 +360,9 @@ export default function SubatividadesConfig({
     </div>
   );
 
-  const ETAPAS_CONFIG = {
-    lavagem: {
-      icon: <Clock className="h-5 w-5 mr-2" />,
-      label: "Lavagem"
-    },
-    inspecao_inicial: {
-      icon: <Clock className="h-5 w-5 mr-2" />,
-      label: "Inspeção Inicial"
-    },
-    inspecao_final: {
-      icon: <Clock className="h-5 w-5 mr-2" />,
-      label: "Inspeção Final"
-    }
-  };
-
-  const temposValoresContent = (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center">
-          <Clock className="h-5 w-5 mr-2" />
-          Tempos e Valores das Etapas
-        </CardTitle>
-        <CardDescription>
-          Configure os valores padrão e específicos por tipo de serviço para cada etapa
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="ml-3">Carregando configurações de etapas...</span>
-          </div>
-        ) : (
-          <>
-            {(['lavagem', 'inspecao_inicial', 'inspecao_final'] as const).map((etapa) => (
-              <div key={etapa} className="border rounded-md p-4">
-                <div className="flex items-center mb-3">
-                  {ETAPAS_CONFIG[etapa].icon}
-                  <h3 className="text-lg font-semibold">{ETAPAS_CONFIG[etapa].label}</h3>
-                </div>
-                
-                {/* Configurações Padrão */}
-                <div className="mb-6">
-                  <h4 className="text-sm font-medium mb-3">Configuração Padrão</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium">Valor por hora (R$)</label>
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        min={0}
-                        step={0.01}
-                        value={etapasTempoPreco[etapa]?.precoHora || 0}
-                        onChange={(e) => handleEtapaTempoPrecoChange(
-                          etapa, 
-                          'precoHora', 
-                          parseFloat(e.target.value) || 0
-                        )}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Tempo estimado (horas)</label>
-                      <Input
-                        type="number"
-                        placeholder="0.0"
-                        min={0}
-                        step={0.5}
-                        value={etapasTempoPreco[etapa]?.tempoEstimado || 0}
-                        onChange={(e) => handleEtapaTempoPrecoChange(
-                          etapa, 
-                          'tempoEstimado', 
-                          parseFloat(e.target.value) || 0
-                        )}
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Configurações por Tipo de Serviço */}
-                <div>
-                  <h4 className="text-sm font-medium mb-3">Configurações Específicas por Tipo de Serviço</h4>
-                  <div className="space-y-4">
-                    {tiposServico.map((tipo) => (
-                      <div key={tipo.value} className="border-t pt-4">
-                        <h5 className="text-sm font-medium mb-2">{tipo.label}</h5>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="text-sm font-medium">Valor por hora (R$)</label>
-                            <Input
-                              type="number"
-                              placeholder="0.00"
-                              min={0}
-                              step={0.01}
-                              value={
-                                etapasTempoPreco[etapa]?.configuracoesServico?.[tipo.value]?.precoHora || 
-                                etapasTempoPreco[etapa]?.precoHora || 
-                                0
-                              }
-                              onChange={(e) => handleEtapaTempoPrecoChange(
-                                etapa,
-                                'precoHora',
-                                parseFloat(e.target.value) || 0,
-                                tipo.value as TipoServico
-                              )}
-                              className="mt-1"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium">Tempo estimado (horas)</label>
-                            <Input
-                              type="number"
-                              placeholder="0.0"
-                              min={0}
-                              step={0.5}
-                              value={
-                                etapasTempoPreco[etapa]?.configuracoesServico?.[tipo.value]?.tempoEstimado || 
-                                etapasTempoPreco[etapa]?.tempoEstimado || 
-                                0
-                              }
-                              onChange={(e) => handleEtapaTempoPrecoChange(
-                                etapa,
-                                'tempoEstimado',
-                                parseFloat(e.target.value) || 0,
-                                tipo.value as TipoServico
-                              )}
-                              className="mt-1"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
-
   if (isEmbedded) {
     return content;
   }
 
-  return <Layout onLogout={onLogout}>{temposValoresContent}</Layout>;
+  return <Layout onLogout={onLogout}>{content}</Layout>;
 }

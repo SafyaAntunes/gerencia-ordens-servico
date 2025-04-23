@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -47,12 +46,10 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
   const verificarEtapasDisponiveis = () => {
     const temMontagem = ordem.servicos.some(s => s.tipo === 'montagem');
     const temDinamometro = ordem.servicos.some(s => s.tipo === 'dinamometro');
-    const temLavagem = ordem.servicos.some(s => s.tipo === 'lavagem');
     
     return {
       montagem: temMontagem,
-      dinamometro: temDinamometro,
-      lavagem: temLavagem
+      dinamometro: temDinamometro
     };
   };
 
@@ -65,18 +62,11 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     
     const etapasDisponiveis = verificarEtapasDisponiveis();
     
-    const allEtapas: EtapaOS[] = [];
-    
-    if (etapasDisponiveis.lavagem) {
-      allEtapas.push('lavagem');
-    } else {
-      // Se não tiver serviço de lavagem específico, adicionar lavagem de qualquer forma
-      // já que é uma etapa padrão do processo
-      allEtapas.push('lavagem');
-    }
-    
-    allEtapas.push('inspecao_inicial');
-    allEtapas.push('retifica');
+    const allEtapas: EtapaOS[] = [
+      'lavagem', 
+      'inspecao_inicial', 
+      'retifica'
+    ];
     
     if (etapasDisponiveis.montagem) {
       allEtapas.push('montagem');
@@ -96,15 +86,11 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     } else {
       const etapasTecnico: EtapaOS[] = ['inspecao_inicial', 'retifica', 'inspecao_final'];
       
-      if (etapasDisponiveis.lavagem) {
-        etapasTecnico.push('lavagem');
-      }
-      
-      if (etapasDisponiveis.montagem && funcionario?.especialidades?.includes('montagem')) {
+      if (etapasDisponiveis.montagem && funcionario?.especialidades.includes('montagem')) {
         etapasTecnico.push('montagem');
       }
       
-      if (etapasDisponiveis.dinamometro && funcionario?.especialidades?.includes('dinamometro')) {
+      if (etapasDisponiveis.dinamometro && funcionario?.especialidades.includes('dinamometro')) {
         etapasTecnico.push('dinamometro');
       }
       
@@ -112,7 +98,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         if (etapa === 'retifica') {
           return ordem.servicos.some(servico => 
             ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo as TipoServico) &&
-            funcionario?.especialidades?.includes(servico.tipo)
+            funcionario?.especialidades.includes(servico.tipo)
           );
         }
         return true;
@@ -142,7 +128,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
       } else if (etapa === "dinamometro") {
         return ordemAtual.servicos?.some(s => s.tipo === "dinamometro");
       } else if (etapa === "lavagem") {
-        return ordemAtual.servicos?.some(s => s.tipo === "lavagem") || true; // Sempre incluir lavagem
+        return ordemAtual.servicos?.some(s => s.tipo === "lavagem");
       }
       return true;
     });
@@ -165,16 +151,13 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     const progresso = totalItens > 0 ? Math.round((itensConcluidos / totalItens) * 100) : 0;
     setProgressoTotal(progresso);
     
-    if (ordemAtual.id && totalItens > 0 && ordem.id.includes('ordens/')) {
-      // Apenas atualizar no DB para documentos reais (não previews)
+    if (ordemAtual.id && totalItens > 0) {
       const progressoFracao = itensConcluidos / totalItens;
       atualizarProgressoNoDB(ordemAtual.id, progressoFracao);
     }
   };
 
   const atualizarProgressoNoDB = async (ordenId: string, progresso: number) => {
-    if (!ordenId.includes('ordens/')) return; // Não atualizar se for um ID de preview
-    
     try {
       const ordemRef = doc(db, "ordens_servico", ordenId);
       await updateDoc(ordemRef, { progressoEtapas: progresso });
@@ -188,7 +171,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     
     if (funcionario.nivelPermissao !== 'admin' && 
         funcionario.nivelPermissao !== 'gerente' && 
-        !funcionario.especialidades?.includes(servicoTipo)) {
+        !funcionario.especialidades.includes(servicoTipo)) {
       toast.error("Você não tem permissão para gerenciar este tipo de serviço");
       return;
     }
@@ -218,11 +201,8 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         return servico;
       });
       
-      // Se estivermos trabalhando com uma ordem salva (não preview)
-      if (ordem.id.includes('ordens/')) {
-        const ordemRef = doc(db, "ordens", ordem.id);
-        await updateDoc(ordemRef, { servicos: servicosAtualizados });
-      }
+      const ordemRef = doc(db, "ordens", ordem.id);
+      await updateDoc(ordemRef, { servicos: servicosAtualizados });
       
       const ordemAtualizada = {
         ...ordem,
@@ -232,9 +212,6 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
       if (onOrdemUpdate) {
         onOrdemUpdate(ordemAtualizada);
       }
-      
-      // Verificar se todos os serviços de uma etapa estão concluídos
-      await verificarEtapaConcluida(ordemAtualizada, servicoTipo);
       
       toast.success(`Serviço ${servicoTipo} ${concluido ? 'concluído' : 'reaberto'}`);
     } catch (error) {
@@ -273,7 +250,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     
     const todosConcluidos = servicosAtivos.every(s => s.concluido);
     
-    if (todosConcluidos && ordemAtualizada.etapasAndamento && !ordemAtualizada.etapasAndamento[etapa]?.concluido) {
+    if (todosConcluidos && !ordemAtualizada.etapasAndamento[etapa]?.concluido) {
       await handleEtapaStatusChange(etapa, true);
     }
   };
@@ -293,11 +270,8 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         }
       };
       
-      // Apenas atualizar no firestore se for uma ordem real (não preview)
-      if (ordem.id.includes('ordens/')) {
-        const ordemRef = doc(db, "ordens", ordem.id);
-        await updateDoc(ordemRef, { etapasAndamento });
-      }
+      const ordemRef = doc(db, "ordens", ordem.id);
+      await updateDoc(ordemRef, { etapasAndamento });
       
       const ordemAtualizada = {
         ...ordem,
@@ -322,7 +296,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     
     if (funcionario?.nivelPermissao !== 'admin' && 
         funcionario?.nivelPermissao !== 'gerente' && 
-        !funcionario?.especialidades?.includes(servicoTipo)) {
+        !funcionario?.especialidades.includes(servicoTipo)) {
       toast.error("Você não tem permissão para gerenciar este tipo de serviço");
       return;
     }
@@ -348,11 +322,8 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         return servico;
       });
       
-      // Apenas atualizar no firestore se for uma ordem real (não preview)
-      if (ordem.id.includes('ordens/')) {
-        const ordemRef = doc(db, "ordens", ordem.id);
-        await updateDoc(ordemRef, { servicos: servicosAtualizados });
-      }
+      const ordemRef = doc(db, "ordens", ordem.id);
+      await updateDoc(ordemRef, { servicos: servicosAtualizados });
       
       const ordemAtualizada = {
         ...ordem,
@@ -386,7 +357,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         if (funcionario?.nivelPermissao !== 'admin' && funcionario?.nivelPermissao !== 'gerente') {
           return ordem.servicos.filter(servico => 
             ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo) &&
-            funcionario?.especialidades?.includes(servico.tipo)
+            funcionario?.especialidades.includes(servico.tipo)
           );
         } else {
           return ordem.servicos.filter(servico => 
@@ -405,8 +376,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
   };
 
   const isRetificaHabilitada = () => {
-    // Se for uma ordem pré-visualizada ou em fabricação, habilitar
-    return !ordem.id.includes('ordens/') || ordem.status === 'fabricacao';
+    return ordem.status === 'fabricacao';
   };
 
   const isInspecaoFinalHabilitada = () => {

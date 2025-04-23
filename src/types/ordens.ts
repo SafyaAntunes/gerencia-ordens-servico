@@ -1,3 +1,4 @@
+
 export type Cliente = {
   id: string;
   nome: string;
@@ -42,10 +43,6 @@ export type SubAtividade = {
   precoHora?: number; // Preço por hora da subatividade
   tempoEstimado?: number; // Tempo estimado em horas
   servicoTipo?: TipoServico; // A qual tipo de serviço esta subatividade se relaciona
-  configuracoesServico?: Record<TipoServico, {
-    precoHora: number;
-    tempoEstimado: number;
-  }>;
 };
 
 export type Servico = {

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
@@ -11,8 +12,7 @@ import {
   ChevronRight,
   UserSquare,
   Wrench,
-  DollarSign,
-  Book // Add this import for the Procedimentos icon
+  DollarSign
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -132,19 +132,24 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             
             {/* Funcionários - Gerente ou superior */}
             {hasPermission('gerente') && (
+              <NavItem icon={Users} label="Funcionários" to="/funcionarios" />
+            )}
+            
+            {/* Clientes - Gerente ou superior */}
+            {hasPermission('gerente') && (
+              <NavItem icon={UserSquare} label="Clientes" to="/clientes" />
+            )}
+            
+            {/* Agenda - Gerente ou superior */}
+            {hasPermission('gerente') && (
+              <NavItem icon={Calendar} label="Agenda" to="/agenda" />
+            )}
+            
+            {/* Removed Subatividades menu item */}
+            
+            {/* Relatórios - Produção para Gerente ou superior, Financeiro para Admin */}
+            {hasPermission('gerente') && (
               <>
-                <NavItem icon={Users} label="Funcionários" to="/funcionarios" />
-                
-                {/* Clientes - Gerente ou superior */}
-                <NavItem icon={UserSquare} label="Clientes" to="/clientes" />
-                
-                {/* Agenda - Gerente ou superior */}
-                <NavItem icon={Calendar} label="Agenda" to="/agenda" />
-                
-                {/* New Procedimentos/POPs menu item */}
-                <NavItem icon={Book} label="Procedimentos (POP)" to="/procedimentos" />
-                
-                {/* Relatórios - Produção para Gerente ou superior, Financeiro para Admin */}
                 <NavItem icon={Wrench} label="Relatórios de Produção" to="/relatorios/producao" />
                 {hasPermission('admin') && (
                   <NavItem icon={TrendingUp} label="Relatórios Financeiros" to="/relatorios/financeiro" />
@@ -198,19 +203,24 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             
             {/* Funcionários - Gerente ou superior */}
             {hasPermission('gerente') && (
+              <NavItem icon={Users} label="Funcionários" to="/funcionarios" isCollapsed={isCollapsed} />
+            )}
+            
+            {/* Clientes - Gerente ou superior */}
+            {hasPermission('gerente') && (
+              <NavItem icon={UserSquare} label="Clientes" to="/clientes" isCollapsed={isCollapsed} />
+            )}
+            
+            {/* Agenda - Gerente ou superior */}
+            {hasPermission('gerente') && (
+              <NavItem icon={Calendar} label="Agenda" to="/agenda" isCollapsed={isCollapsed} />
+            )}
+            
+            {/* Removed Subatividades menu item */}
+            
+            {/* Relatórios - Produção para Gerente ou superior, Financeiro para Admin */}
+            {hasPermission('gerente') && (
               <>
-                <NavItem icon={Users} label="Funcionários" to="/funcionarios" isCollapsed={isCollapsed} />
-                
-                {/* Clientes - Gerente ou superior */}
-                <NavItem icon={UserSquare} label="Clientes" to="/clientes" isCollapsed={isCollapsed} />
-                
-                {/* Agenda - Gerente ou superior */}
-                <NavItem icon={Calendar} label="Agenda" to="/agenda" isCollapsed={isCollapsed} />
-                
-                {/* New Procedimentos/POPs menu item */}
-                <NavItem icon={Book} label="Procedimentos (POP)" to="/procedimentos" isCollapsed={isCollapsed} />
-                
-                {/* Relatórios - Produção para Gerente ou superior, Financeiro para Admin */}
                 <NavItem icon={Wrench} label="Relatórios de Produção" to="/relatorios/producao" isCollapsed={isCollapsed} />
                 {hasPermission('admin') && (
                   <NavItem icon={TrendingUp} label="Relatórios Financeiros" to="/relatorios/financeiro" isCollapsed={isCollapsed} />

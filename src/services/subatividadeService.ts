@@ -94,19 +94,3 @@ export async function getSubatividadesByTipo(tipoServico: TipoServico | TipoAtiv
     throw error;
   }
 }
-
-// Salvar múltiplas subatividades
-export async function saveSubatividades(subatividadesMap: Record<TipoServico | TipoAtividade, SubAtividade[]>): Promise<void> {
-  try {
-    // Salvar cada subatividade individualmente
-    for (const tipo in subatividadesMap) {
-      const subatividades = subatividadesMap[tipo as TipoServico | TipoAtividade];
-      for (const sub of subatividades) {
-        await saveSubatividade(sub, tipo as TipoServico | TipoAtividade);
-      }
-    }
-  } catch (error) {
-    console.error('Erro ao salvar múltiplas subatividades:', error);
-    throw error;
-  }
-}

@@ -4,9 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import Layout from "@/components/layout/Layout";
 import OrdemForm from "@/components/ordens/OrdemForm";
-import EtapasTracker from "@/components/ordens/EtapasTracker";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Prioridade, TipoServico, OrdemServico, SubAtividade, EtapaOS, TipoAtividade } from "@/types/ordens";
 import { collection, addDoc, doc, setDoc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -14,7 +11,6 @@ import { db, storage } from "@/lib/firebase";
 import { getClientes } from "@/services/clienteService";
 import { getSubatividadesByTipo } from "@/services/subatividadeService";
 import { Cliente } from "@/types/clientes";
-import { v4 as uuidv4 } from "uuid";
 
 const toTitleCase = (str: string) => {
   return str
@@ -34,8 +30,6 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
   const [selectedServices, setSelectedServices] = useState<TipoServico[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("formulario");
-  const [ordemPrevia, setOrdemPrevia] = useState<OrdemServico | null>(null);
   
   useEffect(() => {
     const fetchClientes = async () => {
@@ -52,90 +46,6 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
     
     fetchClientes();
   }, []);
-  
-  const handleFormChange = (values: any) => {
-    // Criar uma prévia da OS com base nos valores do formulário
-    if (!values.servicosTipos || values.servicosTipos.length === 0) return;
-    
-    const tempId = values.id || uuidv4();
-    
-    // Formatar as subatividades dos serviços
-    const formattedServicoSubatividades: Record<string, SubAtividade[]> = {};
-    
-    if (values.servicosSubatividades) {
-      Object.entries(values.servicosSubatividades).forEach(([tipo, subatividades]) => {
-        formattedServicoSubatividades[tipo] = (subatividades as SubAtividade[]).map(sub => ({
-          ...sub,
-          nome: toTitleCase(sub.nome)
-        }));
-      });
-    }
-    
-    // Preparar os serviços
-    const servicos = (values.servicosTipos || []).map((tipo: TipoServico) => {
-      return {
-        tipo,
-        descricao: values.servicosDescricoes?.[tipo] || "",
-        concluido: false,
-        subatividades: formattedServicoSubatividades[tipo] || []
-      };
-    });
-
-    // Determinar as etapas necessárias
-    let etapas: EtapaOS[] = ["lavagem", "inspecao_inicial"];
-    
-    if (servicos.some(s => ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo))) {
-      etapas.push("retifica");
-    }
-    
-    if (servicos.some(s => s.tipo === "montagem")) {
-      etapas.push("montagem");
-    }
-    
-    if (servicos.some(s => s.tipo === "dinamometro")) {
-      etapas.push("dinamometro");
-    }
-    
-    etapas.push("inspecao_final");
-
-    const etapasAndamento: Record<string, any> = {};
-    
-    // Configurar cada etapa com os tempos estimados e preços por hora
-    etapas.forEach(etapa => {
-      const etapaConfig = values.etapasTempoPreco?.[etapa] || {};
-      
-      etapasAndamento[etapa] = { 
-        concluido: false,
-        usarCronometro: true,
-        pausas: [],
-        precoHora: etapaConfig.precoHora || 0,
-        tempoEstimado: etapaConfig.tempoEstimado || 0
-      };
-    });
-
-    // Criar um objeto OrdemServico temporário para exibição no tracker
-    const ordemTemp: OrdemServico = {
-      id: tempId,
-      nome: values.nome || "Nova Ordem",
-      cliente: {
-        id: values.clienteId || "",
-        nome: "Cliente",
-        telefone: "",
-        email: ""
-      },
-      motorId: values.motorId || "",
-      dataAbertura: values.dataAbertura || new Date(),
-      dataPrevistaEntrega: values.dataPrevistaEntrega || new Date(),
-      prioridade: values.prioridade as Prioridade || "media",
-      status: "orcamento",
-      servicos: servicos,
-      etapasAndamento: etapasAndamento,
-      tempoRegistros: [],
-      progressoEtapas: 0
-    };
-    
-    setOrdemPrevia(ordemTemp);
-  };
   
   const handleSubmit = async (values: any) => {
     setIsSubmitting(true);
@@ -322,57 +232,18 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
       setIsSubmitting(false);
     }
   };
-
-  const handleOrdemUpdate = (ordemAtualizada: OrdemServico) => {
-    setOrdemPrevia(ordemAtualizada);
-  };
   
   return (
     <Layout onLogout={onLogout}>
       <h1 className="text-2xl font-bold mb-6">Nova Ordem de Serviço</h1>
       
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full mb-6">
-          <TabsTrigger value="formulario" className="flex-1">Formulário</TabsTrigger>
-          <TabsTrigger value="tracker" className="flex-1">Tracker de Serviços</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="formulario">
-          <OrdemForm 
-            onSubmit={handleSubmit}
-            isLoading={isSubmitting}
-            onCancel={() => navigate("/ordens")}
-            clientes={clientes}
-            isLoadingClientes={loading}
-            onChange={handleFormChange}
-          />
-        </TabsContent>
-        
-        <TabsContent value="tracker">
-          {ordemPrevia && (
-            <EtapasTracker
-              ordem={ordemPrevia}
-              onOrdemUpdate={handleOrdemUpdate}
-            />
-          )}
-          
-          {!ordemPrevia && (
-            <Card className="w-full">
-              <CardHeader>
-                <CardTitle>Tracker de Serviços</CardTitle>
-                <CardDescription>
-                  Preencha o formulário primeiro para visualizar o tracker de serviços.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground text-center py-6">
-                  Selecione serviços e subatividades na aba de Formulário para gerar uma prévia do tracker.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+      <OrdemForm 
+        onSubmit={handleSubmit}
+        isLoading={isSubmitting}
+        onCancel={() => navigate("/ordens")}
+        clientes={clientes}
+        isLoadingClientes={loading}
+      />
     </Layout>
   );
 }
