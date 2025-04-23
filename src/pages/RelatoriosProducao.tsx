@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileBarChart, ActivitySquare, BarChart, Wrench, Search, Clock, Filter, AlertTriangle, CheckCircle, Calendar } from "lucide-react";
+import { FileBarChart, ActivitySquare, BarChart as BarChartIcon, Wrench, Search, Clock, Filter, AlertTriangle, CheckCircle, Calendar } from "lucide-react";
 import { LogoutProps } from "@/types/props";
 import { collection, getDocs, doc, getDoc, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -266,14 +265,13 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
       return { status: "neutro", texto: "Não iniciada" };
     }
     
-    // Calcular o tempo previsto para a etapa (assumindo médias)
     const tempoMedioPorEtapa: Record<EtapaOS, number> = {
-      lavagem: 2 * 60 * 60 * 1000, // 2 horas em ms
-      inspecao_inicial: 3 * 60 * 60 * 1000, // 3 horas em ms
-      retifica: 16 * 60 * 60 * 1000, // 16 horas em ms
-      montagem: 8 * 60 * 60 * 1000, // 8 horas em ms
-      dinamometro: 4 * 60 * 60 * 1000, // 4 horas em ms
-      inspecao_final: 2 * 60 * 60 * 1000 // 2 horas em ms
+      lavagem: 2 * 60 * 60 * 1000,
+      inspecao_inicial: 3 * 60 * 60 * 1000,
+      retifica: 16 * 60 * 60 * 1000,
+      montagem: 8 * 60 * 60 * 1000,
+      dinamometro: 4 * 60 * 60 * 1000,
+      inspecao_final: 2 * 60 * 60 * 1000
     };
     
     const inicioTimestamp = etapaInfo.iniciado instanceof Date ? etapaInfo.iniciado.getTime() : 0;
@@ -281,7 +279,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     
     const agoraTimestamp = new Date().getTime();
     const tempoDecorrido = agoraTimestamp - inicioTimestamp;
-    const tempoPrevisto = tempoMedioPorEtapa[etapa] || 8 * 60 * 60 * 1000; // Default 8 horas
+    const tempoPrevisto = tempoMedioPorEtapa[etapa] || 8 * 60 * 60 * 1000;
     
     if (tempoDecorrido > tempoPrevisto * 1.5) {
       return { status: "critico", texto: "Muito atrasada" };
@@ -648,7 +646,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
                         <CardContent className="pt-0">
                           <div className="h-[200px]">
                             <ResponsiveContainer width="100%" height="100%">
-                              <BarChart
+                              <RechartsBarChart
                                 data={[
                                   { nome: 'Dias em Andamento', valor: differenceInDays(new Date(), ordemSelecionada.dataAbertura) },
                                   { nome: 'Dias Previstos', valor: ordemSelecionada.dataPrevistaEntrega && isValid(ordemSelecionada.dataPrevistaEntrega) ? 
@@ -660,7 +658,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
                                 <YAxis />
                                 <Tooltip />
                                 <Bar dataKey="valor" fill="#8884d8" name="Dias" />
-                              </BarChart>
+                              </RechartsBarChart>
                             </ResponsiveContainer>
                           </div>
                         </CardContent>
@@ -673,7 +671,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
                         <CardContent className="pt-0">
                           <div className="h-[200px]">
                             <ResponsiveContainer width="100%" height="100%">
-                              <BarChart
+                              <RechartsBarChart
                                 data={etapas.map(etapa => ({
                                   nome: formatarEtapa(etapa).split(' ')[0],
                                   progresso: calcularProgressoEtapa(etapa)
@@ -685,7 +683,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
                                 <YAxis type="category" dataKey="nome" />
                                 <Tooltip />
                                 <Bar dataKey="progresso" fill="#82ca9d" name="Progresso %" />
-                              </BarChart>
+                              </RechartsBarChart>
                             </ResponsiveContainer>
                           </div>
                         </CardContent>
