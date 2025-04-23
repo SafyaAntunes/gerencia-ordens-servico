@@ -27,8 +27,6 @@ import {
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Funcionario } from "@/types/funcionarios";
-import InspecaoEtapaSection from "./InspecaoEtapaSection";
-import AtribuirFuncionarioDialog from "./AtribuirFuncionarioDialog";
 
 interface EtapaCardProps {
   ordemId: string;
@@ -74,34 +72,20 @@ export default function EtapaCard({
   const podeAtribuirFuncionario = funcionario?.nivelPermissao === 'admin' || 
                                  funcionario?.nivelPermissao === 'gerente';
   
-  const formatarEtapa = (etapa: EtapaOS): string => {
-    const labels: Record<EtapaOS, string> = {
-      lavagem: "Lavagem",
-      inspecao_inicial: "Inspeção Inicial",
-      retifica: "Retífica",
-      montagem: "Montagem",
-      dinamometro: "Dinamômetro",
-      inspecao_final: "Inspeção Final"
-    };
-    return labels[etapa] || etapa;
-  };
-  
-  const formatarTipoServico = (tipo: TipoServico): string => {
-    return {
-      bloco: "BLOCO",
-      biela: "BIELA",
-      cabecote: "CABEÇOTE",
-      virabrequim: "VIRABREQUIM",
-      eixo_comando: "EIXO DE COMANDO",
+  const formatarTituloEtapa = (etapa: EtapaOS, servico: TipoServico): string => {
+    const etapaLabel = formatarEtapa(etapa);
+    const servicoLabel = {
+      bloco: "Bloco",
+      biela: "Biela",
+      cabecote: "Cabeçote",
+      virabrequim: "Virabrequim",
+      eixo_comando: "Eixo de Comando",
       montagem: "Montagem",
       dinamometro: "Dinamômetro",
       lavagem: "Lavagem"
-    }[tipo] || tipo;
-  };
+    }[servico];
 
-  const formatarTituloEtapa = (etapa: EtapaOS, servico: TipoServico): string => {
-    const etapaLabel = formatarEtapa(etapa);
-    return `${etapaLabel} ${formatarTipoServico(servico)}`;
+    return `${etapaLabel} - ${servicoLabel}`;
   };
 
   const etapaServicos = (() => {
@@ -224,31 +208,11 @@ export default function EtapaCard({
     }
   }, [etapaInfo]);
 
-  if (
-    ["inspecao_inicial", "inspecao_final"].includes(etapa) &&
-    servicos.length > 0
-  ) {
-    return (
-      <InspecaoEtapaSection
-        ordemId={ordemId}
-        etapa={etapa}
-        servicos={servicos}
-        etapaInfo={etapaInfo}
-        funcionarioId={funcionarioId}
-        funcionarioNome={funcionarioNome}
-        onEtapaConcluida={handleEtapaConcluida}
-        handleMarcarConcluido={handleMarcarConcluido}
-        isAtivo={isAtivo}
-        setIsAtivo={setIsAtivo}
-      />
-    );
-  }
-
   return (
     <Card className="p-6 mb-4">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xl font-semibold">
-          {servicos.length === 1 && ['inspecao_inicial', 'inspecao_final'].includes(etapa)
+          {servicos.length === 1 
             ? formatarTituloEtapa(etapa, servicos[0].tipo)
             : etapaNome}
         </h3>
@@ -332,16 +296,47 @@ export default function EtapaCard({
         </div>
       )}
       
-      <AtribuirFuncionarioDialog
-        open={atribuirFuncionarioDialogOpen}
-        onOpenChange={setAtribuirFuncionarioDialogOpen}
-        funcionariosOptions={funcionariosOptions}
-        funcionarioSelecionadoId={funcionarioSelecionadoId}
-        setFuncionarioSelecionadoId={setFuncionarioSelecionadoId}
-        funcionarioSelecionadoNome={funcionarioSelecionadoNome}
-        setFuncionarioSelecionadoNome={setFuncionarioSelecionadoNome}
-        onConfirmarAtribuicao={handleConfirmarAtribuicao}
-      />
+      <Dialog open={atribuirFuncionarioDialogOpen} onOpenChange={setAtribuirFuncionarioDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Atribuir Funcionário</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="funcionario-select-etapa" className="block text-sm font-medium">
+                Selecione o funcionário que executou esta etapa
+              </label>
+              
+              <Select onValueChange={handleFuncionarioChange} value={funcionarioSelecionadoId}>
+                <SelectTrigger id="funcionario-select-etapa" className="w-full">
+                  <SelectValue placeholder="Selecione um funcionário" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={funcionario?.id || ""}>
+                    {funcionario?.nome || "Eu mesmo"} (você)
+                  </SelectItem>
+                  {funcionariosOptions
+                    .filter(f => f.id !== funcionario?.id)
+                    .map(f => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.nome}
+                      </SelectItem>
+                    ))
+                  }
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAtribuirFuncionarioDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmarAtribuicao} className="bg-blue-500 hover:bg-blue-600">
+              Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

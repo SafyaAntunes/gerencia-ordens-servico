@@ -1,26 +1,12 @@
-
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  FileBarChart, 
-  ActivitySquare, 
-  BarChart, 
-  Wrench, 
-  Search, 
-  Clock, 
-  Filter,
-  AlertTriangle,
-  Users,
-  CheckCircle,
-  XCircle,
-  HourglassIcon
-} from "lucide-react";
+import { FileBarChart, ActivitySquare, BarChart, Wrench, Search, Clock, Filter } from "lucide-react";
 import { LogoutProps } from "@/types/props";
-import { collection, getDocs, doc, getDoc, query, where, DocumentData } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { OrdemServico, EtapaOS, Cliente } from "@/types/ordens";
+import { OrdemServico, EtapaOS } from "@/types/ordens";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatTime } from "@/utils/timerUtils";
@@ -38,89 +24,38 @@ import {
 } from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { format, formatDistance, differenceInDays } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import ProgressoRelatorio from "@/components/ordens/ProgressoRelatorio";
-import RelatorioResumoCards from "@/components/relatorios/RelatorioResumoCards";
-import RelatorioGraficos from "@/components/relatorios/RelatorioGraficos";
-import OSDetalhesSection from "@/components/relatorios/OSDetalhesSection";
-import { 
-  getStatusLabel, 
-  calcularPercentualConclusao, 
-  calcularTempoTotal, 
-  calcularTempoEstimado,
-  verificarEtapasParadas,
-  contarPessoasTrabalhando,
-  verificarAtrasos,
-  formatarTempoParado
-} from "@/utils/relatoriosProducaoUtils";
 
 interface RelatoriosProducaoProps extends LogoutProps {}
 
-interface ExtendedOrdemServico extends OrdemServico {
-  dataAbertura: Date;
-  dataFinalizacao?: Date;
-  dataCriacao?: Date | string;
-  identificacao?: string;
-  descricao?: string;
-  funcionariosData?: any[];
-}
-
 const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
-  const [ordens, setOrdens] = useState<ExtendedOrdemServico[]>([]);
-  const [filteredOrdens, setFilteredOrdens] = useState<ExtendedOrdemServico[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
-  const [selectedOrdem, setSelectedOrdem] = useState<ExtendedOrdemServico | null>(null);
+  const [ordensDados, setOrdensDados] = useState<OrdemServico[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [periodo, setPeriodo] = useState<string>("30dias");
-  
-  const COLORS = [
-    "#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", 
-    "#82ca9d", "#ffc658", "#8dd1e1", "#a4de6c", "#d0ed57"
-  ];
+  const [searchTerm, setSearchTerm] = useState("");
+  const [ordemSelecionada, setOrdemSelecionada] = useState<OrdemServico | null>(null);
+  const [filteredOrdens, setFilteredOrdens] = useState<OrdemServico[]>([]);
+  const [searchType, setSearchType] = useState<"id" | "cliente" | "nome" | "status">("id");
   
   useEffect(() => {
     const fetchOrdens = async () => {
       setIsLoading(true);
       try {
-        const ordensRef = collection(db, "ordens");
-        const querySnapshot = await getDocs(ordensRef);
+        const querySnapshot = await getDocs(collection(db, "ordens"));
+        const ordens: OrdemServico[] = [];
         
-        const ordensData: ExtendedOrdemServico[] = [];
-        for (const docSnap of querySnapshot.docs) {
-          const data = docSnap.data() as DocumentData;
-          const ordemCompleta = { 
-            id: docSnap.id, 
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          ordens.push({
             ...data,
-            dataAbertura: new Date(data.dataAbertura?.toDate?.() || data.dataAbertura || new Date()),
-            dataCriacao: data.dataCriacao?.toDate?.() || data.dataCriacao || new Date(),
-          } as ExtendedOrdemServico;
-          
-          if (data.cliente?.id) {
-            const clienteRef = doc(db, "clientes", data.cliente.id);
-            const clienteSnap = await getDoc(clienteRef);
-            if (clienteSnap.exists()) {
-              const clienteData = clienteSnap.data();
-              ordemCompleta.cliente = {
-                id: clienteSnap.id,
-                nome: clienteData.nome || "Sem nome",
-                telefone: clienteData.telefone || "",
-                email: clienteData.email || "",
-                ...clienteData
-              } as Cliente;
-            }
-          }
-          
-          ordensData.push(ordemCompleta);
-        }
+            id: doc.id,
+            dataAbertura: data.dataAbertura?.toDate() || new Date(),
+            dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
+          } as OrdemServico);
+        });
         
-        setOrdens(ordensData);
-        setFilteredOrdens(ordensData);
+        setOrdensDados(ordens);
+        setFilteredOrdens(ordens);
       } catch (error) {
-        console.error("Error fetching orders: ", error);
+        console.error("Erro ao buscar ordens:", error);
       } finally {
         setIsLoading(false);
       }
@@ -129,579 +64,571 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     fetchOrdens();
   }, []);
   
-  // Função para pesquisar ordem de serviço específica
-  const handlePesquisaOS = () => {
+  useEffect(() => {
     if (!searchTerm.trim()) {
-      setFilteredOrdens(ordens);
-      setSelectedOrdem(null);
+      setFilteredOrdens(ordensDados);
       return;
     }
     
-    const searchLower = searchTerm.toLowerCase();
+    const searchTermLower = searchTerm.toLowerCase();
     
-    // Busca exata pelo ID ou parcial pelo nome/identificação
-    const osEncontrada = ordens.find(ordem => 
-      ordem.id?.toLowerCase() === searchLower || 
-      ordem.id?.toLowerCase().includes(searchLower)
-    );
-    
-    if (osEncontrada) {
-      setFilteredOrdens([osEncontrada]);
-      handleSelectOrdem(osEncontrada);
-      // Automaticamente muda para a aba de detalhes
-      setTimeout(() => {
-        document.querySelector('[data-value="detalhes"]')?.dispatchEvent(new MouseEvent('click'));
-      }, 100);
-    } else {
-      // Se não encontrar pelo ID exato, busca por outros campos
-      const resultados = ordens.filter(ordem =>
-        ordem.id?.toLowerCase().includes(searchLower) ||
-        ordem.identificacao?.toLowerCase().includes(searchLower) ||
-        ordem.cliente?.nome?.toLowerCase().includes(searchLower) ||
-        ordem.descricao?.toLowerCase().includes(searchLower)
-      );
-      
-      setFilteredOrdens(resultados);
-      setSelectedOrdem(null);
-    }
-  };
-  
-  // Executar pesquisa ao pressionar Enter
-  const handleKeyPress = (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter') {
-      handlePesquisaOS();
-    }
-  };
-  
-  useEffect(() => {
-    let filtered = [...ordens];
-    
-    const dataAtual = new Date();
-    
-    if (periodo === "7dias") {
-      const sevenDaysAgo = new Date(dataAtual);
-      sevenDaysAgo.setDate(dataAtual.getDate() - 7);
-      filtered = filtered.filter(ordem => ordem.dataCriacao && new Date(ordem.dataCriacao) >= sevenDaysAgo);
-    } else if (periodo === "30dias") {
-      const thirtyDaysAgo = new Date(dataAtual);
-      thirtyDaysAgo.setDate(dataAtual.getDate() - 30);
-      filtered = filtered.filter(ordem => ordem.dataCriacao && new Date(ordem.dataCriacao) >= thirtyDaysAgo);
-    } else if (periodo === "90dias") {
-      const ninetyDaysAgo = new Date(dataAtual);
-      ninetyDaysAgo.setDate(dataAtual.getDate() - 90);
-      filtered = filtered.filter(ordem => ordem.dataCriacao && new Date(ordem.dataCriacao) >= ninetyDaysAgo);
-    }
-    
-    if (statusFilter && statusFilter !== "all") {
-      filtered = filtered.filter(ordem => ordem.status === statusFilter);
-    }
-    
-    if (searchTerm.trim()) {
-      const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        ordem =>
-          ordem.id?.toLowerCase().includes(searchLower) ||
-          ordem.identificacao?.toLowerCase().includes(searchLower) ||
-          ordem.cliente?.nome?.toLowerCase().includes(searchLower) ||
-          ordem.descricao?.toLowerCase().includes(searchLower)
-      );
-    }
-    
-    setFilteredOrdens(filtered);
-  }, [ordens, statusFilter, periodo]);
-  
-  const statusMap = {
-    aguardando_aprovacao: "Aguardando Aprovação",
-    aguardando_peca_cliente: "Aguardando Peça (Cliente)",
-    aguardando_peca_interno: "Aguardando Peça (Interno)",
-    fabricacao: "Em Fabricação",
-    finalizado: "Finalizado",
-    entregue: "Entregue",
-    orcamento: "Orçamento"
-  };
-  
-  const buscarNomeFuncionario = (funcionarioId: string, listaFuncionarios: any[]) => {
-    const funcionario = listaFuncionarios.find(func => func.id === funcionarioId);
-    return funcionario ? funcionario.nome : "Não atribuído";
-  };
-  
-  const formatarData = (data: string | Date) => {
-    if (!data) return "N/A";
-    
-    try {
-      const dateObj = data instanceof Date ? data : new Date(data);
-      
-      if (isNaN(dateObj.getTime())) {
-        return "Data inválida";
-      }
-      
-      return format(dateObj, "dd/MM/yyyy", { locale: ptBR });
-    } catch (error) {
-      console.error("Erro ao formatar data:", error, data);
-      return "Erro na data";
-    }
-  };
-  
-  const calcularDadosResumo = () => {
-    let totalServicos = 0;
-    let totalOrdens = filteredOrdens.length;
-    let totalOrdensFinalizadas = 0;
-    let totalOrdensEntregues = 0;
-    
-    filteredOrdens.forEach(ordem => {
-      if (ordem.servicos && Array.isArray(ordem.servicos)) {
-        totalServicos += ordem.servicos.length;
-      }
-      
-      if (ordem.status === "finalizado") {
-        totalOrdensFinalizadas++;
-      } else if (ordem.status === "entregue") {
-        totalOrdensEntregues++;
+    const filtradas = ordensDados.filter(ordem => {
+      switch (searchType) {
+        case "id":
+          return ordem.id.toLowerCase().includes(searchTermLower);
+        case "cliente":
+          return ordem.cliente.nome.toLowerCase().includes(searchTermLower);
+        case "nome":
+          return ordem.nome.toLowerCase().includes(searchTermLower);
+        case "status":
+          const statusLabel = getStatusLabel(ordem.status).toLowerCase();
+          return statusLabel.includes(searchTermLower);
+        default:
+          return false;
       }
     });
     
-    const taxaFinalizacao = totalOrdens > 0 
-      ? ((totalOrdensFinalizadas + totalOrdensEntregues) / totalOrdens) * 100 
-      : 0;
+    setFilteredOrdens(filtradas);
+  }, [searchTerm, ordensDados, searchType]);
+  
+  const getStatusLabel = (status: string): string => {
+    switch (status) {
+      case 'orcamento': return 'Orçamento';
+      case 'aguardando_aprovacao': return 'Aguardando Aprovação';
+      case 'fabricacao': return 'Em Fabricação';
+      case 'aguardando_peca_cliente': return 'Aguardando Peça (Cliente)';
+      case 'aguardando_peca_interno': return 'Aguardando Peça (Interno)';
+      case 'finalizado': return 'Finalizado';
+      case 'entregue': return 'Entregue';
+      default: return status;
+    }
+  };
+  
+  const servicosPorTipo = (() => {
+    const contagem: Record<string, number> = {};
     
-    return {
-      totalServicos,
-      totalOrdens,
-      totalOrdensFinalizadas,
-      totalOrdensEntregues,
-      taxaFinalizacao
+    ordensDados.forEach(ordem => {
+      ordem.servicos?.forEach(servico => {
+        const tipo = servico.tipo;
+        contagem[tipo] = (contagem[tipo] || 0) + 1;
+      });
+    });
+    
+    return Object.entries(contagem).map(([nome, quantidade]) => ({
+      nome,
+      quantidade,
+      percentual: 0,
+    }));
+  })();
+  
+  const totalServicos = servicosPorTipo.reduce((sum, item) => sum + item.quantidade, 0);
+  servicosPorTipo.forEach(item => {
+    item.percentual = Math.round((item.quantidade / totalServicos) * 100);
+  });
+  
+  const ordensPorStatus = (() => {
+    const contagem: Record<string, number> = {
+      orcamento: 0,
+      aguardando_aprovacao: 0,
+      fabricacao: 0,
+      aguardando_peca_cliente: 0,
+      aguardando_peca_interno: 0,
+      finalizado: 0,
+      entregue: 0
     };
-  };
-  
-  const prepararDadosGraficos = () => {
-    const dataAtual = new Date();
     
-    const servicosPorTipoMap = new Map<string, number>();
+    ordensDados.forEach(ordem => {
+      contagem[ordem.status] = (contagem[ordem.status] || 0) + 1;
+    });
     
-    filteredOrdens.forEach(ordem => {
-      if (ordem.servicos && Array.isArray(ordem.servicos)) {
-        ordem.servicos.forEach(servico => {
-          const tipoServico = servico.tipo || "Sem tipo";
-          servicosPorTipoMap.set(
-            tipoServico, 
-            (servicosPorTipoMap.get(tipoServico) || 0) + 1
-          );
-        });
+    return Object.entries(contagem).map(([status, quantidade]) => {
+      let nome = status;
+      
+      switch (status) {
+        case 'orcamento': nome = 'Orçamento'; break;
+        case 'aguardando_aprovacao': nome = 'Aguardando'; break;
+        case 'fabricacao': nome = 'Em Fabricação'; break;
+        case 'aguardando_peca_cliente': nome = 'Aguardando Peça (Cliente)'; break;
+        case 'aguardando_peca_interno': nome = 'Aguardando Peça (Interno)'; break;
+        case 'finalizado': nome = 'Finalizado'; break;
+        case 'entregue': nome = 'Entregue'; break;
       }
+      
+      return { nome, quantidade };
     });
-    
-    const servicosPorTipo = Array.from(servicosPorTipoMap.entries())
-      .map(([nome, quantidade]) => ({
-        nome,
-        quantidade,
-        percentual: quantidade / calcularDadosResumo().totalServicos
-      }))
-      .sort((a, b) => b.quantidade - a.quantidade);
-    
-    const ordensPorStatusMap = new Map<string, number>();
-    
-    filteredOrdens.forEach(ordem => {
-      const statusNome = statusMap[ordem.status as keyof typeof statusMap] || ordem.status;
-      ordensPorStatusMap.set(
-        statusNome, 
-        (ordensPorStatusMap.get(statusNome) || 0) + 1
-      );
-    });
-    
-    const ordensPorStatus = Array.from(ordensPorStatusMap.entries())
-      .map(([nome, quantidade]) => ({
-        nome,
-        quantidade
-      }))
-      .sort((a, b) => b.quantidade - a.quantidade);
-    
-    const produtividadeMensal: {
-      mes: string;
-      ordens: number;
-      tempo_medio: number;
-    }[] = [];
+  })();
+  
+  const produtividadeMensal = (() => {
+    const meses: Record<string, { ordens: number, tempo_medio: number, tempoTotal: number }> = {};
+    const hoje = new Date();
     
     for (let i = 5; i >= 0; i--) {
-      const dataAlvo = new Date(dataAtual);
-      dataAlvo.setMonth(dataAtual.getMonth() - i);
-      
-      const mes = format(dataAlvo, "MMM", { locale: ptBR });
-      const ordensDoMes = filteredOrdens.filter(ordem => {
-        if (!ordem.dataCriacao) return false;
-        const dataOrdem = new Date(ordem.dataCriacao);
-        return dataOrdem.getMonth() === dataAlvo.getMonth() && 
-               dataOrdem.getFullYear() === dataAlvo.getFullYear();
-      });
-      
-      let tempoTotalDias = 0;
-      let ordensFinalizadas = 0;
-      
-      ordensDoMes.forEach(ordem => {
-        if (ordem.status === "finalizado" || ordem.status === "entregue") {
-          ordensFinalizadas++;
-          if (ordem.dataCriacao && ordem.dataFinalizacao) {
-            const inicio = new Date(ordem.dataCriacao);
-            const fim = new Date(ordem.dataFinalizacao);
-            const diferencaDias = Math.max(differenceInDays(fim, inicio), 1);
-            tempoTotalDias += diferencaDias;
-          }
+      const data = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      const mesAno = `${data.getMonth() + 1}/${data.getFullYear()}`;
+      meses[mesAno] = { ordens: 0, tempo_medio: 0, tempoTotal: 0 };
+    }
+    
+    ordensDados.forEach(ordem => {
+      if (ordem.dataAbertura) {
+        const data = new Date(ordem.dataAbertura);
+        const mesAno = `${data.getMonth() + 1}/${data.getFullYear()}`;
+        
+        if (meses[mesAno]) {
+          meses[mesAno].ordens += 1;
+          meses[mesAno].tempoTotal += 2.5;
         }
-      });
-      
-      const tempoMedioDias = ordensFinalizadas > 0 ? tempoTotalDias / ordensFinalizadas : 0;
-      
-      produtividadeMensal.push({
-        mes,
-        ordens: ordensFinalizadas,
-        tempo_medio: Number(tempoMedioDias.toFixed(1))
-      });
-    }
-    
-    return { servicosPorTipo, ordensPorStatus, produtividadeMensal };
-  };
-  
-  const verificarServicoEmAtraso = (servico: any) => {
-    if (!servico.dataInicio || !servico.tempoEstimado) return false;
-    
-    const inicio = new Date(servico.dataInicio).getTime();
-    const estimadoMs = servico.tempoEstimado * 60 * 60 * 1000;
-    const estimadoFim = inicio + estimadoMs;
-    
-    if (servico.dataConclusao) {
-      const conclusao = new Date(servico.dataConclusao).getTime();
-      return conclusao > estimadoFim;
-    }
-    
-    return Date.now() > estimadoFim;
-  };
-  
-  const handleSelectOrdem = async (ordem: ExtendedOrdemServico) => {
-    setSelectedOrdem(ordem);
-    
-    const funcionariosIds = new Set<string>();
-    
-    Object.values(ordem.etapasAndamento || {}).forEach(etapa => {
-      if (etapa.funcionarioId) {
-        funcionariosIds.add(etapa.funcionarioId);
       }
     });
     
-    if (funcionariosIds.size > 0) {
-      try {
-        const funcionariosData: any[] = [];
-        
-        for (const funcionarioId of funcionariosIds) {
-          const funcionarioRef = doc(db, "funcionarios", funcionarioId);
-          const funcionarioSnap = await getDoc(funcionarioRef);
-          
-          if (funcionarioSnap.exists()) {
-            funcionariosData.push({
-              id: funcionarioSnap.id,
-              ...funcionarioSnap.data()
-            });
-          }
-        }
-        
-        setSelectedOrdem({
-          ...ordem,
-          funcionariosData: funcionariosData
-        });
-      } catch (error) {
-        console.error("Erro ao buscar dados dos funcionários:", error);
+    Object.keys(meses).forEach(mesAno => {
+      if (meses[mesAno].ordens > 0) {
+        meses[mesAno].tempo_medio = parseFloat((meses[mesAno].tempoTotal / meses[mesAno].ordens).toFixed(1));
       }
+    });
+    
+    return Object.entries(meses).map(([mesAno, dados]) => {
+      const [mes, ano] = mesAno.split('/');
+      const nomeMes = new Date(parseInt(ano), parseInt(mes) - 1, 1)
+        .toLocaleDateString('pt-BR', { month: 'long' });
+      
+      return {
+        mes: nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1),
+        ordens: dados.ordens,
+        tempo_medio: dados.tempo_medio
+      };
+    });
+  })();
+  
+  const totalOrdens = ordensPorStatus.reduce((sum, item) => sum + item.quantidade, 0);
+  const totalOrdensFinalizadas = ordensPorStatus.find(item => item.nome === "Finalizado")?.quantidade || 0;
+  const totalOrdensEntregues = ordensPorStatus.find(item => item.nome === "Entregue")?.quantidade || 0;
+  const taxaFinalizacao = ((totalOrdensFinalizadas + totalOrdensEntregues) / (totalOrdens || 1)) * 100;
+  
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
+  
+  const buscarOrdem = async (id: string) => {
+    setIsLoading(true);
+    try {
+      const ordemRef = doc(db, "ordens", id);
+      const ordemDoc = await getDoc(ordemRef);
+      
+      if (ordemDoc.exists()) {
+        const data = ordemDoc.data();
+        const ordem = {
+          ...data,
+          id: ordemDoc.id,
+          dataAbertura: data.dataAbertura?.toDate() || new Date(),
+          dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
+        } as OrdemServico;
+        
+        setOrdemSelecionada(ordem);
+      } else {
+        setOrdemSelecionada(null);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar ordem:", error);
+      setOrdemSelecionada(null);
+    } finally {
+      setIsLoading(false);
     }
   };
   
-  const analisarOrdemServico = (ordem: ExtendedOrdemServico) => {
-    if (!ordem) return null;
+  const renderOrdemDetalhes = () => {
+    if (!ordemSelecionada) return null;
     
-    const etapasParadas = verificarEtapasParadas(ordem);
-    const pessoasTrabalhando = contarPessoasTrabalhando(ordem);
-    const atrasos = verificarAtrasos(ordem);
-    const percentualConclusao = calcularPercentualConclusao(ordem);
-    const tempoTotalMs = calcularTempoTotal(ordem);
-    const tempoTotalHoras = tempoTotalMs / (1000 * 60 * 60);
-    const tempoEstimadoMs = calcularTempoEstimado(ordem);
-    const tempoEstimadoHoras = tempoEstimadoMs / (1000 * 60 * 60);
-    const dentroDoPrazo = tempoTotalMs <= tempoEstimadoMs;
-    const diferencaTempo = Math.abs(tempoTotalHoras - tempoEstimadoHoras);
-    
-    return {
-      percentualConclusao,
-      tempoTotalHoras,
-      tempoEstimadoHoras,
-      dentroDoPrazo,
-      diferencaTempo,
-      etapasParadas,
-      pessoasTrabalhando,
-      atrasos
+    const renderTempoEtapa = (etapa: EtapaOS) => {
+      const etapaInfo = ordemSelecionada?.etapasAndamento[etapa];
+      if (!etapaInfo) return "Não iniciada";
+      
+      if (etapaInfo.concluido) {
+        if (etapaInfo.iniciado && etapaInfo.finalizado) {
+          const tempoTotal = etapaInfo.finalizado.getTime() - etapaInfo.iniciado.getTime();
+          return (
+            <div>
+              <div>Concluída em: {formatTime(tempoTotal)}</div>
+              <div className="text-xs text-gray-500">
+                Por: {etapaInfo.funcionarioNome || "Não atribuído"}
+              </div>
+            </div>
+          );
+        }
+        return "Concluída";
+      }
+      
+      if (etapaInfo.iniciado) {
+        const agora = new Date();
+        const tempoDecorrido = agora.getTime() - etapaInfo.iniciado.getTime();
+        return (
+          <div>
+            <div className="flex items-center">
+              <Clock className="h-4 w-4 mr-1 text-amber-500" />
+              <span>Em andamento: {formatTime(tempoDecorrido)}</span>
+            </div>
+            <div className="text-xs text-gray-500">
+              Por: {etapaInfo.funcionarioNome || "Não atribuído"}
+            </div>
+          </div>
+        );
+      }
+      
+      return "Não iniciada";
     };
+    
+    return (
+      <div className="space-y-4 mt-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Detalhes da Ordem #{ordemSelecionada.id}</CardTitle>
+            <CardDescription>
+              {ordemSelecionada.nome} - Cliente: {ordemSelecionada.cliente.nome}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Tempos por Etapa</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Lavagem</CardTitle>
+                    </CardHeader>
+                    <CardContent>{renderTempoEtapa('lavagem')}</CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Inspeção Inicial</CardTitle>
+                    </CardHeader>
+                    <CardContent>{renderTempoEtapa('inspecao_inicial')}</CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Retífica</CardTitle>
+                    </CardHeader>
+                    <CardContent>{renderTempoEtapa('retifica')}</CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Montagem</CardTitle>
+                    </CardHeader>
+                    <CardContent>{renderTempoEtapa('montagem')}</CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Dinamômetro</CardTitle>
+                    </CardHeader>
+                    <CardContent>{renderTempoEtapa('dinamometro')}</CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Inspeção Final</CardTitle>
+                    </CardHeader>
+                    <CardContent>{renderTempoEtapa('inspecao_final')}</CardContent>
+                  </Card>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Tempos por Serviço</h3>
+                <div className="grid grid-cols-1 gap-4">
+                  {ordemSelecionada.servicos.map((servico, index) => (
+                    <Card key={index}>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">
+                          {(() => {
+                            switch(servico.tipo) {
+                              case 'bloco': return 'Bloco';
+                              case 'biela': return 'Biela';
+                              case 'cabecote': return 'Cabeçote';
+                              case 'virabrequim': return 'Virabrequim';
+                              case 'eixo_comando': return 'Eixo de Comando';
+                              case 'montagem': return 'Montagem';
+                              case 'dinamometro': return 'Dinamômetro';
+                              case 'lavagem': return 'Lavagem';
+                              default: return servico.tipo;
+                            }
+                          })()}
+                        </CardTitle>
+                        <CardDescription>{servico.descricao}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div>
+                          <div>Status: {servico.concluido ? 'Concluído' : 'Em andamento'}</div>
+                          {servico.concluido && servico.funcionarioNome && (
+                            <div className="text-xs text-gray-500">
+                              Concluído por: {servico.funcionarioNome}
+                            </div>
+                          )}
+                          {servico.dataConclusao && (
+                            <div className="text-xs text-gray-500">
+                              Data de conclusão: {new Date(servico.dataConclusao).toLocaleDateString('pt-BR')}
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   };
+  
+  if (isLoading) {
+    return (
+      <Layout onLogout={onLogout}>
+        <div className="flex items-center justify-center h-full">
+          <p>Carregando dados dos relatórios...</p>
+        </div>
+      </Layout>
+    );
+  }
   
   return (
     <Layout onLogout={onLogout}>
-      <div className="space-y-4 pb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight mb-1">
-              Relatórios de Produção
-            </h1>
-            <p className="text-muted-foreground">Análise de produtividade e performance das ordens de serviço.</p>
-          </div>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Relatórios de Produção</h1>
+          <p className="text-muted-foreground">
+            Acompanhe as métricas e estatísticas de produção da empresa
+          </p>
         </div>
         
-        {/* Barra de pesquisa principal */}
-        <div className="w-full flex gap-2 mt-4">
-          <div className="relative flex-grow">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Pesquisar por número da OS, cliente ou descrição"
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyPress={handleKeyPress}
-            />
-          </div>
-          <Button onClick={handlePesquisaOS}>
-            Pesquisar
-          </Button>
-        </div>
-        
-        <Tabs defaultValue="resumo" className="mt-6">
-          <TabsList className="grid grid-cols-3 w-full max-w-md">
-            <TabsTrigger value="resumo">
-              <BarChart className="h-4 w-4 mr-2" />
-              Resumo
-            </TabsTrigger>
-            <TabsTrigger value="ordens">
-              <FileBarChart className="h-4 w-4 mr-2" />
-              Ordens
-            </TabsTrigger>
-            <TabsTrigger value="detalhes">
-              <Wrench className="h-4 w-4 mr-2" />
-              Detalhes
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="resumo" className="space-y-4 mt-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <Select value={periodo} onValueChange={setPeriodo}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Período" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7dias">Últimos 7 dias</SelectItem>
-                  <SelectItem value="30dias">Últimos 30 dias</SelectItem>
-                  <SelectItem value="90dias">Últimos 90 dias</SelectItem>
-                  <SelectItem value="todos">Todos os tempos</SelectItem>
-                </SelectContent>
-              </Select>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Pesquisar Ordem de Serviço</CardTitle>
+            <CardDescription>
+              Pesquise por diferentes critérios para analisar detalhes da OS
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col space-y-4">
+              <div className="flex flex-col sm:flex-row w-full items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                <Select 
+                  value={searchType} 
+                  onValueChange={(value) => setSearchType(value as any)}
+                  defaultValue="id"
+                >
+                  <SelectTrigger className="sm:w-[180px]">
+                    <SelectValue placeholder="Tipo de pesquisa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="id">Número da OS</SelectItem>
+                    <SelectItem value="cliente">Nome do Cliente</SelectItem>
+                    <SelectItem value="nome">Descrição da OS</SelectItem>
+                    <SelectItem value="status">Status</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <div className="relative flex-1 w-full">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder={`Pesquisar por ${
+                      searchType === "id" ? "número da OS" : 
+                      searchType === "cliente" ? "nome do cliente" : 
+                      searchType === "nome" ? "descrição da OS" : 
+                      "status"
+                    }...`}
+                    className="pl-8"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  disabled={!searchTerm.trim()}
+                  onClick={() => {
+                    if (filteredOrdens.length > 0) {
+                      buscarOrdem(filteredOrdens[0].id);
+                    }
+                  }}
+                >
+                  Buscar
+                </Button>
+              </div>
               
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filtrar por status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os status</SelectItem>
-                  <SelectItem value="orcamento">Orçamento</SelectItem>
-                  <SelectItem value="aguardando_aprovacao">Aguardando Aprovação</SelectItem>
-                  <SelectItem value="fabricacao">Em Fabricação</SelectItem>
-                  <SelectItem value="aguardando_peca_cliente">Aguardando Peça (Cliente)</SelectItem>
-                  <SelectItem value="aguardando_peca_interno">Aguardando Peça (Interno)</SelectItem>
-                  <SelectItem value="finalizado">Finalizado</SelectItem>
-                  <SelectItem value="entregue">Entregue</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {isLoading ? (
-              <div className="flex justify-center items-center py-8">
-                <p>Carregando dados...</p>
-              </div>
-            ) : (
-              <>
-                <RelatorioResumoCards {...calcularDadosResumo()} />
-                <RelatorioGraficos {...prepararDadosGraficos()} COLORS={COLORS} />
-              </>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="ordens" className="space-y-4 mt-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <Select value={periodo} onValueChange={setPeriodo}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Período" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7dias">Últimos 7 dias</SelectItem>
-                  <SelectItem value="30dias">Últimos 30 dias</SelectItem>
-                  <SelectItem value="90dias">Últimos 90 dias</SelectItem>
-                  <SelectItem value="todos">Todos os tempos</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filtrar por status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os status</SelectItem>
-                  <SelectItem value="orcamento">Orçamento</SelectItem>
-                  <SelectItem value="aguardando_aprovacao">Aguardando Aprovação</SelectItem>
-                  <SelectItem value="fabricacao">Em Fabricação</SelectItem>
-                  <SelectItem value="aguardando_peca_cliente">Aguardando Peça (Cliente)</SelectItem>
-                  <SelectItem value="aguardando_peca_interno">Aguardando Peça (Interno)</SelectItem>
-                  <SelectItem value="finalizado">Finalizado</SelectItem>
-                  <SelectItem value="entregue">Entregue</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {isLoading ? (
-              <div className="flex justify-center items-center py-8">
-                <p>Carregando dados...</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredOrdens.length === 0 ? (
-                  <div className="col-span-full py-8 text-center text-muted-foreground">
-                    Nenhuma ordem de serviço encontrada.
-                  </div>
-                ) : (
-                  filteredOrdens.map(ordem => {
-                    const analise = analisarOrdemServico(ordem);
-                    
-                    if (!analise) return null;
-                    
-                    const atrasos = verificarAtrasos(ordem);
-                    const etapasParadas = verificarEtapasParadas(ordem);
-                    const pessoasTrabalhando = contarPessoasTrabalhando(ordem);
-                    
-                    return (
-                      <Card
-                        key={ordem.id}
-                        className="cursor-pointer hover:bg-accent/50 transition-all duration-200"
-                        onClick={() => handleSelectOrdem(ordem)}
-                      >
-                        <CardHeader className="pb-2">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <CardTitle className="text-lg font-medium mb-1">
-                                {ordem.identificacao || `OS #${ordem.id?.slice(-6)}`}
-                              </CardTitle>
-                              <CardDescription>
-                                {ordem.cliente?.nome || "Cliente não identificado"}
-                              </CardDescription>
-                            </div>
-                            <Badge 
-                              variant={ordem.status === "finalizado" || ordem.status === "entregue" ? "default" : "outline"}
-                              className={ordem.status === "fabricacao" ? "bg-orange-500 hover:bg-orange-500" : undefined}
-                            >
-                              {getStatusLabel(ordem.status)}
-                            </Badge>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                              <div>
-                                <span className="text-muted-foreground">Criação:</span>
-                                <p>{ordem.dataCriacao ? formatarData(ordem.dataCriacao) : "N/A"}</p>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Previsão:</span>
-                                <p>{ordem.dataPrevistaEntrega ? formatarData(ordem.dataPrevistaEntrega) : "N/A"}</p>
-                              </div>
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <div className="flex justify-between items-center mb-1">
-                                <span className="text-sm font-medium">Progresso</span>
-                                <span className="text-sm">{analise.percentualConclusao}%</span>
-                              </div>
-                              <Progress value={analise.percentualConclusao} />
-                            </div>
-                            
-                            <div className="flex flex-wrap gap-1.5 mt-2">
-                              {atrasos.length > 0 && (
-                                <Badge variant="outline" className="text-red-500 border-red-200 bg-red-50">
-                                  <AlertTriangle className="h-3 w-3 mr-1" />
-                                  Atrasos
-                                </Badge>
-                              )}
-                              
-                              {etapasParadas.length > 0 && (
-                                <Badge variant="outline" className="text-amber-500 border-amber-200 bg-amber-50">
-                                  <HourglassIcon className="h-3 w-3 mr-1" />
-                                  Etapas paradas
-                                </Badge>
-                              )}
-                              
-                              {pessoasTrabalhando > 0 && (
-                                <Badge variant="outline" className="text-blue-500 border-blue-200 bg-blue-50">
-                                  <Users className="h-3 w-3 mr-1" />
-                                  {pessoasTrabalhando} trabalhando
-                                </Badge>
-                              )}
-                              
-                              {analise.dentroDoPrazo ? (
-                                <Badge variant="outline" className="text-green-500 border-green-200 bg-green-50">
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  No prazo
-                                </Badge>
-                              ) : (
-                                ordem.status !== "finalizado" && ordem.status !== "entregue" && (
-                                  <Badge variant="outline" className="text-red-500 border-red-200 bg-red-50">
-                                    <XCircle className="h-3 w-3 mr-1" />
-                                    Fora do prazo
-                                  </Badge>
-                                )
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })
-                )}
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="detalhes" className="space-y-4 mt-4">
-            {selectedOrdem ? (
-              <OSDetalhesSection 
-                ordemSelecionada={selectedOrdem} 
-                atrasos={verificarAtrasos(selectedOrdem)} 
-                etapasParadas={verificarEtapasParadas(selectedOrdem)}
-                pessoasTrabalhando={contarPessoasTrabalhando(selectedOrdem)}
-              />
-            ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Detalhes da Ordem de Serviço</CardTitle>
-                  <CardDescription>
-                    Pesquise uma ordem no campo acima ou selecione uma ordem na aba "Ordens" para visualizar os detalhes completos
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex justify-center py-8">
-                  <div className="text-center">
-                    <FileBarChart className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                    <p>Nenhuma ordem selecionada</p>
-                    <Button
-                      variant="outline"
-                      className="mt-4"
-                      onClick={() => document.querySelector('[data-value="ordens"]')?.dispatchEvent(new MouseEvent('click'))}
+              {searchTerm && filteredOrdens.length > 0 && (
+                <div className="max-h-60 overflow-y-auto border rounded-md">
+                  {filteredOrdens.map((ordem) => (
+                    <div
+                      key={ordem.id}
+                      className="p-2 hover:bg-muted cursor-pointer border-b last:border-b-0"
+                      onClick={() => buscarOrdem(ordem.id)}
                     >
-                      Ver lista de ordens
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-        </Tabs>
+                      <div className="font-medium">OS #{ordem.id} - {ordem.nome}</div>
+                      <div className="text-sm text-muted-foreground">Cliente: {ordem.cliente.nome}</div>
+                      <div className="text-xs text-muted-foreground">
+                        Status: {getStatusLabel(ordem.status)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {searchTerm && filteredOrdens.length === 0 && (
+                <div className="text-sm text-muted-foreground p-2 border rounded-md">
+                  Nenhuma ordem encontrada com os critérios informados.
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        
+        {ordemSelecionada && renderOrdemDetalhes()}
+        
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Total de Serviços</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center">
+                <Wrench className="h-5 w-5 mr-2 text-muted-foreground" />
+                <p className="text-2xl font-bold">{totalServicos}</p>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Total de Ordens</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center">
+                <FileBarChart className="h-5 w-5 mr-2 text-muted-foreground" />
+                <p className="text-2xl font-bold">{totalOrdens}</p>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Ordens Finalizadas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center">
+                <ActivitySquare className="h-5 w-5 mr-2 text-muted-foreground" />
+                <p className="text-2xl font-bold">{totalOrdensFinalizadas + totalOrdensEntregues}</p>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Taxa de Finalização</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center">
+                <BarChart className="h-5 w-5 mr-2 text-muted-foreground" />
+                <p className="text-2xl font-bold">{taxaFinalizacao.toFixed(2)}%</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Serviços por Tipo</CardTitle>
+              <CardDescription>
+                Distribuição dos serviços por tipo
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={servicosPorTipo}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={true}
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="quantidade"
+                    nameKey="nome"
+                  >
+                    {servicosPorTipo.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => [value, "Quantidade"]} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Ordens por Status</CardTitle>
+              <CardDescription>
+                Distribuição das ordens de serviço por status
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={ordensPorStatus}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={true}
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="quantidade"
+                    nameKey="nome"
+                  >
+                    {ordensPorStatus.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => [value, "Quantidade"]} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+          
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle>Produtividade Mensal</CardTitle>
+              <CardDescription>
+                Ordens concluídas e tempo médio por mês
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsBarChart
+                  data={produtividadeMensal}
+                  margin={{
+                    top: 20,
+                    right: 30,
+                    left: 20,
+                    bottom: 5,
+                  }}
+                >
+                  <XAxis dataKey="mes" />
+                  <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
+                  <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+                  <Tooltip />
+                  <Legend />
+                  <Bar yAxisId="left" dataKey="ordens" name="Ordens Concluídas" fill="#8884d8" />
+                  <Bar yAxisId="right" dataKey="tempo_medio" name="Tempo Médio (dias)" fill="#82ca9d" />
+                </RechartsBarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </Layout>
   );
