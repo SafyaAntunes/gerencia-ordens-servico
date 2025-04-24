@@ -1,10 +1,11 @@
-
-import { Phone, Mail, Wrench, Shield, Trash, Edit, Eye, User } from "lucide-react";
+import { Phone, Mail, Wrench, Shield, Trash, Edit, Eye, User, Circle } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Funcionario, permissoesLabels, tipoServicoLabels } from "@/types/funcionarios";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+
+import { useState, useEffect } from "react";
 
 interface FuncionarioCardProps {
   funcionario: Funcionario;
@@ -21,6 +22,54 @@ export default function FuncionarioCard({
   onDelete,
   hideDeleteButton = false
 }: FuncionarioCardProps) {
+  const [status, setStatus] = useState<'idle' | 'working' | 'paused'>('idle');
+  
+  useEffect(() => {
+    const checkStatus = () => {
+      const keys = Object.keys(localStorage);
+      const timerKeys = keys.filter(key => key.startsWith('timer_'));
+      
+      let isWorking = false;
+      let isPaused = false;
+      
+      for (const key of timerKeys) {
+        try {
+          const timerData = JSON.parse(localStorage.getItem(key) || '{}');
+          if (timerData.funcionarioId === funcionario.id) {
+            if (timerData.isRunning && !timerData.isPaused) {
+              isWorking = true;
+              break;
+            } else if (timerData.isPaused) {
+              isPaused = true;
+            }
+          }
+        } catch {
+          // Ignore parsing errors
+        }
+      }
+      
+      if (isWorking) setStatus('working');
+      else if (isPaused) setStatus('paused');
+      else setStatus('idle');
+    };
+    
+    checkStatus();
+    const interval = setInterval(checkStatus, 5000);
+    
+    return () => clearInterval(interval);
+  }, [funcionario.id]);
+  
+  const getStatusColor = () => {
+    switch (status) {
+      case 'working':
+        return 'text-[#ea384c]';
+      case 'paused':
+        return 'text-amber-400';
+      default:
+        return 'text-green-500';
+    }
+  };
+
   // Extract initials for the avatar
   const iniciais = funcionario.nome
     .split(" ")
@@ -33,8 +82,11 @@ export default function FuncionarioCard({
     <Card className="overflow-hidden transition-all duration-200 hover:shadow-md border-border h-full flex flex-col">
       <CardHeader className="pb-2">
         <div className="flex items-center gap-4">
-          <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center text-primary text-lg font-medium">
-            {iniciais}
+          <div className="relative">
+            <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center text-lg font-medium">
+              {iniciais}
+            </div>
+            <Circle className={`absolute -bottom-1 -right-1 h-4 w-4 ${getStatusColor()} fill-current`} />
           </div>
           <div className="flex-1">
             <h3 className="font-semibold text-lg line-clamp-1">{funcionario.nome}</h3>

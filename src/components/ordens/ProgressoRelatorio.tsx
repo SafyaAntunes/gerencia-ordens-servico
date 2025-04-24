@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { OrdemServico, EtapaOS, Servico, SubAtividade } from "@/types/ordens";
+import { OrdemServico, EtapaOS, Servico } from "@/types/ordens";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CheckCircle2, Clock, AlertTriangle, XCircle } from "lucide-react";
@@ -107,9 +107,20 @@ export default function ProgressoRelatorio({ ordem }: ProgressoRelatorioProps) {
   
   const calcularTempoTotal = () => {
     let total = 0;
+    let temposPorEtapa: Record<string, number> = {};
+    
+    ordem.tempoRegistros?.forEach(registro => {
+      if (registro.inicio && registro.fim) {
+        const duracao = new Date(registro.fim).getTime() - new Date(registro.inicio).getTime();
+        total += duracao;
+        
+        const etapaKey = registro.etapa;
+        temposPorEtapa[etapaKey] = (temposPorEtapa[etapaKey] || 0) + duracao;
+      }
+    });
     
     ordem.servicos.forEach(servico => {
-      ['retifica', 'inspecao_inicial', 'inspecao_final', 'lavagem'].forEach(etapa => {
+      ['lavagem', 'inspecao_inicial', 'inspecao_final'].forEach(etapa => {
         const storageKey = `timer_${ordem.id}_${etapa}_${servico.tipo}`;
         const data = localStorage.getItem(storageKey);
         
@@ -118,6 +129,8 @@ export default function ProgressoRelatorio({ ordem }: ProgressoRelatorioProps) {
             const parsed = JSON.parse(data);
             if (parsed.totalTime) {
               total += parsed.totalTime;
+              const etapaKey = etapa as EtapaOS;
+              temposPorEtapa[etapaKey] = (temposPorEtapa[etapaKey] || 0) + parsed.totalTime;
             }
           } catch {
             // Ignore parsing errors
@@ -126,14 +139,8 @@ export default function ProgressoRelatorio({ ordem }: ProgressoRelatorioProps) {
       });
     });
     
-    ordem.tempoRegistros?.forEach(registro => {
-      if (registro.inicio && registro.fim) {
-        const duracao = new Date(registro.fim).getTime() - new Date(registro.inicio).getTime();
-        total += duracao;
-      }
-    });
-    
     setTempoTotal(total);
+    return { total, temposPorEtapa };
   };
   
   const calcularTempoEstimado = () => {
@@ -217,6 +224,7 @@ export default function ProgressoRelatorio({ ordem }: ProgressoRelatorioProps) {
     return Math.round((progressoEtapasMedia * 2 + progressoServicosMedia * 1) / 3);
   };
   
+  const { total: tempoTotal, temposPorEtapa } = calcularTempoTotal();
   const statusInfo = getStatusInfo();
   const progressoTotal = calcularProgressoTotal();
   
@@ -256,6 +264,20 @@ export default function ProgressoRelatorio({ ordem }: ProgressoRelatorioProps) {
                 )}
               </div>
               <p className="text-xs">{statusInfo.texto}</p>
+            </div>
+          </div>
+          
+          <Separator className="my-4" />
+          
+          <div>
+            <h3 className="text-lg font-medium mb-4">Tempo por Etapa</h3>
+            <div className="space-y-4">
+              {Object.entries(temposPorEtapa).map(([etapa, tempo]) => (
+                <div key={etapa} className="flex justify-between items-center">
+                  <span className="font-medium">{etapasNomes[etapa as EtapaOS]}</span>
+                  <span>{formatarTempo(tempo)}</span>
+                </div>
+              ))}
             </div>
           </div>
         </CardContent>
