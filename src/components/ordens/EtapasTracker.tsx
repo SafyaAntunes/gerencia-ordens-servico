@@ -209,12 +209,16 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         return ordem.servicos.filter(servico => servico.tipo === 'lavagem');
       case 'inspecao_inicial':
       case 'inspecao_final':
-        return ordem.servicos.filter(servico =>
-          ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo)
-        );
+        return [];
       default:
         return [];
     }
+  };
+
+  const getTiposParaInspecao = (): TipoServico[] => {
+    return ordem.servicos
+      .filter(servico => ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo))
+      .map(servico => servico.tipo);
   };
 
   const getEtapaTitulo = (etapa: EtapaOS, servicoTipo?: TipoServico) => {
@@ -465,53 +469,46 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
           </div>
           <Separator className="my-4" />
 
-          {selectedEtapa &&
-            (
-              (selectedEtapa === "inspecao_inicial" || selectedEtapa === "inspecao_final") ?
-                (
-                  <div className="grid gap-4">
-                    {getServicosParaEtapa(selectedEtapa).map(servico => (
-                      <EtapaCard
-                        key={`${selectedEtapa}-${servico.tipo}`}
-                        ordemId={ordem.id}
-                        etapa={selectedEtapa}
-                        etapaNome={getEtapaTitulo(selectedEtapa, servico.tipo)}
-                        funcionarioId={funcionario?.id || ""}
-                        funcionarioNome={funcionario?.nome}
-                        servicos={[servico]}
-                        etapaInfo={getEtapaInfo(selectedEtapa, servico.tipo)}
-                        servicoTipo={servico.tipo}
-                        onSubatividadeToggle={(servicoTipo, subId, checked) => {
-                          handleSubatividadeToggle(servicoTipo, subId, checked);
-                        }}
-                        onServicoStatusChange={handleServicoStatusChange}
-                        onEtapaStatusChange={handleEtapaStatusChange}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div>
-                    {selectedEtapa && funcionario && (
-                      <EtapaCard
-                        key={selectedEtapa}
-                        ordemId={ordem.id}
-                        etapa={selectedEtapa}
-                        etapaNome={getEtapaTitulo(selectedEtapa)}
-                        funcionarioId={funcionario?.id || ""}
-                        funcionarioNome={funcionario?.nome}
-                        servicos={getServicosParaEtapa(selectedEtapa)}
-                        etapaInfo={getEtapaInfo(selectedEtapa)}
-                        onSubatividadeToggle={(servicoTipo, subId, checked) => {
-                          handleSubatividadeToggle(servicoTipo, subId, checked);
-                        }}
-                        onServicoStatusChange={handleServicoStatusChange}
-                        onEtapaStatusChange={handleEtapaStatusChange}
-                      />
-                    )}
-                  </div>
-                )
+          {selectedEtapa && (
+            (selectedEtapa === "inspecao_inicial" || selectedEtapa === "inspecao_final") ? (
+              <div className="grid gap-4">
+                {getTiposParaInspecao().map(tipo => (
+                  <EtapaCard
+                    key={`${selectedEtapa}-${tipo}`}
+                    ordemId={ordem.id}
+                    etapa={selectedEtapa}
+                    etapaNome={`${getEtapaTitulo(selectedEtapa)} - ${formatServicoTipo(tipo)}`}
+                    funcionarioId={funcionario?.id || ""}
+                    funcionarioNome={funcionario?.nome}
+                    servicos={[]} // Não passamos serviços para inspeções
+                    etapaInfo={getEtapaInfo(selectedEtapa, tipo)}
+                    servicoTipo={tipo}
+                    onEtapaStatusChange={handleEtapaStatusChange}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div>
+                {selectedEtapa && funcionario && (
+                  <EtapaCard
+                    key={selectedEtapa}
+                    ordemId={ordem.id}
+                    etapa={selectedEtapa}
+                    etapaNome={getEtapaTitulo(selectedEtapa)}
+                    funcionarioId={funcionario?.id || ""}
+                    funcionarioNome={funcionario?.nome}
+                    servicos={getServicosParaEtapa(selectedEtapa)}
+                    etapaInfo={getEtapaInfo(selectedEtapa)}
+                    onSubatividadeToggle={(servicoTipo, subId, checked) => {
+                      handleSubatividadeToggle(servicoTipo, subId, checked);
+                    }}
+                    onServicoStatusChange={handleServicoStatusChange}
+                    onEtapaStatusChange={handleEtapaStatusChange}
+                  />
+                )}
+              </div>
             )
-          }
+          )}
         </CardContent>
       </Card>
     </div>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
@@ -101,38 +102,18 @@ export default function EtapaCard({
     }
   }, [podeAtribuirFuncionario]);
   
-  const etapaServicos = (() => {
-    if ((etapa === "inspecao_inicial" || etapa === "inspecao_final") && servicoTipo) {
-      return servicos.filter(servico => servico.tipo === servicoTipo);
-    }
-    
-    switch(etapa) {
-      case 'retifica':
-        return servicos.filter(servico => 
-          ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo)
-        );
-      case 'montagem':
-        return servicos.filter(servico => servico.tipo === 'montagem');
-      case 'dinamometro':
-        return servicos.filter(servico => servico.tipo === 'dinamometro');
-      case 'lavagem':
-        return servicos.filter(servico => servico.tipo === 'lavagem');
-      default:
-        return [];
-    }
-  })();
-
+  // Cálculo de progresso somente se houver serviços 
   useEffect(() => {
-    if (etapaServicos.length === 0) return;
+    if (servicos.length === 0) return;
     
-    const servicosConcluidos = etapaServicos.filter(servico => servico.concluido).length;
-    const percentualProgresso = Math.round((servicosConcluidos / etapaServicos.length) * 100);
+    const servicosConcluidos = servicos.filter(servico => servico.concluido).length;
+    const percentualProgresso = Math.round((servicosConcluidos / servicos.length) * 100);
     setProgresso(percentualProgresso);
     
-    if (servicosConcluidos === etapaServicos.length && !etapaInfo?.concluido && onEtapaStatusChange) {
+    if (servicosConcluidos === servicos.length && !etapaInfo?.concluido && onEtapaStatusChange) {
       onEtapaStatusChange(etapa, true, funcionario?.id, funcionario?.nome);
     }
-  }, [etapaServicos, etapaInfo, onEtapaStatusChange]);
+  }, [servicos, etapaInfo, onEtapaStatusChange]);
 
   const isEtapaConcluida = () => {
     if ((etapa === "inspecao_inicial" || etapa === "inspecao_final") && servicoTipo) {
@@ -246,7 +227,7 @@ export default function EtapaCard({
         </div>
       )}
       
-      {etapaServicos.length > 0 && (
+      {servicos.length > 0 && (
         <div className="mb-4">
           <Progress value={progresso} className="h-2" />
         </div>
@@ -281,9 +262,9 @@ export default function EtapaCard({
         </div>
       )}
       
-      {etapaServicos.length > 0 && (
+      {servicos.length > 0 && (
         <div className="space-y-4">
-          {etapaServicos.map((servico, i) => (
+          {servicos.map((servico, i) => (
             <ServicoTracker
               key={`${servico.tipo}-${i}`}
               servico={servico}
