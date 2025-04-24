@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -20,7 +19,6 @@ export default function ProgressoRelatorio({ ordem }: ProgressoRelatorioProps) {
   const [tempoEstimado, setTempoEstimado] = useState(0);
   const [diasEmAndamento, setDiasEmAndamento] = useState(0);
   
-  // Etapas e seus nomes formatados
   const etapasNomes: Record<EtapaOS, string> = {
     lavagem: "Lavagem",
     inspecao_inicial: "Inspeção Inicial",
@@ -40,26 +38,41 @@ export default function ProgressoRelatorio({ ordem }: ProgressoRelatorioProps) {
     calcularDiasEmAndamento();
   }, [ordem]);
   
-  // Calcular progresso das etapas
   const calcularProgressoEtapas = () => {
     const etapas: EtapaOS[] = ["lavagem", "inspecao_inicial", "retifica", "montagem", "dinamometro", "inspecao_final"];
     
     const progressos = etapas.map(etapa => {
+      if (etapa === 'lavagem' || etapa === 'inspecao_inicial' || etapa === 'inspecao_final') {
+        const tiposServico = ordem.servicos
+          .filter(s => ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(s.tipo))
+          .map(s => s.tipo);
+        
+        const totalPecas = tiposServico.length;
+        if (totalPecas === 0) return { etapa, nome: etapasNomes[etapa], progresso: 0, concluida: false };
+        
+        let pecasConcluidas = 0;
+        tiposServico.forEach(tipo => {
+          const etapaKey = `${etapa}_${tipo}` as any;
+          if (ordem.etapasAndamento[etapaKey]?.concluido) {
+            pecasConcluidas++;
+          }
+        });
+        
+        return {
+          etapa,
+          nome: etapasNomes[etapa],
+          progresso: Math.round((pecasConcluidas / totalPecas) * 100),
+          concluida: pecasConcluidas === totalPecas
+        };
+      }
+      
       const etapaInfo = ordem.etapasAndamento[etapa];
       const concluida = etapaInfo?.concluido || false;
-      let progresso = 0;
-      
-      if (concluida) {
-        progresso = 100;
-      } else if (etapaInfo && etapaInfo.iniciado) {
-        // Se está iniciada mas não concluída, consideramos 50% de progresso
-        progresso = 50;
-      }
       
       return {
         etapa,
         nome: etapasNomes[etapa],
-        progresso,
+        progresso: concluida ? 100 : (etapaInfo?.iniciado ? 50 : 0),
         concluida
       };
     });
@@ -67,7 +80,6 @@ export default function ProgressoRelatorio({ ordem }: ProgressoRelatorioProps) {
     setProgressoEtapas(progressos);
   };
   
-  // Calcular progresso dos serviços
   const calcularProgressoServicos = () => {
     const progressos = ordem.servicos.map(servico => {
       let progresso = 0;
@@ -93,29 +105,27 @@ export default function ProgressoRelatorio({ ordem }: ProgressoRelatorioProps) {
     setProgressoServicos(progressos);
   };
   
-  // Calcular tempo total registrado
   const calcularTempoTotal = () => {
-    // Vamos somar o tempo de todas as etapas e serviços
     let total = 0;
     
-    // Verificar registros no localStorage para cada serviço
     ordem.servicos.forEach(servico => {
-      const storageKey = `timer_${ordem.id}_retifica_${servico.tipo}`;
-      const data = localStorage.getItem(storageKey);
-      
-      if (data) {
-        try {
-          const parsed = JSON.parse(data);
-          if (parsed.totalTime) {
-            total += parsed.totalTime;
+      ['retifica', 'inspecao_inicial', 'inspecao_final', 'lavagem'].forEach(etapa => {
+        const storageKey = `timer_${ordem.id}_${etapa}_${servico.tipo}`;
+        const data = localStorage.getItem(storageKey);
+        
+        if (data) {
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.totalTime) {
+              total += parsed.totalTime;
+            }
+          } catch {
+            // Ignore parsing errors
           }
-        } catch {
-          // Ignorar erro de parsing
         }
-      }
+      });
     });
     
-    // Verificar também os tempos registrados nas etapas
     ordem.tempoRegistros?.forEach(registro => {
       if (registro.inicio && registro.fim) {
         const duracao = new Date(registro.fim).getTime() - new Date(registro.inicio).getTime();
@@ -126,18 +136,15 @@ export default function ProgressoRelatorio({ ordem }: ProgressoRelatorioProps) {
     setTempoTotal(total);
   };
   
-  // Calcular tempo estimado
   const calcularTempoEstimado = () => {
     let total = 0;
     
-    // Somar tempos estimados de todas as subatividades selecionadas
     ordem.servicos.forEach(servico => {
       if (servico.subatividades) {
         servico.subatividades
           .filter(sub => sub.selecionada)
           .forEach(sub => {
             if (sub.tempoEstimado) {
-              // Converter horas para milissegundos
               total += sub.tempoEstimado * 60 * 60 * 1000;
             }
           });
@@ -147,7 +154,6 @@ export default function ProgressoRelatorio({ ordem }: ProgressoRelatorioProps) {
     setTempoEstimado(total);
   };
   
-  // Calcular dias em andamento
   const calcularDiasEmAndamento = () => {
     const dataAbertura = new Date(ordem.dataAbertura).getTime();
     const hoje = new Date().getTime();
@@ -156,12 +162,10 @@ export default function ProgressoRelatorio({ ordem }: ProgressoRelatorioProps) {
     setDiasEmAndamento(diasTotais);
   };
   
-  // Função para formatar tipos de serviço
   const formatarTipoServico = (tipo: string): string => {
     return tipo.charAt(0).toUpperCase() + tipo.slice(1).replace('_', ' ');
   };
   
-  // Função para formatar tempo
   const formatarTempo = (ms: number) => {
     const horas = Math.floor(ms / (1000 * 60 * 60));
     const minutos = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
@@ -169,7 +173,6 @@ export default function ProgressoRelatorio({ ordem }: ProgressoRelatorioProps) {
     return `${horas}h${minutos > 0 ? ` ${minutos}m` : ''}`;
   };
   
-  // Obter o status da comparação entre tempo estimado e real
   const getStatusTempo = () => {
     if (tempoEstimado === 0) return "neutro";
     
@@ -183,7 +186,6 @@ export default function ProgressoRelatorio({ ordem }: ProgressoRelatorioProps) {
     }
   };
   
-  // Obter texto e cor baseados no status
   const getStatusInfo = () => {
     const status = getStatusTempo();
     
@@ -208,12 +210,10 @@ export default function ProgressoRelatorio({ ordem }: ProgressoRelatorioProps) {
     }
   };
   
-  // Calcular progresso total da ordem
   const calcularProgressoTotal = () => {
     const progressoEtapasMedia = progressoEtapas.reduce((total, etapa) => total + etapa.progresso, 0) / progressoEtapas.length;
     const progressoServicosMedia = progressoServicos.reduce((total, servico) => total + servico.progresso, 0) / progressoServicos.length;
     
-    // Média ponderada: etapas têm peso 2, serviços têm peso 1
     return Math.round((progressoEtapasMedia * 2 + progressoServicosMedia * 1) / 3);
   };
   

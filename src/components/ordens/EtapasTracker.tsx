@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
@@ -188,6 +188,12 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     }
   };
 
+  const getTiposParaInspecaoOuLavagem = (etapa: EtapaOS): TipoServico[] => {
+    return ordem.servicos
+      .filter(servico => ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo))
+      .map(servico => servico.tipo);
+  };
+
   const getServicosParaEtapa = (etapa: EtapaOS): Servico[] => {
     switch (etapa) {
       case 'retifica':
@@ -206,7 +212,6 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
       case 'dinamometro':
         return ordem.servicos.filter(servico => servico.tipo === 'dinamometro');
       case 'lavagem':
-        return ordem.servicos.filter(servico => servico.tipo === 'lavagem');
       case 'inspecao_inicial':
       case 'inspecao_final':
         return [];
@@ -470,9 +475,9 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
           <Separator className="my-4" />
 
           {selectedEtapa && (
-            (selectedEtapa === "inspecao_inicial" || selectedEtapa === "inspecao_final") ? (
+            (selectedEtapa === "inspecao_inicial" || selectedEtapa === "inspecao_final" || selectedEtapa === "lavagem") ? (
               <div className="grid gap-4">
-                {getTiposParaInspecao().map(tipo => (
+                {getTiposParaInspecaoOuLavagem(selectedEtapa).map(tipo => (
                   <EtapaCard
                     key={`${selectedEtapa}-${tipo}`}
                     ordemId={ordem.id}
@@ -480,7 +485,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
                     etapaNome={`${getEtapaTitulo(selectedEtapa)} - ${formatServicoTipo(tipo)}`}
                     funcionarioId={funcionario?.id || ""}
                     funcionarioNome={funcionario?.nome}
-                    servicos={[]} // Não passamos serviços para inspeções
+                    servicos={[]} // No services for inspections and washing
                     etapaInfo={getEtapaInfo(selectedEtapa, tipo)}
                     servicoTipo={tipo}
                     onEtapaStatusChange={handleEtapaStatusChange}
