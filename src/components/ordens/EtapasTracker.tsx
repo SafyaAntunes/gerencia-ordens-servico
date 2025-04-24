@@ -416,6 +416,45 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
   }
   const etapasDisponiveis = verificarEtapasDisponiveis();
 
+  const renderEtapaCard = () => {
+    if (selectedEtapa && (selectedEtapa === "inspecao_inicial" || selectedEtapa === "inspecao_final")) {
+      return (
+        <EtapaCard
+          key={selectedEtapa}
+          ordemId={ordem.id}
+          etapa={selectedEtapa}
+          etapaNome={getEtapaTitulo(selectedEtapa)}
+          funcionarioId={funcionario?.id || ""}
+          funcionarioNome={funcionario?.nome}
+          etapaInfo={getEtapaInfo(selectedEtapa)}
+          onEtapaStatusChange={handleEtapaStatusChange}
+        />
+      );
+    }
+
+    if (selectedEtapa && funcionario) {
+      return (
+        <EtapaCard
+          key={selectedEtapa}
+          ordemId={ordem.id}
+          etapa={selectedEtapa}
+          etapaNome={getEtapaTitulo(selectedEtapa)}
+          funcionarioId={funcionario?.id || ""}
+          funcionarioNome={funcionario?.nome}
+          servicos={getServicosParaEtapa(selectedEtapa)}
+          etapaInfo={getEtapaInfo(selectedEtapa)}
+          onSubatividadeToggle={(servicoTipo, subId, checked) => {
+            handleSubatividadeToggle(servicoTipo, subId, checked);
+          }}
+          onServicoStatusChange={handleServicoStatusChange}
+          onEtapaStatusChange={handleEtapaStatusChange}
+        />
+      );
+    }
+
+    return null;
+  };
+
   return (
     <div className="space-y-6">
       <Card className="w-full">
@@ -465,53 +504,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
           </div>
           <Separator className="my-4" />
 
-          {selectedEtapa &&
-            (
-              (selectedEtapa === "inspecao_inicial" || selectedEtapa === "inspecao_final") ?
-                (
-                  <div className="grid gap-4">
-                    {getServicosParaEtapa(selectedEtapa).map(servico => (
-                      <EtapaCard
-                        key={`${selectedEtapa}-${servico.tipo}`}
-                        ordemId={ordem.id}
-                        etapa={selectedEtapa}
-                        etapaNome={getEtapaTitulo(selectedEtapa, servico.tipo)}
-                        funcionarioId={funcionario?.id || ""}
-                        funcionarioNome={funcionario?.nome}
-                        servicos={[servico]}
-                        etapaInfo={getEtapaInfo(selectedEtapa, servico.tipo)}
-                        servicoTipo={servico.tipo}
-                        onSubatividadeToggle={(servicoTipo, subId, checked) => {
-                          handleSubatividadeToggle(servicoTipo, subId, checked);
-                        }}
-                        onServicoStatusChange={handleServicoStatusChange}
-                        onEtapaStatusChange={handleEtapaStatusChange}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div>
-                    {selectedEtapa && funcionario && (
-                      <EtapaCard
-                        key={selectedEtapa}
-                        ordemId={ordem.id}
-                        etapa={selectedEtapa}
-                        etapaNome={getEtapaTitulo(selectedEtapa)}
-                        funcionarioId={funcionario?.id || ""}
-                        funcionarioNome={funcionario?.nome}
-                        servicos={getServicosParaEtapa(selectedEtapa)}
-                        etapaInfo={getEtapaInfo(selectedEtapa)}
-                        onSubatividadeToggle={(servicoTipo, subId, checked) => {
-                          handleSubatividadeToggle(servicoTipo, subId, checked);
-                        }}
-                        onServicoStatusChange={handleServicoStatusChange}
-                        onEtapaStatusChange={handleEtapaStatusChange}
-                      />
-                    )}
-                  </div>
-                )
-            )
-          }
+          {renderEtapaCard()}
         </CardContent>
       </Card>
     </div>
