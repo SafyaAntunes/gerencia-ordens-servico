@@ -563,22 +563,18 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
                             <p className="font-medium">{motor.ano}</p>
                           </div>
                         )}
-                        {motor.numeroSerie && (
+                        {motor.cilindrada && (
                           <div>
-                            <p className="text-sm text-muted-foreground">Número de Série</p>
-                            <p className="font-medium">{motor.numeroSerie}</p>
+                            <p className="text-sm text-muted-foreground">Cilindrada</p>
+                            <p className="font-medium">{motor.cilindrada}</p>
                           </div>
                         )}
-                        {motor.cilindradas && (
+                        {motor.combustivel && (
                           <div>
-                            <p className="text-sm text-muted-foreground">Cilindradas</p>
-                            <p className="font-medium">{motor.cilindradas}</p>
-                          </div>
-                        )}
-                        {motor.observacoes && (
-                          <div>
-                            <p className="text-sm text-muted-foreground">Observações</p>
-                            <p className="font-medium">{motor.observacoes}</p>
+                            <p className="text-sm text-muted-foreground">Combustível</p>
+                            <p className="font-medium">
+                              {motor.combustivel.charAt(0).toUpperCase() + motor.combustivel.slice(1)}
+                            </p>
                           </div>
                         )}
                       </div>
@@ -588,7 +584,9 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
                   {!motor && ordem?.motorId && (
                     <div>
                       <h3 className="text-lg font-medium mb-2">Dados do Motor</h3>
-                      <p className="text-muted-foreground">ID do motor: {ordem.motorId}</p>
+                      <p className="text-muted-foreground">
+                        ID do motor: {ordem.motorId}
+                      </p>
                       <p className="text-sm text-muted-foreground">
                         Detalhes completos não disponíveis.
                       </p>

@@ -1,4 +1,3 @@
-
 import { Cliente } from "@/types/clientes";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -127,12 +126,6 @@ export default function ClienteDetalhes({
                   {selectedMotor.ano && <span className="text-sm text-muted-foreground">Ano: {selectedMotor.ano}</span>}
                 </div>
                 
-                {selectedMotor.numeroSerie && (
-                  <p className="text-sm mt-1">
-                    Numeração: <span className="font-medium">{selectedMotor.numeroSerie}</span>
-                  </p>
-                )}
-                
                 {selectedMotor.cilindrada && (
                   <p className="text-sm">
                     Cilindrada: <span className="font-medium">{selectedMotor.cilindrada}</span>
@@ -144,12 +137,6 @@ export default function ClienteDetalhes({
                     {selectedMotor.combustivel.charAt(0).toUpperCase() + selectedMotor.combustivel.slice(1)}
                   </Badge>
                 )}
-                
-                {selectedMotor.observacoes && (
-                  <p className="text-sm mt-2 text-muted-foreground">
-                    {selectedMotor.observacoes}
-                  </p>
-                )}
               </div>
             ) : cliente.motores && cliente.motores.length > 0 ? (
               <div className="grid gap-3">
@@ -159,12 +146,6 @@ export default function ClienteDetalhes({
                       <h5 className="font-medium">{motor.marca} {motor.modelo}</h5>
                       {motor.ano && <span className="text-sm text-muted-foreground">Ano: {motor.ano}</span>}
                     </div>
-                    
-                    {motor.numeroSerie && (
-                      <p className="text-sm mt-1">
-                        Numeração: <span className="font-medium">{motor.numeroSerie}</span>
-                      </p>
-                    )}
                     
                     {motor.cilindrada && (
                       <p className="text-sm">

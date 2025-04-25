@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -113,15 +112,6 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         });
       }
       
-      // Calcular custo de mão de obra para as etapas
-      if (values.etapasTempoPreco) {
-        Object.entries(values.etapasTempoPreco).forEach(([etapa, dados]: [string, any]) => {
-          if (dados.precoHora && dados.tempoEstimado) {
-            custoEstimadoMaoDeObra += dados.precoHora * dados.tempoEstimado;
-          }
-        });
-      }
-      
       const formattedServicoSubatividades: Record<string, SubAtividade[]> = {};
       
       if (values.servicosSubatividades) {
@@ -185,16 +175,12 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
 
       const etapasAndamento: Record<string, any> = {};
       
-      // Configurar cada etapa com os tempos estimados e preços por hora
+      // Configurar cada etapa sem os tempos estimados
       etapas.forEach(etapa => {
-        const etapaConfig = values.etapasTempoPreco?.[etapa] || {};
-        
         etapasAndamento[etapa] = { 
           concluido: false,
           usarCronometro: true,
-          pausas: [],
-          precoHora: etapaConfig.precoHora || 0,
-          tempoEstimado: etapaConfig.tempoEstimado || 0
+          pausas: []
         };
       });
 
