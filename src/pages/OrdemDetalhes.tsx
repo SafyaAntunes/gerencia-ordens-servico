@@ -125,8 +125,15 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
           const motorEncontrado = clienteData.motores.find(m => m.id === motorId);
           if (motorEncontrado) {
             setMotor(motorEncontrado);
+            console.log("Motor encontrado:", motorEncontrado);
+          } else {
+            console.log("Motor não encontrado na lista de motores do cliente");
           }
+        } else {
+          console.log("Cliente não possui motores cadastrados");
         }
+      } else {
+        console.log("Cliente não encontrado");
       }
     } catch (error) {
       console.error("Erro ao buscar detalhes do motor:", error);
@@ -578,7 +585,7 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
                     </div>
                   )}
                   
-                  {!motor && ordem.motorId && (
+                  {!motor && ordem?.motorId && (
                     <div>
                       <h3 className="text-lg font-medium mb-2">Dados do Motor</h3>
                       <p className="text-muted-foreground">ID do motor: {ordem.motorId}</p>

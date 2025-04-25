@@ -35,6 +35,11 @@ export default function ClienteDetalhes({
       : "Data inválida";
   })();
 
+  // Find the selected motor if there's a motorId in the cliente object
+  const selectedMotor = cliente.motores?.find(motor => 
+    motor.id === cliente.selectedMotorId
+  );
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[550px]">
@@ -110,44 +115,75 @@ export default function ClienteDetalhes({
             </>
           )}
           
-          {cliente.motores && cliente.motores.length > 0 && (
-            <>
-              <Separator />
-              
-              <div className="space-y-4">
-                <h4 className="text-sm font-medium text-muted-foreground">Motores</h4>
-                
-                <div className="grid gap-3">
-                  {cliente.motores.map(motor => (
-                    <div key={motor.id} className="border border-border rounded-md p-3">
-                      <div className="flex justify-between">
-                        <h5 className="font-medium">{motor.marca} {motor.modelo}</h5>
-                        {motor.ano && <span className="text-sm text-muted-foreground">Ano: {motor.ano}</span>}
-                      </div>
-                      
-                      {motor.numeroSerie && (
-                        <p className="text-sm mt-1">
-                          Numeração: <span className="font-medium">{motor.numeroSerie}</span>
-                        </p>
-                      )}
-                      
-                      {motor.cilindrada && (
-                        <p className="text-sm">
-                          Cilindrada: <span className="font-medium">{motor.cilindrada}</span>
-                        </p>
-                      )}
-                      
-                      {motor.combustivel && (
-                        <Badge variant="outline" className="mt-2">
-                          {motor.combustivel.charAt(0).toUpperCase() + motor.combustivel.slice(1)}
-                        </Badge>
-                      )}
-                    </div>
-                  ))}
+          <Separator />
+          
+          <div className="space-y-4">
+            <h4 className="text-sm font-medium text-muted-foreground">Motores</h4>
+            
+            {selectedMotor ? (
+              <div className="border border-border rounded-md p-3">
+                <div className="flex justify-between">
+                  <h5 className="font-medium">{selectedMotor.marca} {selectedMotor.modelo}</h5>
+                  {selectedMotor.ano && <span className="text-sm text-muted-foreground">Ano: {selectedMotor.ano}</span>}
                 </div>
+                
+                {selectedMotor.numeroSerie && (
+                  <p className="text-sm mt-1">
+                    Numeração: <span className="font-medium">{selectedMotor.numeroSerie}</span>
+                  </p>
+                )}
+                
+                {selectedMotor.cilindrada && (
+                  <p className="text-sm">
+                    Cilindrada: <span className="font-medium">{selectedMotor.cilindrada}</span>
+                  </p>
+                )}
+                
+                {selectedMotor.combustivel && (
+                  <Badge variant="outline" className="mt-2">
+                    {selectedMotor.combustivel.charAt(0).toUpperCase() + selectedMotor.combustivel.slice(1)}
+                  </Badge>
+                )}
+                
+                {selectedMotor.observacoes && (
+                  <p className="text-sm mt-2 text-muted-foreground">
+                    {selectedMotor.observacoes}
+                  </p>
+                )}
               </div>
-            </>
-          )}
+            ) : cliente.motores && cliente.motores.length > 0 ? (
+              <div className="grid gap-3">
+                {cliente.motores.map(motor => (
+                  <div key={motor.id} className="border border-border rounded-md p-3">
+                    <div className="flex justify-between">
+                      <h5 className="font-medium">{motor.marca} {motor.modelo}</h5>
+                      {motor.ano && <span className="text-sm text-muted-foreground">Ano: {motor.ano}</span>}
+                    </div>
+                    
+                    {motor.numeroSerie && (
+                      <p className="text-sm mt-1">
+                        Numeração: <span className="font-medium">{motor.numeroSerie}</span>
+                      </p>
+                    )}
+                    
+                    {motor.cilindrada && (
+                      <p className="text-sm">
+                        Cilindrada: <span className="font-medium">{motor.cilindrada}</span>
+                      </p>
+                    )}
+                    
+                    {motor.combustivel && (
+                      <Badge variant="outline" className="mt-2">
+                        {motor.combustivel.charAt(0).toUpperCase() + motor.combustivel.slice(1)}
+                      </Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">Nenhum motor cadastrado para este cliente.</p>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

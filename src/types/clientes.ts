@@ -9,6 +9,7 @@ export interface Cliente {
   motores?: Motor[];
   dataCriacao?: Date | string;
   observacoes?: string;
+  selectedMotorId?: string; // ID do motor selecionado
 }
 
 export interface Motor {
