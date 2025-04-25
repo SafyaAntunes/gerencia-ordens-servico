@@ -4,7 +4,8 @@ import { ptBR } from "date-fns/locale";
 import { Hash } from "lucide-react";
 import { OrdemServico } from "@/types/ordens";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { Progress } from "@/components/ui/progress";
+import OrderTableHeader from "./OrderTableHeader";
+import OrderProgress from "./OrderProgress";
 
 interface OrdemListRowProps {
   ordem: OrdemServico;
@@ -41,16 +42,8 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
       className="group bg-white hover:bg-gray-50 border-b transition-colors duration-200"
     >
       <div className="grid grid-cols-12 gap-4 px-6 py-4 items-center">
-        {/* Headers */}
-        {index === 0 && (
-          <div className="grid grid-cols-12 gap-4 px-6 py-2 bg-gray-100 text-gray-600 font-medium text-sm">
-            <div className="col-span-1">OS</div>
-            <div className="col-span-3">Descrição</div>
-            <div className="col-span-2">Cliente</div>
-            <div className="col-span-4">Status</div>
-            <div className="col-span-2">Datas</div>
-          </div>
-        )}
+        {/* Show header only for first row */}
+        {index === 0 && <OrderTableHeader />}
 
         {/* OS Number */}
         <div className="col-span-1 flex items-center gap-2">
@@ -101,14 +94,8 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
           </div>
         </div>
 
-        {/* Progresso (moved to the end) */}
-        <div className="col-span-12 mt-2">
-          <div className="flex items-center justify-between text-sm text-gray-500 px-6">
-            <span>Progresso</span>
-            <span>{progresso}%</span>
-          </div>
-          <Progress value={progresso} className="h-1.5 mt-1 mx-6" />
-        </div>
+        {/* Progress bar */}
+        <OrderProgress progresso={progresso} />
       </div>
     </div>
   );
