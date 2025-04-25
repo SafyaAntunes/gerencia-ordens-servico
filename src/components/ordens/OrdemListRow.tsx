@@ -1,6 +1,7 @@
+
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Hash, Calendar, Clock, MoveVertical } from "lucide-react";
+import { Hash } from "lucide-react";
 import { OrdemServico } from "@/types/ordens";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatCurrency } from "@/lib/utils";
@@ -38,58 +39,63 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onClick={onClick}
-      className="group bg-card border rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+      className="group bg-card border rounded-lg shadow-sm hover:shadow-md transition-all duration-200 mb-4"
     >
-      <div className="flex items-center gap-4 p-6">
-        <button 
-          className="cursor-grab active:cursor-grabbing p-2 hover:bg-accent rounded-md"
-          onMouseDown={(e) => e.preventDefault()}
-        >
-          <MoveVertical className="h-5 w-5 text-muted-foreground" />
-        </button>
-
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <Hash className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">{ordem.id}</span>
+      <div className="grid grid-cols-12 gap-4 p-6">
+        {/* Ordem de Serviço */}
+        <div className="col-span-2 flex items-center gap-2">
+          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-muted-foreground font-medium">
+            {index + 1}
+          </div>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-1">
+              <Hash className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">{ordem.id}</span>
+            </div>
             <StatusBadge status={ordem.status} size="sm" />
           </div>
+        </div>
+
+        {/* Descrição */}
+        <div className="col-span-3">
           <h3 className="font-semibold">{ordem.nome || "Sem título"}</h3>
-          <p className="text-sm text-muted-foreground">{clienteNome}</p>
-        </div>
-
-        <div className="hidden md:flex flex-col items-start gap-1 flex-1">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Calendar className="h-4 w-4" />
-            <span>
-              {ordem.dataAbertura ? 
-                format(new Date(ordem.dataAbertura), "dd MMM yyyy", { locale: ptBR }) :
-                "Data não definida"}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Clock className="h-4 w-4" />
-            <span>
-              Previsão: {ordem.dataPrevistaEntrega ? 
-                format(new Date(ordem.dataPrevistaEntrega), "dd MMM yyyy", { locale: ptBR }) :
-                "Não definida"}
-            </span>
+          <div className="flex flex-col gap-2 mt-2">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Progresso</span>
+              <span className="text-xs text-muted-foreground">{progresso}%</span>
+            </div>
+            <Progress value={progresso} className="h-2" />
           </div>
         </div>
 
-        <div className="hidden md:flex flex-col gap-2 w-48">
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-medium">Progresso</span>
-            <span className="text-xs text-muted-foreground">{progresso}%</span>
-          </div>
-          <Progress value={progresso} className="h-2" />
+        {/* Cliente */}
+        <div className="col-span-2">
+          <p className="font-medium">{clienteNome}</p>
         </div>
 
-        <div className="hidden lg:block text-right">
+        {/* Status e Prioridade */}
+        <div className="col-span-3 flex items-center justify-between">
+          <div className="flex flex-col gap-2">
+            <StatusBadge status={ordem.status} size="sm" />
+            <StatusBadge status={ordem.prioridade || "media"} size="sm" />
+          </div>
           {ordem.valorTotal && (
             <div className="font-medium">{formatCurrency(ordem.valorTotal)}</div>
           )}
-          <StatusBadge status={ordem.prioridade || "media"} size="sm" />
+        </div>
+
+        {/* Datas */}
+        <div className="col-span-2 flex flex-col gap-1 text-sm text-muted-foreground">
+          <div>
+            Abertura: {ordem.dataAbertura ? 
+              format(new Date(ordem.dataAbertura), "dd MMM yyyy", { locale: ptBR }) :
+              "Data não definida"}
+          </div>
+          <div>
+            Previsão: {ordem.dataPrevistaEntrega ? 
+              format(new Date(ordem.dataPrevistaEntrega), "dd MMM yyyy", { locale: ptBR }) :
+              "Não definida"}
+          </div>
         </div>
       </div>
     </div>
