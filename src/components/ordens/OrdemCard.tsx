@@ -1,4 +1,3 @@
-
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Clock, Calendar, ArrowRight, Settings, Hash, DollarSign } from "lucide-react";
@@ -11,7 +10,6 @@ import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { formatCurrency } from "@/lib/utils";
 
-// Lista de motores conhecidos para exibição
 const MOTORES_DISPLAY: Record<string, string> = {
   "101": "Ford Zetec Rocam 1.0",
   "102": "Ford Zetec Rocam 1.6",
@@ -27,34 +25,29 @@ const MOTORES_DISPLAY: Record<string, string> = {
 
 interface OrdemCardProps {
   ordem: OrdemServico;
-  onClick?: () => void;
+  index: number;
+  onReorder: (dragIndex: number, dropIndex: number) => void;
+  onClick: () => void;
 }
 
-export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
+export default function OrdemCard({ ordem, index, onReorder, onClick }: OrdemCardProps) {
   const navigate = useNavigate();
   
-  // Guard clause: if ordem is undefined, render a placeholder or nothing
   if (!ordem) {
     return null;
   }
   
-  // Safely access cliente
   const clienteNome = ordem.cliente?.nome || "Cliente não especificado";
   
-  // Identificar o motor selecionado se houver
   const motorInfo = ordem.motorId ? MOTORES_DISPLAY[ordem.motorId] || "Motor #" + ordem.motorId : null;
   
-  // Aprimorado - Cálculo de progresso mais preciso
   let progresso = 0;
   
-  // Se tiver progresso já calculado, usa o valor armazenado
   if (ordem.progressoEtapas !== undefined) {
     progresso = Math.round(ordem.progressoEtapas * 100);
   } else {
-    // Calcula o progresso com base nas etapas e serviços
     const etapasPossiveis: EtapaOS[] = ["lavagem", "inspecao_inicial", "retifica", "montagem", "dinamometro", "inspecao_final"];
     
-    // Filtra apenas as etapas relevantes para esta ordem
     const etapasRelevantes = etapasPossiveis.filter(etapa => {
       if (etapa === "retifica") {
         return ordem.servicos?.some(s => 
@@ -66,25 +59,21 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
       } else if (etapa === "lavagem") {
         return ordem.servicos?.some(s => s.tipo === "lavagem");
       }
-      return true; // As etapas de inspeção são sempre relevantes
+      return true;
     });
     
-    // Contar os itens totais e concluídos
     const totalEtapas = etapasRelevantes.length;
     const etapasConcluidas = etapasRelevantes.filter(etapa => 
       ordem.etapasAndamento?.[etapa]?.concluido
     ).length;
     
-    // Subetapas (serviços e subatividades)
     const servicosAtivos = ordem.servicos?.filter(s => {
-      return s.subatividades?.some(sub => sub.selecionada) || true; // Considera todos os serviços
+      return s.subatividades?.some(sub => sub.selecionada) || true;
     }) || [];
     
     const totalServicos = servicosAtivos.length;
     const servicosConcluidos = servicosAtivos.filter(s => s.concluido).length;
     
-    // Cálculo ponderado do progresso
-    // Etapas têm peso 2, serviços têm peso 1
     const pesoEtapas = 2;
     const pesoServicos = 1;
     
@@ -106,16 +95,33 @@ export default function OrdemCard({ ordem, onClick }: OrdemCardProps) {
       navigate(`/ordens/${ordem.id}`);
     }
   };
-  
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('text/plain', index.toString());
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const dragIndex = parseInt(e.dataTransfer.getData('text/plain'));
+    onReorder(dragIndex, index);
+  };
+
   return (
     <Card 
+      draggable
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
       className="card-hover cursor-pointer overflow-hidden"
       onClick={handleCardClick}
     >
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div>
-            {/* OS number displayed prominently first */}
             <p className="text-sm font-bold flex items-center gap-1">
               <Hash className="h-4 w-4" />
               OS: {ordem.id}

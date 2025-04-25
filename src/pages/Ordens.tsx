@@ -5,7 +5,7 @@ import OrdemCard from "@/components/ordens/OrdemCard";
 import OrdemListRow from "@/components/ordens/OrdemListRow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Search, Filter, BarChart, LayoutGrid, LayoutList } from "lucide-react";
+import { PlusCircle, Search, Filter, LayoutGrid, LayoutList } from "lucide-react";
 import { OrdemServico, StatusOS, Prioridade } from "@/types/ordens";
 import { 
   Select, 
@@ -102,6 +102,13 @@ export default function Ordens({ onLogout }: OrdensProps) {
     
     fetchOrdens();
   }, [isTecnico, funcionario]);
+
+  const handleReorder = (dragIndex: number, dropIndex: number) => {
+    const reorderedOrdens = [...ordens];
+    const [draggedItem] = reorderedOrdens.splice(dragIndex, 1);
+    reorderedOrdens.splice(dropIndex, 0, draggedItem);
+    setOrdens(reorderedOrdens);
+  };
 
   const filteredOrdens = ordens.filter((ordem) => {
     if (!ordem) return false;
@@ -243,34 +250,29 @@ export default function Ordens({ onLogout }: OrdensProps) {
         </div>
       ) : viewType === "grid" ? (
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {filteredOrdens.map((ordem) => (
+          {filteredOrdens.map((ordem, index) => (
             <OrdemCard 
               key={ordem.id} 
-              ordem={ordem} 
+              ordem={ordem}
+              index={index}
+              onReorder={handleReorder}
               onClick={() => handleVerOrdem(ordem.id)}
             />
           ))}
         </div>
       ) : (
-        <div className="space-y-2">
-          {filteredOrdens.map((ordem) => (
+        <div className="space-y-4">
+          {filteredOrdens.map((ordem, index) => (
             <OrdemListRow
               key={ordem.id}
               ordem={ordem}
+              index={index}
+              onReorder={handleReorder}
               onClick={() => handleVerOrdem(ordem.id)}
             />
           ))}
         </div>
       )}
-      
-      <div className="mt-6 flex justify-end">
-        {!isTecnico && (
-          <Button variant="outline" onClick={() => navigate('/relatorios')} className="flex items-center gap-2">
-            <BarChart className="h-4 w-4" />
-            Ver relatórios de progresso
-          </Button>
-        )}
-      </div>
     </Layout>
   );
 }
