@@ -41,6 +41,17 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
       className="group bg-white hover:bg-gray-50 border-b transition-colors duration-200"
     >
       <div className="grid grid-cols-12 gap-4 px-6 py-4 items-center">
+        {/* Headers */}
+        {index === 0 && (
+          <div className="grid grid-cols-12 gap-4 px-6 py-2 bg-gray-100 text-gray-600 font-medium text-sm">
+            <div className="col-span-1">OS</div>
+            <div className="col-span-3">Descrição</div>
+            <div className="col-span-2">Cliente</div>
+            <div className="col-span-4">Status</div>
+            <div className="col-span-2">Datas</div>
+          </div>
+        )}
+
         {/* OS Number */}
         <div className="col-span-1 flex items-center gap-2">
           <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-800 font-medium">
@@ -55,13 +66,6 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
         {/* Descrição */}
         <div className="col-span-3">
           <h3 className="font-medium text-gray-900">{ordem.nome || "Sem título"}</h3>
-          <div className="mt-1">
-            <div className="flex items-center justify-between text-sm text-gray-500">
-              <span>Progresso</span>
-              <span>{progresso}%</span>
-            </div>
-            <Progress value={progresso} className="h-1.5 mt-1" />
-          </div>
         </div>
 
         {/* Cliente */}
@@ -95,6 +99,15 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
               </span>
             </div>
           </div>
+        </div>
+
+        {/* Progresso (moved to the end) */}
+        <div className="col-span-12 mt-2">
+          <div className="flex items-center justify-between text-sm text-gray-500 px-6">
+            <span>Progresso</span>
+            <span>{progresso}%</span>
+          </div>
+          <Progress value={progresso} className="h-1.5 mt-1 mx-6" />
         </div>
       </div>
     </div>
