@@ -15,9 +15,10 @@ interface ProgressoRelatorioProps {
 export default function ProgressoRelatorio({ ordem }: ProgressoRelatorioProps) {
   const [progressoEtapas, setProgressoEtapas] = useState<{etapa: EtapaOS, nome: string, progresso: number, concluida: boolean}[]>([]);
   const [progressoServicos, setProgressoServicos] = useState<{tipo: string, nome: string, progresso: number, concluido: boolean}[]>([]);
-  const [tempoTotal, setTempoTotal] = useState(0);
+  const [tempoTotalRegistrado, setTempoTotalRegistrado] = useState(0);
   const [tempoEstimado, setTempoEstimado] = useState(0);
   const [diasEmAndamento, setDiasEmAndamento] = useState(0);
+  const [temposPorEtapa, setTemposPorEtapa] = useState<Record<string, number>>({});
   
   const etapasNomes: Record<EtapaOS, string> = {
     lavagem: "Lavagem",
@@ -33,7 +34,9 @@ export default function ProgressoRelatorio({ ordem }: ProgressoRelatorioProps) {
     
     calcularProgressoEtapas();
     calcularProgressoServicos();
-    calcularTempoTotal();
+    const { total, temposPorEtapa: temposEtapas } = calcularTempoTotal();
+    setTempoTotalRegistrado(total);
+    setTemposPorEtapa(temposEtapas);
     calcularTempoEstimado();
     calcularDiasEmAndamento();
   }, [ordem]);
@@ -139,7 +142,6 @@ export default function ProgressoRelatorio({ ordem }: ProgressoRelatorioProps) {
       });
     });
     
-    setTempoTotal(total);
     return { total, temposPorEtapa };
   };
   
@@ -183,7 +185,7 @@ export default function ProgressoRelatorio({ ordem }: ProgressoRelatorioProps) {
   const getStatusTempo = () => {
     if (tempoEstimado === 0) return "neutro";
     
-    const diferenca = tempoEstimado - tempoTotal;
+    const diferenca = tempoEstimado - tempoTotalRegistrado;
     if (Math.abs(diferenca) < tempoEstimado * 0.1) {
       return "neutro"; // Dentro de 10% do estimado
     } else if (diferenca > 0) {
@@ -224,7 +226,6 @@ export default function ProgressoRelatorio({ ordem }: ProgressoRelatorioProps) {
     return Math.round((progressoEtapasMedia * 2 + progressoServicosMedia * 1) / 3);
   };
   
-  const { total: tempoTotal, temposPorEtapa } = calcularTempoTotal();
   const statusInfo = getStatusInfo();
   const progressoTotal = calcularProgressoTotal();
   
@@ -249,7 +250,7 @@ export default function ProgressoRelatorio({ ordem }: ProgressoRelatorioProps) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-muted/50 p-4 rounded-lg">
               <p className="text-muted-foreground">Tempo Total Registrado</p>
-              <p className="text-2xl font-bold">{formatarTempo(tempoTotal)}</p>
+              <p className="text-2xl font-bold">{formatarTempo(tempoTotalRegistrado)}</p>
             </div>
             <div className="bg-muted/50 p-4 rounded-lg">
               <p className="text-muted-foreground">Tempo Estimado</p>
@@ -260,7 +261,7 @@ export default function ProgressoRelatorio({ ordem }: ProgressoRelatorioProps) {
               <div className="flex items-center text-xl font-bold">
                 {statusInfo.icone}
                 {tempoEstimado === 0 ? "Sem estimativa" : (
-                  Math.abs(tempoEstimado - tempoTotal) < 1000 * 60 * 30 ? "No tempo" : formatarTempo(Math.abs(tempoEstimado - tempoTotal))
+                  Math.abs(tempoEstimado - tempoTotalRegistrado) < 1000 * 60 * 30 ? "No tempo" : formatarTempo(Math.abs(tempoEstimado - tempoTotalRegistrado))
                 )}
               </div>
               <p className="text-xs">{statusInfo.texto}</p>
