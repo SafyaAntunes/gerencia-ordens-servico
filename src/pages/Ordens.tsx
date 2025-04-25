@@ -1,11 +1,11 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import OrdemCard from "@/components/ordens/OrdemCard";
+import OrdemListRow from "@/components/ordens/OrdemListRow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Search, Filter, BarChart } from "lucide-react";
+import { PlusCircle, Search, Filter, BarChart, LayoutGrid, LayoutList } from "lucide-react";
 import { OrdemServico, StatusOS, Prioridade } from "@/types/ordens";
 import { 
   Select, 
@@ -14,6 +14,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { toast } from "sonner";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -33,6 +34,7 @@ export default function Ordens({ onLogout }: OrdensProps) {
   const [progressoFilter, setProgressoFilter] = useState("all");
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewType, setViewType] = useState<"grid" | "list">("grid");
   const isTecnico = funcionario?.nivelPermissao === 'tecnico';
 
   useEffect(() => {
@@ -42,22 +44,18 @@ export default function Ordens({ onLogout }: OrdensProps) {
         let ordensData: OrdemServico[] = [];
         
         if (isTecnico && funcionario?.especialidades?.length) {
-          // Fetch orders filtered by technician's specialties
           const especialidadesOrdens = await getOrdensByFuncionarioEspecialidades(funcionario.especialidades);
           ordensData = especialidadesOrdens as OrdemServico[];
         } else {
-          // For admins and managers, fetch all orders
           const q = query(collection(db, "ordens"), orderBy("dataAbertura", "desc"));
           const querySnapshot = await getDocs(q);
           
           querySnapshot.forEach((doc) => {
             const data = doc.data();
             
-            // Calculando progresso para cada ordem se não existir
             let progressoEtapas = data.progressoEtapas;
             
             if (progressoEtapas === undefined) {
-              // Determina etapas baseado nos serviços
               let etapas = ["lavagem", "inspecao_inicial"];
               
               if (data.servicos?.some((s: any) => 
@@ -106,7 +104,7 @@ export default function Ordens({ onLogout }: OrdensProps) {
   }, [isTecnico, funcionario]);
 
   const filteredOrdens = ordens.filter((ordem) => {
-    if (!ordem) return false; // Skip invalid orders
+    if (!ordem) return false;
     
     const searchMatch = 
       (ordem.nome || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -115,7 +113,6 @@ export default function Ordens({ onLogout }: OrdensProps) {
     const statusMatch = statusFilter === "all" ? true : ordem.status === statusFilter;
     const prioridadeMatch = prioridadeFilter === "all" ? true : ordem.prioridade === prioridadeFilter;
     
-    // Filtro de progresso
     let progressoMatch = true;
     const progresso = ordem.progressoEtapas !== undefined ? ordem.progressoEtapas * 100 : 0;
     
@@ -156,12 +153,23 @@ export default function Ordens({ onLogout }: OrdensProps) {
             : 'Ordens de Serviço'}
         </h1>
         
-        {!isTecnico && (
-          <Button onClick={handleNovaOrdem}>
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Nova Ordem
-          </Button>
-        )}
+        <div className="flex items-center gap-4">
+          <ToggleGroup type="single" value={viewType} onValueChange={(value) => value && setViewType(value as "grid" | "list")}>
+            <ToggleGroupItem value="grid" aria-label="Visualização em grid">
+              <LayoutGrid className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="list" aria-label="Visualização em lista">
+              <LayoutList className="h-4 w-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
+
+          {!isTecnico && (
+            <Button onClick={handleNovaOrdem}>
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Nova Ordem
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-6">
@@ -233,12 +241,22 @@ export default function Ordens({ onLogout }: OrdensProps) {
             ? "Nenhuma ordem encontrada para suas especialidades."
             : "Nenhuma ordem encontrada com os filtros selecionados."}
         </div>
-      ) : (
+      ) : viewType === "grid" ? (
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {filteredOrdens.map((ordem) => (
             <OrdemCard 
               key={ordem.id} 
               ordem={ordem} 
+              onClick={() => handleVerOrdem(ordem.id)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filteredOrdens.map((ordem) => (
+            <OrdemListRow
+              key={ordem.id}
+              ordem={ordem}
               onClick={() => handleVerOrdem(ordem.id)}
             />
           ))}
