@@ -1,3 +1,4 @@
+
 import { Cliente } from "@/types/clientes";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -126,15 +127,15 @@ export default function ClienteDetalhes({
                   {selectedMotor.ano && <span className="text-sm text-muted-foreground">Ano: {selectedMotor.ano}</span>}
                 </div>
                 
-                {selectedMotor.cilindrada && (
+                {selectedMotor.cilindradas && (
                   <p className="text-sm">
-                    Cilindrada: <span className="font-medium">{selectedMotor.cilindrada}</span>
+                    Cilindrada: <span className="font-medium">{selectedMotor.cilindradas}</span>
                   </p>
                 )}
                 
-                {selectedMotor.combustivel && (
+                {selectedMotor.numeroSerie && (
                   <Badge variant="outline" className="mt-2">
-                    {selectedMotor.combustivel.charAt(0).toUpperCase() + selectedMotor.combustivel.slice(1)}
+                    {selectedMotor.numeroSerie}
                   </Badge>
                 )}
               </div>
@@ -147,15 +148,15 @@ export default function ClienteDetalhes({
                       {motor.ano && <span className="text-sm text-muted-foreground">Ano: {motor.ano}</span>}
                     </div>
                     
-                    {motor.cilindrada && (
+                    {motor.cilindradas && (
                       <p className="text-sm">
-                        Cilindrada: <span className="font-medium">{motor.cilindrada}</span>
+                        Cilindrada: <span className="font-medium">{motor.cilindradas}</span>
                       </p>
                     )}
                     
-                    {motor.combustivel && (
+                    {motor.numeroSerie && (
                       <Badge variant="outline" className="mt-2">
-                        {motor.combustivel.charAt(0).toUpperCase() + motor.combustivel.slice(1)}
+                        {motor.numeroSerie}
                       </Badge>
                     )}
                   </div>

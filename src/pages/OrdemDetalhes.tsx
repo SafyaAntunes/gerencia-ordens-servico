@@ -563,18 +563,16 @@ const OrdemDetalhes = ({ onLogout }: OrdemDetalhesProps) => {
                             <p className="font-medium">{motor.ano}</p>
                           </div>
                         )}
-                        {motor.cilindrada && (
+                        {motor.cilindradas && (
                           <div>
                             <p className="text-sm text-muted-foreground">Cilindrada</p>
-                            <p className="font-medium">{motor.cilindrada}</p>
+                            <p className="font-medium">{motor.cilindradas}</p>
                           </div>
                         )}
-                        {motor.combustivel && (
+                        {motor.numeroSerie && (
                           <div>
-                            <p className="text-sm text-muted-foreground">Combustível</p>
-                            <p className="font-medium">
-                              {motor.combustivel.charAt(0).toUpperCase() + motor.combustivel.slice(1)}
-                            </p>
+                            <p className="text-sm text-muted-foreground">Número de Série</p>
+                            <p className="font-medium">{motor.numeroSerie}</p>
                           </div>
                         )}
                       </div>
