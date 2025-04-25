@@ -4,7 +4,6 @@ import { ptBR } from "date-fns/locale";
 import { Hash } from "lucide-react";
 import { OrdemServico } from "@/types/ordens";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { formatCurrency } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 
 interface OrdemListRowProps {
@@ -39,62 +38,62 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onClick={onClick}
-      className="group bg-card border rounded-lg shadow-sm hover:shadow-md transition-all duration-200 mb-4"
+      className="group bg-white hover:bg-gray-50 border-b transition-colors duration-200"
     >
-      <div className="grid grid-cols-12 gap-4 p-6">
-        {/* Ordem de Serviço */}
-        <div className="col-span-2 flex items-center gap-2">
-          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-muted-foreground font-medium">
+      <div className="grid grid-cols-12 gap-4 px-6 py-4 items-center">
+        {/* OS Number */}
+        <div className="col-span-1 flex items-center gap-2">
+          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-800 font-medium">
             {index + 1}
           </div>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1">
-              <Hash className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">{ordem.id}</span>
-            </div>
-            <StatusBadge status={ordem.status} size="sm" />
+          <div className="flex items-center gap-1 text-gray-600">
+            <Hash className="h-4 w-4" />
+            {ordem.id}
           </div>
         </div>
 
         {/* Descrição */}
         <div className="col-span-3">
-          <h3 className="font-semibold">{ordem.nome || "Sem título"}</h3>
-          <div className="flex flex-col gap-2 mt-2">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Progresso</span>
-              <span className="text-xs text-muted-foreground">{progresso}%</span>
+          <h3 className="font-medium text-gray-900">{ordem.nome || "Sem título"}</h3>
+          <div className="mt-1">
+            <div className="flex items-center justify-between text-sm text-gray-500">
+              <span>Progresso</span>
+              <span>{progresso}%</span>
             </div>
-            <Progress value={progresso} className="h-2" />
+            <Progress value={progresso} className="h-1.5 mt-1" />
           </div>
         </div>
 
         {/* Cliente */}
         <div className="col-span-2">
-          <p className="font-medium">{clienteNome}</p>
+          <p className="text-gray-900">{clienteNome}</p>
         </div>
 
         {/* Status e Prioridade */}
-        <div className="col-span-3 flex items-center justify-between">
-          <div className="flex flex-col gap-2">
-            <StatusBadge status={ordem.status} size="sm" />
-            <StatusBadge status={ordem.prioridade || "media"} size="sm" />
-          </div>
-          {ordem.valorTotal && (
-            <div className="font-medium">{formatCurrency(ordem.valorTotal)}</div>
-          )}
+        <div className="col-span-4 flex items-center gap-4">
+          <StatusBadge status={ordem.status} size="md" />
+          <StatusBadge status={ordem.prioridade || "media"} size="md" />
         </div>
 
         {/* Datas */}
-        <div className="col-span-2 flex flex-col gap-1 text-sm text-muted-foreground">
-          <div>
-            Abertura: {ordem.dataAbertura ? 
-              format(new Date(ordem.dataAbertura), "dd MMM yyyy", { locale: ptBR }) :
-              "Data não definida"}
-          </div>
-          <div>
-            Previsão: {ordem.dataPrevistaEntrega ? 
-              format(new Date(ordem.dataPrevistaEntrega), "dd MMM yyyy", { locale: ptBR }) :
-              "Não definida"}
+        <div className="col-span-2 text-sm text-gray-500">
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span>Abertura:</span>
+              <span>
+                {ordem.dataAbertura ? 
+                  format(new Date(ordem.dataAbertura), "dd MMM yyyy", { locale: ptBR }) :
+                  "Data não definida"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Previsão:</span>
+              <span>
+                {ordem.dataPrevistaEntrega ? 
+                  format(new Date(ordem.dataPrevistaEntrega), "dd MMM yyyy", { locale: ptBR }) :
+                  "Não definida"}
+              </span>
+            </div>
           </div>
         </div>
       </div>
