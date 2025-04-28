@@ -1,4 +1,3 @@
-
 export interface Cliente {
   id: string;
   nome: string;
@@ -18,7 +17,7 @@ export interface Motor {
   marca: string;
   ano?: string;
   numeroSerie?: string;
-  cilindrada?: string;
+  cilindrada?: string; // Changed from cilindradas
   combustivel?: 'gasolina' | 'diesel' | 'flex' | 'etanol' | 'gnv';
   observacoes?: string;
   fotos?: string[];

@@ -1,4 +1,3 @@
-
 import { Cliente } from "@/types/clientes";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -119,7 +118,7 @@ export default function ClienteDetalhes({
           
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-muted-foreground">Motores</h4>
-            
+          
             {selectedMotor ? (
               <div className="border border-border rounded-md p-3">
                 <div className="flex justify-between">
@@ -127,16 +126,16 @@ export default function ClienteDetalhes({
                   {selectedMotor.ano && <span className="text-sm text-muted-foreground">Ano: {selectedMotor.ano}</span>}
                 </div>
                 
-                {selectedMotor.cilindradas && (
+                {selectedMotor.cilindrada && (
                   <p className="text-sm">
-                    Cilindrada: <span className="font-medium">{selectedMotor.cilindradas}</span>
+                    Cilindrada: <span className="font-medium">{selectedMotor.cilindrada}</span>
                   </p>
                 )}
                 
-                {selectedMotor.numeroSerie && (
-                  <Badge variant="outline" className="mt-2">
-                    {selectedMotor.numeroSerie}
-                  </Badge>
+                {selectedMotor.combustivel && (
+                  <p className="text-sm mt-1">
+                    Combustível: <span className="font-medium">{selectedMotor.combustivel}</span>
+                  </p>
                 )}
               </div>
             ) : cliente.motores && cliente.motores.length > 0 ? (
@@ -148,16 +147,16 @@ export default function ClienteDetalhes({
                       {motor.ano && <span className="text-sm text-muted-foreground">Ano: {motor.ano}</span>}
                     </div>
                     
-                    {motor.cilindradas && (
+                    {motor.cilindrada && (
                       <p className="text-sm">
-                        Cilindrada: <span className="font-medium">{motor.cilindradas}</span>
+                        Cilindrada: <span className="font-medium">{motor.cilindrada}</span>
                       </p>
                     )}
                     
-                    {motor.numeroSerie && (
-                      <Badge variant="outline" className="mt-2">
-                        {motor.numeroSerie}
-                      </Badge>
+                    {motor.combustivel && (
+                      <p className="text-sm mt-1">
+                        Combustível: <span className="font-medium">{motor.combustivel}</span>
+                      </p>
                     )}
                   </div>
                 ))}
