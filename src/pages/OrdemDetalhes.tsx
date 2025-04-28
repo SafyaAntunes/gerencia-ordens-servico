@@ -133,6 +133,55 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
         return imageUrls;
       };
       
+      // Corrigido: Preservar subatividades existentes do serviço atual
+      const preserveExistingSubactivities = (currentServicos = [], newServicosTipos = []) => {
+        // Criar um mapa dos serviços existentes por tipo
+        const servicosMap = currentServicos.reduce((acc, servico) => {
+          acc[servico.tipo] = servico;
+          return acc;
+        }, {});
+        
+        return newServicosTipos.map(tipo => {
+          const existingServico = servicosMap[tipo];
+          
+          // Obter subatividades do formulário
+          const novasSubatividades = values.servicosSubatividades?.[tipo] || [];
+          
+          // Se existe um serviço com esse tipo, vamos preservar as propriedades importantes
+          if (existingServico && existingServico.subatividades) {
+            // Mapear as novas subatividades mantendo o estado "concluida" das existentes
+            const subatividadesPreservadas = novasSubatividades.map(novaSub => {
+              const subExistente = existingServico.subatividades?.find(s => s.id === novaSub.id);
+              if (subExistente) {
+                return {
+                  ...novaSub,
+                  concluida: subExistente.concluida !== undefined ? subExistente.concluida : novaSub.concluida
+                };
+              }
+              return novaSub;
+            });
+            
+            return {
+              tipo,
+              descricao: values.servicosDescricoes?.[tipo] || "",
+              concluido: existingServico.concluido || false,
+              subatividades: subatividadesPreservadas,
+              funcionarioId: existingServico.funcionarioId,
+              funcionarioNome: existingServico.funcionarioNome,
+              dataConclusao: existingServico.dataConclusao
+            };
+          }
+          
+          // Caso contrário, criar um novo serviço
+          return {
+            tipo,
+            descricao: values.servicosDescricoes?.[tipo] || "",
+            concluido: false,
+            subatividades: novasSubatividades
+          };
+        });
+      };
+      
       const updatedOrder: Partial<OrdemServico> = {
         nome: values.nome,
         cliente: {
@@ -143,12 +192,7 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
         dataPrevistaEntrega: values.dataPrevistaEntrega,
         prioridade: values.prioridade,
         motorId: values.motorId,
-        servicos: (values.servicosTipos || []).map((tipo: string) => ({
-          tipo,
-          descricao: values.servicosDescricoes?.[tipo] || "",
-          concluido: false,
-          subatividades: values.servicosSubatividades?.[tipo] || []
-        }))
+        servicos: preserveExistingSubactivities(ordem?.servicos, values.servicosTipos)
       };
       
       if (values.fotosEntrada && values.fotosEntrada.length > 0) {

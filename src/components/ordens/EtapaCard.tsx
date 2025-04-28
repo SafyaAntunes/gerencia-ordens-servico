@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
@@ -6,7 +5,7 @@ import { formatTime } from "@/utils/timerUtils";
 import { Progress } from "../ui/progress";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { CheckCircle2, User } from "lucide-react";
+import { CheckCircle2, User, RefreshCw } from "lucide-react";
 import ServicoTracker from "./ServicoTracker";
 import OrdemCronometro from "./OrdemCronometro";
 import { useAuth } from "@/hooks/useAuth";
@@ -76,6 +75,30 @@ export default function EtapaCard({
   const podeAtribuirFuncionario = funcionario?.nivelPermissao === 'admin' || 
                                  funcionario?.nivelPermissao === 'gerente';
   
+  const podeTrabalharNaEtapa = () => {
+    if (funcionario?.nivelPermissao === 'admin' || 
+        funcionario?.nivelPermissao === 'gerente') {
+      return true;
+    }
+    
+    if (etapa === 'lavagem') {
+      return funcionario?.especialidades?.includes('lavagem');
+    }
+    
+    if (etapa === 'inspecao_inicial' || etapa === 'inspecao_final') {
+      if (servicoTipo) {
+        return funcionario?.especialidades?.includes(servicoTipo);
+      }
+      return false;
+    }
+    
+    if (servicoTipo) {
+      return funcionario?.especialidades?.includes(servicoTipo);
+    }
+    
+    return funcionario?.especialidades?.includes(etapa);
+  };
+  
   useEffect(() => {
     const carregarFuncionarios = async () => {
       try {
@@ -102,7 +125,6 @@ export default function EtapaCard({
     }
   }, [podeAtribuirFuncionario]);
   
-  // Cálculo de progresso somente se houver serviços 
   useEffect(() => {
     if (servicos.length === 0) return;
     
@@ -158,6 +180,30 @@ export default function EtapaCard({
           (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
         );
       }
+    }
+  };
+  
+  const handleReiniciarEtapa = () => {
+    if (!funcionario?.id) {
+      toast.error("É necessário estar logado para reiniciar uma etapa");
+      return;
+    }
+    
+    if (!podeAtribuirFuncionario && !podeTrabalharNaEtapa()) {
+      toast.error("Você não tem permissão para reiniciar esta etapa");
+      return;
+    }
+    
+    if (onEtapaStatusChange) {
+      onEtapaStatusChange(
+        etapa, 
+        false,
+        funcionario.id, 
+        funcionario.nome,
+        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+      );
+      
+      toast.success("Etapa reaberta para continuação");
     }
   };
   
@@ -224,6 +270,18 @@ export default function EtapaCard({
         <div className="mb-4 flex items-center text-sm text-muted-foreground">
           <User className="h-4 w-4 mr-1" />
           <span>Concluído por: {etapaInfo.funcionarioNome}</span>
+          
+          {(podeAtribuirFuncionario || podeTrabalharNaEtapa()) && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="ml-auto text-blue-500 hover:text-blue-700"
+              onClick={handleReiniciarEtapa}
+            >
+              <RefreshCw className="h-4 w-4 mr-1" />
+              Reiniciar
+            </Button>
+          )}
         </div>
       )}
       

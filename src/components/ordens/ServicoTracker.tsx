@@ -11,7 +11,8 @@ import {
   Pause, 
   StopCircle, 
   Clock4,
-  User
+  User,
+  RefreshCw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatTime } from "@/utils/timerUtils";
@@ -203,6 +204,21 @@ export default function ServicoTracker({
     }
   };
   
+  const handleReiniciarServico = () => {
+    if (!funcionario?.id) {
+      toast.error("É necessário estar logado para reiniciar um serviço");
+      return;
+    }
+    
+    if (!temPermissao) {
+      toast.error("Você não tem permissão para reiniciar este tipo de serviço");
+      return;
+    }
+    
+    onServicoStatusChange(false, servico.funcionarioId, servico.funcionarioNome);
+    toast.success("Serviço reaberto para continuação");
+  };
+  
   const handleConfirmarAtribuicao = () => {
     if (funcionarioSelecionadoId) {
       onServicoStatusChange(true, funcionarioSelecionadoId, funcionarioSelecionadoNome);
@@ -265,6 +281,21 @@ export default function ServicoTracker({
               <div className="mt-2 flex items-center text-xs text-muted-foreground">
                 <User className="h-3 w-3 mr-1" />
                 <span>Concluído por: {servico.funcionarioNome}</span>
+                
+                {temPermissao && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="ml-auto text-blue-500 hover:text-blue-700"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleReiniciarServico();
+                    }}
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Reiniciar
+                  </Button>
+                )}
               </div>
             )}
           </CardHeader>
