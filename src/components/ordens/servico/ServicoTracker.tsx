@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Servico, SubAtividade } from "@/types/ordens";
@@ -101,6 +100,7 @@ export default function ServicoTracker({
   const progressPercentage = totalSubatividades > 0 
     ? Math.round((completedSubatividades / totalSubatividades) * 100)
     : 0;
+  const todasSubatividadesConcluidas = totalSubatividades > 0 && completedSubatividades === totalSubatividades;
   
   const tempoTotalEstimado = subatividadesFiltradas.reduce((total, sub) => {
     return total + (sub.tempoEstimado || 0);
@@ -149,6 +149,11 @@ export default function ServicoTracker({
       toast.error("Você não tem permissão para editar este tipo de serviço");
       return;
     }
+
+    if (totalSubatividades > 0 && !todasSubatividadesConcluidas) {
+      toast.error("É necessário concluir todas as subatividades antes de finalizar o serviço");
+      return;
+    }
     
     if (isRunning || isPaused) {
       handleFinish();
@@ -184,10 +189,15 @@ export default function ServicoTracker({
     const funcNome = funcionarioSelecionadoNome || funcionario?.nome;
     
     if (dialogAction === 'start') {
-      // Apenas inicia o timer com o funcionário selecionado
       handleStart();
+      console.log("Timer iniciado após atribuição de funcionário");
     } else if (dialogAction === 'finish') {
-      // Marca o serviço como concluído com o funcionário selecionado
+      if (totalSubatividades > 0 && !todasSubatividadesConcluidas) {
+        toast.error("É necessário concluir todas as subatividades antes de finalizar o serviço");
+        setAtribuirFuncionarioDialogOpen(false);
+        return;
+      }
+      
       onServicoStatusChange(true, funcId, funcNome);
     }
     

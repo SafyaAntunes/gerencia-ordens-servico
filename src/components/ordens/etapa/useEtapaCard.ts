@@ -90,7 +90,10 @@ export function useEtapaCard(etapa: string, servicoTipo?: string) {
   };
   
   const handleTimerStart = () => {
+    console.log("Timer sendo iniciado em useEtapaCard");
     setIsAtivo(true);
+    // Retorna true para indicar que o timer foi iniciado com sucesso
+    return true;
   };
   
   const handleMarcarConcluido = () => {

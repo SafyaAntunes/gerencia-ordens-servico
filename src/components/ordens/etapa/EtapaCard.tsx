@@ -69,6 +69,16 @@ export default function EtapaCard({
     handleMarcarConcluido
   } = useEtapaCard(etapa, servicoTipo);
   
+  // Verificar se todas as subatividades dos serviços estão concluídas
+  const todasSubatividadesConcluidas = () => {
+    if (servicos.length === 0) return true;
+    
+    return servicos.every(servico => {
+      const subatividades = servico.subatividades?.filter(s => s.selecionada) || [];
+      return subatividades.length === 0 || subatividades.every(sub => sub.concluida);
+    });
+  };
+  
   const isEtapaConcluida = () => {
     if ((etapa === "inspecao_inicial" || etapa === "inspecao_final") && servicoTipo) {
       return etapaInfo?.concluido && etapaInfo?.servicoTipo === servicoTipo;
@@ -79,6 +89,12 @@ export default function EtapaCard({
   const etapaComCronometro = ['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa);
   
   const handleEtapaConcluida = (tempoTotal: number) => {
+    // Verificar se todas as subatividades estão concluídas
+    if (!todasSubatividadesConcluidas()) {
+      toast.error("É necessário concluir todas as subatividades antes de finalizar a etapa");
+      return;
+    }
+    
     if (onEtapaStatusChange) {
       if (podeAtribuirFuncionario) {
         setDialogAction('finish');
@@ -125,9 +141,17 @@ export default function EtapaCard({
       const funcNome = funcionarioSelecionadoNome || funcionario?.nome;
       
       if (dialogAction === 'start') {
-        // Apenas inicia o timer com o funcionário selecionado
+        // Primeiro iniciar o timer e depois fechar o diálogo
         handleTimerStart();
+        console.log("Timer iniciado após atribuição de funcionário na etapa");
       } else if (dialogAction === 'finish') {
+        // Verificar novamente se todas as subatividades estão concluídas
+        if (!todasSubatividadesConcluidas()) {
+          toast.error("É necessário concluir todas as subatividades antes de finalizar a etapa");
+          setAtribuirFuncionarioDialogOpen(false);
+          return;
+        }
+        
         // Marca a etapa como concluída com o funcionário selecionado
         onEtapaStatusChange(
           etapa, 

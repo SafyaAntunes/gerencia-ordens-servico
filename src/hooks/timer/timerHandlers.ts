@@ -35,11 +35,13 @@ export const createTimerHandlers = ({
       return;
     }
     
+    console.log("Iniciando timer no timerHandlers");
     dispatch({ 
       type: "START_TIMER", 
       payload: { now: Date.now() } 
     });
     
+    // Chamada ao callback onStart APÓS iniciar o timer
     onStart?.();
     
     if (etapa) {

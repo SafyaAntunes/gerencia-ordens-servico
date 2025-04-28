@@ -1,11 +1,9 @@
 
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Hash } from "lucide-react";
+import { Clock, Calendar, User } from "lucide-react";
 import { OrdemServico } from "@/types/ordens";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import OrderTableHeader from "./OrderTableHeader";
-import OrderProgress from "./OrderProgress";
 
 interface OrdemListRowProps {
   ordem: OrdemServico;
@@ -17,6 +15,7 @@ interface OrdemListRowProps {
 export default function OrdemListRow({ ordem, index, onReorder, onClick }: OrdemListRowProps) {
   const clienteNome = ordem.cliente?.nome || "Cliente não especificado";
   const progresso = ordem.progressoEtapas !== undefined ? Math.round(ordem.progressoEtapas * 100) : 0;
+  const statusConcluido = progresso === 100;
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('text/plain', index.toString());
@@ -39,63 +38,74 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onClick={onClick}
-      className="group bg-white hover:bg-gray-50 border-b transition-colors duration-200"
+      className="group bg-white hover:bg-gray-50 border border-gray-100 rounded-md mb-2 shadow-sm transition-all duration-200 cursor-pointer"
     >
-      <div className="grid grid-cols-12 gap-4 px-6 py-4 items-center">
-        {/* Show header only for first row */}
-        {index === 0 && <OrderTableHeader />}
-
-        {/* OS Number */}
-        <div className="col-span-1 flex items-center gap-2">
-          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-800 font-medium">
-            {index + 1}
-          </div>
-          <div className="flex items-center gap-1 text-gray-600">
-            <Hash className="h-4 w-4" />
+      <div className="grid grid-cols-12 gap-2 p-4 items-center">
+        {/* OS Number & Name */}
+        <div className="col-span-4 flex items-center space-x-3">
+          <div className="flex flex-shrink-0 items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-800 font-medium">
             {ordem.id}
           </div>
-        </div>
-
-        {/* Descrição */}
-        <div className="col-span-3">
-          <h3 className="font-medium text-gray-900">{ordem.nome || "Sem título"}</h3>
+          <div>
+            <h3 className="font-medium text-gray-900 line-clamp-1">{ordem.nome || "Sem título"}</h3>
+            <p className="text-sm text-gray-500">#{index + 1}</p>
+          </div>
         </div>
 
         {/* Cliente */}
-        <div className="col-span-2">
-          <p className="text-gray-900">{clienteNome}</p>
+        <div className="col-span-3">
+          <p className="font-medium text-gray-900">{clienteNome}</p>
+          {ordem.etapasAndamento && Object.values(ordem.etapasAndamento).some(etapa => etapa?.funcionarioNome) && (
+            <div className="flex items-center text-xs text-gray-500 mt-1">
+              <User className="h-3 w-3 mr-1" />
+              <span className="truncate">
+                {Object.values(ordem.etapasAndamento)
+                  .filter(etapa => etapa?.funcionarioNome)
+                  .map(etapa => etapa?.funcionarioNome)
+                  .join(", ")}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Status e Prioridade */}
-        <div className="col-span-4 flex items-center gap-4">
-          <StatusBadge status={ordem.status} size="md" />
-          <StatusBadge status={ordem.prioridade || "media"} size="md" />
+        <div className="col-span-3 flex flex-col space-y-2">
+          <StatusBadge status={ordem.status} size="sm" />
+          <StatusBadge status={ordem.prioridade || "media"} size="sm" />
         </div>
 
-        {/* Datas */}
-        <div className="col-span-2 text-sm text-gray-500">
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <span>Abertura:</span>
-              <span>
-                {ordem.dataAbertura ? 
-                  format(new Date(ordem.dataAbertura), "dd MMM yyyy", { locale: ptBR }) :
-                  "Data não definida"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Previsão:</span>
-              <span>
-                {ordem.dataPrevistaEntrega ? 
-                  format(new Date(ordem.dataPrevistaEntrega), "dd MMM yyyy", { locale: ptBR }) :
-                  "Não definida"}
-              </span>
-            </div>
+        {/* Datas e Progresso */}
+        <div className="col-span-2 text-xs text-gray-500">
+          <div className="flex items-center mb-1">
+            <Calendar className="h-3 w-3 mr-1" />
+            <span>
+              {ordem.dataAbertura ? 
+                format(new Date(ordem.dataAbertura), "dd/MM/yy", { locale: ptBR }) :
+                "N/D"}
+            </span>
+          </div>
+          <div className="flex items-center">
+            <Clock className="h-3 w-3 mr-1" />
+            <span>
+              {ordem.dataPrevistaEntrega ? 
+                format(new Date(ordem.dataPrevistaEntrega), "dd/MM/yy", { locale: ptBR }) :
+                "N/D"}
+            </span>
           </div>
         </div>
 
         {/* Progress bar */}
-        <OrderProgress progresso={progresso} />
+        <div className="col-span-12 mt-2">
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div 
+              className={`h-2 rounded-full ${statusConcluido ? 'bg-green-500' : 'bg-blue-500'}`}
+              style={{ width: `${progresso}%` }}
+            />
+          </div>
+          <div className="flex justify-end mt-1">
+            <span className="text-xs font-medium text-gray-500">{progresso}%</span>
+          </div>
+        </div>
       </div>
     </div>
   );
