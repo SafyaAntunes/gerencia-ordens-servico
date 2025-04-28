@@ -9,7 +9,9 @@ import {
   getDoc, 
   setDoc, 
   updateDoc, 
-  deleteDoc
+  deleteDoc,
+  query,
+  orderBy
 } from 'firebase/firestore';
 import { OrdemServico } from '@/types/ordens';
 
@@ -21,13 +23,17 @@ export const useOrdens = () => {
     setLoading(true);
     try {
       const ordensRef = collection(db, 'ordens_servico');
-      const snapshot = await getDocs(ordensRef);
+      const q = query(ordensRef, orderBy("dataAbertura", "desc"));
+      const snapshot = await getDocs(q);
       const ordensData = snapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
+        dataAbertura: doc.data().dataAbertura?.toDate() || new Date(),
+        dataPrevistaEntrega: doc.data().dataPrevistaEntrega?.toDate() || new Date()
       })) as OrdemServico[];
       setOrdens(ordensData);
     } catch (error) {
+      console.error("Erro ao carregar ordens:", error);
       toast.error('Erro ao carregar ordens de serviço.');
     } finally {
       setLoading(false);

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { LogoutProps } from "@/types/props";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { OrdemServico } from "@/types/ordens";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -57,7 +56,12 @@ const Agenda = ({ onLogout }: AgendaProps) => {
     const fetchOrdens = async () => {
       setIsLoading(true);
       try {
-        const querySnapshot = await getDocs(collection(db, "ordens"));
+        const q = query(
+          collection(db, "ordens_servico"), 
+          orderBy("dataAbertura", "desc")
+        );
+        
+        const querySnapshot = await getDocs(q);
         const eventosTemp: EventoOS[] = [];
         
         querySnapshot.forEach((doc) => {
@@ -69,23 +73,21 @@ const Agenda = ({ onLogout }: AgendaProps) => {
             dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
           } as OrdemServico;
           
-          // Adicionar evento de entrega
           eventosTemp.push({
             id: `entrega-${ordem.id}`,
-            title: `Entrega - ${ordem.nome}`,
+            title: `Entrega - ${ordem.nome || 'Sem nome'}`,
             date: new Date(ordem.dataPrevistaEntrega),
             type: "entrega",
-            status: ordem.status,
+            status: ordem.status || 'pendente',
             ordemId: ordem.id
           });
           
-          // Adicionar evento de recebimento
           eventosTemp.push({
             id: `recebimento-${ordem.id}`,
-            title: `Recebimento - ${ordem.nome}`,
+            title: `Recebimento - ${ordem.nome || 'Sem nome'}`,
             date: new Date(ordem.dataAbertura),
             type: "recebimento",
-            status: ordem.status,
+            status: ordem.status || 'pendente',
             ordemId: ordem.id
           });
         });
@@ -93,6 +95,7 @@ const Agenda = ({ onLogout }: AgendaProps) => {
         setEventos(eventosTemp);
       } catch (error) {
         console.error("Erro ao buscar ordens:", error);
+        toast.error("Falha ao carregar eventos do calendário");
       } finally {
         setIsLoading(false);
       }
@@ -179,7 +182,6 @@ const Agenda = ({ onLogout }: AgendaProps) => {
   
   const getEventColor = (type: string, status: string) => {
     if (status === "entregue") {
-      // Eventos de ordens entregues devem ter uma cor mais clara/desativada
       return "bg-gray-100 text-gray-500 border-gray-300";
     }
     
@@ -199,7 +201,6 @@ const Agenda = ({ onLogout }: AgendaProps) => {
   
   const isEntregue = (event: EventoOS) => event.status === "entregue";
 
-  // Componente de renderização personalizado para os dias com eventos
   const renderDayContents = (day: Date) => {
     const dayEvents = getEventsByDate(day);
     
@@ -253,7 +254,6 @@ const Agenda = ({ onLogout }: AgendaProps) => {
   const handleNovoEvento = () => {
     setNovoEventoAberto(true);
     
-    // Se tiver uma data selecionada, preenche o formulário com ela
     if (date) {
       form.setValue('data', date.toISOString().split('T')[0]);
     }
@@ -261,8 +261,6 @@ const Agenda = ({ onLogout }: AgendaProps) => {
   
   const onSubmitNovoEvento = (values: NovoEventoFormValues) => {
     try {
-      // Aqui você implementaria a lógica para salvar o evento no Firebase
-      // Por enquanto, vamos apenas adicionar ao estado local
       const dataEvento = new Date(`${values.data}T${values.hora}`);
       
       const novoEvento: EventoOS = {
@@ -347,32 +345,39 @@ const Agenda = ({ onLogout }: AgendaProps) => {
               
               <div className="mt-4">
                 <Tabs value={view} className="mt-0">
-                  <TabsContent value="month">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      className="border rounded-md"
-                      components={{
-                        Day: (props) => {
-                          const { date: dayDate, ...rest } = props;
-                          if (!dayDate) return null;
-                          return <div {...rest}>{renderDayContents(dayDate)}</div>;
-                        }
-                      }}
-                      modifiers={{
-                        event: (date) => getEventsByDate(date).length > 0,
-                      }}
-                      modifiersClassNames={{
-                        event: "",
-                      }}
-                      // Corrigindo o problema de meses não exibidos
-                      fromMonth={new Date(2023, 0)}
-                      toMonth={new Date(2025, 11)}
-                      formatters={{
-                        formatMonthCaption: (date) => getMonthName(date.getMonth()) + ' ' + date.getFullYear(),
-                      }}
-                    />
+                  <TabsContent value="month" className="flex justify-center">
+                    <div className="w-full max-w-4xl">
+                      <Calendar
+                        mode="single"
+                        selected={date}
+                        onSelect={setDate}
+                        className="border rounded-md w-full max-h-[600px] mx-auto"
+                        components={{
+                          Day: (props) => {
+                            const { date: dayDate, ...rest } = props;
+                            if (!dayDate) return null;
+                            return <div {...rest}>{renderDayContents(dayDate)}</div>;
+                          }
+                        }}
+                        modifiers={{
+                          event: (date) => getEventsByDate(date).length > 0,
+                        }}
+                        modifiersClassNames={{
+                          event: "",
+                        }}
+                        fromMonth={new Date(2023, 0)}
+                        toMonth={new Date(2025, 11)}
+                        formatters={{
+                          formatMonthCaption: (date) => getMonthName(date.getMonth()) + ' ' + date.getFullYear(),
+                        }}
+                        styles={{
+                          months: { fontSize: '1rem' },
+                          caption: { fontSize: '1.25rem' },
+                          cell: { width: '3.5rem', height: '3.5rem' },
+                          day: { width: '3.5rem', height: '3.5rem', fontSize: '1rem' }
+                        }}
+                      />
+                    </div>
                   </TabsContent>
                   
                   <TabsContent value="day">
@@ -462,7 +467,6 @@ const Agenda = ({ onLogout }: AgendaProps) => {
         </Card>
       </div>
       
-      {/* Modal para adicionar novo evento */}
       <Dialog open={novoEventoAberto} onOpenChange={setNovoEventoAberto}>
         <DialogContent>
           <DialogHeader>
