@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -6,6 +5,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { OrdemServico, StatusOS } from "@/types/ordens";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ClienteMotorInfo } from "./ClienteMotorInfo";
 
 interface OrderDetailsTabProps {
   ordem: OrdemServico;
@@ -99,4 +99,3 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
     </div>
   );
 }
-

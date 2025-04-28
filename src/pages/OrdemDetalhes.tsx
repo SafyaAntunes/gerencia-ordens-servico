@@ -5,9 +5,10 @@ import { LogoutProps } from "@/types/props";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ChevronLeft, Edit, Trash } from "lucide-react";
-import { OrdemServico, StatusOS } from "@/types/ordens";
+import { OrdemServico, StatusOS, SubAtividade } from "@/types/ordens";
 import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import OrdemForm from "@/components/ordens/OrdemForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,6 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { getDoc as getClienteDoc } from "firebase/firestore";
 
 interface OrdemDetalhesProps extends LogoutProps {}
 
@@ -70,6 +72,21 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
       toast.error("Erro ao carregar dados da ordem");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchMotorDetails = async (clienteId: string, motorId: string) => {
+    try {
+      if (!clienteId || !motorId) return;
+      
+      const motorRef = doc(db, `clientes/${clienteId}/motores`, motorId);
+      const motorDoc = await getClienteDoc(motorRef);
+      
+      if (motorDoc.exists()) {
+        console.log("Motor details fetched successfully");
+      }
+    } catch (error) {
+      console.error("Error fetching motor details:", error);
     }
   };
 

@@ -1,9 +1,8 @@
-
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileUpload } from "@/components/ui/file-upload";
 import { Camera, Upload } from "lucide-react";
-import { useImages } from "@/hooks/useFirebase";
+import { useStorage } from "@/hooks/useStorage";
 import { toast } from "sonner";
 
 interface FotosFormProps {
@@ -22,12 +21,11 @@ export default function FotosForm({
   ordemId = "temp",
 }: FotosFormProps) {
   const [activeTab, setActiveTab] = useState("entrada");
-  const { uploadFile, deleteFile } = useImages();
+  const { uploadFile, deleteFile } = useStorage();
 
   const handleAddFotoEntrada = async (file: File | null) => {
     if (file) {
       try {
-        // Se estamos em uma ordem existente, podemos fazer upload imediatamente
         if (ordemId !== "temp") {
           const url = await uploadFile(file, `ordens/${ordemId}/entrada`);
           if (url) {
@@ -35,7 +33,6 @@ export default function FotosForm({
             toast.success("Arquivo carregado com sucesso!");
           }
         } else {
-          // Caso contrário, mantemos o arquivo para upload posterior
           onChangeFotosEntrada([...fotosEntrada, file]);
         }
       } catch (error) {
@@ -51,7 +48,6 @@ export default function FotosForm({
     newFotos.splice(index, 1);
     onChangeFotosEntrada(newFotos);
 
-    // Se for uma URL, tentar excluir do storage
     if (typeof foto === 'string' && foto.startsWith('http')) {
       try {
         await deleteFile(foto);
@@ -64,7 +60,6 @@ export default function FotosForm({
   const handleAddFotoSaida = async (file: File | null) => {
     if (file) {
       try {
-        // Se estamos em uma ordem existente, podemos fazer upload imediatamente
         if (ordemId !== "temp") {
           const url = await uploadFile(file, `ordens/${ordemId}/saida`);
           if (url) {
@@ -72,7 +67,6 @@ export default function FotosForm({
             toast.success("Arquivo carregado com sucesso!");
           }
         } else {
-          // Caso contrário, mantemos o arquivo para upload posterior
           onChangeFotosSaida([...fotosSaida, file]);
         }
       } catch (error) {
@@ -88,7 +82,6 @@ export default function FotosForm({
     newFotos.splice(index, 1);
     onChangeFotosSaida(newFotos);
 
-    // Se for uma URL, tentar excluir do storage
     if (typeof foto === 'string' && foto.startsWith('http')) {
       try {
         await deleteFile(foto);
