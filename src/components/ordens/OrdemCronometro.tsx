@@ -19,6 +19,7 @@ export interface OrdemCronometroProps {
   etapa: EtapaOS;
   tipoServico?: TipoServico;
   onStart?: () => void;
+  onCustomStart?: () => void; // Novo prop para inicialização customizada
   onPause?: (motivo?: string) => void;
   onResume?: () => void;
   onFinish?: (tempoTotal: number) => void;
@@ -32,6 +33,7 @@ export default function OrdemCronometro({
   etapa,
   tipoServico,
   onStart,
+  onCustomStart,
   onPause,
   onResume,
   onFinish,
@@ -78,6 +80,15 @@ export default function OrdemCronometro({
   
   const status = getStatus();
   
+  // Função para gerenciar o início do timer, possivelmente abrindo o diálogo
+  const handleStartTimer = () => {
+    if (onCustomStart) {
+      onCustomStart();
+    } else {
+      handleStart();
+    }
+  };
+  
   // If the stage is completed, just show the saved time without controls
   if (isEtapaConcluida) {
     return <CompletedTimer totalSavedTime={totalSavedTime} />;
@@ -114,7 +125,7 @@ export default function OrdemCronometro({
         isRunning={isRunning}
         isPaused={isPaused}
         usarCronometro={usarCronometro}
-        onStart={handleStart}
+        onStart={handleStartTimer} // Usando a nova função personalizada
         onPause={handlePause}
         onResume={handleResume}
         onFinish={handleFinish}

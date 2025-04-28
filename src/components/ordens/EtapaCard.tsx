@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
@@ -67,6 +68,7 @@ export default function EtapaCard({
   const [progresso, setProgresso] = useState(0);
   const [isAtivo, setIsAtivo] = useState(false);
   const [atribuirFuncionarioDialogOpen, setAtribuirFuncionarioDialogOpen] = useState(false);
+  const [dialogAction, setDialogAction] = useState<'start' | 'finish'>('start');
   const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
   const [funcionarioSelecionadoId, setFuncionarioSelecionadoId] = useState<string>("");
   const [funcionarioSelecionadoNome, setFuncionarioSelecionadoNome] = useState<string>("");
@@ -146,9 +148,31 @@ export default function EtapaCard({
 
   const etapaComCronometro = ['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa);
   
+  const handleIniciarTimer = () => {
+    if (!funcionario?.id) {
+      toast.error("É necessário estar logado para iniciar uma etapa");
+      return;
+    }
+
+    if (podeAtribuirFuncionario) {
+      setDialogAction('start');
+      setAtribuirFuncionarioDialogOpen(true);
+    } else {
+      // Próprio usuário inicia o timer
+      handleTimerStart();
+    }
+  };
+  
+  const handleTimerStart = () => {
+    // Esta função será chamada quando o usuário clicar em iniciar
+    // Ou após a confirmação de atribuição de funcionário
+    setIsAtivo(true);
+  };
+  
   const handleEtapaConcluida = (tempoTotal: number) => {
     if (onEtapaStatusChange) {
       if (podeAtribuirFuncionario) {
+        setDialogAction('finish');
         setAtribuirFuncionarioDialogOpen(true);
       } else {
         onEtapaStatusChange(
@@ -169,6 +193,7 @@ export default function EtapaCard({
     }
     
     if (podeAtribuirFuncionario) {
+      setDialogAction('finish');
       setAtribuirFuncionarioDialogOpen(true);
     } else {
       if (onEtapaStatusChange) {
@@ -212,13 +237,19 @@ export default function EtapaCard({
       const funcId = funcionarioSelecionadoId || funcionario?.id;
       const funcNome = funcionarioSelecionadoNome || funcionario?.nome;
       
-      onEtapaStatusChange(
-        etapa, 
-        true, 
-        funcId, 
-        funcNome,
-        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
-      );
+      if (dialogAction === 'start') {
+        // Apenas inicia o timer com o funcionário selecionado
+        handleTimerStart();
+      } else if (dialogAction === 'finish') {
+        // Marca a etapa como concluída com o funcionário selecionado
+        onEtapaStatusChange(
+          etapa, 
+          true, 
+          funcId, 
+          funcNome,
+          (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+        );
+      }
     }
     setAtribuirFuncionarioDialogOpen(false);
   };
@@ -300,7 +331,8 @@ export default function EtapaCard({
             etapa={etapa}
             onFinish={handleEtapaConcluida}
             isEtapaConcluida={isEtapaConcluida()}
-            onStart={() => setIsAtivo(true)}
+            onStart={handleTimerStart}
+            onCustomStart={handleIniciarTimer}
             tipoServico={servicoTipo}
           />
           
@@ -353,7 +385,7 @@ export default function EtapaCard({
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <label htmlFor="funcionario-select-etapa" className="block text-sm font-medium">
-                Selecione o funcionário que executou esta etapa
+                Selecione o funcionário que {dialogAction === 'start' ? 'executará' : 'executou'} esta etapa
               </label>
               
               <Select onValueChange={handleFuncionarioChange} value={funcionarioSelecionadoId}>

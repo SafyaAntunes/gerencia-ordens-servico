@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,6 +68,7 @@ export default function ServicoTracker({
   const [funcionarioSelecionadoId, setFuncionarioSelecionadoId] = useState<string>("");
   const [funcionarioSelecionadoNome, setFuncionarioSelecionadoNome] = useState<string>("");
   const [atribuirFuncionarioDialogOpen, setAtribuirFuncionarioDialogOpen] = useState(false);
+  const [dialogAction, setDialogAction] = useState<'start' | 'finish'>('start');
   const { funcionario } = useAuth();
   
   const temPermissao = funcionario?.nivelPermissao === 'admin' || 
@@ -164,6 +166,20 @@ export default function ServicoTracker({
     onSubatividadeToggle(subatividade.id, !subatividade.concluida);
   };
   
+  const handleStartClick = () => {
+    if (!temPermissao) {
+      toast.error("Você não tem permissão para iniciar este tipo de serviço");
+      return;
+    }
+
+    if (podeAtribuirFuncionario) {
+      setDialogAction('start');
+      setAtribuirFuncionarioDialogOpen(true);
+    } else {
+      handleStart();
+    }
+  };
+  
   const handlePauseClick = () => {
     if (!temPermissao) {
       toast.error("Você não tem permissão para pausar este tipo de serviço");
@@ -198,6 +214,7 @@ export default function ServicoTracker({
     }
     
     if (podeAtribuirFuncionario) {
+      setDialogAction('finish');
       setAtribuirFuncionarioDialogOpen(true);
     } else {
       onServicoStatusChange(true, funcionario.id, funcionario.nome);
@@ -220,11 +237,17 @@ export default function ServicoTracker({
   };
   
   const handleConfirmarAtribuicao = () => {
-    if (funcionarioSelecionadoId) {
-      onServicoStatusChange(true, funcionarioSelecionadoId, funcionarioSelecionadoNome);
-    } else {
-      onServicoStatusChange(true, funcionario?.id, funcionario?.nome);
+    const funcId = funcionarioSelecionadoId || funcionario?.id;
+    const funcNome = funcionarioSelecionadoNome || funcionario?.nome;
+    
+    if (dialogAction === 'start') {
+      // Apenas inicia o timer com o funcionário selecionado
+      handleStart();
+    } else if (dialogAction === 'finish') {
+      // Marca o serviço como concluído com o funcionário selecionado
+      onServicoStatusChange(true, funcId, funcNome);
     }
+    
     setAtribuirFuncionarioDialogOpen(false);
   };
 
@@ -359,7 +382,7 @@ export default function ServicoTracker({
               <div className="flex space-x-2 my-2">
                 {!isRunning && !isPaused && !servico.concluido && (
                   <Button
-                    onClick={handleStart}
+                    onClick={handleStartClick}
                     className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
                   >
                     <Play className="h-4 w-4 mr-1" />
@@ -430,7 +453,7 @@ export default function ServicoTracker({
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <label htmlFor="funcionario-select" className="block text-sm font-medium">
-                Selecione o funcionário que executou o serviço
+                Selecione o funcionário que {dialogAction === 'start' ? 'executará' : 'executou'} o serviço
               </label>
               
               <Select onValueChange={handleFuncionarioChange} value={funcionarioSelecionadoId}>
