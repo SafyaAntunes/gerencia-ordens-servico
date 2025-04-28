@@ -5,4 +5,6 @@ export { default as EtapaProgresso } from './EtapaProgresso';
 export { default as EtapaConcluiButton } from './EtapaConcluiButton';
 export { default as EtapaServicos } from './EtapaServicos';
 export { default as EtapaCard } from './EtapaCard';
+export { default as EtapaTimer } from './EtapaTimer';
+export { default as TimerPausas } from './TimerPausas';
 export { useEtapaCard } from './useEtapaCard';

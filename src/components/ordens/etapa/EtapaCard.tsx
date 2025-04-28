@@ -4,14 +4,14 @@ import { Card } from "@/components/ui/card";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import OrdemCronometro from "../OrdemCronometro";
 import { useEtapaCard } from "./useEtapaCard";
 import { 
   AtribuirFuncionarioDialog,
   EtapaStatus,
   EtapaProgresso,
   EtapaConcluiButton,
-  EtapaServicos
+  EtapaServicos,
+  EtapaTimer
 } from ".";
 
 interface EtapaCardProps {
@@ -182,7 +182,7 @@ export default function EtapaCard({
       
       {etapaComCronometro && (
         <div className="p-4 border rounded-md mb-4">
-          <OrdemCronometro
+          <EtapaTimer
             ordemId={ordemId}
             funcionarioId={funcionarioId}
             funcionarioNome={funcionarioNome}
