@@ -11,12 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { CheckCircle, Clock, PlayCircle, Wrench, Gauge, Search } from "lucide-react";
-import EtapaCard from "./EtapaCard";
-
-interface EtapasTrackerProps {
-  ordem: OrdemServico;
-  onOrdemUpdate?: (ordem: OrdemServico) => void;
-}
+import { EtapaCard } from "./etapa";
 
 const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
   const [etapasAtivas, setEtapasAtivas] = useState<EtapaOS[]>([]);

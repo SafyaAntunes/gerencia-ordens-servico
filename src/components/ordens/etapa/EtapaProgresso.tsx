@@ -1,0 +1,38 @@
+
+import { Progress } from "@/components/ui/progress";
+import { Servico } from "@/types/ordens";
+import { useEffect, useState } from "react";
+
+interface EtapaProgressoProps {
+  servicos: Servico[];
+  onAllServicosConcluidos?: () => void;
+}
+
+export default function EtapaProgresso({
+  servicos,
+  onAllServicosConcluidos
+}: EtapaProgressoProps) {
+  const [progresso, setProgresso] = useState(0);
+  
+  useEffect(() => {
+    if (servicos.length === 0) return;
+    
+    const servicosConcluidos = servicos.filter(servico => servico.concluido).length;
+    const percentualProgresso = Math.round((servicosConcluidos / servicos.length) * 100);
+    setProgresso(percentualProgresso);
+    
+    if (servicosConcluidos === servicos.length && onAllServicosConcluidos) {
+      onAllServicosConcluidos();
+    }
+  }, [servicos, onAllServicosConcluidos]);
+  
+  if (servicos.length === 0) {
+    return null;
+  }
+  
+  return (
+    <div className="mb-4">
+      <Progress value={progresso} className="h-2" />
+    </div>
+  );
+}
