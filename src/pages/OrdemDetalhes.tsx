@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -50,7 +51,8 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
   const fetchOrdem = async () => {
     setIsLoading(true);
     try {
-      const docRef = doc(db, "ordens", id!);
+      // Updated collection name from "ordens" to "ordens_servico" for consistency
+      const docRef = doc(db, "ordens_servico", id!);
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
@@ -94,7 +96,8 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
     if (!id || !ordem) return;
     
     try {
-      const orderRef = doc(db, "ordens", id);
+      // Updated collection name from "ordens" to "ordens_servico" for consistency
+      const orderRef = doc(db, "ordens_servico", id);
       await updateDoc(orderRef, { status: newStatus });
       
       setOrdem({
@@ -168,7 +171,8 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
         updatedOrder.fotosSaida = newSaidaUrls;
       }
       
-      const orderRef = doc(db, "ordens", id);
+      // Updated collection name from "ordens" to "ordens_servico" for consistency
+      const orderRef = doc(db, "ordens_servico", id);
       await updateDoc(orderRef, updatedOrder);
       
       setOrdem(prev => {
@@ -195,7 +199,8 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
     
     try {
       setIsSubmitting(true);
-      const orderRef = doc(db, "ordens", id);
+      // Updated collection name from "ordens" to "ordens_servico" for consistency
+      const orderRef = doc(db, "ordens_servico", id);
       await deleteDoc(orderRef);
       
       toast.success("Ordem de serviço excluída com sucesso!");
