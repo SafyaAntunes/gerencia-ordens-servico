@@ -25,12 +25,37 @@ export const useOrdens = () => {
       const ordensRef = collection(db, 'ordens_servico');
       const q = query(ordensRef, orderBy("dataAbertura", "desc"));
       const snapshot = await getDocs(q);
-      const ordensData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        dataAbertura: doc.data().dataAbertura?.toDate() || new Date(),
-        dataPrevistaEntrega: doc.data().dataPrevistaEntrega?.toDate() || new Date()
-      })) as OrdemServico[];
+      
+      // Processar as ordens e carregar informações do cliente com seus motores
+      const ordensData = await Promise.all(snapshot.docs.map(async (doc) => {
+        const data = doc.data();
+        
+        // Verificar se há cliente com ID
+        if (data.cliente && data.cliente.id) {
+          try {
+            // Buscar motores do cliente
+            const motoresRef = collection(db, `clientes/${data.cliente.id}/motores`);
+            const motoresSnapshot = await getDocs(motoresRef);
+            const motores = motoresSnapshot.docs.map(motorDoc => ({
+              id: motorDoc.id,
+              ...motorDoc.data()
+            }));
+            
+            // Adicionar motores ao cliente na ordem
+            data.cliente.motores = motores;
+          } catch (error) {
+            console.error("Erro ao carregar motores do cliente:", error);
+          }
+        }
+        
+        return {
+          id: doc.id,
+          ...data,
+          dataAbertura: data.dataAbertura?.toDate() || new Date(),
+          dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date()
+        } as OrdemServico;
+      }));
+      
       setOrdens(ordensData);
     } catch (error) {
       console.error("Erro ao carregar ordens:", error);
@@ -49,9 +74,27 @@ export const useOrdens = () => {
         return null;
       }
       
+      const data = ordemDoc.data();
+      
+      // Carregar motores do cliente se houver um cliente vinculado
+      if (data.cliente && data.cliente.id) {
+        try {
+          const motoresRef = collection(db, `clientes/${data.cliente.id}/motores`);
+          const motoresSnapshot = await getDocs(motoresRef);
+          const motores = motoresSnapshot.docs.map(motorDoc => ({
+            id: motorDoc.id,
+            ...motorDoc.data()
+          }));
+          
+          data.cliente.motores = motores;
+        } catch (error) {
+          console.error("Erro ao carregar motores do cliente:", error);
+        }
+      }
+      
       return {
         id: ordemDoc.id,
-        ...ordemDoc.data()
+        ...data
       } as OrdemServico;
     } catch (error) {
       toast.error('Erro ao carregar ordem de serviço.');

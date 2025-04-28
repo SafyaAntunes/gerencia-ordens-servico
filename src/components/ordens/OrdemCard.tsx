@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Clock, Calendar, ArrowRight, Settings, Hash, DollarSign } from "lucide-react";
+import { Clock, Calendar, ArrowRight, Settings, DollarSign } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,19 +9,6 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { formatCurrency } from "@/lib/utils";
-
-const MOTORES_DISPLAY: Record<string, string> = {
-  "101": "Ford Zetec Rocam 1.0",
-  "102": "Ford Zetec Rocam 1.6",
-  "201": "VW EA111 1.0",
-  "202": "VW EA211 1.6",
-  "301": "Fiat Fire 1.0",
-  "302": "Fiat E.torQ 1.6",
-  "401": "GM Econo.Flex 1.0",
-  "402": "GM Family 1.4",
-  "501": "Mercedes OM 366",
-  "502": "Scania DC13",
-};
 
 interface OrdemCardProps {
   ordem: OrdemServico;
@@ -39,7 +26,15 @@ export default function OrdemCard({ ordem, index, onReorder, onClick }: OrdemCar
   
   const clienteNome = ordem.cliente?.nome || "Cliente não especificado";
   
-  const motorInfo = ordem.motorId ? MOTORES_DISPLAY[ordem.motorId] || "Motor #" + ordem.motorId : null;
+  let motorInfo = null;
+  if (ordem.motorId && ordem.cliente?.motores) {
+    const motor = ordem.cliente.motores.find(m => m.id === ordem.motorId);
+    if (motor) {
+      motorInfo = `${motor.marca} ${motor.modelo}${motor.numeroSerie ? ` - ${motor.numeroSerie}` : ''}${motor.ano ? ` (${motor.ano})` : ''}`;
+    } else {
+      motorInfo = "Motor não encontrado";
+    }
+  }
   
   let progresso = 0;
   
@@ -122,8 +117,7 @@ export default function OrdemCard({ ordem, index, onReorder, onClick }: OrdemCar
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div>
-            <p className="text-sm font-bold flex items-center gap-1">
-              <Hash className="h-4 w-4" />
+            <p className="text-sm font-bold">
               OS: {ordem.id}
             </p>
             

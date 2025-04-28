@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -174,6 +173,7 @@ const tiposServico: { value: TipoServico; label: string }[] = [
   { value: "eixo_comando", label: "Eixo de Comando" },
   { value: "montagem", label: "Montagem" },
   { value: "dinamometro", label: "Dinamômetro" },
+  { value: "lavagem", label: "Lavagem" },
 ];
 
 export default function OrdemForm({ 
@@ -228,7 +228,6 @@ export default function OrdemForm({
     },
   });
   
-  // Carregar configurações de preço por hora para as etapas
   useEffect(() => {
     const fetchEtapasConfig = async () => {
       setIsLoadingEtapas(true);
@@ -451,12 +450,8 @@ export default function OrdemForm({
           onValueChange={setActiveTab}
           className="w-full"
         >
-          <TabsList className="grid grid-cols-3">
+          <TabsList className="grid grid-cols-2">
             <TabsTrigger value="dados">Dados da OS</TabsTrigger>
-            <TabsTrigger value="etapas" className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Tempos de Etapas
-            </TabsTrigger>
             <TabsTrigger value="fotos" className="flex items-center gap-2">
               <Camera className="h-4 w-4" />
               Fotos
@@ -802,91 +797,6 @@ export default function OrdemForm({
                 />
               </div>
             </div>
-          </TabsContent>
-          
-          <TabsContent value="etapas" className="space-y-6 pt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Clock className="h-5 w-5 mr-2" />
-                  Tempos e Valores das Etapas
-                </CardTitle>
-                <CardDescription>
-                  Configure os valores por hora e o tempo estimado para cada etapa do processo
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {isLoadingEtapas ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                    <span className="ml-3">Carregando configurações de etapas...</span>
-                  </div>
-                ) : (
-                  <>
-                    {/* Etapas com configuração de subatividades */}
-                    {(['lavagem', 'inspecao_inicial', 'inspecao_final'] as const).map((etapa) => (
-                      <div key={etapa} className="border rounded-md p-4">
-                        <div className="flex items-center mb-3">
-                          {ETAPAS_CONFIG[etapa].icon}
-                          <h3 className="text-lg font-semibold">{ETAPAS_CONFIG[etapa].label}</h3>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="text-sm font-medium">Valor por hora (R$)</label>
-                            <Input
-                              type="number"
-                              placeholder="0.00"
-                              min={0}
-                              step={0.01}
-                              value={etapasTempoPreco[etapa]?.precoHora || 0}
-                              onChange={(e) => handleEtapaTempoPrecoChange(
-                                etapa, 
-                                'precoHora', 
-                                parseFloat(e.target.value) || 0
-                              )}
-                              className="mt-1"
-                            />
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Valor cobrado por hora de trabalho
-                            </p>
-                          </div>
-                          
-                          <div>
-                            <label className="text-sm font-medium">Tempo estimado (horas)</label>
-                            <Input
-                              type="number"
-                              placeholder="0.0"
-                              min={0}
-                              step={0.5}
-                              value={etapasTempoPreco[etapa]?.tempoEstimado || 0}
-                              onChange={(e) => handleEtapaTempoPrecoChange(
-                                etapa, 
-                                'tempoEstimado', 
-                                parseFloat(e.target.value) || 0
-                              )}
-                              className="mt-1"
-                            />
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Tempo previsto para completar esta etapa
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <div className="mt-2 px-3 py-2 bg-muted rounded-md text-sm">
-                          <div className="flex justify-between">
-                            <span>Valor estimado:</span>
-                            <span className="font-medium">
-                              R$ {((etapasTempoPreco[etapa]?.precoHora || 0) * (etapasTempoPreco[etapa]?.tempoEstimado || 0)).toFixed(2).replace('.', ',')}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </>
-                )}
-              </CardContent>
-            </Card>
           </TabsContent>
           
           <TabsContent value="fotos" className="pt-4">

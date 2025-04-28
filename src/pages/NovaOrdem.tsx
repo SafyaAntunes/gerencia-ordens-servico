@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -9,7 +10,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { getClientes } from "@/services/clienteService";
 import { getSubatividadesByTipo } from "@/services/subatividadeService";
-import { Cliente } from "@/types/clientes";
+import { Cliente, Motor } from "@/types/clientes";
 
 const toTitleCase = (str: string) => {
   return str
@@ -71,6 +72,7 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
       let clienteNome = "Cliente não encontrado";
       let clienteTelefone = "";
       let clienteEmail = "";
+      let clienteMotores: Motor[] = [];
       
       if (values.clienteId) {
         try {
@@ -80,6 +82,14 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
             clienteNome = clienteData.nome || "Cliente sem nome";
             clienteTelefone = clienteData.telefone || "";
             clienteEmail = clienteData.email || "";
+            
+            // Carregar os motores do cliente
+            const motoresRef = collection(db, `clientes/${values.clienteId}/motores`);
+            const motoresSnapshot = await getDocs(motoresRef);
+            clienteMotores = motoresSnapshot.docs.map(motorDoc => ({
+              id: motorDoc.id,
+              ...motorDoc.data()
+            })) as Motor[];
           }
         } catch (clientError) {
           console.error("Erro ao buscar dados do cliente:", clientError);
@@ -191,7 +201,8 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
           id: values.clienteId,
           nome: clienteNome,
           telefone: clienteTelefone, 
-          email: clienteEmail
+          email: clienteEmail,
+          motores: clienteMotores
         },
         motorId: values.motorId,
         dataAbertura: values.dataAbertura,
@@ -207,7 +218,7 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         custoEstimadoMaoDeObra: custoEstimadoMaoDeObra || 0
       };
       
-      await setDoc(doc(db, "ordens", values.id), newOrder);
+      await setDoc(doc(db, "ordens_servico", values.id), newOrder);
       
       toast.success("Ordem de serviço criada com sucesso!");
       navigate("/ordens");

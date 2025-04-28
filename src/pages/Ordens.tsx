@@ -47,48 +47,67 @@ export default function Ordens({ onLogout }: OrdensProps) {
           const especialidadesOrdens = await getOrdensByFuncionarioEspecialidades(funcionario.especialidades);
           ordensData = especialidadesOrdens as OrdemServico[];
         } else {
-          const q = query(collection(db, "ordens"), orderBy("dataAbertura", "desc"));
+          const q = query(collection(db, "ordens_servico"), orderBy("dataAbertura", "desc"));
           const querySnapshot = await getDocs(q);
           
-          querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            
-            let progressoEtapas = data.progressoEtapas;
-            
-            if (progressoEtapas === undefined) {
-              let etapas = ["lavagem", "inspecao_inicial"];
+          const ordensWithClienteMotores = await Promise.all(
+            querySnapshot.docs.map(async (doc) => {
+              const data = doc.data();
               
-              if (data.servicos?.some((s: any) => 
-                ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo))) {
-                etapas.push("retifica");
+              if (data.cliente && data.cliente.id) {
+                try {
+                  const motoresRef = collection(db, `clientes/${data.cliente.id}/motores`);
+                  const motoresSnapshot = await getDocs(motoresRef);
+                  const motores = motoresSnapshot.docs.map(motorDoc => ({
+                    id: motorDoc.id,
+                    ...motorDoc.data()
+                  }));
+                  
+                  data.cliente.motores = motores;
+                } catch (error) {
+                  console.error("Erro ao carregar motores do cliente:", error);
+                }
               }
               
-              if (data.servicos?.some((s: any) => s.tipo === "montagem")) {
-                etapas.push("montagem");
+              let progressoEtapas = data.progressoEtapas;
+              
+              if (progressoEtapas === undefined) {
+                let etapas = ["lavagem", "inspecao_inicial"];
+                
+                if (data.servicos?.some((s: any) => 
+                  ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo))) {
+                  etapas.push("retifica");
+                }
+                
+                if (data.servicos?.some((s: any) => s.tipo === "montagem")) {
+                  etapas.push("montagem");
+                }
+                
+                if (data.servicos?.some((s: any) => s.tipo === "dinamometro")) {
+                  etapas.push("dinamometro");
+                }
+                
+                etapas.push("inspecao_final");
+                
+                const etapasAndamento = data.etapasAndamento || {};
+                const etapasConcluidas = etapas.filter(etapa => 
+                  etapasAndamento[etapa]?.concluido
+                ).length;
+                
+                progressoEtapas = etapasConcluidas / etapas.length;
               }
               
-              if (data.servicos?.some((s: any) => s.tipo === "dinamometro")) {
-                etapas.push("dinamometro");
-              }
-              
-              etapas.push("inspecao_final");
-              
-              const etapasAndamento = data.etapasAndamento || {};
-              const etapasConcluidas = etapas.filter(etapa => 
-                etapasAndamento[etapa]?.concluido
-              ).length;
-              
-              progressoEtapas = etapasConcluidas / etapas.length;
-            }
-            
-            ordensData.push({
-              ...data,
-              id: doc.id,
-              dataAbertura: data.dataAbertura?.toDate() || new Date(),
-              dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
-              progressoEtapas: progressoEtapas
-            } as OrdemServico);
-          });
+              return {
+                ...data,
+                id: doc.id,
+                dataAbertura: data.dataAbertura?.toDate() || new Date(),
+                dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
+                progressoEtapas: progressoEtapas
+              } as OrdemServico;
+            })
+          );
+          
+          ordensData = ordensWithClienteMotores;
         }
         
         setOrdens(ordensData);
