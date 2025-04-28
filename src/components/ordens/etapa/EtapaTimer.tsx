@@ -5,6 +5,7 @@ import { EtapaOS, TipoServico } from "@/types/ordens";
 import TimerControls from "../TimerControls";
 import CompletedTimer from "../CompletedTimer";
 import { Badge } from "@/components/ui/badge";
+import TimerPausas from "./TimerPausas";
 
 export interface EtapaTimerProps {
   ordemId: string;
