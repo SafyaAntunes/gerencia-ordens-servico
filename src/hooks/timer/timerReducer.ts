@@ -76,7 +76,7 @@ export function timerReducer(state: TimerState, action: TimerAction): TimerState
 
     case "FINISH_TIMER": {
       const finalTime = state.elapsedTime;
-      const totalTime = state.totalSavedTime + finalTime;
+      const totalTime = state.totalTime + finalTime;
       
       return {
         ...state,
