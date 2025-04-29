@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 
 interface ServicoHeaderProps {
   tipo: TipoServico;
-  displayTime: number;
+  displayTime: string;
   servicoStatus: ServicoStatus;
   progressPercentage: number;
   completedSubatividades: number;
@@ -80,7 +80,7 @@ export default function ServicoHeader({
             </Badge>
           )}
           
-          {servicoStatus === "nao_iniciado" && (
+          {servicoStatus === "pendente" && (
             <Badge variant="outline" className="bg-gray-100">
               Não iniciado
             </Badge>
