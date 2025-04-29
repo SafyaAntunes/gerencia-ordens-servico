@@ -14,6 +14,14 @@ export function useOrdemTimer({
   onFinish,
   isEtapaConcluida = false,
 }: UseOrdemTimerProps): UseOrdemTimerResult {
+  // Log detalhado para monitorar o comportamento
+  console.log("useOrdemTimer iniciado com:", { ordemId, etapa, tipoServico, isEtapaConcluida });
+  
+  // Validação de parâmetros para prevenir erros
+  if (!ordemId || !etapa) {
+    console.error("useOrdemTimer: parâmetros essenciais faltando", { ordemId, etapa, tipoServico });
+  }
+  
   const { state, dispatch } = useTimerState({
     ordemId,
     etapa,

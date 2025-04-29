@@ -34,8 +34,27 @@ export default function EtapaTimer({
   onFinish,
   isEtapaConcluida = false,
 }: EtapaTimerProps) {
-  // Usar console.log para debug de problemas de renderização
-  console.log("EtapaTimer renderizando para:", {ordemId, etapa, tipoServico, isEtapaConcluida});
+  // Logging detalhado para debug de problemas de renderização
+  console.log("EtapaTimer renderizando com props:", {
+    ordemId, 
+    funcionarioId,
+    etapa, 
+    tipoServico, 
+    isEtapaConcluida,
+    hasOnCustomStart: !!onCustomStart,
+    hasOnStart: !!onStart,
+    hasOnFinish: !!onFinish
+  });
+
+  // Validação adicional para prevenir erros
+  if (!ordemId || !etapa) {
+    console.error("EtapaTimer: props essenciais estão faltando", {
+      ordemId, 
+      etapa, 
+      tipoServico
+    });
+    return <div className="text-red-500">Erro: Dados insuficientes para iniciar o cronômetro</div>;
+  }
   
   const {
     isRunning,

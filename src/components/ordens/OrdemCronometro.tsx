@@ -19,9 +19,10 @@ export interface OrdemCronometroProps {
 export default function OrdemCronometro(props: OrdemCronometroProps) {
   console.log("OrdemCronometro rendering with props:", props);
   
-  // Verificar se as props essenciais estão presentes
+  // Validação de props críticas
   if (!props.ordemId || !props.etapa) {
     console.error("OrdemCronometro: props essenciais estão faltando", props);
+    return <div className="text-red-500">Erro: Dados insuficientes para iniciar o cronômetro</div>;
   }
   
   return <EtapaTimer {...props} />;

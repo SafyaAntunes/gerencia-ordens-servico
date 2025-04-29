@@ -17,15 +17,23 @@ export default function ServicoDetails({
   temPermissao,
   onSubatividadeToggle,
 }: ServicoDetailsProps) {
+  // Verificação de segurança para garantir que subatividades é um array
+  const subatividadesSeguras = Array.isArray(subatividades) ? subatividades : [];
+  
   // Função para manipular o clique de forma segura
   const handleSubatividadeClick = (subatividade: SubAtividade) => {
-    if (temPermissao && subatividade) {
-      // Verificar se o objeto é válido antes de chamar a função
-      try {
+    // Verificações de segurança antes de chamar a função
+    if (!temPermissao || !subatividade || !onSubatividadeToggle) return;
+    
+    // Verificar se o objeto é válido antes de chamar a função
+    try {
+      if (subatividade.id) {
         onSubatividadeToggle(subatividade);
-      } catch (error) {
-        console.error("Erro ao alternar subatividade:", error, subatividade);
+      } else {
+        console.error("Subatividade inválida (sem ID):", subatividade);
       }
+    } catch (error) {
+      console.error("Erro ao alternar subatividade:", error, subatividade);
     }
   };
 
@@ -37,10 +45,10 @@ export default function ServicoDetails({
         </div>
       )}
       
-      {subatividades.length > 0 && (
+      {subatividadesSeguras.length > 0 && (
         <div className="border-t border-gray-200 pt-4">
           <div className="space-y-3">
-            {subatividades.map((subatividade) => {
+            {subatividadesSeguras.map((subatividade) => {
               // Verificar se a subatividade é válida antes de renderizar
               if (!subatividade || !subatividade.id) {
                 console.warn("Subatividade inválida detectada:", subatividade);
@@ -52,7 +60,7 @@ export default function ServicoDetails({
                   key={subatividade.id}
                   className={cn(
                     "flex items-center justify-between",
-                    temPermissao ? "cursor-pointer" : "cursor-default"
+                    temPermissao ? "cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors" : "cursor-default"
                   )}
                   onClick={() => handleSubatividadeClick(subatividade)}
                 >
