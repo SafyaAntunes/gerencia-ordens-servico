@@ -9,7 +9,6 @@ import { useServicoTracker, ServicoStatus } from "./hooks/useServicoTracker";
 import ServicoHeader from "./ServicoHeader";
 import ServicoDetails from "./ServicoDetails";
 import ServicoControls from "./ServicoControls";
-import AtribuirFuncionarioDialog from "./AtribuirFuncionarioDialog";
 
 interface ServicoTrackerProps {
   servico: Servico;
@@ -36,9 +35,6 @@ export default function ServicoTracker({
     isOpen,
     setIsOpen,
     funcionariosOptions,
-    atribuirFuncionarioDialogOpen,
-    setAtribuirFuncionarioDialogOpen,
-    dialogAction,
     temPermissao,
     isRunning,
     isPaused,
@@ -56,10 +52,7 @@ export default function ServicoTracker({
     handleResume,
     handleFinish,
     handleMarcarConcluido,
-    handleReiniciarServico,
-    handleConfirmarAtribuicao,
-    handleFuncionarioChange,
-    funcionarioSelecionadoId
+    handleReiniciarServico
   } = useServicoTracker({
     servico,
     ordemId,
@@ -120,16 +113,6 @@ export default function ServicoTracker({
           </CardContent>
         </CollapsibleContent>
       </Collapsible>
-      
-      <AtribuirFuncionarioDialog 
-        isOpen={atribuirFuncionarioDialogOpen}
-        onOpenChange={setAtribuirFuncionarioDialogOpen}
-        funcionariosOptions={funcionariosOptions}
-        funcionarioAtual={{ id: funcionarioId, nome: funcionarioNome || "" }}
-        onFuncionarioChange={handleFuncionarioChange}
-        onConfirm={handleConfirmarAtribuicao}
-        dialogAction={dialogAction}
-      />
     </Card>
   );
 }

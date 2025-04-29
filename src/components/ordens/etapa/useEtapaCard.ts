@@ -1,18 +1,15 @@
 
 import { useState, useEffect } from "react";
-import { toast } from "sonner";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Funcionario } from "@/types/funcionarios";
 import { useAuth } from "@/hooks/useAuth";
+import { Funcionario } from "@/types/funcionarios";
+import { EtapaOS, TipoServico } from "@/types/ordens";
+import { toast } from "sonner";
 
-export function useEtapaCard(etapa: string, servicoTipo?: string) {
+export function useEtapaCard(etapa: EtapaOS, servicoTipo?: TipoServico) {
   const [isAtivo, setIsAtivo] = useState(false);
-  const [atribuirFuncionarioDialogOpen, setAtribuirFuncionarioDialogOpen] = useState(false);
-  const [dialogAction, setDialogAction] = useState<'start' | 'finish'>('start');
   const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
-  const [funcionarioSelecionadoId, setFuncionarioSelecionadoId] = useState<string>("");
-  const [funcionarioSelecionadoNome, setFuncionarioSelecionadoNome] = useState<string>("");
   const { funcionario } = useAuth();
   
   const podeAtribuirFuncionario = funcionario?.nivelPermissao === 'admin' || 
@@ -63,16 +60,8 @@ export function useEtapaCard(etapa: string, servicoTipo?: string) {
       }
     };
     
-    if (podeAtribuirFuncionario) {
-      carregarFuncionarios();
-    }
-  }, [podeAtribuirFuncionario]);
-  
-  const handleFuncionarioChange = (value: string) => {
-    setFuncionarioSelecionadoId(value);
-    const funcionarioSelecionado = funcionariosOptions.find(f => f.id === value);
-    setFuncionarioSelecionadoNome(funcionarioSelecionado?.nome || "");
-  };
+    carregarFuncionarios();
+  }, []);
   
   const handleIniciarTimer = () => {
     if (!funcionario?.id) {
@@ -80,20 +69,13 @@ export function useEtapaCard(etapa: string, servicoTipo?: string) {
       return;
     }
 
-    if (podeAtribuirFuncionario) {
-      setDialogAction('start');
-      setAtribuirFuncionarioDialogOpen(true);
-    } else {
-      // Próprio usuário inicia o timer
-      handleTimerStart();
-    }
+    // Directly start the timer without dialog
+    handleTimerStart();
   };
   
   const handleTimerStart = () => {
-    console.log("Timer sendo iniciado em useEtapaCard");
     setIsAtivo(true);
-    // Retorna true para indicar que o timer foi iniciado com sucesso
-    return true;
+    return true; // Indicate success
   };
   
   const handleMarcarConcluido = () => {
@@ -101,26 +83,17 @@ export function useEtapaCard(etapa: string, servicoTipo?: string) {
       toast.error("É necessário estar logado para finalizar uma etapa");
       return;
     }
-    
-    if (podeAtribuirFuncionario) {
-      setDialogAction('finish');
-      setAtribuirFuncionarioDialogOpen(true);
-    }
+
+    // Just return true to let caller know this was successful
+    return true;
   };
   
   return {
     isAtivo,
     setIsAtivo,
-    atribuirFuncionarioDialogOpen,
-    setAtribuirFuncionarioDialogOpen,
-    dialogAction,
-    setDialogAction,
     funcionariosOptions,
-    funcionarioSelecionadoId,
-    funcionarioSelecionadoNome,
     podeAtribuirFuncionario,
     podeTrabalharNaEtapa,
-    handleFuncionarioChange,
     handleIniciarTimer,
     handleTimerStart,
     handleMarcarConcluido

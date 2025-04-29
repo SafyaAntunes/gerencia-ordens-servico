@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { getDocs, collection } from "firebase/firestore";
@@ -31,18 +32,11 @@ export function useServicoTracker({
 }: UseServicoTrackerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
-  const [funcionarioSelecionadoId, setFuncionarioSelecionadoId] = useState<string>("");
-  const [funcionarioSelecionadoNome, setFuncionarioSelecionadoNome] = useState<string>("");
-  const [atribuirFuncionarioDialogOpen, setAtribuirFuncionarioDialogOpen] = useState(false);
-  const [dialogAction, setDialogAction] = useState<'start' | 'finish'>('start');
   const { funcionario } = useAuth();
   
   const temPermissao = funcionario?.nivelPermissao === 'admin' || 
                       funcionario?.nivelPermissao === 'gerente' ||
                       (funcionario?.especialidades && funcionario.especialidades.includes(servico.tipo));
-  
-  const podeAtribuirFuncionario = funcionario?.nivelPermissao === 'admin' || 
-                                 funcionario?.nivelPermissao === 'gerente';
   
   const {
     isRunning,
@@ -82,9 +76,7 @@ export function useServicoTracker({
   };
 
   const handleLoadFuncionarios = () => {
-    if (podeAtribuirFuncionario) {
-      carregarFuncionarios();
-    }
+    carregarFuncionarios();
   };
   
   const handleSubatividadeToggle = (subatividade: SubAtividade) => {
@@ -102,12 +94,8 @@ export function useServicoTracker({
       return;
     }
 
-    if (podeAtribuirFuncionario) {
-      setDialogAction('start');
-      setAtribuirFuncionarioDialogOpen(true);
-    } else {
-      handleStart();
-    }
+    // Removed dialog opening, directly call handleStart
+    handleStart();
   };
   
   const handleMarcarConcluido = () => {
@@ -135,12 +123,8 @@ export function useServicoTracker({
       handleFinish();
     }
     
-    if (podeAtribuirFuncionario) {
-      setDialogAction('finish');
-      setAtribuirFuncionarioDialogOpen(true);
-    } else {
-      onServicoStatusChange(true, funcionario.id, funcionario.nome);
-    }
+    // Removed dialog opening, directly call onServicoStatusChange
+    onServicoStatusChange(true, funcionario.id, funcionario.nome);
   };
   
   const handleReiniciarServico = (e: React.MouseEvent) => {
@@ -158,41 +142,6 @@ export function useServicoTracker({
     
     onServicoStatusChange(false, servico.funcionarioId, servico.funcionarioNome);
     toast.success("Serviço reaberto para continuação");
-  };
-  
-  const handleConfirmarAtribuicao = () => {
-    const funcId = funcionarioSelecionadoId || funcionario?.id;
-    const funcNome = funcionarioSelecionadoNome || funcionario?.nome;
-    
-    if (dialogAction === 'start') {
-      // Explicitamente iniciar o timer após a confirmação do funcionário
-      console.log("Iniciando timer após atribuição de funcionário");
-      handleStart();
-      
-      // O erro estava aqui. Não podemos testar o retorno de handleStart()
-      // já que ele não retorna um valor booleano
-    } else if (dialogAction === 'finish') {
-      const subatividadesFiltradas = servico.subatividades?.filter(item => item.selecionada) || [];
-      const totalSubatividades = subatividadesFiltradas.length || 0;
-      const completedSubatividades = subatividadesFiltradas.filter(item => item.concluida).length || 0;
-      const todasSubatividadesConcluidas = totalSubatividades > 0 && completedSubatividades === totalSubatividades;
-      
-      if (totalSubatividades > 0 && !todasSubatividadesConcluidas) {
-        toast.error("É necessário concluir todas as subatividades antes de finalizar o serviço");
-        setAtribuirFuncionarioDialogOpen(false);
-        return;
-      }
-      
-      onServicoStatusChange(true, funcId, funcNome);
-    }
-    
-    setAtribuirFuncionarioDialogOpen(false);
-  };
-  
-  const handleFuncionarioChange = (value: string) => {
-    setFuncionarioSelecionadoId(value);
-    const funcionarioSelecionado = funcionariosOptions.find(f => f.id === value);
-    setFuncionarioSelecionadoNome(funcionarioSelecionado?.nome || "");
   };
   
   // Calculated values
@@ -224,9 +173,6 @@ export function useServicoTracker({
     isOpen,
     setIsOpen,
     funcionariosOptions,
-    atribuirFuncionarioDialogOpen,
-    setAtribuirFuncionarioDialogOpen,
-    dialogAction,
     temPermissao,
     isRunning,
     isPaused,
@@ -244,9 +190,6 @@ export function useServicoTracker({
     handleResume,
     handleFinish,
     handleMarcarConcluido,
-    handleReiniciarServico,
-    handleConfirmarAtribuicao,
-    handleFuncionarioChange,
-    funcionarioSelecionadoId
+    handleReiniciarServico
   };
 }

@@ -6,7 +6,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { useEtapaCard } from "./useEtapaCard";
 import { 
-  AtribuirFuncionarioDialog,
   EtapaStatus,
   EtapaProgresso,
   EtapaConcluiButton,
@@ -54,16 +53,8 @@ export default function EtapaCard({
   const {
     isAtivo,
     setIsAtivo,
-    atribuirFuncionarioDialogOpen,
-    setAtribuirFuncionarioDialogOpen,
-    dialogAction,
-    setDialogAction,
-    funcionariosOptions,
-    funcionarioSelecionadoId,
-    funcionarioSelecionadoNome,
     podeAtribuirFuncionario,
     podeTrabalharNaEtapa,
-    handleFuncionarioChange,
     handleIniciarTimer,
     handleTimerStart,
     handleMarcarConcluido
@@ -96,18 +87,14 @@ export default function EtapaCard({
     }
     
     if (onEtapaStatusChange) {
-      if (podeAtribuirFuncionario) {
-        setDialogAction('finish');
-        setAtribuirFuncionarioDialogOpen(true);
-      } else {
-        onEtapaStatusChange(
-          etapa, 
-          true, 
-          funcionario?.id, 
-          funcionario?.nome,
-          (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
-        );
-      }
+      // Directly call onEtapaStatusChange without dialog
+      onEtapaStatusChange(
+        etapa, 
+        true, 
+        funcionario?.id, 
+        funcionario?.nome,
+        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+      );
     }
   };
 
@@ -133,40 +120,6 @@ export default function EtapaCard({
       
       toast.success("Etapa reaberta para continuação");
     }
-  };
-  
-  const handleConfirmarAtribuicao = () => {
-    if (onEtapaStatusChange) {
-      const funcId = funcionarioSelecionadoId || funcionario?.id;
-      const funcNome = funcionarioSelecionadoNome || funcionario?.nome;
-      
-      if (dialogAction === 'start') {
-        // Primeiro iniciar o timer e depois fechar o diálogo
-        const timerIniciado = handleTimerStart();
-        console.log("Timer iniciado após atribuição de funcionário na etapa:", timerIniciado);
-        // Se o timer não iniciou, mostrar um erro
-        if (!timerIniciado) {
-          toast.error("Não foi possível iniciar o cronômetro");
-        }
-      } else if (dialogAction === 'finish') {
-        // Verificar novamente se todas as subatividades estão concluídas
-        if (!todasSubatividadesConcluidas()) {
-          toast.error("É necessário concluir todas as subatividades antes de finalizar a etapa");
-          setAtribuirFuncionarioDialogOpen(false);
-          return;
-        }
-        
-        // Marca a etapa como concluída com o funcionário selecionado
-        onEtapaStatusChange(
-          etapa, 
-          true, 
-          funcId, 
-          funcNome,
-          (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
-        );
-      }
-    }
-    setAtribuirFuncionarioDialogOpen(false);
   };
   
   const getEtapaStatus = () => {
@@ -224,7 +177,17 @@ export default function EtapaCard({
           
           <EtapaConcluiButton 
             isConcluida={isEtapaConcluida()} 
-            onClick={handleMarcarConcluido} 
+            onClick={() => {
+              if (handleMarcarConcluido() && onEtapaStatusChange) {
+                onEtapaStatusChange(
+                  etapa, 
+                  true, 
+                  funcionario?.id, 
+                  funcionario?.nome,
+                  (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+                );
+              }
+            }} 
           />
         </div>
       )}
@@ -237,16 +200,6 @@ export default function EtapaCard({
         etapa={etapa}
         onSubatividadeToggle={onSubatividadeToggle}
         onServicoStatusChange={onServicoStatusChange}
-      />
-      
-      <AtribuirFuncionarioDialog 
-        isOpen={atribuirFuncionarioDialogOpen} 
-        onOpenChange={setAtribuirFuncionarioDialogOpen}
-        onConfirm={handleConfirmarAtribuicao}
-        funcionarioAtual={{ id: funcionario?.id || "", nome: funcionario?.nome || "" }}
-        funcionariosOptions={funcionariosOptions}
-        onFuncionarioChange={handleFuncionarioChange}
-        dialogAction={dialogAction}
       />
     </Card>
   );
