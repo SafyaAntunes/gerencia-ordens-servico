@@ -4,6 +4,7 @@ import { ptBR } from "date-fns/locale";
 import { OrdemServico } from "@/types/ordens";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Progress } from "@/components/ui/progress";
+import { MoveVertical } from "lucide-react";
 
 interface OrdemListRowProps {
   ordem: OrdemServico;
@@ -41,8 +42,17 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
     >
       {/* Cabeçalho com informações principais */}
       <div className="grid grid-cols-12 gap-2 p-4 pb-2 items-center border-b border-gray-100">
+        {/* Número de ordenação */}
+        <div className="col-span-1 flex items-center">
+          <div className="bg-gray-100 text-gray-600 rounded-full w-7 h-7 flex items-center justify-center mr-2 text-sm font-semibold">
+            {index + 1}
+          </div>
+          <MoveVertical size={16} className="text-gray-400" />
+        </div>
+
         {/* OS Número */}
         <div className="col-span-1">
+          <div className="text-xs text-gray-500 mb-0.5">OS</div>
           <div className="font-semibold text-gray-900">
             {ordem.id}
           </div>
@@ -50,6 +60,7 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
 
         {/* Cliente */}
         <div className="col-span-3">
+          <div className="text-xs text-gray-500 mb-0.5">Cliente</div>
           <div className="font-medium text-gray-900">
             {clienteNome}
           </div>
@@ -57,19 +68,24 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
 
         {/* Status */}
         <div className="col-span-3">
+          <div className="text-xs text-gray-500 mb-0.5">Status</div>
           <StatusBadge status={ordem.status} size="md" />
         </div>
         
         {/* Prioridade */}
         <div className="col-span-2">
+          <div className="text-xs text-gray-500 mb-0.5">Prioridade</div>
           <StatusBadge status={ordem.prioridade || "media"} size="md" />
         </div>
 
         {/* Data de Entrada */}
-        <div className="col-span-3 text-gray-600">
-          {ordem.dataAbertura ? 
-            format(new Date(ordem.dataAbertura), "dd/MM/yy", { locale: ptBR }) :
-            "N/D"}
+        <div className="col-span-2 text-right">
+          <div className="text-xs text-gray-500 mb-0.5">Data de Entrada</div>
+          <div className="text-gray-600">
+            {ordem.dataAbertura ? 
+              format(new Date(ordem.dataAbertura), "dd/MM/yy", { locale: ptBR }) :
+              "N/D"}
+          </div>
         </div>
       </div>
 
@@ -84,7 +100,7 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
         </div>
 
         {/* Data de Término */}
-        <div className="col-span-4">
+        <div className="col-span-4 text-right">
           <div className="text-sm font-medium text-gray-900 mb-1">Data de Término</div>
           <div className="text-sm text-gray-700">
             {ordem.dataPrevistaEntrega ? 
