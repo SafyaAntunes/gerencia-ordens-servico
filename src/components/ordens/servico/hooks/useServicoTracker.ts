@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
@@ -33,8 +34,8 @@ export function useServicoTracker({
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [pauseTime, setPauseTime] = useState<number | null>(null);
-  const [pausas, setPausas<{ inicio: number; fim?: number }[]>([]);
-  const [funcionariosOptions, setFuncionariosOptions: any] = useState<Funcionario[]>([]);
+  const [pausas, setPausas] = useState<{ inicio: number; fim?: number }[]>([]);
+  const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
   const { toast } = useToast();
 
   // Compute derived state
