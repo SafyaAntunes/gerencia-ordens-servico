@@ -285,8 +285,8 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         return servico;
       });
       
-      // Update the database
-      const ordemRef = doc(db, "ordens", ordem.id);
+      // Corrigir o caminho do documento para "ordens_servico" ao invés de "ordens"
+      const ordemRef = doc(db, "ordens_servico", ordem.id);
       await updateDoc(ordemRef, { servicos: servicosAtualizados });
       
       // Update local state
@@ -355,7 +355,8 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         };
       }
       
-      const ordemRef = doc(db, "ordens", ordem.id);
+      // Corrigir o caminho do documento para "ordens_servico" ao invés de "ordens"
+      const ordemRef = doc(db, "ordens_servico", ordem.id);
       await updateDoc(ordemRef, { etapasAndamento });
       
       const ordemAtualizada = {
