@@ -1,7 +1,7 @@
 
 import { useTimerState } from "./timer/useTimerState";
 import { createTimerHandlers } from "./timer/timerHandlers";
-import { UseOrdemTimerProps, UseOrdemTimerResult } from "@/types/timer";
+import { UseOrdemTimerProps, UseOrdemTimerResult } from "./timer/types";
 import { EtapaOS, TipoServico } from "@/types/ordens";
 
 export function useOrdemTimer({
