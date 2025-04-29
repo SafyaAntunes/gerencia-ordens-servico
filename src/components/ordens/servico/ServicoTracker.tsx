@@ -189,8 +189,9 @@ export default function ServicoTracker({
     const funcNome = funcionarioSelecionadoNome || funcionario?.nome;
     
     if (dialogAction === 'start') {
+      // Explicitamente iniciar o timer após a confirmação do funcionário
+      console.log("Iniciando timer após atribuição de funcionário");
       handleStart();
-      console.log("Timer iniciado após atribuição de funcionário");
     } else if (dialogAction === 'finish') {
       if (totalSubatividades > 0 && !todasSubatividadesConcluidas) {
         toast.error("É necessário concluir todas as subatividades antes de finalizar o serviço");

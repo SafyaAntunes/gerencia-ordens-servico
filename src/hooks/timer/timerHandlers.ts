@@ -51,7 +51,7 @@ export const createTimerHandlers = ({
   
   const handlePause = (motivo?: string) => {
     if (!usarCronometro) {
-      onPause?.();
+      onPause?.(motivo);
       return;
     }
     
@@ -90,14 +90,15 @@ export const createTimerHandlers = ({
       return;
     }
     
+    const finalTime = 0; // Este valor virá do estado atual
+    
     dispatch({ 
       type: "FINISH_TIMER", 
       payload: { now: Date.now() } 
     });
     
-    // Get the current state after finishing
-    const finalTime = 0; // This will be passed from the current state
-    const totalTime = 0; // This will be calculated from current + saved time
+    // Obtenha o estado final após finalizar
+    const totalTime = 0; // Este valor será calculado a partir do tempo atual + tempo salvo
     
     notifyTimerFinished(totalTime);
     

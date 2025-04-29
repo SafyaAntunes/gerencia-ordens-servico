@@ -142,8 +142,8 @@ export default function EtapaCard({
       
       if (dialogAction === 'start') {
         // Primeiro iniciar o timer e depois fechar o diálogo
-        handleTimerStart();
-        console.log("Timer iniciado após atribuição de funcionário na etapa");
+        const timerIniciado = handleTimerStart();
+        console.log("Timer iniciado após atribuição de funcionário na etapa:", timerIniciado);
       } else if (dialogAction === 'finish') {
         // Verificar novamente se todas as subatividades estão concluídas
         if (!todasSubatividadesConcluidas()) {
