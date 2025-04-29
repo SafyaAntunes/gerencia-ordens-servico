@@ -66,7 +66,7 @@ export default function ServicoTracker({
   // Load funcionarios if needed (when the component mounts)
   useEffect(() => {
     handleLoadFuncionarios();
-  }, []);
+  }, [handleLoadFuncionarios]);
 
   return (
     <Card className={cn("w-full", className)}>
@@ -86,6 +86,7 @@ export default function ServicoTracker({
               temPermissao={temPermissao}
               onToggleOpen={() => setIsOpen(!isOpen)}
               onReiniciarServico={handleReiniciarServico}
+              isOpen={isOpen}
             />
           </CardContent>
         </CollapsibleTrigger>
@@ -96,7 +97,7 @@ export default function ServicoTracker({
               descricao={servico.descricao}
               subatividades={subatividadesFiltradas}
               temPermissao={temPermissao}
-              onSubatividadeToggle={handleSubatividadeToggle}
+              onSubatividadeToggle={onSubatividadeToggle}
             />
             
             <ServicoControls 

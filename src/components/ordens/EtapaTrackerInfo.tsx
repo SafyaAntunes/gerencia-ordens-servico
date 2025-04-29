@@ -68,14 +68,14 @@ export default function EtapaTrackerInfo({
           <div key={sub.id} className="flex items-center space-x-2">
             <Checkbox
               id={`check-etapa-${etapa}-${sub.id}`}
-              checked={sub.concluida}
+              checked={sub.concluida || false}
               onCheckedChange={(checked) => handleToggle(sub.id, checked === true)}
               disabled={servico.concluido}
               className="cursor-pointer"
             />
             <Label 
               htmlFor={`check-etapa-${etapa}-${sub.id}`} 
-              className={`text-sm ${sub.concluida ? 'line-through text-muted-foreground' : ''}`}
+              className={`text-sm ${sub.concluida ? 'line-through text-muted-foreground' : ''} cursor-pointer`}
             >
               {sub.nome}
             </Label>

@@ -8,7 +8,7 @@ interface ServicoDetailsProps {
   descricao?: string;
   subatividades: SubAtividade[];
   temPermissao: boolean;
-  onSubatividadeToggle: (subatividade: SubAtividade) => void;
+  onSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
 }
 
 export default function ServicoDetails({
@@ -28,11 +28,9 @@ export default function ServicoDetails({
     // Verificar se o objeto é válido antes de chamar a função
     try {
       if (subatividade.id) {
-        // Passamos uma cópia do objeto com o estado concluido invertido
-        onSubatividadeToggle({
-          ...subatividade,
-          concluida: !subatividade.concluida
-        });
+        // Chamamos a função com ID e o estado inverso do atual
+        onSubatividadeToggle(subatividade.id, !subatividade.concluida);
+        console.log("Subatividade clicada:", subatividade.id, "novo estado:", !subatividade.concluida);
       } else {
         console.error("Subatividade inválida (sem ID):", subatividade);
       }

@@ -18,6 +18,7 @@ interface ServicoHeaderProps {
   funcionarioNome?: string;
   concluido: boolean;
   temPermissao: boolean;
+  isOpen: boolean;
   onToggleOpen: () => void;
   onReiniciarServico: (e: React.MouseEvent) => void;
 }
@@ -33,6 +34,7 @@ export default function ServicoHeader({
   funcionarioNome,
   concluido,
   temPermissao,
+  isOpen,
   onToggleOpen,
   onReiniciarServico
 }: ServicoHeaderProps) {
@@ -87,7 +89,7 @@ export default function ServicoHeader({
           )}
           
           <Button variant="ghost" size="sm" className="p-0 h-8 w-8" onClick={onToggleOpen}>
-            {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </Button>
         </div>
       </div>
