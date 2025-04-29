@@ -1,0 +1,2 @@
+
+export { ServicoSubatividades } from './ServicoSubatividades';
