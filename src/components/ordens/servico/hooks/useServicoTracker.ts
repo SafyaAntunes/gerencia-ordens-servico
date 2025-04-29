@@ -15,8 +15,6 @@ import {
 import { useServicoTimer } from "./utils/servicoTimerUtils";
 import { loadFuncionario } from "./utils/servicoFirebaseUtils";
 
-export type { ServicoStatus } from "./types/servicoTrackerTypes";
-
 export function useServicoTracker({
   servico,
   ordemId,

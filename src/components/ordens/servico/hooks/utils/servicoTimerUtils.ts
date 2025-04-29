@@ -1,5 +1,6 @@
 
 import { useState, useEffect, useCallback } from "react";
+import { formatTimeDisplay } from "./servicoTrackerUtils";
 
 export interface UseServicoTimerResult {
   isRunning: boolean;
@@ -9,13 +10,6 @@ export interface UseServicoTimerResult {
   startTime: number | null;
   pauseTime: number | null;
   pausas: { inicio: number; fim?: number }[];
-  setIsRunning: (value: boolean) => void;
-  setIsPaused: (value: boolean) => void;
-  setDisplayTime: (value: string) => void;
-  setElapsedSeconds: (value: number) => void;
-  setStartTime: (value: number | null) => void;
-  setPauseTime: (value: number | null) => void;
-  setPausas: React.Dispatch<React.SetStateAction<{ inicio: number; fim?: number }[]>>;
   handleStartClick: () => void;
   handlePause: () => void;
   handleResume: () => void;
@@ -78,14 +72,7 @@ export function useServicoTimer(): UseServicoTimerResult {
         const diff = now - startTime;
         const seconds = Math.floor(diff / 1000);
         setElapsedSeconds(seconds);
-
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        const remainingSeconds = seconds % 60;
-
-        setDisplayTime(
-          `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`
-        );
+        setDisplayTime(formatTimeDisplay(seconds));
       }, 1000);
     }
 
@@ -100,13 +87,6 @@ export function useServicoTimer(): UseServicoTimerResult {
     startTime,
     pauseTime,
     pausas,
-    setIsRunning,
-    setIsPaused,
-    setDisplayTime,
-    setElapsedSeconds,
-    setStartTime,
-    setPauseTime,
-    setPausas,
     handleStartClick,
     handlePause,
     handleResume,
