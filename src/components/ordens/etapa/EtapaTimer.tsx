@@ -34,6 +34,9 @@ export default function EtapaTimer({
   onFinish,
   isEtapaConcluida = false,
 }: EtapaTimerProps) {
+  // Usar console.log para debug de problemas de renderização
+  console.log("EtapaTimer renderizando para:", {ordemId, etapa, tipoServico, isEtapaConcluida});
+  
   const {
     isRunning,
     isPaused,
@@ -55,7 +58,10 @@ export default function EtapaTimer({
     },
     onPause,
     onResume,
-    onFinish,
+    onFinish: (tempoTotal) => {
+      console.log("Timer finished with total time:", tempoTotal, "for", {ordemId, etapa, tipoServico});
+      if (onFinish) onFinish(tempoTotal);
+    },
     isEtapaConcluida
   });
   
@@ -78,7 +84,8 @@ export default function EtapaTimer({
     if (onCustomStart) {
       onCustomStart();
     } else {
-      handleStart();
+      const result = handleStart();
+      console.log("handleStart result:", result);
     }
   };
   

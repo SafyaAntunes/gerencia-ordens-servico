@@ -52,6 +52,7 @@ export function useOrdemTimer({
     }
     
     // Calculate the final time before dispatching the finish action
+    // Só adiciona o elapsed time ao total se o timer estiver rodando e não pausado
     const finalTime = state.isRunning && !state.isPaused ? state.elapsedTime : 0;
     const totalTime = state.totalTime + finalTime;
     

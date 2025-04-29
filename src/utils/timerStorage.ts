@@ -37,16 +37,20 @@ export const loadTimerData = (
   
   try {
     const key = generateTimerStorageKey(ordemId, etapa, tipoServico);
+    console.log("Loading timer data with key:", key);
     const data = localStorage.getItem(key);
-    console.log("Loading timer data with key:", key, data ? "data found" : "no data");
     
     if (data) {
       try {
-        return JSON.parse(data) as TimerState;
+        const parsed = JSON.parse(data) as TimerState;
+        console.log("Loaded timer data:", parsed);
+        return parsed;
       } catch (e) {
         console.error("Error parsing timer data:", e);
         return null;
       }
+    } else {
+      console.log("No timer data found for key:", key);
     }
     
     return null;
