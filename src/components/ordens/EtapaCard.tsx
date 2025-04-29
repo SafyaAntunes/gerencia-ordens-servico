@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
@@ -164,6 +163,7 @@ export default function EtapaCard({
   };
   
   const handleTimerStart = () => {
+    console.log("handleTimerStart chamado em EtapaCard para:", {ordemId, etapa, servicoTipo});
     // Esta função será chamada quando o usuário clicar em iniciar
     // Ou após a confirmação de atribuição de funcionário
     setIsAtivo(true);
