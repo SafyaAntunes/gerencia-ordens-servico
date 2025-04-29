@@ -2,12 +2,14 @@
 import { toast } from "sonner";
 import { EtapaOS, TipoServico } from "@/types/ordens";
 import { useEtapaPermissoes } from "./useEtapaPermissoes";
+import { useEtapaSubatividades } from "./useEtapaSubatividades";
 
 export function useEtapaOperations(
   etapa: EtapaOS,
   servicoTipo?: TipoServico
 ) {
   const { funcionario, podeAtribuirFuncionario, podeReabrirAtividade } = useEtapaPermissoes(etapa, servicoTipo);
+  const { verificarSubatividadesConcluidas } = useEtapaSubatividades();
   
   const handleTimerStart = (): boolean => {
     console.log("handleTimerStart chamado em useEtapaOperations");
@@ -34,10 +36,16 @@ export function useEtapaOperations(
   
   const handleMarcarConcluido = (
     setDialogAction: (action: 'start' | 'finish') => void,
-    setAtribuirFuncionarioDialogOpen: (open: boolean) => void
+    setAtribuirFuncionarioDialogOpen: (open: boolean) => void,
+    servicos?: any[]
   ): boolean => {
     if (!funcionario?.id) {
       toast.error("É necessário estar logado para finalizar uma etapa");
+      return false;
+    }
+    
+    // Verificar se todas as subatividades estão concluídas
+    if (servicos && !verificarSubatividadesConcluidas(servicos)) {
       return false;
     }
 
@@ -87,7 +95,8 @@ export function useEtapaOperations(
       const funcNome = funcionarioSelecionadoNome || funcionario?.nome;
       
       if (dialogAction === 'start') {
-        // Apenas inicia o timer com o funcionário selecionado
+        // Inicia o timer com o funcionário selecionado
+        console.log("Iniciando timer via handleConfirmarAtribuicao");
         handleTimerStart();
       } else if (dialogAction === 'finish') {
         // Marca a etapa como concluída com o funcionário selecionado
