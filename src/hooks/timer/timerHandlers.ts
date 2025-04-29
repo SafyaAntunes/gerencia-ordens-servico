@@ -29,13 +29,13 @@ export const createTimerHandlers = ({
   onResume,
   onFinish
 }: TimerHandlerProps) => {
-  const handleStart = (): void => {
+  const handleStart = (): boolean => {
     if (!usarCronometro) {
       onStart?.();
-      return;
+      return true;
     }
     
-    console.log("Iniciando timer no timerHandlers");
+    console.log("Iniciando timer no timerHandlers para:", {etapa, tipoServico});
     // Dispatch START_TIMER action with the current timestamp
     dispatch({ 
       type: "START_TIMER", 
@@ -48,6 +48,8 @@ export const createTimerHandlers = ({
     if (etapa) {
       notifyTimerStarted(etapa as EtapaOS, tipoServico as TipoServico);
     }
+    
+    return true;
   };
   
   const handlePause = (motivo?: string) => {

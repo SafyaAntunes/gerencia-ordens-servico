@@ -1,7 +1,6 @@
 
-import { useState, useEffect, useReducer } from "react";
+import { useReducer, useEffect } from "react";
 import { EtapaOS, TipoServico } from "@/types/ordens";
-import { TimerState } from "@/types/timer";
 import { loadTimerData } from "@/utils/timerStorage";
 import { timerReducer, createInitialTimerState, persistTimerState } from "./timerReducer";
 
@@ -22,7 +21,7 @@ export function useTimerState({
   
   // Load saved time from localStorage
   useEffect(() => {
-    console.log("Loading timer data for:", ordemId, etapa, tipoServico);
+    console.log("Loading timer data for:", {ordemId, etapa, tipoServico});
     const savedData = loadTimerData(ordemId, etapa as EtapaOS, tipoServico as TipoServico);
     
     if (savedData) {
@@ -53,8 +52,8 @@ export function useTimerState({
   
   // Save state to localStorage whenever it changes
   useEffect(() => {
-    if (state.isRunning || state.totalTime > 0 || state.pausas.length > 0) {
-      console.log("Persisting timer state:", state);
+    if (ordemId && etapa && (state.isRunning || state.totalTime > 0 || state.pausas.length > 0)) {
+      console.log("Persisting timer state:", {state, ordemId, etapa, tipoServico});
       persistTimerState(ordemId, etapa as EtapaOS, tipoServico as TipoServico, state);
     }
   }, [
@@ -82,7 +81,7 @@ export function useTimerState({
           type: "UPDATE_ELAPSED_TIME",
           payload: { now: Date.now() }
         });
-      }, 100);
+      }, 100); // Update 10 times per second for smoother display
       
       console.log("Timer interval created");
     }

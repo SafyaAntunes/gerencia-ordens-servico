@@ -50,7 +50,8 @@ export default function EtapaTimer({
     etapa,
     tipoServico,
     onStart: () => {
-      if (onStart) onStart();
+      console.log("Timer started for:", {ordemId, etapa, tipoServico});
+      onStart?.();
     },
     onPause,
     onResume,
@@ -73,6 +74,7 @@ export default function EtapaTimer({
   
   // Function to manage timer start, possibly opening dialog
   const handleStartTimer = () => {
+    console.log("handleStartTimer called", {onCustomStart});
     if (onCustomStart) {
       onCustomStart();
     } else {
@@ -100,15 +102,15 @@ export default function EtapaTimer({
         </div>
       </div>
       
-      {/* Tempo em formato menor abaixo do principal */}
-      <div className="mb-3 text-lg">
-        {formatTime(displayTime)}
+      {/* Tempo em formato menor abaixo do principal (redundante, mas mantido por compatibilidade) */}
+      <div className="mb-3 text-sm text-muted-foreground">
+        Tempo registrado: {formatTime(displayTime)}
       </div>
       
       {/* Nome do funcionário */}
       {funcionarioNome && (
         <div className="mb-4 text-base">
-          {funcionarioNome}
+          Responsável: {funcionarioNome}
         </div>
       )}
       

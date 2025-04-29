@@ -67,14 +67,16 @@ export function useEtapaCard(etapa: EtapaOS, servicoTipo?: TipoServico) {
   const handleIniciarTimer = () => {
     if (!funcionario?.id) {
       toast.error("É necessário estar logado para iniciar uma etapa");
-      return;
+      return false;
     }
-
+    
+    console.log("Iniciando timer diretamente em useEtapaCard");
     // Directly start the timer without dialog
-    handleTimerStart();
+    return handleTimerStart();
   };
   
   const handleTimerStart = () => {
+    console.log("handleTimerStart chamado em useEtapaCard");
     setIsAtivo(true);
     return true; // Indicate success
   };
@@ -82,9 +84,10 @@ export function useEtapaCard(etapa: EtapaOS, servicoTipo?: TipoServico) {
   const handleMarcarConcluido = () => {
     if (!funcionario?.id) {
       toast.error("É necessário estar logado para finalizar uma etapa");
-      return;
+      return false;
     }
 
+    console.log("Marcando como concluído em useEtapaCard");
     // Just return true to let caller know this was successful
     return true;
   };

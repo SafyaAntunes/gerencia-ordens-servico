@@ -1,5 +1,10 @@
 
 export const formatTime = (milliseconds: number): string => {
+  // Proteger contra valores inválidos
+  if (!milliseconds || isNaN(milliseconds) || milliseconds < 0) {
+    return '00:00:00';
+  }
+  
   const totalSeconds = Math.floor(milliseconds / 1000);
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -15,8 +20,10 @@ export const calculateElapsedTime = (
   endTime: Date | number | undefined, 
   pausas: { inicio: Date | number; fim?: Date | number }[] = []
 ): number => {
+  if (!startTime) return 0;
+  
   if (!endTime) {
-    endTime = new Date();
+    endTime = Date.now();
   }
 
   const startMs = startTime instanceof Date ? startTime.getTime() : startTime;
@@ -27,6 +34,8 @@ export const calculateElapsedTime = (
   
   // Subtract paused time
   for (const pausa of pausas) {
+    if (!pausa.inicio) continue;
+    
     const pausaStartMs = pausa.inicio instanceof Date ? pausa.inicio.getTime() : pausa.inicio;
     const pausaEndMs = pausa.fim 
       ? (pausa.fim instanceof Date ? pausa.fim.getTime() : pausa.fim) 
@@ -44,5 +53,10 @@ export const generateTimerStorageKey = (
   etapa: string, 
   tipoServico?: string
 ): string => {
+  if (!ordemId || !etapa) {
+    console.warn("Missing required parameters for timer storage key", {ordemId, etapa, tipoServico});
+    return `timer_invalid_${Date.now()}`;
+  }
+  
   return `timer_${ordemId}_${etapa}${tipoServico ? `_${tipoServico}` : ''}`;
 };

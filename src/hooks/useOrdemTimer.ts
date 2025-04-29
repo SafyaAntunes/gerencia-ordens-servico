@@ -40,15 +40,14 @@ export function useOrdemTimer({
   
   // Wrap the handler from timerHandlers to ensure it works correctly
   const handleStart = (): boolean => {
-    console.log("handleStart called in useOrdemTimer");
-    timerStart();
-    return true; // Always return true to indicate timer has started
+    console.log("handleStart called in useOrdemTimer with params:", {ordemId, etapa, tipoServico});
+    return timerStart();
   };
   
   // Custom handleFinish that calculates totalTime correctly
   const handleFinish = () => {
     if (!state.usarCronometro) {
-      onFinish?.(0);
+      if (onFinish) onFinish(0);
       return;
     }
     
@@ -56,10 +55,12 @@ export function useOrdemTimer({
     const finalTime = state.elapsedTime;
     const totalTime = state.totalTime + finalTime;
     
+    console.log("Finishing timer with total time:", totalTime, "ms");
+    
     // Dispatch finish action
     dispatch({ 
       type: "FINISH_TIMER", 
-      payload: { now: Date.now() } 
+      payload: { now: Date.now(), totalTime } 
     });
     
     // Notify and callback with the total time
@@ -69,7 +70,7 @@ export function useOrdemTimer({
   };
   
   // Calculate total time (saved + current if running)
-  const displayTime = state.isRunning ? state.totalTime + state.elapsedTime : state.totalTime;
+  const displayTime = state.isRunning && !state.isPaused ? state.totalTime + state.elapsedTime : state.totalTime;
 
   return {
     isRunning: state.isRunning,
