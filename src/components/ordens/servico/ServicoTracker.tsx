@@ -191,14 +191,10 @@ export default function ServicoTracker({
     if (dialogAction === 'start') {
       // Explicitamente iniciar o timer após a confirmação do funcionário
       console.log("Iniciando timer após atribuição de funcionário");
-      const timerIniciado = handleStart();
+      handleStart();
       
-      // Verifica se o timer iniciou corretamente
-      if (!timerIniciado) {
-        toast.error("Não foi possível iniciar o cronômetro");
-        setAtribuirFuncionarioDialogOpen(false);
-        return;
-      }
+      // O erro estava aqui. Não podemos testar o retorno de handleStart()
+      // já que ele não retorna um valor booleano
     } else if (dialogAction === 'finish') {
       if (totalSubatividades > 0 && !todasSubatividadesConcluidas) {
         toast.error("É necessário concluir todas as subatividades antes de finalizar o serviço");

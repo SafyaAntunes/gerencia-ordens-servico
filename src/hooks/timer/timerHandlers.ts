@@ -29,7 +29,7 @@ export const createTimerHandlers = ({
   onResume,
   onFinish
 }: TimerHandlerProps) => {
-  const handleStart = () => {
+  const handleStart = (): void => {
     if (!usarCronometro) {
       onStart?.();
       return;
@@ -48,9 +48,6 @@ export const createTimerHandlers = ({
     if (etapa) {
       notifyTimerStarted(etapa as EtapaOS, tipoServico as TipoServico);
     }
-    
-    // Return true to indicate successful timer start
-    return true;
   };
   
   const handlePause = (motivo?: string) => {

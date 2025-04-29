@@ -39,9 +39,10 @@ export function useOrdemTimer({
   });
   
   // Wrap the handler from timerHandlers to ensure it works correctly
-  const handleStart = () => {
+  const handleStart = (): boolean => {
     console.log("handleStart called in useOrdemTimer");
-    return timerStart();
+    timerStart();
+    return true; // Always return true to indicate timer has started
   };
   
   // Custom handleFinish that calculates totalTime correctly
