@@ -31,7 +31,7 @@ export async function getSubatividades(): Promise<Record<TipoServico | TipoAtivi
         selecionada: false,
         precoHora: data.precoHora || 0,
         tempoEstimado: data.tempoEstimado || 0,
-        servicoTipo: data.servicoTipo,
+        servicoTipo: data.servicoTipo || null,
         descricao: data.descricao || '',
       };
       
@@ -51,10 +51,13 @@ export async function getSubatividades(): Promise<Record<TipoServico | TipoAtivi
 export async function saveSubatividade(subatividade: SubAtividade, tipoServico: TipoServico | TipoAtividade): Promise<void> {
   try {
     const subatividadeRef = doc(db, 'subatividades', subatividade.id);
-    await setDoc(subatividadeRef, {
+    const dataToSave = {
       ...subatividade,
       tipoServico,
-    });
+      // Garantir que servicoTipo não seja undefined
+      servicoTipo: subatividade.servicoTipo || null,
+    };
+    await setDoc(subatividadeRef, dataToSave);
   } catch (error) {
     console.error('Erro ao salvar subatividade:', error);
     throw error;
@@ -98,10 +101,14 @@ export async function saveSubatividades(subatividadesMap: Partial<Record<TipoSer
     Object.entries(completeMap).forEach(([tipoServico, subatividades]) => {
       subatividades.forEach((subatividade) => {
         const subatividadeRef = doc(db, 'subatividades', subatividade.id);
-        batch.set(subatividadeRef, {
+        // Garantir que servicoTipo não seja undefined
+        const dataToSave = {
           ...subatividade,
           tipoServico,
-        });
+          // Converter undefined para null (o Firestore aceita null)
+          servicoTipo: subatividade.servicoTipo || null
+        };
+        batch.set(subatividadeRef, dataToSave);
       });
     });
     
@@ -129,7 +136,7 @@ export async function getSubatividadesByTipo(tipoServico: TipoServico | TipoAtiv
         concluida: false,
         precoHora: data.precoHora || 0,
         tempoEstimado: data.tempoEstimado || 0,
-        servicoTipo: data.servicoTipo,
+        servicoTipo: data.servicoTipo || null,
         descricao: data.descricao || '',
       });
     });

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -145,7 +144,8 @@ export default function SubatividadesConfig({
         nome,
         selecionada: false,
         precoHora: 70,
-        servicoTipo: porServico ? selectedServicoTipo as TipoServico : undefined,
+        // Garantir que servicoTipo nunca seja undefined
+        servicoTipo: porServico ? selectedServicoTipo as TipoServico : null,
         tempoEstimado: 1 // valor padrão de tempo estimado
       }));
     
@@ -170,14 +170,23 @@ export default function SubatividadesConfig({
           s => s.servicoTipo !== selectedServicoTipo
         );
         
+        // Garantir que cada subatividade tenha um servicoTipo definido
         const subatividadesComTipo = subatividades.map(s => ({
           ...s,
-          servicoTipo: selectedServicoTipo as TipoServico
+          // Usar o selectedServicoTipo ou manter o atual se já estiver definido
+          servicoTipo: s.servicoTipo || (selectedServicoTipo as TipoServico)
         }));
         
         novoMap[tipoAtividade] = [...outrasSubatividades, ...subatividadesComTipo];
       } else {
-        novoMap[selectedTipo] = subatividades;
+        // Garantir que nenhuma subatividade tenha servicoTipo undefined
+        const subatividadesProcessadas = subatividades.map(s => ({
+          ...s,
+          // Se não estiver em modo porServico, podemos definir como null
+          servicoTipo: s.servicoTipo || null
+        }));
+        
+        novoMap[selectedTipo] = subatividadesProcessadas;
       }
       
       await saveSubatividades(novoMap);
@@ -209,18 +218,21 @@ export default function SubatividadesConfig({
   };
 
   const handleSaveSubatividade = (data: SubAtividade) => {
+    // Garantir que servicoTipo não seja undefined
+    const processedData = {
+      ...data,
+      servicoTipo: porServico ? selectedServicoTipo as TipoServico : data.servicoTipo || null
+    };
+    
     if (editingSubatividade) {
       setSubatividades(prev =>
-        prev.map(sub => (sub.id === data.id ? data : sub))
+        prev.map(sub => (sub.id === processedData.id ? processedData : sub))
       );
       setEditingSubatividade(null);
-      toast.success(`Subatividade "${data.nome}" atualizada com sucesso`);
+      toast.success(`Subatividade "${processedData.nome}" atualizada com sucesso`);
     } else {
-      setSubatividades(prev => [...prev, {
-        ...data,
-        servicoTipo: porServico ? selectedServicoTipo as TipoServico : undefined
-      }]);
-      toast.success(`Subatividade "${data.nome}" adicionada com sucesso`);
+      setSubatividades(prev => [...prev, processedData]);
+      toast.success(`Subatividade "${processedData.nome}" adicionada com sucesso`);
     }
   };
 

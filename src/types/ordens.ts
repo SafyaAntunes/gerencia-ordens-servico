@@ -42,7 +42,7 @@ export type SubAtividade = {
   concluida?: boolean;
   precoHora?: number; // Preço por hora da subatividade
   tempoEstimado?: number; // Tempo estimado em horas
-  servicoTipo?: TipoServico; // A qual tipo de serviço esta subatividade se relaciona
+  servicoTipo?: TipoServico | null; // A qual tipo de serviço esta subatividade se relaciona
   descricao?: string; // Descrição opcional da subatividade
 };
 
