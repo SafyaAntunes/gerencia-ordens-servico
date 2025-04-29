@@ -1,6 +1,6 @@
 
-import ServicoTracker from "@/components/ordens/ServicoTracker";
-import { EtapaOS, Servico } from "@/types/ordens";
+import { Servico, TipoServico, EtapaOS } from "@/types/ordens";
+import { ServicoTracker } from "@/components/ordens/servico";
 
 interface EtapaServicosProps {
   servicos: Servico[];
@@ -8,8 +8,8 @@ interface EtapaServicosProps {
   funcionarioId: string;
   funcionarioNome?: string;
   etapa: EtapaOS;
-  onSubatividadeToggle?: (servicoTipo: string, subatividadeId: string, checked: boolean) => void;
-  onServicoStatusChange?: (servicoTipo: string, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
+  onSubatividadeToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
+  onServicoStatusChange?: (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
 }
 
 export default function EtapaServicos({
@@ -38,12 +38,12 @@ export default function EtapaServicos({
           onSubatividadeToggle={
             onSubatividadeToggle ? 
               (subId, checked) => onSubatividadeToggle(servico.tipo, subId, checked) : 
-              () => {}
+              undefined
           }
           onServicoStatusChange={
             onServicoStatusChange ? 
               (concluido, funcId, funcNome) => onServicoStatusChange(servico.tipo, concluido, funcId, funcNome) : 
-              () => {}
+              undefined
           }
         />
       ))}

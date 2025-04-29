@@ -11,6 +11,10 @@ export function useEtapaCard(etapa: EtapaOS, servicoTipo?: TipoServico) {
   const [isAtivo, setIsAtivo] = useState(false);
   const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
   const [progresso, setProgresso] = useState(0);
+  const [atribuirFuncionarioDialogOpen, setAtribuirFuncionarioDialogOpen] = useState(false);
+  const [dialogAction, setDialogAction] = useState<'start' | 'finish'>('start');
+  const [funcionarioSelecionadoId, setFuncionarioSelecionadoId] = useState<string>("");
+  const [funcionarioSelecionadoNome, setFuncionarioSelecionadoNome] = useState<string>("");
   const { funcionario } = useAuth();
   
   const podeAtribuirFuncionario = funcionario?.nivelPermissao === 'admin' || 
@@ -69,9 +73,14 @@ export function useEtapaCard(etapa: EtapaOS, servicoTipo?: TipoServico) {
       toast.error("É necessário estar logado para iniciar uma etapa");
       return false;
     }
+
+    if (podeAtribuirFuncionario) {
+      setDialogAction('start');
+      setAtribuirFuncionarioDialogOpen(true);
+      return false;
+    }
     
-    console.log("Iniciando timer diretamente em useEtapaCard");
-    // Directly start the timer without dialog
+    // Próprio usuário inicia o timer
     return handleTimerStart();
   };
   
@@ -87,8 +96,12 @@ export function useEtapaCard(etapa: EtapaOS, servicoTipo?: TipoServico) {
       return false;
     }
 
-    console.log("Marcando como concluído em useEtapaCard");
-    // Just return true to let caller know this was successful
+    if (podeAtribuirFuncionario) {
+      setDialogAction('finish');
+      setAtribuirFuncionarioDialogOpen(true);
+      return false;
+    }
+    
     return true;
   };
   
@@ -132,6 +145,34 @@ export function useEtapaCard(etapa: EtapaOS, servicoTipo?: TipoServico) {
       toast.success("Etapa reaberta para continuação");
     }
   };
+
+  const handleFuncionarioChange = (value: string) => {
+    setFuncionarioSelecionadoId(value);
+    const funcionarioSelecionado = funcionariosOptions.find(f => f.id === value);
+    setFuncionarioSelecionadoNome(funcionarioSelecionado?.nome || "");
+  };
+  
+  const handleConfirmarAtribuicao = (onEtapaStatusChange?: any) => {
+    if (onEtapaStatusChange) {
+      const funcId = funcionarioSelecionadoId || funcionario?.id;
+      const funcNome = funcionarioSelecionadoNome || funcionario?.nome;
+      
+      if (dialogAction === 'start') {
+        // Apenas inicia o timer com o funcionário selecionado
+        handleTimerStart();
+      } else if (dialogAction === 'finish') {
+        // Marca a etapa como concluída com o funcionário selecionado
+        onEtapaStatusChange(
+          etapa, 
+          true, 
+          funcId, 
+          funcNome,
+          (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+        );
+      }
+    }
+    setAtribuirFuncionarioDialogOpen(false);
+  };
   
   return {
     isAtivo,
@@ -146,6 +187,14 @@ export function useEtapaCard(etapa: EtapaOS, servicoTipo?: TipoServico) {
     handleMarcarConcluido,
     isEtapaConcluida,
     getEtapaStatus,
-    handleReiniciarEtapa
+    handleReiniciarEtapa,
+    atribuirFuncionarioDialogOpen,
+    setAtribuirFuncionarioDialogOpen,
+    dialogAction,
+    setDialogAction,
+    funcionarioSelecionadoId,
+    funcionarioSelecionadoNome,
+    handleFuncionarioChange,
+    handleConfirmarAtribuicao
   };
 }

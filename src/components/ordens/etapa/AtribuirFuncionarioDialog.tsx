@@ -1,6 +1,6 @@
 
-import { Button } from "@/components/ui/button";
-import { 
+import React from "react";
+import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -14,29 +14,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { Funcionario } from "@/types/funcionarios";
 
 interface AtribuirFuncionarioDialogProps {
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
-  onConfirm: () => void;
-  funcionarioAtual: { id: string; nome: string };
-  funcionariosOptions: Funcionario[];
-  onFuncionarioChange: (value: string) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   dialogAction: 'start' | 'finish';
+  funcionarioOptions: Funcionario[];
+  currentFuncionarioId?: string;
+  currentFuncionarioNome?: string;
+  selectedFuncionarioId: string;
+  onFuncionarioChange: (value: string) => void;
+  onConfirm: () => void;
 }
 
 export default function AtribuirFuncionarioDialog({
-  isOpen,
+  open,
   onOpenChange,
-  onConfirm,
-  funcionarioAtual,
-  funcionariosOptions,
+  dialogAction,
+  funcionarioOptions,
+  currentFuncionarioId,
+  currentFuncionarioNome,
+  selectedFuncionarioId,
   onFuncionarioChange,
-  dialogAction
+  onConfirm
 }: AtribuirFuncionarioDialogProps) {
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Atribuir Funcionário</DialogTitle>
@@ -47,16 +52,16 @@ export default function AtribuirFuncionarioDialog({
               Selecione o funcionário que {dialogAction === 'start' ? 'executará' : 'executou'} esta etapa
             </label>
             
-            <Select onValueChange={onFuncionarioChange} defaultValue={funcionarioAtual.id}>
+            <Select onValueChange={onFuncionarioChange} value={selectedFuncionarioId}>
               <SelectTrigger id="funcionario-select-etapa" className="w-full">
                 <SelectValue placeholder="Selecione um funcionário" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={funcionarioAtual.id}>
-                  {funcionarioAtual.nome || "Eu mesmo"} (você)
+                <SelectItem value={currentFuncionarioId || ""}>
+                  {currentFuncionarioNome || "Eu mesmo"} (você)
                 </SelectItem>
-                {funcionariosOptions
-                  .filter(f => f.id !== funcionarioAtual.id)
+                {funcionarioOptions
+                  .filter(f => f.id !== currentFuncionarioId)
                   .map(f => (
                     <SelectItem key={f.id} value={f.id}>
                       {f.nome}

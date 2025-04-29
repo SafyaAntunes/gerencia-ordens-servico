@@ -10,7 +10,8 @@ import {
   EtapaProgresso,
   EtapaConcluiButton,
   EtapaServicos,
-  EtapaTimer
+  EtapaTimer,
+  AtribuirFuncionarioDialog
 } from ".";
 
 interface EtapaCardProps {
@@ -60,7 +61,14 @@ export default function EtapaCard({
     handleMarcarConcluido,
     isEtapaConcluida,
     getEtapaStatus,
-    handleReiniciarEtapa
+    handleReiniciarEtapa,
+    atribuirFuncionarioDialogOpen,
+    setAtribuirFuncionarioDialogOpen,
+    dialogAction,
+    funcionarioSelecionadoId,
+    funcionarioSelecionadoNome,
+    handleFuncionarioChange,
+    handleConfirmarAtribuicao
   } = useEtapaCard(etapa, servicoTipo);
   
   // Verificar se todas as subatividades dos serviços estão concluídas
@@ -101,6 +109,18 @@ export default function EtapaCard({
       setIsAtivo(false);
     }
   }, [etapaInfo, setIsAtivo]);
+  
+  const handleMarcarConcluidoClick = () => {
+    if (handleMarcarConcluido() && onEtapaStatusChange) {
+      onEtapaStatusChange(
+        etapa, 
+        true, 
+        funcionario?.id, 
+        funcionario?.nome,
+        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+      );
+    }
+  };
 
   return (
     <Card className="p-6 mb-4">
@@ -139,17 +159,7 @@ export default function EtapaCard({
           
           <EtapaConcluiButton 
             isConcluida={isEtapaConcluida(etapaInfo)} 
-            onClick={() => {
-              if (handleMarcarConcluido() && onEtapaStatusChange) {
-                onEtapaStatusChange(
-                  etapa, 
-                  true, 
-                  funcionario?.id, 
-                  funcionario?.nome,
-                  (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
-                );
-              }
-            }} 
+            onClick={handleMarcarConcluidoClick} 
           />
         </div>
       )}
@@ -162,6 +172,18 @@ export default function EtapaCard({
         etapa={etapa}
         onSubatividadeToggle={onSubatividadeToggle}
         onServicoStatusChange={onServicoStatusChange}
+      />
+      
+      <AtribuirFuncionarioDialog
+        open={atribuirFuncionarioDialogOpen}
+        onOpenChange={setAtribuirFuncionarioDialogOpen}
+        dialogAction={dialogAction}
+        funcionarioOptions={funcionario ? [funcionario, ...funcionariosOptions.filter(f => f.id !== funcionario.id)] : funcionariosOptions}
+        currentFuncionarioId={funcionario?.id}
+        currentFuncionarioNome={funcionario?.nome}
+        selectedFuncionarioId={funcionarioSelecionadoId}
+        onFuncionarioChange={handleFuncionarioChange}
+        onConfirm={() => handleConfirmarAtribuicao(onEtapaStatusChange)}
       />
     </Card>
   );
