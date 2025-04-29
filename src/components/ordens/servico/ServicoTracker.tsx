@@ -1,14 +1,11 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Servico, SubAtividade } from "@/types/ordens";
+import { Servico } from "@/types/ordens";
 import { cn } from "@/lib/utils";
-import { useOrdemTimer } from "@/hooks/useOrdemTimer";
-import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
-import { getDocs, collection } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { Funcionario } from "@/types/funcionarios";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+
+import { useServicoTracker } from "./hooks/useServicoTracker";
 import ServicoHeader from "./ServicoHeader";
 import ServicoDetails from "./ServicoDetails";
 import ServicoControls from "./ServicoControls";
@@ -35,186 +32,48 @@ export default function ServicoTracker({
   className,
   etapa,
 }: ServicoTrackerProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
-  const [funcionarioSelecionadoId, setFuncionarioSelecionadoId] = useState<string>("");
-  const [funcionarioSelecionadoNome, setFuncionarioSelecionadoNome] = useState<string>("");
-  const [atribuirFuncionarioDialogOpen, setAtribuirFuncionarioDialogOpen] = useState(false);
-  const [dialogAction, setDialogAction] = useState<'start' | 'finish'>('start');
-  const { funcionario } = useAuth();
-  
-  const temPermissao = funcionario?.nivelPermissao === 'admin' || 
-                      funcionario?.nivelPermissao === 'gerente' ||
-                      (funcionario?.especialidades && funcionario.especialidades.includes(servico.tipo));
-  
-  const podeAtribuirFuncionario = funcionario?.nivelPermissao === 'admin' || 
-                                 funcionario?.nivelPermissao === 'gerente';
-  
   const {
+    isOpen,
+    setIsOpen,
+    funcionariosOptions,
+    atribuirFuncionarioDialogOpen,
+    setAtribuirFuncionarioDialogOpen,
+    dialogAction,
+    temPermissao,
     isRunning,
     isPaused,
-    usarCronometro,
     displayTime,
-    handleStart,
+    servicoStatus,
+    progressPercentage,
+    completedSubatividades,
+    totalSubatividades,
+    tempoTotalEstimado,
+    subatividadesFiltradas,
+    handleLoadFuncionarios,
+    handleSubatividadeToggle,
+    handleStartClick,
     handlePause,
     handleResume,
-    handleFinish
-  } = useOrdemTimer({
+    handleFinish,
+    handleMarcarConcluido,
+    handleReiniciarServico,
+    handleConfirmarAtribuicao,
+    handleFuncionarioChange,
+    funcionarioSelecionadoId
+  } = useServicoTracker({
+    servico,
     ordemId,
-    etapa: etapa || 'retifica',
-    tipoServico: servico.tipo,
-    onFinish: () => {/* Removed auto-completion */},
-    isEtapaConcluida: servico.concluido
+    funcionarioId,
+    funcionarioNome,
+    etapa,
+    onServicoStatusChange,
+    onSubatividadeToggle
   });
 
+  // Load funcionarios if needed (when the component mounts)
   useEffect(() => {
-    const carregarFuncionarios = async () => {
-      try {
-        const funcionariosRef = collection(db, "funcionarios");
-        const snapshot = await getDocs(funcionariosRef);
-        const funcionarios: Funcionario[] = [];
-        
-        snapshot.forEach((doc) => {
-          const data = doc.data() as Funcionario;
-          funcionarios.push({
-            ...data,
-            id: doc.id
-          });
-        });
-        
-        setFuncionariosOptions(funcionarios);
-      } catch (error) {
-        console.error("Erro ao carregar funcionários:", error);
-      }
-    };
-    
-    if (podeAtribuirFuncionario) {
-      carregarFuncionarios();
-    }
-  }, [podeAtribuirFuncionario]);
-
-  const subatividadesFiltradas = servico.subatividades?.filter(item => item.selecionada) || [];
-  
-  const totalSubatividades = subatividadesFiltradas.length || 0;
-  const completedSubatividades = subatividadesFiltradas.filter(item => item.concluida).length || 0;
-  const progressPercentage = totalSubatividades > 0 
-    ? Math.round((completedSubatividades / totalSubatividades) * 100)
-    : 0;
-  const todasSubatividadesConcluidas = totalSubatividades > 0 && completedSubatividades === totalSubatividades;
-  
-  const tempoTotalEstimado = subatividadesFiltradas.reduce((total, sub) => {
-    return total + (sub.tempoEstimado || 0);
-  }, 0);
-    
-  const getServicoStatus = () => {
-    if (servico.concluido) {
-      return "concluido";
-    } else if (isRunning || isPaused) {
-      return "em_andamento";
-    } else {
-      return "nao_iniciado";
-    }
-  };
-
-  const handleSubatividadeToggle = (subatividade: SubAtividade) => {
-    if (!temPermissao) {
-      toast.error("Você não tem permissão para editar este tipo de serviço");
-      return;
-    }
-    
-    onSubatividadeToggle(subatividade.id, !subatividade.concluida);
-  };
-  
-  const handleStartClick = () => {
-    if (!temPermissao) {
-      toast.error("Você não tem permissão para iniciar este tipo de serviço");
-      return;
-    }
-
-    if (podeAtribuirFuncionario) {
-      setDialogAction('start');
-      setAtribuirFuncionarioDialogOpen(true);
-    } else {
-      handleStart();
-    }
-  };
-  
-  const handleMarcarConcluido = () => {
-    if (!funcionario?.id) {
-      toast.error("É necessário estar logado para finalizar um serviço");
-      return;
-    }
-    
-    if (!temPermissao) {
-      toast.error("Você não tem permissão para editar este tipo de serviço");
-      return;
-    }
-
-    if (totalSubatividades > 0 && !todasSubatividadesConcluidas) {
-      toast.error("É necessário concluir todas as subatividades antes de finalizar o serviço");
-      return;
-    }
-    
-    if (isRunning || isPaused) {
-      handleFinish();
-    }
-    
-    if (podeAtribuirFuncionario) {
-      setDialogAction('finish');
-      setAtribuirFuncionarioDialogOpen(true);
-    } else {
-      onServicoStatusChange(true, funcionario.id, funcionario.nome);
-    }
-  };
-  
-  const handleReiniciarServico = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    if (!funcionario?.id) {
-      toast.error("É necessário estar logado para reiniciar um serviço");
-      return;
-    }
-    
-    if (!temPermissao) {
-      toast.error("Você não tem permissão para reiniciar este tipo de serviço");
-      return;
-    }
-    
-    onServicoStatusChange(false, servico.funcionarioId, servico.funcionarioNome);
-    toast.success("Serviço reaberto para continuação");
-  };
-  
-  const handleConfirmarAtribuicao = () => {
-    const funcId = funcionarioSelecionadoId || funcionario?.id;
-    const funcNome = funcionarioSelecionadoNome || funcionario?.nome;
-    
-    if (dialogAction === 'start') {
-      // Explicitamente iniciar o timer após a confirmação do funcionário
-      console.log("Iniciando timer após atribuição de funcionário");
-      handleStart();
-      
-      // O erro estava aqui. Não podemos testar o retorno de handleStart()
-      // já que ele não retorna um valor booleano
-    } else if (dialogAction === 'finish') {
-      if (totalSubatividades > 0 && !todasSubatividadesConcluidas) {
-        toast.error("É necessário concluir todas as subatividades antes de finalizar o serviço");
-        setAtribuirFuncionarioDialogOpen(false);
-        return;
-      }
-      
-      onServicoStatusChange(true, funcId, funcNome);
-    }
-    
-    setAtribuirFuncionarioDialogOpen(false);
-  };
-  
-  const handleFuncionarioChange = (value: string) => {
-    setFuncionarioSelecionadoId(value);
-    const funcionarioSelecionado = funcionariosOptions.find(f => f.id === value);
-    setFuncionarioSelecionadoNome(funcionarioSelecionado?.nome || "");
-  };
-  
-  const servicoStatus = getServicoStatus();
+    handleLoadFuncionarios();
+  }, []);
 
   return (
     <Card className={cn("w-full", className)}>
@@ -266,7 +125,7 @@ export default function ServicoTracker({
         isOpen={atribuirFuncionarioDialogOpen}
         onOpenChange={setAtribuirFuncionarioDialogOpen}
         funcionariosOptions={funcionariosOptions}
-        funcionarioAtual={{ id: funcionario?.id || "", nome: funcionario?.nome || "" }}
+        funcionarioAtual={{ id: funcionarioId, nome: funcionarioNome || "" }}
         onFuncionarioChange={handleFuncionarioChange}
         onConfirm={handleConfirmarAtribuicao}
         dialogAction={dialogAction}
