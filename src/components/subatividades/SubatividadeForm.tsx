@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,6 +15,7 @@ const formSchema = z.object({
   id: z.string().optional(),
   nome: z.string().min(3, { message: 'O nome precisa ter pelo menos 3 caracteres' }),
   precoHora: z.number().min(0, { message: 'O preço não pode ser negativo' }).optional(),
+  tempoEstimado: z.number().min(0, { message: 'O tempo não pode ser negativo' }).optional(),
   descricao: z.string().optional(),
 });
 
@@ -33,6 +35,7 @@ export function SubatividadeForm({ onSave, tipoServico, initialData, onCancel }:
       id: '',
       nome: '',
       precoHora: 0,
+      tempoEstimado: 0,
       descricao: '',
     },
   });
@@ -43,6 +46,7 @@ export function SubatividadeForm({ onSave, tipoServico, initialData, onCancel }:
         id: initialData.id,
         nome: initialData.nome,
         precoHora: initialData.precoHora || 0,
+        tempoEstimado: initialData.tempoEstimado || 0,
         descricao: '',
       });
     } else {
@@ -50,6 +54,7 @@ export function SubatividadeForm({ onSave, tipoServico, initialData, onCancel }:
         id: '',
         nome: '',
         precoHora: 0,
+        tempoEstimado: 0,
         descricao: '',
       });
     }
@@ -60,6 +65,7 @@ export function SubatividadeForm({ onSave, tipoServico, initialData, onCancel }:
       id: data.id || uuidv4(),
       nome: data.nome,
       precoHora: data.precoHora || 0,
+      tempoEstimado: data.tempoEstimado || 0,
       selecionada: false,
     };
     
@@ -68,6 +74,7 @@ export function SubatividadeForm({ onSave, tipoServico, initialData, onCancel }:
       id: '',
       nome: '',
       precoHora: 0,
+      tempoEstimado: 0,
       descricao: '',
     });
   };
@@ -107,6 +114,30 @@ export function SubatividadeForm({ onSave, tipoServico, initialData, onCancel }:
               </FormControl>
               <FormDescription>
                 Valor cobrado por hora para esta subatividade
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="tempoEstimado"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tempo Padrão (horas)</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  placeholder="0"
+                  {...field}
+                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                />
+              </FormControl>
+              <FormDescription>
+                Tempo padrão estimado para esta subatividade
               </FormDescription>
               <FormMessage />
             </FormItem>

@@ -14,7 +14,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 
@@ -55,12 +54,18 @@ export function SubatividadeList({ subatividades, isLoading, onEdit, onDelete }:
     }
   };
 
+  const formatarTempo = (tempo?: number) => {
+    if (!tempo) return "-";
+    return `${tempo} ${tempo === 1 ? "hora" : "horas"}`;
+  };
+
   return (
     <>
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Nome</TableHead>
+            <TableHead className="text-right">Tempo Padrão</TableHead>
             <TableHead className="text-right">Preço/Hora</TableHead>
             <TableHead className="w-[100px]">Ações</TableHead>
           </TableRow>
@@ -69,6 +74,7 @@ export function SubatividadeList({ subatividades, isLoading, onEdit, onDelete }:
           {subatividades.map((subatividade) => (
             <TableRow key={subatividade.id}>
               <TableCell className="font-medium">{subatividade.nome}</TableCell>
+              <TableCell className="text-right">{formatarTempo(subatividade.tempoEstimado)}</TableCell>
               <TableCell className="text-right">{formatCurrency(subatividade.precoHora || 0)}</TableCell>
               <TableCell>
                 <div className="flex space-x-2">

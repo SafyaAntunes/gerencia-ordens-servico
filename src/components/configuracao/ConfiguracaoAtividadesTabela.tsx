@@ -27,6 +27,11 @@ export default function ConfiguracaoAtividadesTabela({
   itens,
   onItemChange
 }: ConfiguracaoAtividadesTabelaProps) {
+  // Formata o valor para exibição no campo de moeda
+  const formatarValor = (valor: number): string => {
+    return valor.toFixed(2);
+  };
+
   return (
     <Card className="w-full">
       <CardHeader>

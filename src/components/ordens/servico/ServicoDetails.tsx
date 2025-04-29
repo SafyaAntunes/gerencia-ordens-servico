@@ -60,9 +60,18 @@ export default function ServicoDetails({
                   key={subatividade.id}
                   className={cn(
                     "flex items-center justify-between",
-                    temPermissao ? "cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors" : "cursor-default"
+                    temPermissao ? "cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors" : ""
                   )}
                   onClick={() => handleSubatividadeClick(subatividade)}
+                  tabIndex={temPermissao ? 0 : undefined}
+                  role={temPermissao ? "button" : undefined}
+                  aria-pressed={subatividade.concluida}
+                  onKeyDown={(e) => {
+                    if (temPermissao && (e.key === "Enter" || e.key === " ")) {
+                      e.preventDefault();
+                      handleSubatividadeClick(subatividade);
+                    }
+                  }}
                 >
                   <div className="flex items-center gap-2">
                     <div 

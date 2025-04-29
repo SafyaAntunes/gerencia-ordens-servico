@@ -51,7 +51,7 @@ export function ServicoSubatividades({
           return {
             ...sub,
             selecionada: true,
-            tempoEstimado: existente.tempoEstimado || 0
+            tempoEstimado: existente.tempoEstimado || sub.tempoEstimado || 0
           };
         }
         return sub;
@@ -87,7 +87,7 @@ export function ServicoSubatividades({
         updatedSubs.push({
           ...subToAdd,
           selecionada: checked,
-          tempoEstimado: 0
+          tempoEstimado: subToAdd.tempoEstimado || 0
         });
       }
     }
@@ -135,7 +135,7 @@ export function ServicoSubatividades({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
         {presetSubatividades.map((sub) => {
           const selecionada = subatividades.some(s => s.id === sub.id && s.selecionada);
           const subAtual = subatividades.find(s => s.id === sub.id) || sub;
@@ -151,11 +151,12 @@ export function ServicoSubatividades({
                       handleToggleSubatividade(sub.id, checked === true)
                     }
                     disabled={!editable}
+                    className="cursor-pointer"
                   />
                   <div>
                     <Label
                       htmlFor={`sub-${sub.id}`}
-                      className={`font-medium ${!selecionada && "text-muted-foreground"}`}
+                      className={`font-medium ${!selecionada && "text-muted-foreground"} cursor-pointer`}
                     >
                       {sub.nome}
                     </Label>
@@ -258,10 +259,11 @@ export function ServicoSubatividades({
                       handleToggleSubatividade(sub.id, checked === true)
                     }
                     disabled={!editable}
+                    className="cursor-pointer"
                   />
                   <Label
                     htmlFor={`sub-${sub.id}`}
-                    className="font-medium"
+                    className="font-medium cursor-pointer"
                   >
                     {sub.nome}
                   </Label>
