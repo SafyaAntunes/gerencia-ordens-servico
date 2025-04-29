@@ -265,9 +265,9 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     }
     
     try {
-      const servicoAtual = ordem.servicos.find(s => s.tipo === servicoTipo);
-      if (!servicoAtual || !servicoAtual.subatividades) return;
+      console.log("Toggling subatividade in EtapasTracker:", subatividadeId, "to", checked);
       
+      // Create a deep clone of the services to avoid messing with React's state directly
       const servicosAtualizados = ordem.servicos.map(servico => {
         if (servico.tipo === servicoTipo && servico.subatividades) {
           const subatividades = servico.subatividades.map(sub => {
@@ -285,17 +285,23 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         return servico;
       });
       
+      // Update the database
       const ordemRef = doc(db, "ordens", ordem.id);
       await updateDoc(ordemRef, { servicos: servicosAtualizados });
       
+      // Update local state
       const ordemAtualizada = {
         ...ordem,
         servicos: servicosAtualizados
       };
       
+      // Notify parent component
       if (onOrdemUpdate) {
         onOrdemUpdate(ordemAtualizada);
       }
+      
+      // Provide feedback to the user
+      toast.success(`Subatividade ${checked ? 'concluída' : 'reaberta'}`);
     } catch (error) {
       console.error("Erro ao atualizar subatividade:", error);
       toast.error("Erro ao atualizar subatividade");
@@ -504,9 +510,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
                     funcionarioNome={funcionario?.nome}
                     servicos={getServicosParaEtapa(selectedEtapa)}
                     etapaInfo={getEtapaInfo(selectedEtapa)}
-                    onSubatividadeToggle={(servicoTipo, subId, checked) => {
-                      handleSubatividadeToggle(servicoTipo, subId, checked);
-                    }}
+                    onSubatividadeToggle={handleSubatividadeToggle}
                     onServicoStatusChange={handleServicoStatusChange}
                     onEtapaStatusChange={handleEtapaStatusChange}
                   />

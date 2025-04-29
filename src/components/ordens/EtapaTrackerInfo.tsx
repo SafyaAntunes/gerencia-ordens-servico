@@ -29,6 +29,7 @@ export default function EtapaTrackerInfo({
   }, [servico, etapa]);
   
   const handleToggle = (subId: string, checked: boolean) => {
+    console.log("Toggle subatividade in EtapaTrackerInfo:", subId, checked);
     if (onSubatividadeToggle) {
       onSubatividadeToggle(subId, checked);
     }
@@ -70,6 +71,7 @@ export default function EtapaTrackerInfo({
               checked={sub.concluida}
               onCheckedChange={(checked) => handleToggle(sub.id, checked === true)}
               disabled={servico.concluido}
+              className="cursor-pointer"
             />
             <Label 
               htmlFor={`check-etapa-${etapa}-${sub.id}`} 

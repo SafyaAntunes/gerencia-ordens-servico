@@ -28,7 +28,11 @@ export default function ServicoDetails({
     // Verificar se o objeto é válido antes de chamar a função
     try {
       if (subatividade.id) {
-        onSubatividadeToggle(subatividade);
+        // Passamos uma cópia do objeto com o estado concluido invertido
+        onSubatividadeToggle({
+          ...subatividade,
+          concluida: !subatividade.concluida
+        });
       } else {
         console.error("Subatividade inválida (sem ID):", subatividade);
       }
