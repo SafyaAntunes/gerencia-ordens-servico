@@ -57,7 +57,10 @@ export default function EtapaCard({
     podeTrabalharNaEtapa,
     handleIniciarTimer,
     handleTimerStart,
-    handleMarcarConcluido
+    handleMarcarConcluido,
+    isEtapaConcluida,
+    getEtapaStatus,
+    handleReiniciarEtapa
   } = useEtapaCard(etapa, servicoTipo);
   
   // Verificar se todas as subatividades dos serviços estão concluídas
@@ -68,13 +71,6 @@ export default function EtapaCard({
       const subatividades = servico.subatividades?.filter(s => s.selecionada) || [];
       return subatividades.length === 0 || subatividades.every(sub => sub.concluida);
     });
-  };
-  
-  const isEtapaConcluida = () => {
-    if ((etapa === "inspecao_inicial" || etapa === "inspecao_final") && servicoTipo) {
-      return etapaInfo?.concluido && etapaInfo?.servicoTipo === servicoTipo;
-    }
-    return etapaInfo?.concluido;
   };
 
   const etapaComCronometro = ['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa);
@@ -97,40 +93,6 @@ export default function EtapaCard({
       );
     }
   };
-
-  const handleReiniciarEtapa = () => {
-    if (!funcionario?.id) {
-      toast.error("É necessário estar logado para reiniciar uma etapa");
-      return;
-    }
-    
-    if (!podeAtribuirFuncionario && !podeTrabalharNaEtapa()) {
-      toast.error("Você não tem permissão para reiniciar esta etapa");
-      return;
-    }
-    
-    if (onEtapaStatusChange) {
-      onEtapaStatusChange(
-        etapa, 
-        false,
-        funcionario.id, 
-        funcionario.nome,
-        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
-      );
-      
-      toast.success("Etapa reaberta para continuação");
-    }
-  };
-  
-  const getEtapaStatus = () => {
-    if (isEtapaConcluida()) {
-      return "concluido";
-    } else if (etapaInfo?.iniciado) {
-      return "em_andamento";
-    } else {
-      return "nao_iniciado";
-    }
-  };
   
   useEffect(() => {
     if (etapaInfo?.iniciado && !etapaInfo?.concluido) {
@@ -145,17 +107,17 @@ export default function EtapaCard({
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xl font-semibold">{etapaNome}</h3>
         <EtapaStatus 
-          status={getEtapaStatus()} 
+          status={getEtapaStatus(etapaInfo)} 
           funcionarioNome={etapaInfo?.funcionarioNome}
-          onReiniciar={handleReiniciarEtapa}
-          podeReiniciar={(podeAtribuirFuncionario || podeTrabalharNaEtapa()) && isEtapaConcluida()}
+          onReiniciar={() => handleReiniciarEtapa(onEtapaStatusChange)}
+          podeReiniciar={(podeAtribuirFuncionario || podeTrabalharNaEtapa()) && isEtapaConcluida(etapaInfo)}
         />
       </div>
       
       <EtapaProgresso 
         servicos={servicos} 
         onAllServicosConcluidos={() => {
-          if (onEtapaStatusChange && !isEtapaConcluida()) {
+          if (onEtapaStatusChange && !isEtapaConcluida(etapaInfo)) {
             onEtapaStatusChange(etapa, true, funcionario?.id, funcionario?.nome);
           }
         }} 
@@ -169,14 +131,14 @@ export default function EtapaCard({
             funcionarioNome={funcionarioNome}
             etapa={etapa}
             onFinish={handleEtapaConcluida}
-            isEtapaConcluida={isEtapaConcluida()}
+            isEtapaConcluida={isEtapaConcluida(etapaInfo)}
             onStart={handleTimerStart}
             onCustomStart={handleIniciarTimer}
             tipoServico={servicoTipo}
           />
           
           <EtapaConcluiButton 
-            isConcluida={isEtapaConcluida()} 
+            isConcluida={isEtapaConcluida(etapaInfo)} 
             onClick={() => {
               if (handleMarcarConcluido() && onEtapaStatusChange) {
                 onEtapaStatusChange(

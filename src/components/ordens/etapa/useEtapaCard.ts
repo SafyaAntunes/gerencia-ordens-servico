@@ -10,6 +10,7 @@ import { toast } from "sonner";
 export function useEtapaCard(etapa: EtapaOS, servicoTipo?: TipoServico) {
   const [isAtivo, setIsAtivo] = useState(false);
   const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
+  const [progresso, setProgresso] = useState(0);
   const { funcionario } = useAuth();
   
   const podeAtribuirFuncionario = funcionario?.nivelPermissao === 'admin' || 
@@ -88,14 +89,60 @@ export function useEtapaCard(etapa: EtapaOS, servicoTipo?: TipoServico) {
     return true;
   };
   
+  const isEtapaConcluida = (etapaInfo: any) => {
+    if ((etapa === "inspecao_inicial" || etapa === "inspecao_final") && servicoTipo) {
+      return etapaInfo?.concluido && etapaInfo?.servicoTipo === servicoTipo;
+    }
+    return etapaInfo?.concluido;
+  };
+  
+  const getEtapaStatus = (etapaInfo: any) => {
+    if (isEtapaConcluida(etapaInfo)) {
+      return "concluido";
+    } else if (etapaInfo?.iniciado) {
+      return "em_andamento";
+    } else {
+      return "nao_iniciado";
+    }
+  };
+  
+  const handleReiniciarEtapa = (onEtapaStatusChange: any) => {
+    if (!funcionario?.id) {
+      toast.error("É necessário estar logado para reiniciar uma etapa");
+      return;
+    }
+    
+    if (!podeAtribuirFuncionario && !podeTrabalharNaEtapa()) {
+      toast.error("Você não tem permissão para reiniciar esta etapa");
+      return;
+    }
+    
+    if (onEtapaStatusChange) {
+      onEtapaStatusChange(
+        etapa, 
+        false,
+        funcionario.id, 
+        funcionario.nome,
+        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+      );
+      
+      toast.success("Etapa reaberta para continuação");
+    }
+  };
+  
   return {
     isAtivo,
     setIsAtivo,
+    progresso,
+    setProgresso,
     funcionariosOptions,
     podeAtribuirFuncionario,
     podeTrabalharNaEtapa,
     handleIniciarTimer,
     handleTimerStart,
-    handleMarcarConcluido
+    handleMarcarConcluido,
+    isEtapaConcluida,
+    getEtapaStatus,
+    handleReiniciarEtapa
   };
 }
