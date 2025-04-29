@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Funcionario } from "@/types/funcionarios";
 import { EtapaOS, TipoServico } from "@/types/ordens";
 import { toast } from "sonner";
+import { getFuncionarios } from "@/services/funcionarioService";
 
 export function useEtapaCard(etapa: EtapaOS, servicoTipo?: TipoServico) {
   const [isAtivo, setIsAtivo] = useState(false);
@@ -17,6 +18,7 @@ export function useEtapaCard(etapa: EtapaOS, servicoTipo?: TipoServico) {
   const [funcionarioSelecionadoNome, setFuncionarioSelecionadoNome] = useState<string>("");
   const { funcionario } = useAuth();
   
+  // Verificar se o usuário tem permissão para atribuir funcionários
   const podeAtribuirFuncionario = funcionario?.nivelPermissao === 'admin' || 
                                  funcionario?.nivelPermissao === 'gerente';
   
@@ -44,22 +46,19 @@ export function useEtapaCard(etapa: EtapaOS, servicoTipo?: TipoServico) {
     return funcionario?.especialidades?.includes(etapa);
   };
   
+  // Verificação para determinar se o usuário pode reabrir uma atividade já concluída
+  const podeReabrirAtividade = () => {
+    // Apenas administradores podem reabrir atividades
+    return funcionario?.nivelPermissao === 'admin';
+  };
+  
   useEffect(() => {
     const carregarFuncionarios = async () => {
       try {
-        const funcionariosRef = collection(db, "funcionarios");
-        const snapshot = await getDocs(funcionariosRef);
-        const funcionarios: Funcionario[] = [];
-        
-        snapshot.forEach((doc) => {
-          const data = doc.data() as Funcionario;
-          funcionarios.push({
-            ...data,
-            id: doc.id
-          });
-        });
-        
-        setFuncionariosOptions(funcionarios);
+        const funcionariosData = await getFuncionarios();
+        if (funcionariosData && funcionariosData.length > 0) {
+          setFuncionariosOptions(funcionariosData);
+        }
       } catch (error) {
         console.error("Erro ao carregar funcionários:", error);
       }
@@ -128,8 +127,9 @@ export function useEtapaCard(etapa: EtapaOS, servicoTipo?: TipoServico) {
       return;
     }
     
-    if (!podeAtribuirFuncionario && !podeTrabalharNaEtapa()) {
-      toast.error("Você não tem permissão para reiniciar esta etapa");
+    // Verificar se o usuário é administrador para permitir reabrir a etapa
+    if (!podeReabrirAtividade()) {
+      toast.error("Apenas administradores podem reabrir atividades concluídas");
       return;
     }
     
@@ -182,6 +182,7 @@ export function useEtapaCard(etapa: EtapaOS, servicoTipo?: TipoServico) {
     funcionariosOptions,
     podeAtribuirFuncionario,
     podeTrabalharNaEtapa,
+    podeReabrirAtividade,
     handleIniciarTimer,
     handleTimerStart,
     handleMarcarConcluido,

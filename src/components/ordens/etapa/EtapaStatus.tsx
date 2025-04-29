@@ -41,6 +41,7 @@ export default function EtapaStatus({
               size="sm" 
               className="ml-auto text-blue-500 hover:text-blue-700"
               onClick={onReiniciar}
+              title="Apenas administradores podem reabrir atividades concluídas"
             >
               <RefreshCw className="h-4 w-4 mr-1" />
               Reiniciar

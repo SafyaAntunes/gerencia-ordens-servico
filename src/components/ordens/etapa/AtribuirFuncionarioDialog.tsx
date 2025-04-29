@@ -40,6 +40,11 @@ export default function AtribuirFuncionarioDialog({
   onFuncionarioChange,
   onConfirm
 }: AtribuirFuncionarioDialogProps) {
+  const currentUserOption = {
+    id: currentFuncionarioId || "",
+    nome: currentFuncionarioNome || "Você mesmo",
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
@@ -52,14 +57,16 @@ export default function AtribuirFuncionarioDialog({
               Selecione o funcionário que {dialogAction === 'start' ? 'executará' : 'executou'} esta etapa
             </label>
             
-            <Select onValueChange={onFuncionarioChange} value={selectedFuncionarioId}>
+            <Select onValueChange={onFuncionarioChange} value={selectedFuncionarioId || currentFuncionarioId || ""}>
               <SelectTrigger id="funcionario-select-etapa" className="w-full">
                 <SelectValue placeholder="Selecione um funcionário" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={currentFuncionarioId || ""}>
-                  {currentFuncionarioNome || "Eu mesmo"} (você)
-                </SelectItem>
+                {currentFuncionarioId && (
+                  <SelectItem value={currentFuncionarioId}>
+                    {currentUserOption.nome} (você)
+                  </SelectItem>
+                )}
                 {funcionarioOptions
                   .filter(f => f.id !== currentFuncionarioId)
                   .map(f => (

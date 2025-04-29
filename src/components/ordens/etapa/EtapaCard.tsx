@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
@@ -14,34 +13,7 @@ import {
   AtribuirFuncionarioDialog
 } from ".";
 import { Funcionario } from "@/types/funcionarios";
-
-// Lista de funcionários temporária com todas as propriedades obrigatórias
-const funcionariosOptions: Funcionario[] = [
-  { 
-    id: "1", 
-    nome: "João Silva", 
-    especialidades: ["bloco", "cabecote", "lavagem"],
-    nivelPermissao: "tecnico"
-  },
-  { 
-    id: "2", 
-    nome: "Maria Oliveira", 
-    especialidades: ["biela", "montagem"],
-    nivelPermissao: "tecnico"
-  },
-  { 
-    id: "3", 
-    nome: "Carlos Santos", 
-    especialidades: ["virabrequim", "dinamometro"],
-    nivelPermissao: "tecnico"
-  },
-  { 
-    id: "4", 
-    nome: "Ana Pereira", 
-    especialidades: ["lavagem", "inspecao_inicial", "inspecao_final"],
-    nivelPermissao: "gerente"
-  }
-];
+import { getFuncionarios } from "@/services/funcionarioService";
 
 interface EtapaCardProps {
   ordemId: string;
@@ -80,6 +52,7 @@ export default function EtapaCard({
   onEtapaStatusChange
 }: EtapaCardProps) {
   const { funcionario } = useAuth();
+  const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
   const {
     isAtivo,
     setIsAtivo,
@@ -99,6 +72,23 @@ export default function EtapaCard({
     handleFuncionarioChange,
     handleConfirmarAtribuicao
   } = useEtapaCard(etapa, servicoTipo);
+  
+  // Fetch real funcionarios from database
+  useEffect(() => {
+    const carregarFuncionarios = async () => {
+      try {
+        const funcionariosData = await getFuncionarios();
+        if (funcionariosData) {
+          setFuncionariosOptions(funcionariosData);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar funcionários:", error);
+        toast.error("Erro ao carregar lista de funcionários");
+      }
+    };
+    
+    carregarFuncionarios();
+  }, []);
   
   // Verificar se todas as subatividades dos serviços estão concluídas
   const todasSubatividadesConcluidas = () => {
@@ -140,6 +130,12 @@ export default function EtapaCard({
   }, [etapaInfo, setIsAtivo]);
   
   const handleMarcarConcluidoClick = () => {
+    // Verificar se todas as subatividades estão concluídas antes de permitir marcar a etapa como concluída
+    if (!todasSubatividadesConcluidas()) {
+      toast.error("É necessário concluir todas as subatividades antes de finalizar a etapa");
+      return;
+    }
+    
     if (handleMarcarConcluido() && onEtapaStatusChange) {
       onEtapaStatusChange(
         etapa, 
@@ -159,7 +155,7 @@ export default function EtapaCard({
           status={getEtapaStatus(etapaInfo)} 
           funcionarioNome={etapaInfo?.funcionarioNome}
           onReiniciar={() => handleReiniciarEtapa(onEtapaStatusChange)}
-          podeReiniciar={(podeAtribuirFuncionario || podeTrabalharNaEtapa()) && isEtapaConcluida(etapaInfo)}
+          podeReiniciar={podeAtribuirFuncionario && isEtapaConcluida(etapaInfo)}
         />
       </div>
       
@@ -207,7 +203,7 @@ export default function EtapaCard({
         open={atribuirFuncionarioDialogOpen}
         onOpenChange={setAtribuirFuncionarioDialogOpen}
         dialogAction={dialogAction}
-        funcionarioOptions={funcionario ? [funcionario, ...funcionariosOptions.filter(f => f.id !== funcionario.id)] : funcionariosOptions}
+        funcionarioOptions={funcionariosOptions}
         currentFuncionarioId={funcionario?.id}
         currentFuncionarioNome={funcionario?.nome}
         selectedFuncionarioId={funcionarioSelecionadoId}

@@ -52,9 +52,11 @@ export default function AtribuirFuncionarioDialog({
                 <SelectValue placeholder="Selecione um funcionário" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={funcionarioAtual?.id || ""}>
-                  {funcionarioAtual?.nome || "Eu mesmo"} (você)
-                </SelectItem>
+                {funcionarioAtual && (
+                  <SelectItem value={funcionarioAtual.id}>
+                    {funcionarioAtual.nome} (você)
+                  </SelectItem>
+                )}
                 {funcionariosOptions
                   .filter(f => f.id !== funcionarioAtual?.id)
                   .map(f => (
