@@ -32,7 +32,7 @@ export async function getSubatividades(): Promise<Record<TipoServico | TipoAtivi
         precoHora: data.precoHora || 0,
         tempoEstimado: data.tempoEstimado || 0,
         servicoTipo: data.servicoTipo,
-        descricao: data.descricao,
+        descricao: data.descricao || '',
       };
       
       if (result[tipoServico]) {
@@ -130,7 +130,7 @@ export async function getSubatividadesByTipo(tipoServico: TipoServico | TipoAtiv
         precoHora: data.precoHora || 0,
         tempoEstimado: data.tempoEstimado || 0,
         servicoTipo: data.servicoTipo,
-        descricao: data.descricao,
+        descricao: data.descricao || '',
       });
     });
     

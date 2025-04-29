@@ -6,6 +6,7 @@ import * as z from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { SubAtividade, TipoServico, TipoAtividade } from '@/types/ordens';
 import { CurrencyInput } from '@/components/ui/currency-input';
@@ -144,6 +145,27 @@ export function SubatividadeForm({ onSave, tipoServico, initialData, onCancel }:
               </FormControl>
               <FormDescription>
                 Tempo padrão estimado para esta subatividade
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="descricao"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Descrição</FormLabel>
+              <FormControl>
+                <Textarea 
+                  placeholder="Descrição opcional da subatividade"
+                  className="resize-none"
+                  {...field}
+                />
+              </FormControl>
+              <FormDescription>
+                Adicione uma descrição para explicar melhor esta subatividade
               </FormDescription>
               <FormMessage />
             </FormItem>
