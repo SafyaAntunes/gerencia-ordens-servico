@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
+import { useState } from "react";
 
 interface CustomSubatividadesFormProps {
   customSubatividade: string;
@@ -18,6 +19,13 @@ export function CustomSubatividadesForm({
   setIsAddingCustom,
   onAddCustom,
 }: CustomSubatividadesFormProps) {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && customSubatividade.trim()) {
+      e.preventDefault();
+      onAddCustom();
+    }
+  };
+
   return (
     <div>
       {isAddingCustom ? (
@@ -27,7 +35,8 @@ export function CustomSubatividadesForm({
             onChange={(e) => setCustomSubatividade(e.target.value)}
             placeholder="Nome da subatividade"
             className="flex-1"
-            onKeyDown={(e) => e.key === "Enter" && onAddCustom()}
+            onKeyDown={handleKeyDown}
+            autoFocus
           />
           <Button
             variant="outline"

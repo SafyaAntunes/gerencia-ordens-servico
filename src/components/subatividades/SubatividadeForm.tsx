@@ -40,6 +40,7 @@ export function SubatividadeForm({ onSave, tipoServico, initialData, onCancel }:
     },
   });
 
+  // Atualiza o form quando o initialData muda
   useEffect(() => {
     if (initialData) {
       form.reset({
@@ -47,7 +48,7 @@ export function SubatividadeForm({ onSave, tipoServico, initialData, onCancel }:
         nome: initialData.nome,
         precoHora: initialData.precoHora || 0,
         tempoEstimado: initialData.tempoEstimado || 0,
-        descricao: '',
+        descricao: initialData.descricao || '',
       });
     } else {
       form.reset({
@@ -66,17 +67,22 @@ export function SubatividadeForm({ onSave, tipoServico, initialData, onCancel }:
       nome: data.nome,
       precoHora: data.precoHora || 0,
       tempoEstimado: data.tempoEstimado || 0,
-      selecionada: false,
+      selecionada: initialData?.selecionada || false,
+      servicoTipo: initialData?.servicoTipo,
+      descricao: data.descricao,
     };
     
     onSave(subatividade);
-    form.reset({
-      id: '',
-      nome: '',
-      precoHora: 0,
-      tempoEstimado: 0,
-      descricao: '',
-    });
+    
+    if (!initialData) {
+      form.reset({
+        id: '',
+        nome: '',
+        precoHora: 0,
+        tempoEstimado: 0,
+        descricao: '',
+      });
+    }
   };
 
   return (

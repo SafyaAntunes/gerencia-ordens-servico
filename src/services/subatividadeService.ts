@@ -30,6 +30,9 @@ export async function getSubatividades(): Promise<Record<TipoServico | TipoAtivi
         nome: data.nome,
         selecionada: false,
         precoHora: data.precoHora || 0,
+        tempoEstimado: data.tempoEstimado || 0,
+        servicoTipo: data.servicoTipo,
+        descricao: data.descricao,
       };
       
       if (result[tipoServico]) {
@@ -109,17 +112,6 @@ export async function saveSubatividades(subatividadesMap: Partial<Record<TipoSer
   }
 }
 
-// Excluir uma subatividade
-export async function deleteSubatividade(id: string, tipoServico: TipoServico | TipoAtividade): Promise<void> {
-  try {
-    const subatividadeRef = doc(db, 'subatividades', id);
-    await deleteDoc(subatividadeRef);
-  } catch (error) {
-    console.error('Erro ao excluir subatividade:', error);
-    throw error;
-  }
-}
-
 // Obter subatividades por tipo de serviço
 export async function getSubatividadesByTipo(tipoServico: TipoServico | TipoAtividade): Promise<SubAtividade[]> {
   try {
@@ -136,12 +128,26 @@ export async function getSubatividadesByTipo(tipoServico: TipoServico | TipoAtiv
         selecionada: false,
         concluida: false,
         precoHora: data.precoHora || 0,
+        tempoEstimado: data.tempoEstimado || 0,
+        servicoTipo: data.servicoTipo,
+        descricao: data.descricao,
       });
     });
     
     return subatividades;
   } catch (error) {
     console.error(`Erro ao buscar subatividades do tipo ${tipoServico}:`, error);
+    throw error;
+  }
+}
+
+// Excluir uma subatividade
+export async function deleteSubatividade(id: string): Promise<void> {
+  try {
+    const subatividadeRef = doc(db, 'subatividades', id);
+    await deleteDoc(subatividadeRef);
+  } catch (error) {
+    console.error('Erro ao excluir subatividade:', error);
     throw error;
   }
 }

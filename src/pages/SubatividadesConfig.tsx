@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -144,7 +145,8 @@ export default function SubatividadesConfig({
         nome,
         selecionada: false,
         precoHora: 70,
-        servicoTipo: porServico ? selectedServicoTipo as TipoServico : undefined
+        servicoTipo: porServico ? selectedServicoTipo as TipoServico : undefined,
+        tempoEstimado: 1 // valor padrão de tempo estimado
       }));
     
     if (novosDefault.length > 0) {
@@ -198,6 +200,8 @@ export default function SubatividadesConfig({
     if (editingSubatividade?.id === id) {
       setEditingSubatividade(null);
     }
+    
+    toast.success("Subatividade removida da lista");
   };
 
   const handleCancelEdit = () => {
@@ -210,11 +214,13 @@ export default function SubatividadesConfig({
         prev.map(sub => (sub.id === data.id ? data : sub))
       );
       setEditingSubatividade(null);
+      toast.success(`Subatividade "${data.nome}" atualizada com sucesso`);
     } else {
       setSubatividades(prev => [...prev, {
         ...data,
         servicoTipo: porServico ? selectedServicoTipo as TipoServico : undefined
       }]);
+      toast.success(`Subatividade "${data.nome}" adicionada com sucesso`);
     }
   };
 

@@ -7,6 +7,7 @@ import { PresetSubatividades } from "./PresetSubatividades";
 import { CustomSubatividadesForm } from "./CustomSubatividadesForm";
 import { CustomSubatividadesList } from "./CustomSubatividadesList";
 import { Skeleton } from "@/components/ui/skeleton";
+import { v4 as uuidv4 } from "uuid";
 
 interface ServicoSubatividadesProps {
   tipoServico: string;
@@ -70,41 +71,49 @@ export function ServicoSubatividades({
   const handleToggleSubatividade = (id: string, checked: boolean) => {
     if (!editable) return;
     
-    const updatedSubs = subatividades.map((sub) => {
-      if (sub.id === id) {
-        return { ...sub, selecionada: checked };
-      }
-      return sub;
-    });
-
-    // Se não existe na lista de subatividades, adiciona
-    if (!updatedSubs.some((sub) => sub.id === id)) {
-      const subToAdd = presetSubatividades.find((sub) => sub.id === id);
+    const updatedSubs = [...subatividades];
+    const existingIndex = updatedSubs.findIndex(sub => sub.id === id);
+    
+    if (existingIndex >= 0) {
+      // Atualiza subatividade existente
+      updatedSubs[existingIndex] = {
+        ...updatedSubs[existingIndex],
+        selecionada: checked
+      };
+    } else if (checked) {
+      // Adiciona nova subatividade da lista de presets
+      const subToAdd = presetSubatividades.find(sub => sub.id === id);
       if (subToAdd) {
         updatedSubs.push({
           ...subToAdd,
-          selecionada: checked,
+          selecionada: true,
           tempoEstimado: subToAdd.tempoEstimado || 0
         });
       }
     }
-
-    onChange(updatedSubs.filter((sub) => sub.selecionada));
+    
+    onChange(updatedSubs.filter(sub => sub.selecionada));
   };
 
   const handleAddCustom = () => {
     if (!customSubatividade.trim() || !editable) return;
 
     const newSub: SubAtividade = {
-      id: `custom-${Date.now()}`,
+      id: `custom-${uuidv4()}`,
       nome: customSubatividade.trim(),
       selecionada: true,
       tempoEstimado: 0,
+      precoHora: 70, // Valor padrão
     };
 
     onChange([...subatividades, newSub]);
     setCustomSubatividade("");
     setIsAddingCustom(false);
+    
+    toast({
+      title: "Subatividade adicionada",
+      description: `A subatividade "${newSub.nome}" foi adicionada com sucesso.`,
+    });
   };
 
   const handleTempoEstimadoChange = (id: string, horas: number) => {
