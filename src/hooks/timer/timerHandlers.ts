@@ -87,24 +87,23 @@ export const createTimerHandlers = ({
     notifyTimerResumed();
   };
   
+  // Let useOrdemTimer handle the finish calculation, here we just
+  // dispatch the action and call the callback
   const handleFinish = () => {
     if (!usarCronometro) {
       onFinish?.(0);
       return;
     }
     
-    // Dispatch finish action
+    // Dispatch finish action but without calculating the total time
+    // This will be done in useOrdemTimer
     dispatch({ 
       type: "FINISH_TIMER", 
       payload: { now: Date.now() } 
     });
     
-    // Calculate the total time (will be done in useOrdemTimer now)
-    const totalTime = 0; // This is just a placeholder
-    
-    notifyTimerFinished(totalTime);
-    
-    onFinish?.(totalTime);
+    // The total time is handled in useOrdemTimer, not here
+    notifyTimerFinished(0);
   };
   
   const handleCronometroChange = (checked: boolean) => {

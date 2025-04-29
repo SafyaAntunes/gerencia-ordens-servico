@@ -51,7 +51,7 @@ export default function EtapaTimer({
     tipoServico,
     onStart: () => {
       console.log("Timer started for:", {ordemId, etapa, tipoServico});
-      onStart?.();
+      if (onStart) onStart();
     },
     onPause,
     onResume,
@@ -74,7 +74,7 @@ export default function EtapaTimer({
   
   // Function to manage timer start, possibly opening dialog
   const handleStartTimer = () => {
-    console.log("handleStartTimer called", {onCustomStart});
+    console.log("handleStartTimer called in EtapaTimer", {ordemId, etapa, tipoServico, onCustomStart});
     if (onCustomStart) {
       onCustomStart();
     } else {

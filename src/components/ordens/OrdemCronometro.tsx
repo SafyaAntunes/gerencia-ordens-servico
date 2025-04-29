@@ -9,7 +9,7 @@ export interface OrdemCronometroProps {
   etapa: EtapaOS;
   tipoServico?: TipoServico;
   onStart?: () => void;
-  onCustomStart?: () => void; // Prop for custom initialization
+  onCustomStart?: () => void; 
   onPause?: (motivo?: string) => void;
   onResume?: () => void;
   onFinish?: (tempoTotal: number) => void;
@@ -17,6 +17,6 @@ export interface OrdemCronometroProps {
 }
 
 export default function OrdemCronometro(props: OrdemCronometroProps) {
-  // Simply pass all props to EtapaTimer component
+  console.log("OrdemCronometro rendering with props:", props);
   return <EtapaTimer {...props} />;
 }

@@ -46,7 +46,7 @@ export function useTimerState({
         payload: { savedData }
       });
     } else {
-      console.log("No saved timer data found");
+      console.log("No saved timer data found for", {ordemId, etapa, tipoServico});
     }
   }, [ordemId, etapa, tipoServico, isEtapaConcluida]);
   
@@ -83,7 +83,7 @@ export function useTimerState({
         });
       }, 100); // Update 10 times per second for smoother display
       
-      console.log("Timer interval created");
+      console.log("Timer interval created for", {ordemId, etapa, tipoServico});
     }
     
     return () => {
@@ -92,7 +92,7 @@ export function useTimerState({
         clearInterval(interval);
       }
     };
-  }, [state.isRunning, state.isPaused, state.startTime, state.totalPausedTime, state.usarCronometro]);
+  }, [state.isRunning, state.isPaused, state.startTime, state.totalPausedTime, state.usarCronometro, ordemId, etapa, tipoServico]);
   
   return { state, dispatch };
 }

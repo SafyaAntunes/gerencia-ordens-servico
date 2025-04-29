@@ -52,7 +52,7 @@ export function useOrdemTimer({
     }
     
     // Calculate the final time before dispatching the finish action
-    const finalTime = state.elapsedTime;
+    const finalTime = state.isRunning && !state.isPaused ? state.elapsedTime : 0;
     const totalTime = state.totalTime + finalTime;
     
     console.log("Finishing timer with total time:", totalTime, "ms");

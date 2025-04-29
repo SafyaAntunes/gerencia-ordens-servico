@@ -35,7 +35,12 @@ export default function ServicoDetails({
                   "flex items-center justify-between",
                   temPermissao ? "cursor-pointer" : "cursor-default"
                 )}
-                onClick={() => temPermissao && onSubatividadeToggle(subatividade)}
+                onClick={() => {
+                  // Prevent errors by ensuring subatividade is defined before toggling
+                  if (temPermissao && subatividade) {
+                    onSubatividadeToggle(subatividade);
+                  }
+                }}
               >
                 <div className="flex items-center gap-2">
                   <div 

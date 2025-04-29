@@ -41,7 +41,12 @@ export const loadTimerData = (
     console.log("Loading timer data with key:", key, data ? "data found" : "no data");
     
     if (data) {
-      return JSON.parse(data) as TimerState;
+      try {
+        return JSON.parse(data) as TimerState;
+      } catch (e) {
+        console.error("Error parsing timer data:", e);
+        return null;
+      }
     }
     
     return null;
