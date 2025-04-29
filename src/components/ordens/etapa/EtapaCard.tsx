@@ -13,13 +13,34 @@ import {
   EtapaTimer,
   AtribuirFuncionarioDialog
 } from ".";
+import { Funcionario } from "@/types/funcionarios";
 
-// Lista de funcionários para o dialog (temporário até implementação real)
-const funcionariosOptions = [
-  { id: "1", nome: "João Silva" },
-  { id: "2", nome: "Maria Oliveira" },
-  { id: "3", nome: "Carlos Santos" },
-  { id: "4", nome: "Ana Pereira" }
+// Lista de funcionários temporária com todas as propriedades obrigatórias
+const funcionariosOptions: Funcionario[] = [
+  { 
+    id: "1", 
+    nome: "João Silva", 
+    especialidades: ["bloco", "cabecote", "lavagem"],
+    nivelPermissao: "tecnico"
+  },
+  { 
+    id: "2", 
+    nome: "Maria Oliveira", 
+    especialidades: ["biela", "montagem"],
+    nivelPermissao: "tecnico"
+  },
+  { 
+    id: "3", 
+    nome: "Carlos Santos", 
+    especialidades: ["virabrequim", "dinamometro"],
+    nivelPermissao: "tecnico"
+  },
+  { 
+    id: "4", 
+    nome: "Ana Pereira", 
+    especialidades: ["lavagem", "inspecao_inicial", "inspecao_final"],
+    nivelPermissao: "gerente"
+  }
 ];
 
 interface EtapaCardProps {
