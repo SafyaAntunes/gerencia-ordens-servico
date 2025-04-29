@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Funcionario } from "@/types/funcionarios";
@@ -14,6 +13,8 @@ import {
 } from "./utils/servicoTrackerUtils";
 import { useServicoTimer } from "./utils/servicoTimerUtils";
 import { loadFuncionario } from "./utils/servicoFirebaseUtils";
+
+export type { ServicoStatus };
 
 export function useServicoTracker({
   servico,
