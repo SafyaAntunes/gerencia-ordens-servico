@@ -38,7 +38,7 @@ export default function ConfiguracaoAtividadesTabela({
           <TableHeader>
             <TableRow>
               <TableHead className="w-[40%]">GRUPO</TableHead>
-              <TableHead className="w-[30%]">HORA PADRÃO</TableHead>
+              <TableHead className="w-[30%]">TEMPO PADRÃO</TableHead>
               <TableHead className="w-[30%]">VALOR (R$)</TableHead>
             </TableRow>
           </TableHeader>

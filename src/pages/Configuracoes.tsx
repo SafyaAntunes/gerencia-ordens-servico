@@ -11,6 +11,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClipboardList, Droplet, FileSearch, Search } from "lucide-react";
 import SubatividadesConfig from "./SubatividadesConfig";
+import ConfiguracoesAtividades from "./ConfiguracoesAtividades";
+import { TipoAtividade } from "@/types/ordens";
 
 interface ConfiguracoesProps {
   onLogout: () => void;
@@ -59,35 +61,32 @@ export default function Configuracoes({ onLogout }: ConfiguracoesProps) {
           </TabsContent>
           
           <TabsContent value="lavagem">
-            <SubatividadesConfig 
+            <ConfiguracoesAtividades 
               onLogout={onLogout} 
               isEmbedded={true} 
-              tipoFixo="lavagem" 
+              tipoAtividade="lavagem" 
               titulo="Configuração de Atividades de Lavagem"
-              descricao="Configure as atividades de lavagem específicas para cada tipo de serviço"
-              porServico={true}
+              descricao="Configure os valores e tempos padrão para cada tipo de serviço de lavagem"
             />
           </TabsContent>
           
           <TabsContent value="inspecao_inicial">
-            <SubatividadesConfig 
+            <ConfiguracoesAtividades 
               onLogout={onLogout} 
               isEmbedded={true} 
-              tipoFixo="inspecao_inicial" 
+              tipoAtividade="inspecao_inicial" 
               titulo="Configuração de Atividades de Inspeção Inicial"
-              descricao="Configure as atividades de inspeção inicial específicas para cada tipo de serviço"
-              porServico={true}
+              descricao="Configure os valores e tempos padrão para cada tipo de serviço de inspeção inicial"
             />
           </TabsContent>
           
           <TabsContent value="inspecao_final">
-            <SubatividadesConfig 
+            <ConfiguracoesAtividades 
               onLogout={onLogout} 
               isEmbedded={true} 
-              tipoFixo="inspecao_final" 
+              tipoAtividade="inspecao_final" 
               titulo="Configuração de Atividades de Inspeção Final"
-              descricao="Configure as atividades de inspeção final específicas para cada tipo de serviço"
-              porServico={true}
+              descricao="Configure os valores e tempos padrão para cada tipo de serviço de inspeção final"
             />
           </TabsContent>
         </Tabs>

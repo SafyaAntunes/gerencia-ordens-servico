@@ -83,7 +83,6 @@ export function useConfiguracoesServico(tipoAtividade: TipoAtividade) {
     setIsSaving(true);
     try {
       localStorage.setItem(`configuracao_${tipoAtividade}`, JSON.stringify(itens));
-      toast.success(`Configurações de ${formatarTipoAtividade(tipoAtividade)} salvas com sucesso`);
       return true;
     } catch (error) {
       console.error(`Erro ao salvar configurações de ${tipoAtividade}:`, error);
