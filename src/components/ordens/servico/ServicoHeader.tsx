@@ -60,7 +60,7 @@ export default function ServicoHeader({
           
           <div className="flex items-center text-sm text-muted-foreground mt-1">
             <Clock className="h-4 w-4 mr-1" />
-            <span>Tempo: {formatTime(displayTime)}</span>
+            <span>Tempo: {displayTime}</span>
             {tempoTotalEstimado > 0 && (
               <span className="ml-2">/ Estimado: {formatTime(tempoTotalEstimado * 3600 * 1000)}</span>
             )}
