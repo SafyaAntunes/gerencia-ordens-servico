@@ -21,8 +21,9 @@ export function useOrdemTimer({
     isEtapaConcluida
   });
   
+  // Create the timer handlers
   const {
-    handleStart,
+    handleStart: timerStart,
     handlePause,
     handleResume,
     handleCronometroChange
@@ -37,6 +38,12 @@ export function useOrdemTimer({
     onFinish
   });
   
+  // Wrap the handler from timerHandlers to ensure it works correctly
+  const handleStart = () => {
+    console.log("handleStart called in useOrdemTimer");
+    return timerStart();
+  };
+  
   // Custom handleFinish that calculates totalTime correctly
   const handleFinish = () => {
     if (!state.usarCronometro) {
@@ -44,6 +51,7 @@ export function useOrdemTimer({
       return;
     }
     
+    // Calculate the final time before dispatching the finish action
     const finalTime = state.elapsedTime;
     const totalTime = state.totalTime + finalTime;
     

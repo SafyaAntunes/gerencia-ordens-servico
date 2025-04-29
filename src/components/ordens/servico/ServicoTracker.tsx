@@ -191,7 +191,14 @@ export default function ServicoTracker({
     if (dialogAction === 'start') {
       // Explicitamente iniciar o timer após a confirmação do funcionário
       console.log("Iniciando timer após atribuição de funcionário");
-      handleStart();
+      const timerIniciado = handleStart();
+      
+      // Verifica se o timer iniciou corretamente
+      if (!timerIniciado) {
+        toast.error("Não foi possível iniciar o cronômetro");
+        setAtribuirFuncionarioDialogOpen(false);
+        return;
+      }
     } else if (dialogAction === 'finish') {
       if (totalSubatividades > 0 && !todasSubatividadesConcluidas) {
         toast.error("É necessário concluir todas as subatividades antes de finalizar o serviço");
@@ -204,7 +211,7 @@ export default function ServicoTracker({
     
     setAtribuirFuncionarioDialogOpen(false);
   };
-
+  
   const handleFuncionarioChange = (value: string) => {
     setFuncionarioSelecionadoId(value);
     const funcionarioSelecionado = funcionariosOptions.find(f => f.id === value);

@@ -144,6 +144,10 @@ export default function EtapaCard({
         // Primeiro iniciar o timer e depois fechar o diálogo
         const timerIniciado = handleTimerStart();
         console.log("Timer iniciado após atribuição de funcionário na etapa:", timerIniciado);
+        // Se o timer não iniciou, mostrar um erro
+        if (!timerIniciado) {
+          toast.error("Não foi possível iniciar o cronômetro");
+        }
       } else if (dialogAction === 'finish') {
         // Verificar novamente se todas as subatividades estão concluídas
         if (!todasSubatividadesConcluidas()) {

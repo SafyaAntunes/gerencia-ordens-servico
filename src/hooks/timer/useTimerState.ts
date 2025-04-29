@@ -22,9 +22,11 @@ export function useTimerState({
   
   // Load saved time from localStorage
   useEffect(() => {
+    console.log("Loading timer data for:", ordemId, etapa, tipoServico);
     const savedData = loadTimerData(ordemId, etapa as EtapaOS, tipoServico as TipoServico);
     
     if (savedData) {
+      console.log("Found saved timer data:", savedData);
       // If the etapa is completed, just show the total saved time
       if (isEtapaConcluida) {
         dispatch({
@@ -44,12 +46,15 @@ export function useTimerState({
         type: "LOAD_SAVED_DATA",
         payload: { savedData }
       });
+    } else {
+      console.log("No saved timer data found");
     }
   }, [ordemId, etapa, tipoServico, isEtapaConcluida]);
   
   // Save state to localStorage whenever it changes
   useEffect(() => {
-    if (state.isRunning || state.totalTime > 0) {
+    if (state.isRunning || state.totalTime > 0 || state.pausas.length > 0) {
+      console.log("Persisting timer state:", state);
       persistTimerState(ordemId, etapa as EtapaOS, tipoServico as TipoServico, state);
     }
   }, [
@@ -78,10 +83,15 @@ export function useTimerState({
           payload: { now: Date.now() }
         });
       }, 100);
+      
+      console.log("Timer interval created");
     }
     
     return () => {
-      if (interval) clearInterval(interval);
+      if (interval) {
+        console.log("Clearing timer interval");
+        clearInterval(interval);
+      }
     };
   }, [state.isRunning, state.isPaused, state.startTime, state.totalPausedTime, state.usarCronometro]);
   

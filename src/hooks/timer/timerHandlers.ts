@@ -36,6 +36,7 @@ export const createTimerHandlers = ({
     }
     
     console.log("Iniciando timer no timerHandlers");
+    // Dispatch START_TIMER action with the current timestamp
     dispatch({ 
       type: "START_TIMER", 
       payload: { now: Date.now() } 
@@ -47,6 +48,9 @@ export const createTimerHandlers = ({
     if (etapa) {
       notifyTimerStarted(etapa as EtapaOS, tipoServico as TipoServico);
     }
+    
+    // Return true to indicate successful timer start
+    return true;
   };
   
   const handlePause = (motivo?: string) => {
@@ -90,15 +94,14 @@ export const createTimerHandlers = ({
       return;
     }
     
-    const finalTime = 0; // Este valor virá do estado atual
-    
+    // Dispatch finish action
     dispatch({ 
       type: "FINISH_TIMER", 
       payload: { now: Date.now() } 
     });
     
-    // Obtenha o estado final após finalizar
-    const totalTime = 0; // Este valor será calculado a partir do tempo atual + tempo salvo
+    // Calculate the total time (will be done in useOrdemTimer now)
+    const totalTime = 0; // This is just a placeholder
     
     notifyTimerFinished(totalTime);
     
