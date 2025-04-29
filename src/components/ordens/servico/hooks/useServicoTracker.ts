@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { getDocs, collection } from "firebase/firestore";
@@ -7,6 +6,9 @@ import { Funcionario } from "@/types/funcionarios";
 import { Servico, SubAtividade } from "@/types/ordens";
 import { useOrdemTimer } from "@/hooks/useOrdemTimer";
 import { toast } from "sonner";
+
+// Define the ServiceStatus type to ensure consistency
+export type ServicoStatus = "concluido" | "em_andamento" | "nao_iniciado";
 
 interface UseServicoTrackerProps {
   servico: Servico;
@@ -206,7 +208,7 @@ export function useServicoTracker({
     return total + (sub.tempoEstimado || 0);
   }, 0);
     
-  const getServicoStatus = () => {
+  const getServicoStatus = (): ServicoStatus => {
     if (servico.concluido) {
       return "concluido";
     } else if (isRunning || isPaused) {

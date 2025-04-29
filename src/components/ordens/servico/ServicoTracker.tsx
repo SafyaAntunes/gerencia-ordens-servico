@@ -5,7 +5,7 @@ import { Servico } from "@/types/ordens";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-import { useServicoTracker } from "./hooks/useServicoTracker";
+import { useServicoTracker, ServicoStatus } from "./hooks/useServicoTracker";
 import ServicoHeader from "./ServicoHeader";
 import ServicoDetails from "./ServicoDetails";
 import ServicoControls from "./ServicoControls";
