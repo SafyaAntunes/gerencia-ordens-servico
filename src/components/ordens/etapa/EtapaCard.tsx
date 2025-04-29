@@ -14,6 +14,14 @@ import {
   AtribuirFuncionarioDialog
 } from ".";
 
+// Lista de funcionários para o dialog (temporário até implementação real)
+const funcionariosOptions = [
+  { id: "1", nome: "João Silva" },
+  { id: "2", nome: "Maria Oliveira" },
+  { id: "3", nome: "Carlos Santos" },
+  { id: "4", nome: "Ana Pereira" }
+];
+
 interface EtapaCardProps {
   ordemId: string;
   etapa: EtapaOS;
