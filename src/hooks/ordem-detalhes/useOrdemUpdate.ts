@@ -1,15 +1,15 @@
-
 import { useState } from "react";
 import { db, storage } from "@/lib/firebase";
 import { doc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { OrdemServico } from "@/types/ordens";
 import { toast } from "sonner";
+import { SetOrdemFunction } from "./types";
 
 export const useOrdemUpdate = (
   id: string | undefined, 
   ordem: OrdemServico | null, 
-  setOrdem: (ordem: OrdemServico | null) => void,
+  setOrdem: SetOrdemFunction,
   fetchMotorDetails: (clienteId: string, motorId: string) => Promise<void>,
   setIsEditando: (editing: boolean) => void
 ) => {
@@ -116,7 +116,7 @@ export const useOrdemUpdate = (
       const orderRef = doc(db, "ordens_servico", id);
       await updateDoc(orderRef, updatedOrder);
       
-      setOrdem(prev => {
+      setOrdem((prev) => {
         if (!prev) return null;
         return { ...prev, ...updatedOrder } as OrdemServico;
       });

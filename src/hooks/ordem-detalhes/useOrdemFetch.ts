@@ -5,6 +5,7 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { OrdemServico } from "@/types/ordens";
 import { toast } from "sonner";
+import { SetOrdemFunction } from "./types";
 
 export const useOrdemFetch = (id: string | undefined) => {
   const navigate = useNavigate();
@@ -61,7 +62,7 @@ export const useOrdemFetch = (id: string | undefined) => {
 
   return {
     ordem,
-    setOrdem,
+    setOrdem: setOrdem as SetOrdemFunction,
     isLoading,
     fetchMotorDetails
   };

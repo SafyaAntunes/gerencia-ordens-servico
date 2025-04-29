@@ -16,3 +16,6 @@ export interface UseOrdemDetalhesResult {
   handleDelete: () => Promise<void>;
   handleStatusChange: (newStatus: StatusOS) => Promise<void>;
 }
+
+// Define the type for setOrdem function
+export type SetOrdemFunction = (ordem: OrdemServico | null | ((prev: OrdemServico | null) => OrdemServico | null)) => void;
