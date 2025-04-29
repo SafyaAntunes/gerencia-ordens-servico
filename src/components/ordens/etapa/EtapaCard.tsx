@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
@@ -136,7 +137,7 @@ export default function EtapaCard({
       return;
     }
     
-    if (handleMarcarConcluido() && onEtapaStatusChange) {
+    if (handleMarcarConcluido(servicos) && onEtapaStatusChange) {
       onEtapaStatusChange(
         etapa, 
         true, 
@@ -154,8 +155,6 @@ export default function EtapaCard({
         <EtapaStatus 
           status={getEtapaStatus(etapaInfo)} 
           funcionarioNome={etapaInfo?.funcionarioNome}
-          onReiniciar={() => handleReiniciarEtapa(onEtapaStatusChange)}
-          podeReiniciar={podeAtribuirFuncionario && isEtapaConcluida(etapaInfo)}
         />
       </div>
       
