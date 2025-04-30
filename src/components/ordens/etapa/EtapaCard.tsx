@@ -149,7 +149,7 @@ export default function EtapaCard({
   };
 
   // Esta função será chamada pelo componente EtapaTimer quando o cronômetro for iniciado
-  const handleCustomTimerStart = () => {
+  const handleCustomTimerStart = (): boolean => {
     console.log("handleCustomTimerStart chamado em EtapaCard");
     const iniciarResult = handleIniciarTimer();
     return iniciarResult; // Retorna true se o timer deve ser iniciado, false caso contrário

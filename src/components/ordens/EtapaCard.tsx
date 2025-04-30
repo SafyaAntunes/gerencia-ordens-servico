@@ -1,32 +1,18 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
-import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
-import { formatTime } from "@/utils/timerUtils";
-import { Progress } from "../ui/progress";
-import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
-import { CheckCircle2, User, RefreshCw } from "lucide-react";
-import ServicoTracker from "./ServicoTracker";
-import OrdemCronometro from "./OrdemCronometro";
+import { EtapaOS, Servico, TipoServico } from "@/types/ordens";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { 
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getFuncionarios } from "@/services/funcionarioService";
 import { Funcionario } from "@/types/funcionarios";
+import {
+  EtapaHeader,
+  EtapaProgress,
+  EtapaTimerSection,
+  EtapaServiceList,
+  EtapaAtribuirDialog
+} from "./etapa-card";
 
 interface EtapaCardProps {
   ordemId: string;
@@ -64,15 +50,15 @@ export default function EtapaCard({
   onServicoStatusChange,
   onEtapaStatusChange
 }: EtapaCardProps) {
-  const [progresso, setProgresso] = useState(0);
+  const { funcionario } = useAuth();
+  const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
   const [isAtivo, setIsAtivo] = useState(false);
   const [atribuirFuncionarioDialogOpen, setAtribuirFuncionarioDialogOpen] = useState(false);
   const [dialogAction, setDialogAction] = useState<'start' | 'finish'>('start');
-  const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
   const [funcionarioSelecionadoId, setFuncionarioSelecionadoId] = useState<string>("");
   const [funcionarioSelecionadoNome, setFuncionarioSelecionadoNome] = useState<string>("");
-  const { funcionario } = useAuth();
   
+  // Verificar se o usuário tem permissão para atribuir funcionários
   const podeAtribuirFuncionario = funcionario?.nivelPermissao === 'admin' || 
                                  funcionario?.nivelPermissao === 'gerente';
   
@@ -100,76 +86,67 @@ export default function EtapaCard({
     return funcionario?.especialidades?.includes(etapa);
   };
   
+  // Fetch real funcionarios from database
   useEffect(() => {
     const carregarFuncionarios = async () => {
       try {
-        const funcionariosRef = collection(db, "funcionarios");
-        const snapshot = await getDocs(funcionariosRef);
-        const funcionarios: Funcionario[] = [];
-        
-        snapshot.forEach((doc) => {
-          const data = doc.data() as Funcionario;
-          funcionarios.push({
-            ...data,
-            id: doc.id
-          });
-        });
-        
-        setFuncionariosOptions(funcionarios);
+        const funcionariosData = await getFuncionarios();
+        if (funcionariosData) {
+          setFuncionariosOptions(funcionariosData);
+        }
       } catch (error) {
         console.error("Erro ao carregar funcionários:", error);
+        toast.error("Erro ao carregar lista de funcionários");
       }
     };
     
-    if (podeAtribuirFuncionario) {
-      carregarFuncionarios();
-    }
-  }, [podeAtribuirFuncionario]);
+    carregarFuncionarios();
+  }, []);
   
-  useEffect(() => {
-    if (servicos.length === 0) return;
+  // Verificar se todas as subatividades dos serviços estão concluídas
+  const todasSubatividadesConcluidas = () => {
+    if (servicos.length === 0) return true;
     
-    const servicosConcluidos = servicos.filter(servico => servico.concluido).length;
-    const percentualProgresso = Math.round((servicosConcluidos / servicos.length) * 100);
-    setProgresso(percentualProgresso);
-    
-    if (servicosConcluidos === servicos.length && !etapaInfo?.concluido && onEtapaStatusChange) {
-      onEtapaStatusChange(etapa, true, funcionario?.id, funcionario?.nome);
-    }
-  }, [servicos, etapaInfo, onEtapaStatusChange]);
+    return servicos.every(servico => {
+      const subatividades = servico.subatividades?.filter(s => s.selecionada) || [];
+      return subatividades.length === 0 || subatividades.every(sub => sub.concluida);
+    });
+  };
 
+  const etapaComCronometro = ['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa);
+  
   const isEtapaConcluida = () => {
     if ((etapa === "inspecao_inicial" || etapa === "inspecao_final") && servicoTipo) {
       return etapaInfo?.concluido && etapaInfo?.servicoTipo === servicoTipo;
     }
     return etapaInfo?.concluido;
   };
-
-  const etapaComCronometro = ['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa);
   
-  const handleIniciarTimer = () => {
-    if (!funcionario?.id) {
-      toast.error("É necessário estar logado para iniciar uma etapa");
-      return;
-    }
-
-    if (podeAtribuirFuncionario) {
-      setDialogAction('start');
-      setAtribuirFuncionarioDialogOpen(true);
+  const getEtapaStatus = () => {
+    if (isEtapaConcluida()) {
+      return "concluido";
+    } else if (etapaInfo?.iniciado) {
+      return "em_andamento";
     } else {
-      // Próprio usuário inicia o timer
-      handleTimerStart();
+      return "nao_iniciado";
     }
   };
   
-  const handleTimerStart = () => {
-    console.log("handleTimerStart chamado em EtapaCard para:", {ordemId, etapa, servicoTipo});
-    // Esta função será chamada quando o usuário clicar em iniciar
-    // Ou após a confirmação de atribuição de funcionário
-    setIsAtivo(true);
-  };
+  useEffect(() => {
+    if (etapaInfo?.iniciado && !etapaInfo?.concluido) {
+      setIsAtivo(true);
+    } else {
+      setIsAtivo(false);
+    }
+  }, [etapaInfo]);
   
   const handleEtapaConcluida = (tempoTotal: number) => {
+    // Verificar se todas as subatividades estão concluídas
+    if (!todasSubatividadesConcluidas()) {
+      toast.error("É necessário concluir todas as subatividades antes de finalizar a etapa");
+      return;
+    }
+    
     if (onEtapaStatusChange) {
       if (podeAtribuirFuncionario) {
         setDialogAction('finish');
@@ -185,10 +162,16 @@ export default function EtapaCard({
       }
     }
   };
-
+  
   const handleMarcarConcluido = () => {
     if (!funcionario?.id) {
       toast.error("É necessário estar logado para finalizar uma etapa");
+      return;
+    }
+    
+    // Verificar se todas as subatividades estão concluídas
+    if (!todasSubatividadesConcluidas()) {
+      toast.error("É necessário concluir todas as subatividades antes de finalizar a etapa");
       return;
     }
     
@@ -205,6 +188,30 @@ export default function EtapaCard({
           (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
         );
       }
+    }
+  };
+  
+  const handleTimerStart = () => {
+    console.log("handleTimerStart chamado em EtapaCard para:", {ordemId, etapa, servicoTipo});
+    // Esta função será chamada quando o usuário clicar em iniciar
+    // Ou após a confirmação de atribuição de funcionário
+    setIsAtivo(true);
+    return true; // Return true to indicate success
+  };
+  
+  const handleIniciarTimer = () => {
+    if (!funcionario?.id) {
+      toast.error("É necessário estar logado para iniciar uma etapa");
+      return false;
+    }
+
+    if (podeAtribuirFuncionario) {
+      setDialogAction('start');
+      setAtribuirFuncionarioDialogOpen(true);
+      return false;
+    } else {
+      // Próprio usuário inicia o timer
+      return true; // EtapaTimer chamará handleTimerStart diretamente
     }
   };
   
@@ -260,164 +267,61 @@ export default function EtapaCard({
     setFuncionarioSelecionadoNome(funcionarioSelecionado?.nome || "");
   };
   
-  const getEtapaStatus = () => {
-    if (isEtapaConcluida()) {
-      return "concluido";
-    } else if (etapaInfo?.iniciado) {
-      return "em_andamento";
-    } else {
-      return "nao_iniciado";
-    }
+  // Esta função será chamada pelo componente EtapaTimer quando o cronômetro for iniciado
+  const handleCustomTimerStart = () => {
+    console.log("handleCustomTimerStart chamado em EtapaCard");
+    return handleIniciarTimer();
   };
-  
-  useEffect(() => {
-    if (etapaInfo?.iniciado && !etapaInfo?.concluido) {
-      setIsAtivo(true);
-    } else {
-      setIsAtivo(false);
-    }
-  }, [etapaInfo]);
 
   return (
     <Card className="p-6 mb-4">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-semibold">{etapaNome}</h3>
-        <div className="flex items-center gap-2">
-          {getEtapaStatus() === "concluido" && (
-            <Badge variant="success">
-              Concluído
-            </Badge>
-          )}
-          {getEtapaStatus() === "em_andamento" && (
-            <Badge variant="outline">Em andamento</Badge>
-          )}
-          {getEtapaStatus() === "nao_iniciado" && (
-            <Badge variant="outline" className="bg-gray-100">Não iniciado</Badge>
-          )}
-        </div>
-      </div>
+      <EtapaHeader 
+        etapaNome={etapaNome}
+        status={getEtapaStatus()}
+        isEtapaConcluida={isEtapaConcluida()}
+        funcionarioNome={etapaInfo?.funcionarioNome}
+        podeReiniciar={podeAtribuirFuncionario || podeTrabalharNaEtapa()}
+        onReiniciar={handleReiniciarEtapa}
+      />
       
-      {isEtapaConcluida() && etapaInfo?.funcionarioNome && (
-        <div className="mb-4 flex items-center text-sm text-muted-foreground">
-          <User className="h-4 w-4 mr-1" />
-          <span>Concluído por: {etapaInfo.funcionarioNome}</span>
-          
-          {(podeAtribuirFuncionario || podeTrabalharNaEtapa()) && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="ml-auto text-blue-500 hover:text-blue-700"
-              onClick={handleReiniciarEtapa}
-            >
-              <RefreshCw className="h-4 w-4 mr-1" />
-              Reiniciar
-            </Button>
-          )}
-        </div>
-      )}
-      
-      {servicos.length > 0 && (
-        <div className="mb-4">
-          <Progress value={progresso} className="h-2" />
-        </div>
-      )}
+      <EtapaProgress servicos={servicos} />
       
       {etapaComCronometro && (
-        <div className="p-4 border rounded-md mb-4">
-          <OrdemCronometro
-            ordemId={ordemId}
-            funcionarioId={funcionarioId}
-            funcionarioNome={funcionarioNome}
-            etapa={etapa}
-            onFinish={handleEtapaConcluida}
-            isEtapaConcluida={isEtapaConcluida()}
-            onStart={handleTimerStart}
-            onCustomStart={handleIniciarTimer}
-            tipoServico={servicoTipo}
-          />
-          
-          {!isEtapaConcluida() && (
-            <div className="mt-4">
-              <Button 
-                variant="default" 
-                size="sm" 
-                className="w-full bg-blue-500 hover:bg-blue-600 text-white"
-                onClick={handleMarcarConcluido}
-              >
-                <CheckCircle2 className="h-4 w-4 mr-1" />
-                Marcar Etapa como Concluída
-              </Button>
-            </div>
-          )}
-        </div>
+        <EtapaTimerSection
+          ordemId={ordemId}
+          funcionarioId={funcionarioId}
+          funcionarioNome={funcionarioNome}
+          etapa={etapa}
+          tipoServico={servicoTipo}
+          isEtapaConcluida={isEtapaConcluida()}
+          onEtapaConcluida={handleEtapaConcluida}
+          onMarcarConcluido={handleMarcarConcluido}
+          onTimerStart={handleTimerStart}
+          onCustomStart={handleCustomTimerStart}
+        />
       )}
       
-      {servicos.length > 0 && (
-        <div className="space-y-4">
-          {servicos.map((servico, i) => (
-            <ServicoTracker
-              key={`${servico.tipo}-${i}`}
-              servico={servico}
-              ordemId={ordemId}
-              funcionarioId={funcionarioId}
-              funcionarioNome={funcionarioNome}
-              etapa={etapa}
-              onSubatividadeToggle={
-                onSubatividadeToggle ? 
-                  (subId, checked) => onSubatividadeToggle(servico.tipo, subId, checked) : 
-                  () => {}
-              }
-              onServicoStatusChange={
-                onServicoStatusChange ? 
-                  (concluido, funcId, funcNome) => onServicoStatusChange(servico.tipo, concluido, funcId, funcNome) : 
-                  () => {}
-              }
-            />
-          ))}
-        </div>
-      )}
+      <EtapaServiceList
+        servicos={servicos}
+        ordemId={ordemId}
+        funcionarioId={funcionarioId}
+        funcionarioNome={funcionarioNome}
+        etapa={etapa}
+        onSubatividadeToggle={onSubatividadeToggle}
+        onServicoStatusChange={onServicoStatusChange}
+      />
       
-      <Dialog open={atribuirFuncionarioDialogOpen} onOpenChange={setAtribuirFuncionarioDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Atribuir Funcionário</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <label htmlFor="funcionario-select-etapa" className="block text-sm font-medium">
-                Selecione o funcionário que {dialogAction === 'start' ? 'executará' : 'executou'} esta etapa
-              </label>
-              
-              <Select onValueChange={handleFuncionarioChange} value={funcionarioSelecionadoId}>
-                <SelectTrigger id="funcionario-select-etapa" className="w-full">
-                  <SelectValue placeholder="Selecione um funcionário" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={funcionario?.id || ""}>
-                    {funcionario?.nome || "Eu mesmo"} (você)
-                  </SelectItem>
-                  {funcionariosOptions
-                    .filter(f => f.id !== funcionario?.id)
-                    .map(f => (
-                      <SelectItem key={f.id} value={f.id}>
-                        {f.nome}
-                      </SelectItem>
-                    ))
-                  }
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAtribuirFuncionarioDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleConfirmarAtribuicao} className="bg-blue-500 hover:bg-blue-600">
-              Confirmar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EtapaAtribuirDialog
+        open={atribuirFuncionarioDialogOpen}
+        onOpenChange={setAtribuirFuncionarioDialogOpen}
+        dialogAction={dialogAction}
+        funcionarioOptions={funcionariosOptions}
+        currentFuncionarioId={funcionario?.id}
+        currentFuncionarioNome={funcionario?.nome}
+        selectedFuncionarioId={funcionarioSelecionadoId}
+        onFuncionarioChange={handleFuncionarioChange}
+        onConfirm={handleConfirmarAtribuicao}
+      />
     </Card>
   );
 }
