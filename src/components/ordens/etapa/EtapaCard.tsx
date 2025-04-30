@@ -5,16 +5,17 @@ import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { useEtapaCard } from "./useEtapaCard";
-import { 
-  EtapaStatus,
-  EtapaProgresso,
-  EtapaConcluiButton,
-  EtapaServicos,
-  EtapaTimer,
-  AtribuirFuncionarioDialog
-} from ".";
-import { Funcionario } from "@/types/funcionarios";
 import { getFuncionarios } from "@/services/funcionarioService";
+import { Funcionario } from "@/types/funcionarios";
+import { AtribuirFuncionarioDialog } from ".";
+import { 
+  EtapaHeader, 
+  EtapaProgressDisplay, 
+  EtapaTimerSection, 
+  EtapaServicosLista 
+} from "./components";
+import { useSubatividadesVerifier } from "./hooks/useSubatividadesVerifier";
+import { useEtapaStatusHandlers } from "./hooks/useEtapaStatusHandlers";
 
 interface EtapaCardProps {
   ordemId: string;
@@ -54,20 +55,25 @@ export default function EtapaCard({
 }: EtapaCardProps) {
   const { funcionario } = useAuth();
   const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
+  const { todasSubatividadesConcluidas } = useSubatividadesVerifier();
+  const { 
+    isAtivo, 
+    setIsAtivo, 
+    isEtapaConcluida, 
+    getEtapaStatus 
+  } = useEtapaStatusHandlers(etapa, servicoTipo);
+  
   const {
-    isAtivo,
-    setIsAtivo,
     podeAtribuirFuncionario,
     podeTrabalharNaEtapa,
     handleIniciarTimer,
     handleTimerStart,
     handleMarcarConcluido,
-    isEtapaConcluida,
-    getEtapaStatus,
     handleReiniciarEtapa,
     atribuirFuncionarioDialogOpen,
     setAtribuirFuncionarioDialogOpen,
     dialogAction,
+    setDialogAction,
     funcionarioSelecionadoId,
     funcionarioSelecionadoNome,
     handleFuncionarioChange,
@@ -90,22 +96,12 @@ export default function EtapaCard({
     
     carregarFuncionarios();
   }, []);
-  
-  // Verificar se todas as subatividades dos serviços estão concluídas
-  const todasSubatividadesConcluidas = () => {
-    if (servicos.length === 0) return true;
-    
-    return servicos.every(servico => {
-      const subatividades = servico.subatividades?.filter(s => s.selecionada) || [];
-      return subatividades.length === 0 || subatividades.every(sub => sub.concluida);
-    });
-  };
 
   const etapaComCronometro = ['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa);
   
   const handleEtapaConcluida = (tempoTotal: number) => {
     // Verificar se todas as subatividades estão concluídas
-    if (!todasSubatividadesConcluidas()) {
+    if (!todasSubatividadesConcluidas(servicos)) {
       toast.error("É necessário concluir todas as subatividades antes de finalizar a etapa");
       return;
     }
@@ -131,12 +127,6 @@ export default function EtapaCard({
   }, [etapaInfo, setIsAtivo]);
   
   const handleMarcarConcluidoClick = () => {
-    // Verificar se todas as subatividades estão concluídas antes de permitir marcar a etapa como concluída
-    if (!todasSubatividadesConcluidas()) {
-      toast.error("É necessário concluir todas as subatividades antes de finalizar a etapa");
-      return;
-    }
-    
     if (handleMarcarConcluido(servicos) && onEtapaStatusChange) {
       onEtapaStatusChange(
         etapa, 
@@ -157,15 +147,16 @@ export default function EtapaCard({
 
   return (
     <Card className="p-6 mb-4">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-semibold">{etapaNome}</h3>
-        <EtapaStatus 
-          status={getEtapaStatus(etapaInfo)} 
-          funcionarioNome={etapaInfo?.funcionarioNome}
-        />
-      </div>
+      <EtapaHeader 
+        etapaNome={etapaNome}
+        status={getEtapaStatus(etapaInfo)}
+        isEtapaConcluida={isEtapaConcluida(etapaInfo)}
+        funcionarioNome={etapaInfo?.funcionarioNome}
+        podeReiniciar={podeAtribuirFuncionario() || podeTrabalharNaEtapa()}
+        onReiniciar={() => handleReiniciarEtapa(onEtapaStatusChange)}
+      />
       
-      <EtapaProgresso 
+      <EtapaProgressDisplay 
         servicos={servicos} 
         onAllServicosConcluidos={() => {
           if (onEtapaStatusChange && !isEtapaConcluida(etapaInfo)) {
@@ -175,27 +166,21 @@ export default function EtapaCard({
       />
       
       {etapaComCronometro && (
-        <div className="p-4 border rounded-md mb-4">
-          <EtapaTimer
-            ordemId={ordemId}
-            funcionarioId={funcionarioId}
-            funcionarioNome={funcionarioNome}
-            etapa={etapa}
-            onFinish={handleEtapaConcluida}
-            isEtapaConcluida={isEtapaConcluida(etapaInfo)}
-            onStart={handleTimerStart}
-            onCustomStart={handleCustomTimerStart}
-            tipoServico={servicoTipo}
-          />
-          
-          <EtapaConcluiButton 
-            isConcluida={isEtapaConcluida(etapaInfo)} 
-            onClick={handleMarcarConcluidoClick} 
-          />
-        </div>
+        <EtapaTimerSection 
+          ordemId={ordemId}
+          funcionarioId={funcionarioId}
+          funcionarioNome={funcionarioNome}
+          etapa={etapa}
+          tipoServico={servicoTipo}
+          isEtapaConcluida={isEtapaConcluida(etapaInfo)}
+          onEtapaConcluida={handleEtapaConcluida}
+          onMarcarConcluido={handleMarcarConcluidoClick}
+          onTimerStart={handleTimerStart}
+          onCustomStart={handleCustomTimerStart}
+        />
       )}
       
-      <EtapaServicos
+      <EtapaServicosLista
         servicos={servicos}
         ordemId={ordemId}
         funcionarioId={funcionarioId}
