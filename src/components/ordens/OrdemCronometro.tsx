@@ -9,7 +9,7 @@ export interface OrdemCronometroProps {
   etapa: EtapaOS;
   tipoServico?: TipoServico;
   onStart?: () => void;
-  onCustomStart?: () => void; 
+  onCustomStart?: () => boolean; // Updated to return boolean
   onPause?: (motivo?: string) => void;
   onResume?: () => void;
   onFinish?: (tempoTotal: number) => void;
