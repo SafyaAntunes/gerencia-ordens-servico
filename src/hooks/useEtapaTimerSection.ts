@@ -14,7 +14,7 @@ interface UseEtapaTimerSectionProps {
   onCustomStart: () => boolean;
 }
 
-export function useEtapaTimerSection({
+export default function useEtapaTimerSection({
   ordemId,
   funcionarioId,
   funcionarioNome,
@@ -37,7 +37,7 @@ export function useEtapaTimerSection({
       etapa,
       tipoServico,
       isEtapaConcluida,
-      onEtapaConcluida,
+      onFinish: onEtapaConcluida,
       onTimerStart,
       onCustomStart
     },

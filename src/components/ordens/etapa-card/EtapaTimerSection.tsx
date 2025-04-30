@@ -1,7 +1,7 @@
 
 import { EtapaOS, TipoServico } from "@/types/ordens";
 import OrdemCronometro from "../OrdemCronometro";
-import { useEtapaTimerSection } from "@/hooks/useEtapaTimerSection";
+import useEtapaTimerSection from "@/hooks/useEtapaTimerSection";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
 
