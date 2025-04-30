@@ -148,6 +148,13 @@ export default function EtapaCard({
     }
   };
 
+  // Esta função será chamada pelo componente EtapaTimer quando o cronômetro for iniciado
+  const handleCustomTimerStart = () => {
+    console.log("handleCustomTimerStart chamado em EtapaCard");
+    const iniciarResult = handleIniciarTimer();
+    return iniciarResult; // Retorna true se o timer deve ser iniciado, false caso contrário
+  };
+
   return (
     <Card className="p-6 mb-4">
       <div className="flex justify-between items-center mb-4">
@@ -177,7 +184,7 @@ export default function EtapaCard({
             onFinish={handleEtapaConcluida}
             isEtapaConcluida={isEtapaConcluida(etapaInfo)}
             onStart={handleTimerStart}
-            onCustomStart={handleIniciarTimer}
+            onCustomStart={handleCustomTimerStart}
             tipoServico={servicoTipo}
           />
           

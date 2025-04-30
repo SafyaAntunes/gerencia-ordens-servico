@@ -14,7 +14,7 @@ export interface EtapaTimerProps {
   etapa: EtapaOS;
   tipoServico?: TipoServico;
   onStart?: () => void;
-  onCustomStart?: () => void;
+  onCustomStart?: () => boolean;
   onPause?: (motivo?: string) => void;
   onResume?: () => void;
   onFinish?: (tempoTotal: number) => void;
@@ -99,12 +99,20 @@ export default function EtapaTimer({
   
   // Function to manage timer start, possibly opening dialog
   const handleStartTimer = () => {
-    console.log("handleStartTimer called in EtapaTimer", {ordemId, etapa, tipoServico, onCustomStart});
+    console.log("handleStartTimer called in EtapaTimer", {ordemId, etapa, tipoServico});
+    
     if (onCustomStart) {
-      onCustomStart();
+      const shouldStartTimer = onCustomStart();
+      console.log("onCustomStart result:", shouldStartTimer);
+      
+      // Se onCustomStart retornar true, inicie o timer diretamente
+      if (shouldStartTimer) {
+        console.log("Iniciando timer após confirmação de onCustomStart");
+        handleStart();
+      }
     } else {
-      const result = handleStart();
-      console.log("handleStart result:", result);
+      console.log("Sem onCustomStart, chamando handleStart diretamente");
+      handleStart();
     }
   };
   

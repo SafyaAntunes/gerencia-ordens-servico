@@ -20,6 +20,8 @@ export function useEtapaOperations(
     setDialogAction: (action: 'start' | 'finish') => void,
     setAtribuirFuncionarioDialogOpen: (open: boolean) => void
   ): boolean => {
+    console.log("handleIniciarTimer chamado em useEtapaOperations");
+    
     if (!funcionario?.id) {
       toast.error("É necessário estar logado para iniciar uma etapa");
       return false;
@@ -31,7 +33,9 @@ export function useEtapaOperations(
       return false;
     }
     
-    return handleTimerStart();
+    // Retorna diretamente true sem chamar handleTimerStart
+    // para permitir que EtapaTimer.tsx controle o início do timer
+    return true;
   };
   
   const handleMarcarConcluido = (
@@ -95,9 +99,9 @@ export function useEtapaOperations(
       const funcNome = funcionarioSelecionadoNome || funcionario?.nome;
       
       if (dialogAction === 'start') {
-        // Inicia o timer com o funcionário selecionado
-        console.log("Iniciando timer via handleConfirmarAtribuicao");
-        handleTimerStart();
+        // Agora, não fazemos nada além de fechar o diálogo
+        // O timer será iniciado pelo componente EtapaTimer
+        console.log("Atribuição de funcionário para iniciar timer realizada com sucesso");
       } else if (dialogAction === 'finish') {
         // Marca a etapa como concluída com o funcionário selecionado
         onEtapaStatusChange(
