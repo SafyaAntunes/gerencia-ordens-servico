@@ -59,8 +59,8 @@ export function useEtapaCard(etapa: EtapaOS, servicoTipo?: TipoServico): UseEtap
     return iniciarTimer(setDialogAction, setAtribuirFuncionarioDialogOpen);
   };
   
-  const handleMarcarConcluido = () => {
-    return marcarConcluido(setDialogAction, setAtribuirFuncionarioDialogOpen);
+  const handleMarcarConcluido = (servicos?: any[]) => {
+    return marcarConcluido(setDialogAction, setAtribuirFuncionarioDialogOpen, servicos);
   };
   
   const handleReiniciarEtapa = (onEtapaStatusChange: any) => {
