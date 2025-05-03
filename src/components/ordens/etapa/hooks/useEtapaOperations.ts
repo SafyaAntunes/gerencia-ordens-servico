@@ -30,11 +30,11 @@ export function useEtapaOperations(
     if (podeAtribuirFuncionario) {
       setDialogAction('start');
       setAtribuirFuncionarioDialogOpen(true);
-      return false;
+      // Importante: retornamos true para permitir que o timer inicie mesmo com o diálogo aberto
+      return true;
     }
     
-    // Retorna diretamente true sem chamar handleTimerStart
-    // para permitir que EtapaTimer.tsx controle o início do timer
+    // Retorna diretamente true para permitir que EtapaTimer.tsx controle o início do timer
     return true;
   };
   
@@ -99,8 +99,7 @@ export function useEtapaOperations(
       const funcNome = funcionarioSelecionadoNome || funcionario?.nome;
       
       if (dialogAction === 'start') {
-        // Agora, não fazemos nada além de fechar o diálogo
-        // O timer será iniciado pelo componente EtapaTimer
+        // Simplesmente fechamos o diálogo, o timer já foi iniciado
         console.log("Atribuição de funcionário para iniciar timer realizada com sucesso");
       } else if (dialogAction === 'finish') {
         // Marca a etapa como concluída com o funcionário selecionado

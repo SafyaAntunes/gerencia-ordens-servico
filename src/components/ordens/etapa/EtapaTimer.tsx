@@ -95,7 +95,33 @@ export default function EtapaTimer({
     }
   };
   
+  // Get estimated time based on the service type and stage
+  const getTempoEstimado = () => {
+    // Simplified estimated times (in minutes) for each type of service/stage
+    const temposEstimados: Record<string, number> = {
+      inspecao_inicial_bloco: 60, // 60 minutos para inspeção inicial de bloco
+      inspecao_inicial_biela: 45, // 45 minutos para inspeção inicial de biela
+      inspecao_inicial_cabecote: 50, // 50 minutos para inspeção inicial de cabeçote
+      inspecao_inicial_virabrequim: 55, // 55 minutos para inspeção inicial de virabrequim
+      inspecao_inicial_eixo_comando: 40, // 40 minutos para inspeção inicial de eixo comando
+      inspecao_final_bloco: 45, // 45 minutos para inspeção final de bloco
+      inspecao_final_biela: 30, // 30 minutos para inspeção final de biela
+      inspecao_final_cabecote: 40, // 40 minutos para inspeção final de cabeçote
+      inspecao_final_virabrequim: 45, // 45 minutos para inspeção final de virabrequim
+      inspecao_final_eixo_comando: 30, // 30 minutos para inspeção final de eixo comando
+      lavagem_bloco: 90, // 90 minutos para lavagem de bloco
+      lavagem_biela: 60, // 60 minutos para lavagem de biela
+      lavagem_cabecote: 75, // 75 minutos para lavagem de cabeçote
+      lavagem_virabrequim: 80, // 80 minutos para lavagem de virabrequim
+      lavagem_eixo_comando: 60, // 60 minutos para lavagem de eixo comando
+    };
+
+    const key = tipoServico ? `${etapa}_${tipoServico}` : etapa;
+    return temposEstimados[key] || 0;
+  };
+  
   const status = getStatus();
+  const tempoEstimadoMinutos = getTempoEstimado();
   
   // Function to manage timer start, possibly opening dialog
   const handleStartTimer = () => {
@@ -136,7 +162,15 @@ export default function EtapaTimer({
         </div>
       </div>
       
-      {/* Tempo em formato menor abaixo do principal (redundante, mas mantido por compatibilidade) */}
+      {/* Tempo estimado para concluir a etapa */}
+      {tempoEstimadoMinutos > 0 && (
+        <div className="mb-3 text-sm text-muted-foreground flex items-center gap-1">
+          <span>Tempo estimado:</span>
+          <span className="font-medium">{tempoEstimadoMinutos} minutos</span>
+        </div>
+      )}
+      
+      {/* Tempo em formato menor abaixo do principal */}
       <div className="mb-3 text-sm text-muted-foreground">
         Tempo registrado: {formatTime(displayTime)}
       </div>

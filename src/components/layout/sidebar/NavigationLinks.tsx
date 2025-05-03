@@ -1,58 +1,90 @@
 
+import { useLocation } from 'react-router-dom';
+import NavItem from './NavItem';
 import { 
   LayoutDashboard, 
   FileText, 
   Users, 
-  Settings, 
-  Calendar,
-  UserSquare,
-  Wrench
+  UserCircle, 
+  Calendar, 
+  BarChart2,
+  Settings 
 } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
-import { useAuth } from '@/hooks/useAuth';
-import NavItem from './NavItem';
 
-type NavigationLinksProps = {
-  isCollapsed?: boolean;
-};
+interface NavigationLinksProps {
+  isCollapsed: boolean;
+}
 
-const NavigationLinks = ({ isCollapsed = false }: NavigationLinksProps) => {
-  const { hasPermission } = useAuth();
+const NavigationLinks = ({ isCollapsed }: NavigationLinksProps) => {
+  const { pathname } = useLocation();
+  
+  const isActive = (path: string) => {
+    return pathname === path || pathname.startsWith(`${path}/`);
+  };
 
   return (
-    <div className="flex-1 px-3 py-2 space-y-1">
-      {/* Todos os usuários veem o Dashboard */}
-      <NavItem icon={LayoutDashboard} label="Dashboard" to="/" isCollapsed={isCollapsed} />
-      
-      {/* Todos os níveis podem ver a lista de Ordens de Serviço */}
-      <NavItem icon={FileText} label="Ordens de Serviço" to="/ordens" isCollapsed={isCollapsed} />
-      
-      {/* Funcionários - Gerente ou superior */}
-      {hasPermission('gerente') && (
-        <NavItem icon={Users} label="Funcionários" to="/funcionarios" isCollapsed={isCollapsed} />
-      )}
-      
-      {/* Clientes - Gerente ou superior */}
-      {hasPermission('gerente') && (
-        <NavItem icon={UserSquare} label="Clientes" to="/clientes" isCollapsed={isCollapsed} />
-      )}
-      
-      {/* Agenda - Gerente ou superior */}
-      {hasPermission('gerente') && (
-        <NavItem icon={Calendar} label="Agenda" to="/agenda" isCollapsed={isCollapsed} />
-      )}
-      
-      {/* Relatórios - Produção para Gerente ou superior */}
-      {hasPermission('gerente') && (
-        <NavItem icon={Wrench} label="Relatórios de Produção" to="/relatorios/producao" isCollapsed={isCollapsed} />
-      )}
-      
-      <Separator className="my-4 bg-sidebar-border" />
-      
-      {/* Configurações - Apenas Admin */}
-      {hasPermission('admin') && (
-        <NavItem icon={Settings} label="Configurações" to="/configuracoes" isCollapsed={isCollapsed} />
-      )}
+    <div className="flex flex-col py-4 flex-1">
+      <nav className="flex-1">
+        <div className="px-3 py-2">
+          <NavItem 
+            href="/dashboard" 
+            icon={<LayoutDashboard className="h-5 w-5" />}
+            label="Dashboard"
+            isActive={isActive('/dashboard')}
+            isCollapsed={isCollapsed}
+          />
+
+          <NavItem 
+            href="/ordens" 
+            icon={<FileText className="h-5 w-5" />}
+            label="Ordens de Serviço"
+            isActive={isActive('/ordens')}
+            isCollapsed={isCollapsed}
+          />
+          
+          <NavItem 
+            href="/funcionarios" 
+            icon={<Users className="h-5 w-5" />}
+            label="Funcionários"
+            isActive={isActive('/funcionarios')}
+            isCollapsed={isCollapsed}
+          />
+          
+          <NavItem 
+            href="/clientes" 
+            icon={<UserCircle className="h-5 w-5" />}
+            label="Clientes"
+            isActive={isActive('/clientes')}
+            isCollapsed={isCollapsed}
+          />
+          
+          <NavItem 
+            href="/agenda" 
+            icon={<Calendar className="h-5 w-5" />}
+            label="Agenda"
+            isActive={isActive('/agenda')}
+            isCollapsed={isCollapsed}
+          />
+          
+          <NavItem 
+            href="/relatorios/producao" 
+            icon={<BarChart2 className="h-5 w-5" />}
+            label="Relatórios de Produção"
+            isActive={isActive('/relatorios/producao')}
+            isCollapsed={isCollapsed}
+          />
+          
+          <div className="mt-2 border-t border-sidebar-muted pt-2">
+            <NavItem 
+              href="/configuracoes" 
+              icon={<Settings className="h-5 w-5" />}
+              label="Configurações"
+              isActive={isActive('/configuracoes')}
+              isCollapsed={isCollapsed}
+            />
+          </div>
+        </div>
+      </nav>
     </div>
   );
 };
