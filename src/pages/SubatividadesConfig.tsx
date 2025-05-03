@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -7,7 +8,7 @@ import { SubatividadeForm } from "@/components/subatividades/SubatividadeForm";
 import { SubatividadeList } from "@/components/subatividades/SubatividadeList";
 import { TipoServico, SubAtividade, TipoAtividade } from "@/types/ordens";
 import { Button } from "@/components/ui/button";
-import { Plus, Save, Loader2 } from "lucide-react";
+import { Save, Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -95,7 +96,6 @@ export default function SubatividadesConfig({
               id: uuidv4(),
               nome,
               selecionada: false,
-              precoHora: 70,
               servicoTipo
             }));
             
@@ -123,38 +123,6 @@ export default function SubatividadesConfig({
   const handleServicoTipoChange = (value: string) => {
     setSelectedServicoTipo(value as TipoServico);
     setEditingSubatividade(null);
-  };
-
-  const handleAddDefault = () => {
-    let defaultsToAdd: string[] = [];
-    
-    if (porServico && tipoFixo && selectedServicoTipo) {
-      const tipoAtividade = tipoFixo as TipoAtividade;
-      const servicoTipo = selectedServicoTipo as TipoServico;
-      
-      defaultsToAdd = defaultAtividadesEspecificas[tipoAtividade]?.[servicoTipo] || [];
-    } else {
-      defaultsToAdd = defaultSubatividades[selectedTipo as TipoServico] || [];
-    }
-    
-    const novosDefault = defaultsToAdd
-      .filter(nome => !subatividades.some(s => s.nome.toLowerCase() === nome.toLowerCase()))
-      .map(nome => ({
-        id: uuidv4(),
-        nome,
-        selecionada: false,
-        precoHora: 70,
-        // Garantir que servicoTipo nunca seja undefined
-        servicoTipo: porServico ? selectedServicoTipo as TipoServico : null,
-        tempoEstimado: 1 // valor padrão de tempo estimado
-      }));
-    
-    if (novosDefault.length > 0) {
-      setSubatividades(prev => [...prev, ...novosDefault]);
-      toast.success(`${novosDefault.length} subatividades padrão adicionadas`);
-    } else {
-      toast.info("Todas as subatividades padrão já estão na lista");
-    }
   };
   
   const handleSave = async () => {
@@ -293,16 +261,6 @@ export default function SubatividadesConfig({
             
             <div className="flex flex-wrap gap-2">
               <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleAddDefault}
-                disabled={isLoading}
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Adicionar Padrões
-              </Button>
-              
-              <Button 
                 variant="default" 
                 size="sm"
                 onClick={handleSave}
@@ -346,7 +304,7 @@ export default function SubatividadesConfig({
                   </div>
                 ) : subatividades.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">
-                    Nenhuma subatividade configurada. Adicione uma nova ou use o botão "Adicionar Padrões".
+                    Nenhuma subatividade configurada. Adicione uma nova.
                   </p>
                 ) : (
                   <SubatividadeList

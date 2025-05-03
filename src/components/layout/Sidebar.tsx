@@ -6,13 +6,10 @@ import {
   FileText, 
   Users, 
   Settings, 
-  BarChart, 
-  TrendingUp,
   Calendar,
   ChevronRight,
   UserSquare,
-  Wrench,
-  DollarSign
+  Wrench
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -145,16 +142,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <NavItem icon={Calendar} label="Agenda" to="/agenda" />
             )}
             
-            {/* Removed Subatividades menu item */}
-            
-            {/* Relatórios - Produção para Gerente ou superior, Financeiro para Admin */}
+            {/* Relatórios - Produção para Gerente ou superior */}
             {hasPermission('gerente') && (
-              <>
-                <NavItem icon={Wrench} label="Relatórios de Produção" to="/relatorios/producao" />
-                {hasPermission('admin') && (
-                  <NavItem icon={TrendingUp} label="Relatórios Financeiros" to="/relatorios/financeiro" />
-                )}
-              </>
+              <NavItem icon={Wrench} label="Relatórios de Produção" to="/relatorios/producao" />
             )}
             
             <Separator className="my-4 bg-sidebar-border" />
@@ -216,16 +206,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <NavItem icon={Calendar} label="Agenda" to="/agenda" isCollapsed={isCollapsed} />
             )}
             
-            {/* Removed Subatividades menu item */}
-            
-            {/* Relatórios - Produção para Gerente ou superior, Financeiro para Admin */}
+            {/* Relatórios - Produção para Gerente ou superior */}
             {hasPermission('gerente') && (
-              <>
-                <NavItem icon={Wrench} label="Relatórios de Produção" to="/relatorios/producao" isCollapsed={isCollapsed} />
-                {hasPermission('admin') && (
-                  <NavItem icon={TrendingUp} label="Relatórios Financeiros" to="/relatorios/financeiro" isCollapsed={isCollapsed} />
-                )}
-              </>
+              <NavItem icon={Wrench} label="Relatórios de Produção" to="/relatorios/producao" isCollapsed={isCollapsed} />
             )}
             
             <Separator className="my-4 bg-sidebar-border" />
