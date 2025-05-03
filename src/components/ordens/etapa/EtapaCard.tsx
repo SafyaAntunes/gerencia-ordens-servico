@@ -140,6 +140,8 @@ export default function EtapaCard({
       const funcId = etapaInfo?.funcionarioId || funcionario?.id;
       const funcNome = etapaInfo?.funcionarioNome || funcionario?.nome;
       
+      console.log("Concluindo etapa com funcionário:", funcNome);
+      
       onEtapaStatusChange(
         etapa, 
         true, 
@@ -153,9 +155,14 @@ export default function EtapaCard({
   // Esta função será chamada pelo componente EtapaTimer quando o cronômetro for iniciado
   const handleCustomTimerStart = (): boolean => {
     console.log("handleCustomTimerStart chamado em EtapaCard");
-    // Modificado para permitir o início do timer mesmo com atribuição de funcionário
-    handleIniciarTimer();
-    return true; // Sempre retorna true para permitir que o timer inicie
+    
+    if (podeAtribuirFuncionario) {
+      setDialogAction('start');
+      setAtribuirFuncionarioDialogOpen(true);
+      return false; // Não inicia o timer até que o funcionário seja confirmado
+    }
+    
+    return true; // Permite que o timer inicie
   };
 
   return (
@@ -165,8 +172,8 @@ export default function EtapaCard({
         status={getEtapaStatus(etapaInfo)}
         isEtapaConcluida={isEtapaConcluida(etapaInfo)}
         funcionarioNome={etapaInfo?.funcionarioNome}
-        podeReiniciar={false} // Removed restart functionality
-        onReiniciar={() => {}} // Empty function since we're not using it
+        podeReiniciar={false}
+        onReiniciar={() => {}}
       />
       
       <EtapaProgressDisplay 
