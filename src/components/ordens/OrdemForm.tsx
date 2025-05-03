@@ -237,17 +237,17 @@ export default function OrdemForm({
         // Apenas precisamos das etapas lavagem, inspecao_inicial e inspecao_final
         const tiposAtividade: TipoAtividade[] = ['lavagem', 'inspecao_inicial', 'inspecao_final'];
         
-        // Para cada tipo de atividade, atualize o preço padrão se houver subatividades
+        // Para cada tipo de atividade, atualize o tempo padrão se houver subatividades
         tiposAtividade.forEach((tipo) => {
           if (etapasData[tipo] && etapasData[tipo].length > 0) {
-            // Use o preço da primeira subatividade como preço padrão
-            const defaultPreco = etapasData[tipo][0].precoHora || 0;
+            // Use o tempo estimado da primeira subatividade como tempo padrão
+            const defaultTempo = etapasData[tipo][0].tempoEstimado || 0;
             
             setEtapasTempoPreco(prev => ({
               ...prev,
               [tipo]: { 
                 ...prev[tipo],
-                precoHora: defaultPreco 
+                tempoEstimado: defaultTempo 
               }
             }));
           }

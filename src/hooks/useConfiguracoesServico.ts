@@ -7,7 +7,7 @@ interface ConfiguracaoItem {
   tipo: TipoServico;
   nome: string;
   horaPadrao: string;
-  tempoPadrao: number; // Changed from valorHora to tempoPadrao
+  tempoPadrao: number;
 }
 
 export function useConfiguracoesServico(tipoAtividade: TipoAtividade) {

@@ -9,7 +9,7 @@ interface ConfiguracaoItem {
   tipo: TipoServico;
   nome: string;
   horaPadrao: string;
-  valorHora: number;
+  tempoPadrao: number;
 }
 
 interface ConfiguracaoAtividadesTabelaProps {
@@ -17,7 +17,7 @@ interface ConfiguracaoAtividadesTabelaProps {
   titulo: string;
   descricao: string;
   itens: ConfiguracaoItem[];
-  onItemChange: (tipo: TipoServico, campo: 'horaPadrao' | 'valorHora', valor: string | number) => void;
+  onItemChange: (tipo: TipoServico, campo: 'horaPadrao' | 'tempoPadrao', valor: string | number) => void;
 }
 
 export default function ConfiguracaoAtividadesTabela({
@@ -27,11 +27,6 @@ export default function ConfiguracaoAtividadesTabela({
   itens,
   onItemChange
 }: ConfiguracaoAtividadesTabelaProps) {
-  // Formata o valor para exibição no campo de moeda
-  const formatarValor = (valor: number): string => {
-    return valor.toFixed(2);
-  };
-
   return (
     <Card className="w-full">
       <CardHeader>
@@ -43,8 +38,8 @@ export default function ConfiguracaoAtividadesTabela({
           <TableHeader>
             <TableRow>
               <TableHead className="w-[40%]">GRUPO</TableHead>
-              <TableHead className="w-[30%]">TEMPO PADRÃO</TableHead>
-              <TableHead className="w-[30%]">VALOR (R$)</TableHead>
+              <TableHead className="w-[30%]">TEMPO PADRÃO (HH:MM)</TableHead>
+              <TableHead className="w-[30%]">TEMPO EM HORAS</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -63,9 +58,9 @@ export default function ConfiguracaoAtividadesTabela({
                   <Input
                     type="number"
                     min="0"
-                    step="0.01"
-                    value={item.valorHora}
-                    onChange={(e) => onItemChange(item.tipo, 'valorHora', parseFloat(e.target.value))}
+                    step="0.5"
+                    value={item.tempoPadrao}
+                    onChange={(e) => onItemChange(item.tipo, 'tempoPadrao', parseFloat(e.target.value))}
                     className="w-full"
                   />
                 </TableCell>

@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { SubAtividade } from "@/types/ordens";
 import { Edit, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,7 +65,6 @@ export function SubatividadeList({ subatividades, isLoading, onEdit, onDelete }:
           <TableRow>
             <TableHead>Nome</TableHead>
             <TableHead className="text-right">Tempo Padrão</TableHead>
-            <TableHead className="text-right">Preço/Hora</TableHead>
             <TableHead className="w-[100px]">Ações</TableHead>
           </TableRow>
         </TableHeader>
@@ -75,7 +73,6 @@ export function SubatividadeList({ subatividades, isLoading, onEdit, onDelete }:
             <TableRow key={subatividade.id}>
               <TableCell className="font-medium">{subatividade.nome}</TableCell>
               <TableCell className="text-right">{formatarTempo(subatividade.tempoEstimado)}</TableCell>
-              <TableCell className="text-right">{formatCurrency(subatividade.precoHora || 0)}</TableCell>
               <TableCell>
                 <div className="flex space-x-2">
                   <Button

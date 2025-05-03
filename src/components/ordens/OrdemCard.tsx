@@ -1,6 +1,7 @@
+
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Clock, Calendar, ArrowRight, Settings, DollarSign } from "lucide-react";
+import { Clock, Calendar, ArrowRight, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,6 @@ import { OrdemServico, EtapaOS } from "@/types/ordens";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { formatCurrency } from "@/lib/utils";
 
 interface OrdemCardProps {
   ordem: OrdemServico;
@@ -164,16 +164,6 @@ export default function OrdemCard({ ordem, index, onReorder, onClick }: OrdemCar
           </div>
           <Progress value={progresso} className="h-2" />
         </div>
-        
-        {ordem.valorTotal && (
-          <div className="mt-3 flex justify-between items-center">
-            <div className="flex items-center gap-1 text-sm">
-              <DollarSign className="h-4 w-4 text-green-600" />
-              <span className="font-medium">Valor Total:</span>
-            </div>
-            <span className="text-sm font-semibold">{formatCurrency(ordem.valorTotal)}</span>
-          </div>
-        )}
         
         <div className="mt-3">
           <StatusBadge status={ordem.status || "orcamento"} size="md" />
