@@ -49,7 +49,7 @@ const MobileSidebar = ({ isOpen, onClose }: MobileSidebarProps) => {
       >
         <div className="flex flex-col h-full bg-sidebar text-sidebar-foreground">
           <SidebarHeader onClose={onClose} isMobile={true} />
-          <NavigationLinks />
+          <NavigationLinks isCollapsed={false} />
         </div>
       </motion.aside>
     </>

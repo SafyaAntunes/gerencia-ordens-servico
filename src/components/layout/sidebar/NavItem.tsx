@@ -1,19 +1,20 @@
 
 import { NavLink } from 'react-router-dom';
+import { ReactNode } from 'react';
 
 type NavItemProps = {
-  icon: React.ElementType;
+  icon: ReactNode;
   label: string;
-  to: string;
-  badge?: number;
+  href: string;
+  isActive: boolean;
   isCollapsed?: boolean;
 };
 
-const NavItem = ({ icon: Icon, label, to, badge, isCollapsed = false }: NavItemProps) => {
+const NavItem = ({ icon, label, href, isActive, isCollapsed = false }: NavItemProps) => {
   return (
     <NavLink 
-      to={to}
-      className={({ isActive }) => `
+      to={href}
+      className={`
         flex items-center gap-3 px-3 py-2.5 rounded-md transition-all duration-200
         ${isActive 
           ? 'bg-sidebar-accent text-primary font-medium' 
@@ -21,16 +22,9 @@ const NavItem = ({ icon: Icon, label, to, badge, isCollapsed = false }: NavItemP
         }
       `}
     >
-      <Icon className="h-5 w-5 flex-shrink-0" />
+      {icon}
       {!isCollapsed && (
-        <>
-          <span className="flex-1">{label}</span>
-          {badge ? (
-            <span className="h-5 min-w-5 rounded-full bg-primary flex items-center justify-center text-xs text-white">
-              {badge}
-            </span>
-          ) : null}
-        </>
+        <span className="flex-1">{label}</span>
       )}
     </NavLink>
   );
