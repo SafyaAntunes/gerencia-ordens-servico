@@ -6,6 +6,9 @@ import TimerControls from "../TimerControls";
 import CompletedTimer from "../CompletedTimer";
 import { Badge } from "@/components/ui/badge";
 import TimerPausas from "./TimerPausas";
+import { useEffect, useState } from "react";
+import { useConfiguracoesServico } from "@/hooks/useConfiguracoesServico";
+import { User } from "lucide-react";
 
 export interface EtapaTimerProps {
   ordemId: string;
@@ -45,6 +48,25 @@ export default function EtapaTimer({
     hasOnStart: !!onStart,
     hasOnFinish: !!onFinish
   });
+
+  const [tempoPadrao, setTempoPadrao] = useState<number>(0);
+  
+  // Obter configurações de tempo para o tipo de etapa atual
+  const { itens } = useConfiguracoesServico(etapa);
+
+  // Atualizar tempo padrão quando as configurações ou tipo de serviço mudarem
+  useEffect(() => {
+    if (tipoServico && itens.length > 0) {
+      const configuracaoServico = itens.find(item => item.tipo === tipoServico);
+      if (configuracaoServico) {
+        // Converter HH:MM para minutos
+        const partes = configuracaoServico.horaPadrao.split(':');
+        const horasEmMinutos = parseInt(partes[0], 10) * 60;
+        const minutos = parseInt(partes[1], 10);
+        setTempoPadrao(horasEmMinutos + minutos);
+      }
+    }
+  }, [tipoServico, itens, etapa]);
 
   // Validação adicional para prevenir erros
   if (!ordemId || !etapa) {
@@ -95,34 +117,6 @@ export default function EtapaTimer({
     }
   };
   
-  // Get estimated time based on the service type and stage
-  const getTempoEstimado = () => {
-    // Simplified estimated times (in minutes) for each type of service/stage
-    const temposEstimados: Record<string, number> = {
-      inspecao_inicial_bloco: 60, // 60 minutos para inspeção inicial de bloco
-      inspecao_inicial_biela: 45, // 45 minutos para inspeção inicial de biela
-      inspecao_inicial_cabecote: 50, // 50 minutos para inspeção inicial de cabeçote
-      inspecao_inicial_virabrequim: 55, // 55 minutos para inspeção inicial de virabrequim
-      inspecao_inicial_eixo_comando: 40, // 40 minutos para inspeção inicial de eixo comando
-      inspecao_final_bloco: 45, // 45 minutos para inspeção final de bloco
-      inspecao_final_biela: 30, // 30 minutos para inspeção final de biela
-      inspecao_final_cabecote: 40, // 40 minutos para inspeção final de cabeçote
-      inspecao_final_virabrequim: 45, // 45 minutos para inspeção final de virabrequim
-      inspecao_final_eixo_comando: 30, // 30 minutos para inspeção final de eixo comando
-      lavagem_bloco: 90, // 90 minutos para lavagem de bloco
-      lavagem_biela: 60, // 60 minutos para lavagem de biela
-      lavagem_cabecote: 75, // 75 minutos para lavagem de cabeçote
-      lavagem_virabrequim: 80, // 80 minutos para lavagem de virabrequim
-      lavagem_eixo_comando: 60, // 60 minutos para lavagem de eixo comando
-    };
-
-    const key = tipoServico ? `${etapa}_${tipoServico}` : etapa;
-    return temposEstimados[key] || 0;
-  };
-  
-  const status = getStatus();
-  const tempoEstimadoMinutos = getTempoEstimado();
-  
   // Function to manage timer start, possibly opening dialog
   const handleStartTimer = () => {
     console.log("handleStartTimer called in EtapaTimer", {ordemId, etapa, tipoServico});
@@ -142,10 +136,25 @@ export default function EtapaTimer({
     }
   };
   
-  // If the stage is completed, just show the saved time without controls
+  // If the stage is completed, show the saved time without controls but with employee info
   if (isEtapaConcluida) {
-    return <CompletedTimer totalSavedTime={totalSavedTime} />;
+    return (
+      <div className="w-full">
+        {/* Tempo concluído */}
+        <CompletedTimer totalSavedTime={totalSavedTime} />
+        
+        {/* Funcionário que concluiu */}
+        {funcionarioNome && (
+          <div className="mt-2 flex items-center text-sm text-muted-foreground">
+            <User className="h-4 w-4 mr-1" />
+            <span>Concluído por: {funcionarioNome}</span>
+          </div>
+        )}
+      </div>
+    );
   }
+  
+  const status = getStatus();
   
   return (
     <div className="w-full">
@@ -163,10 +172,10 @@ export default function EtapaTimer({
       </div>
       
       {/* Tempo estimado para concluir a etapa */}
-      {tempoEstimadoMinutos > 0 && (
+      {tempoPadrao > 0 && (
         <div className="mb-3 text-sm text-muted-foreground flex items-center gap-1">
           <span>Tempo estimado:</span>
-          <span className="font-medium">{tempoEstimadoMinutos} minutos</span>
+          <span className="font-medium">{tempoPadrao} minutos</span>
         </div>
       )}
       

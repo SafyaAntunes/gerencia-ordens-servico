@@ -53,12 +53,8 @@ export function useEtapaOperations(
       return false;
     }
 
-    if (podeAtribuirFuncionario) {
-      setDialogAction('finish');
-      setAtribuirFuncionarioDialogOpen(true);
-      return false;
-    }
-    
+    // Não abrimos mais o diálogo para atribuir funcionário ao concluir
+    // Usamos o mesmo funcionário que iniciou a etapa
     return true;
   };
 

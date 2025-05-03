@@ -28,7 +28,7 @@ export default function EtapaStatus({
       {status === "concluido" && funcionarioNome && (
         <div className="flex items-center gap-1 ml-2">
           <User className="h-4 w-4" />
-          <span className="text-sm text-muted-foreground">{funcionarioNome}</span>
+          <span className="text-sm">{funcionarioNome}</span>
         </div>
       )}
     </div>

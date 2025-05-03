@@ -107,12 +107,15 @@ export default function EtapaCard({
     }
     
     if (onEtapaStatusChange) {
-      // Directly call onEtapaStatusChange without dialog
+      // Usa o ID e nome do funcionário do etapaInfo (quem iniciou a etapa)
+      const funcId = etapaInfo?.funcionarioId || funcionario?.id;
+      const funcNome = etapaInfo?.funcionarioNome || funcionario?.nome;
+      
       onEtapaStatusChange(
         etapa, 
         true, 
-        funcionario?.id, 
-        funcionario?.nome,
+        funcId, 
+        funcNome,
         (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
       );
     }
@@ -127,12 +130,21 @@ export default function EtapaCard({
   }, [etapaInfo, setIsAtivo]);
   
   const handleMarcarConcluidoClick = () => {
-    if (handleMarcarConcluido(servicos) && onEtapaStatusChange) {
+    if (!todasSubatividadesConcluidas(servicos)) {
+      toast.error("É necessário concluir todas as subatividades antes de finalizar a etapa");
+      return;
+    }
+    
+    if (onEtapaStatusChange) {
+      // Usa o ID e nome do funcionário do etapaInfo (quem iniciou a etapa)
+      const funcId = etapaInfo?.funcionarioId || funcionario?.id;
+      const funcNome = etapaInfo?.funcionarioNome || funcionario?.nome;
+      
       onEtapaStatusChange(
         etapa, 
         true, 
-        funcionario?.id, 
-        funcionario?.nome,
+        funcId, 
+        funcNome,
         (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
       );
     }
@@ -153,8 +165,8 @@ export default function EtapaCard({
         status={getEtapaStatus(etapaInfo)}
         isEtapaConcluida={isEtapaConcluida(etapaInfo)}
         funcionarioNome={etapaInfo?.funcionarioNome}
-        podeReiniciar={podeAtribuirFuncionario() || podeTrabalharNaEtapa()}
-        onReiniciar={() => handleReiniciarEtapa(onEtapaStatusChange)}
+        podeReiniciar={false} // Removed restart functionality
+        onReiniciar={() => {}} // Empty function since we're not using it
       />
       
       <EtapaProgressDisplay 
@@ -169,8 +181,8 @@ export default function EtapaCard({
       {etapaComCronometro && (
         <EtapaTimerSection 
           ordemId={ordemId}
-          funcionarioId={funcionarioId}
-          funcionarioNome={funcionarioNome}
+          funcionarioId={etapaInfo?.funcionarioId || funcionarioId}
+          funcionarioNome={etapaInfo?.funcionarioNome || funcionarioNome}
           etapa={etapa}
           tipoServico={servicoTipo}
           isEtapaConcluida={isEtapaConcluida(etapaInfo)}
