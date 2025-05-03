@@ -74,7 +74,7 @@ export default function ConfiguracoesAtividades({
             <ConfiguracaoAtividadesTabela
               tipoAtividade={tipoAtividade}
               titulo={`Configuração de ${formatarTipoAtividade(tipoAtividade)}`}
-              descricao={`Configure os valores e tempos padrão para ${formatarTipoAtividade(tipoAtividade)}`}
+              descricao={`Configure os tempos padrão para ${formatarTipoAtividade(tipoAtividade)}`}
               itens={itens}
               onItemChange={atualizarItem}
             />

@@ -7,7 +7,7 @@ interface ConfiguracaoItem {
   tipo: TipoServico;
   nome: string;
   horaPadrao: string;
-  valorHora: number;
+  tempoPadrao: number; // Changed from valorHora to tempoPadrao
 }
 
 export function useConfiguracoesServico(tipoAtividade: TipoAtividade) {
@@ -54,7 +54,7 @@ export function useConfiguracoesServico(tipoAtividade: TipoAtividade) {
             tipo,
             nome: servicoNomes[tipo],
             horaPadrao: "01:00",
-            valorHora: 70.00
+            tempoPadrao: 1.0 // Default time in hours
           }));
           setItens(itensIniciais);
         }
@@ -69,7 +69,7 @@ export function useConfiguracoesServico(tipoAtividade: TipoAtividade) {
   }, [tipoAtividade]);
   
   // Atualizar um item de configuração
-  const atualizarItem = (tipo: TipoServico, campo: 'horaPadrao' | 'valorHora', valor: string | number) => {
+  const atualizarItem = (tipo: TipoServico, campo: 'horaPadrao' | 'tempoPadrao', valor: string | number) => {
     setItens(prev => prev.map(item => {
       if (item.tipo === tipo) {
         return { ...item, [campo]: valor };

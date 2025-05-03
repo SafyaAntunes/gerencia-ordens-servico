@@ -4,7 +4,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Clock } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
 
 interface PresetSubatividadesProps {
   presetSubatividades: SubAtividade[];
@@ -44,19 +43,12 @@ export function PresetSubatividades({
                   disabled={!editable}
                   className="cursor-pointer"
                 />
-                <div>
-                  <Label
-                    htmlFor={`sub-${sub.id}`}
-                    className={`font-medium ${!selecionada && "text-muted-foreground"} cursor-pointer`}
-                  >
-                    {sub.nome}
-                  </Label>
-                  {sub.precoHora > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      {formatCurrency(sub.precoHora)}/hora
-                    </p>
-                  )}
-                </div>
+                <Label
+                  htmlFor={`sub-${sub.id}`}
+                  className={`font-medium ${!selecionada && "text-muted-foreground"} cursor-pointer`}
+                >
+                  {sub.nome}
+                </Label>
               </div>
               
               {selecionada && (
@@ -76,12 +68,6 @@ export function PresetSubatividades({
                 </div>
               )}
             </div>
-            
-            {selecionada && sub.precoHora > 0 && subAtual.tempoEstimado > 0 && (
-              <div className="text-right text-xs">
-                Valor estimado: <span className="font-medium">{formatCurrency(sub.precoHora * (subAtual.tempoEstimado || 0))}</span>
-              </div>
-            )}
           </div>
         );
       })}

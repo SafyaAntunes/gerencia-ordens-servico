@@ -1,3 +1,8 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import Layout from "@/components/layout/Layout";
+import OrdemForm from "@/components/ordens/OrdemForm";
 
 export type Cliente = {
   id: string;
@@ -40,7 +45,6 @@ export type SubAtividade = {
   nome: string;
   selecionada: boolean;
   concluida?: boolean;
-  precoHora?: number; // Preço por hora da subatividade
   tempoEstimado?: number; // Tempo estimado em horas
   servicoTipo?: TipoServico | null; // A qual tipo de serviço esta subatividade se relaciona
   descricao?: string; // Descrição opcional da subatividade
@@ -122,18 +126,12 @@ export type OrdemServico = {
       finalizado?: Date;
       usarCronometro?: boolean;
       pausas?: PausaRegistro[];
-      precoHora?: number;
-      tempoEstimado?: number;
+      tempoEstimado?: number; // Tempo estimado para esta etapa
       servicoTipo?: TipoServico; // Para associar etapas específicas a serviços
     }
   };
   tempoRegistros: TempoRegistro[];
   fotosEntrada?: FotoBase64[] | any[];
   fotosSaida?: FotoBase64[] | any[];
-  valorTotal?: number; // Valor total do orçamento
-  custoMaterial?: number; // Custo com materiais
-  custoEstimadoMaoDeObra?: number; // Custo estimado da mão de obra
-  custoRealMaoDeObra?: number; // Custo real da mão de obra
-  lucroBruto?: number; // Lucro bruto (valorTotal - custoMaterial - custoRealMaoDeObra)
-  margemLucro?: number; // Margem de lucro em porcentagem
+  tempoTotalEstimado?: number; // Tempo total estimado para todas as etapas e subatividades
 };

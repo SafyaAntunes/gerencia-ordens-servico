@@ -9,13 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { SubAtividade, TipoServico, TipoAtividade } from '@/types/ordens';
-import { CurrencyInput } from '@/components/ui/currency-input';
 
 // Esquema de validação
 const formSchema = z.object({
   id: z.string().optional(),
   nome: z.string().min(3, { message: 'O nome precisa ter pelo menos 3 caracteres' }),
-  precoHora: z.number().min(0, { message: 'O preço não pode ser negativo' }).optional(),
   tempoEstimado: z.number().min(0, { message: 'O tempo não pode ser negativo' }).optional(),
   descricao: z.string().optional(),
 });
@@ -35,7 +33,6 @@ export function SubatividadeForm({ onSave, tipoServico, initialData, onCancel }:
     defaultValues: {
       id: '',
       nome: '',
-      precoHora: 0,
       tempoEstimado: 0,
       descricao: '',
     },
@@ -47,7 +44,6 @@ export function SubatividadeForm({ onSave, tipoServico, initialData, onCancel }:
       form.reset({
         id: initialData.id,
         nome: initialData.nome,
-        precoHora: initialData.precoHora || 0,
         tempoEstimado: initialData.tempoEstimado || 0,
         descricao: initialData.descricao || '',
       });
@@ -55,7 +51,6 @@ export function SubatividadeForm({ onSave, tipoServico, initialData, onCancel }:
       form.reset({
         id: '',
         nome: '',
-        precoHora: 0,
         tempoEstimado: 0,
         descricao: '',
       });
@@ -66,7 +61,6 @@ export function SubatividadeForm({ onSave, tipoServico, initialData, onCancel }:
     const subatividade: SubAtividade = {
       id: data.id || uuidv4(),
       nome: data.nome,
-      precoHora: data.precoHora || 0,
       tempoEstimado: data.tempoEstimado || 0,
       selecionada: initialData?.selecionada || false,
       servicoTipo: initialData?.servicoTipo,
@@ -79,7 +73,6 @@ export function SubatividadeForm({ onSave, tipoServico, initialData, onCancel }:
       form.reset({
         id: '',
         nome: '',
-        precoHora: 0,
         tempoEstimado: 0,
         descricao: '',
       });
@@ -100,27 +93,6 @@ export function SubatividadeForm({ onSave, tipoServico, initialData, onCancel }:
               </FormControl>
               <FormDescription>
                 Nome que aparecerá na lista de subatividades da OS
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="precoHora"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Preço por Hora (R$)</FormLabel>
-              <FormControl>
-                <CurrencyInput
-                  placeholder="0,00"
-                  value={field.value || 0}
-                  onValueChange={(value) => field.onChange(value)}
-                />
-              </FormControl>
-              <FormDescription>
-                Valor cobrado por hora para esta subatividade
               </FormDescription>
               <FormMessage />
             </FormItem>

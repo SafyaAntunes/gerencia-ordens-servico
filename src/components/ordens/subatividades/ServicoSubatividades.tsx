@@ -103,7 +103,6 @@ export function ServicoSubatividades({
       nome: customSubatividade.trim(),
       selecionada: true,
       tempoEstimado: 0,
-      precoHora: 70, // Valor padrão
     };
 
     onChange([...subatividades, newSub]);

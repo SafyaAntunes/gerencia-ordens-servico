@@ -131,7 +131,7 @@ export default function ServicoAtividadesConfig({
               </div>
               
               {sub.selecionada && (
-                <div className="mt-2 ml-7 grid grid-cols-2 gap-2">
+                <div className="mt-2 ml-7">
                   <div>
                     <Label htmlFor={`tempo-${sub.id}`} className="text-xs">
                       Tempo estimado (horas)
@@ -145,22 +145,8 @@ export default function ServicoAtividadesConfig({
                       onChange={(e) => 
                         handleTempoEstimadoChange(sub.id, parseFloat(e.target.value) || 0)
                       }
-                      className="h-8 text-sm"
+                      className="h-8 text-sm w-24"
                     />
-                  </div>
-                  <div>
-                    <Label htmlFor={`price-${sub.id}`} className="text-xs">
-                      Preço por hora (R$)
-                    </Label>
-                    <div className="h-8">
-                      <Input
-                        id={`price-${sub.id}`}
-                        value={sub.precoHora ? `R$ ${sub.precoHora.toFixed(2)}` : "R$ 0.00"}
-                        readOnly
-                        placeholder="Configurado nas configurações"
-                        className="text-sm h-full"
-                      />
-                    </div>
                   </div>
                 </div>
               )}

@@ -96,26 +96,27 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         }
       }
       
-      let custoEstimadoMaoDeObra = 0;
+      // Calcular tempo total estimado
+      let tempoTotalEstimado = 0;
       
-      // Calcular custo de mão de obra para as subatividades dos serviços
+      // Calcular tempo estimado para as subatividades dos serviços
       if (values.servicosSubatividades) {
         Object.entries(values.servicosSubatividades).forEach(([tipo, subs]: [string, any]) => {
           (subs as SubAtividade[]).forEach(sub => {
-            if (sub.selecionada && sub.precoHora && sub.tempoEstimado) {
-              custoEstimadoMaoDeObra += sub.precoHora * sub.tempoEstimado;
+            if (sub.selecionada && sub.tempoEstimado) {
+              tempoTotalEstimado += sub.tempoEstimado;
             }
           });
         });
       }
       
-      // Calcular custo de mão de obra para atividades específicas de cada serviço
+      // Calcular tempo estimado para atividades específicas de cada serviço
       if (values.atividadesEspecificas) {
         Object.entries(values.atividadesEspecificas).forEach(([servicoTipo, atividades]: [string, any]) => {
           Object.entries(atividades).forEach(([tipoAtividade, subs]: [string, any]) => {
             (subs as SubAtividade[]).forEach(sub => {
-              if (sub.selecionada && sub.precoHora && sub.tempoEstimado) {
-                custoEstimadoMaoDeObra += sub.precoHora * sub.tempoEstimado;
+              if (sub.selecionada && sub.tempoEstimado) {
+                tempoTotalEstimado += sub.tempoEstimado;
               }
             });
           });
@@ -185,14 +186,39 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
 
       const etapasAndamento: Record<string, any> = {};
       
-      // Configurar cada etapa sem os tempos estimados
+      // Configurar cada etapa com os tempos estimados
       etapas.forEach(etapa => {
         etapasAndamento[etapa] = { 
           concluido: false,
           usarCronometro: true,
-          pausas: []
+          pausas: [],
+          tempoEstimado: 0 // Inicializado com zero, será atualizado abaixo para as etapas específicas
         };
       });
+
+      // Configurar tempos padrão para lavagem, inspeção inicial e inspeção final
+      try {
+        ["lavagem", "inspecao_inicial", "inspecao_final"].forEach(etapaTipo => {
+          const configSalva = localStorage.getItem(`configuracao_${etapaTipo}`);
+          if (configSalva) {
+            const config = JSON.parse(configSalva);
+            // Para cada serviço, obter o tempo padrão da etapa correspondente
+            servicos.forEach(servico => {
+              const servicoConfig = config.find((item: any) => item.tipo === servico.tipo);
+              if (servicoConfig && etapasAndamento[etapaTipo]) {
+                // Converter horaPadrao (string "HH:MM") para número de horas
+                const [horas, minutos] = servicoConfig.horaPadrao.split(":").map(Number);
+                const tempoEmHoras = horas + (minutos / 60);
+                
+                // Adicionar ao tempo estimado da etapa
+                etapasAndamento[etapaTipo].tempoEstimado += servicoConfig.tempoPadrao || tempoEmHoras;
+              }
+            });
+          }
+        });
+      } catch (error) {
+        console.error("Erro ao carregar configurações de tempos padrão:", error);
+      }
 
       const newOrder: Partial<OrdemServico> = {
         id: values.id,
@@ -215,7 +241,7 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         fotosEntrada: fotosEntradaUrls,
         fotosSaida: fotosSaidaUrls,
         progressoEtapas: 0,
-        custoEstimadoMaoDeObra: custoEstimadoMaoDeObra || 0
+        tempoTotalEstimado: tempoTotalEstimado || 0
       };
       
       await setDoc(doc(db, "ordens_servico", values.id), newOrder);
