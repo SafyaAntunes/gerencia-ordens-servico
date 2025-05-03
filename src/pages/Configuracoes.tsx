@@ -66,7 +66,7 @@ export default function Configuracoes({ onLogout }: ConfiguracoesProps) {
               isEmbedded={true} 
               tipoAtividade="lavagem" 
               titulo="Configuração de Atividades de Lavagem"
-              descricao="Configure os valores e tempos padrão para cada tipo de serviço de lavagem"
+              descricao="Configure os tempos padrão para cada tipo de serviço de lavagem"
             />
           </TabsContent>
           
@@ -76,7 +76,7 @@ export default function Configuracoes({ onLogout }: ConfiguracoesProps) {
               isEmbedded={true} 
               tipoAtividade="inspecao_inicial" 
               titulo="Configuração de Atividades de Inspeção Inicial"
-              descricao="Configure os valores e tempos padrão para cada tipo de serviço de inspeção inicial"
+              descricao="Configure os tempos padrão para cada tipo de serviço de inspeção inicial"
             />
           </TabsContent>
           
@@ -86,7 +86,7 @@ export default function Configuracoes({ onLogout }: ConfiguracoesProps) {
               isEmbedded={true} 
               tipoAtividade="inspecao_final" 
               titulo="Configuração de Atividades de Inspeção Final"
-              descricao="Configure os valores e tempos padrão para cada tipo de serviço de inspeção final"
+              descricao="Configure os tempos padrão para cada tipo de serviço de inspeção final"
             />
           </TabsContent>
         </Tabs>
