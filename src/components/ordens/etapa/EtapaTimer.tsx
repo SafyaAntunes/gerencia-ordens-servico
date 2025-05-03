@@ -1,7 +1,7 @@
 
 import { formatTime } from "@/utils/timerUtils";
 import { useOrdemTimer } from "@/hooks/useOrdemTimer";
-import { EtapaOS, TipoServico } from "@/types/ordens";
+import { EtapaOS, TipoServico, TipoAtividade } from "@/types/ordens";
 import TimerControls from "../TimerControls";
 import CompletedTimer from "../CompletedTimer";
 import { Badge } from "@/components/ui/badge";
@@ -51,8 +51,18 @@ export default function EtapaTimer({
 
   const [tempoPadrao, setTempoPadrao] = useState<number>(0);
   
+  // Convert EtapaOS to TipoAtividade for the hook
+  const getTipoAtividade = (etapa: EtapaOS): TipoAtividade | undefined => {
+    if (etapa === 'lavagem') return 'lavagem';
+    if (etapa === 'inspecao_inicial') return 'inspecao_inicial';
+    if (etapa === 'inspecao_final') return 'inspecao_final';
+    return undefined;
+  };
+  
+  const tipoAtividade = getTipoAtividade(etapa);
+  
   // Obter configurações de tempo para o tipo de etapa atual
-  const { itens } = useConfiguracoesServico(etapa);
+  const { itens } = useConfiguracoesServico(tipoAtividade as TipoAtividade);
 
   // Atualizar tempo padrão quando as configurações ou tipo de serviço mudarem
   useEffect(() => {
