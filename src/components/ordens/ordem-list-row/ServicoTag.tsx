@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 
 interface ServicoTagProps {
   servico: any;
@@ -8,6 +8,11 @@ interface ServicoTagProps {
 }
 
 export default function ServicoTag({ servico, emAndamento, pausado }: ServicoTagProps) {
+  // Log para debugging dos props recebidos
+  useEffect(() => {
+    console.log(`ServicoTag - ${servico.tipo}: concluido=${servico.concluido}, emAndamento=${emAndamento}, pausado=${pausado}`);
+  }, [servico, emAndamento, pausado]);
+
   // Define a cor de fundo para cada serviço de acordo com seu status
   const getServicoStatusColor = () => {
     if (servico.concluido) {
@@ -24,6 +29,7 @@ export default function ServicoTag({ servico, emAndamento, pausado }: ServicoTag
   return (
     <span 
       className={`text-xs px-2 py-0.5 rounded-full ${getServicoStatusColor()}`}
+      data-status={servico.concluido ? "concluido" : (pausado ? "pausado" : (emAndamento ? "andamento" : "nao-iniciado"))}
     >
       {servico.tipo.replace('_', ' ')}
     </span>

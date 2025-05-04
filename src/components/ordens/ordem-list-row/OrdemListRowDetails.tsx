@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { OrdemServico } from "@/types/ordens";
@@ -10,6 +10,13 @@ interface OrdemListRowDetailsProps {
 }
 
 export default function OrdemListRowDetails({ ordem }: OrdemListRowDetailsProps) {
+  // Log para verificar os dados da ordem
+  useEffect(() => {
+    if (ordem?.servicos) {
+      console.log("OrdemListRowDetails - Serviços:", ordem.servicos);
+    }
+  }, [ordem]);
+
   // Verificar se um serviço está em andamento (iniciado mas não concluído)
   const isServicoEmAndamento = (servico: any) => {
     // Se o serviço estiver concluído, não está em andamento
@@ -104,14 +111,22 @@ export default function OrdemListRowDetails({ ordem }: OrdemListRowDetailsProps)
           <div className="mt-2">
             <div className="text-xs text-gray-500 mb-1">Serviços:</div>
             <div className="flex flex-wrap gap-1">
-              {ordem.servicos.map((servico, idx) => (
-                <ServicoTag
-                  key={`${servico.tipo}-${idx}`}
-                  servico={servico}
-                  emAndamento={isServicoEmAndamento(servico)}
-                  pausado={isServicoPausado(servico)}
-                />
-              ))}
+              {ordem.servicos.map((servico, idx) => {
+                const emAndamento = isServicoEmAndamento(servico);
+                const pausado = isServicoPausado(servico);
+                
+                // Log para debug
+                console.log(`Renderizando serviço ${servico.tipo}: concluído=${servico.concluido}, emAndamento=${emAndamento}, pausado=${pausado}`);
+                
+                return (
+                  <ServicoTag
+                    key={`${servico.tipo}-${idx}`}
+                    servico={servico}
+                    emAndamento={emAndamento}
+                    pausado={pausado}
+                  />
+                );
+              })}
             </div>
           </div>
         )}
