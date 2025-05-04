@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { OrdemServico } from "@/types/ordens";
@@ -10,17 +10,6 @@ interface OrdemListRowDetailsProps {
 }
 
 export default function OrdemListRowDetails({ ordem }: OrdemListRowDetailsProps) {
-  // Verificar os status dos serviços para debugging
-  useEffect(() => {
-    if (ordem?.servicos) {
-      ordem.servicos.forEach(servico => {
-        const emAndamento = isServicoEmAndamento(servico);
-        const pausado = isServicoPausado(servico);
-        console.log(`Serviço: ${servico.tipo}, Concluído: ${servico.concluido}, Em Andamento: ${emAndamento}, Pausado: ${pausado}`);
-      });
-    }
-  }, [ordem]);
-
   // Verificar se um serviço está em andamento (iniciado mas não concluído)
   const isServicoEmAndamento = (servico: any) => {
     // Se o serviço estiver concluído, não está em andamento
