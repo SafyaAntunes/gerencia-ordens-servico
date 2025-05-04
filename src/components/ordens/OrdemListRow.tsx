@@ -44,6 +44,19 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
     }
   };
 
+  // Define a cor de fundo para cada serviço de acordo com seu status
+  const getServicoStatusColor = (concluido: boolean, estaEmAndamento: boolean = false, estaPausado: boolean = false) => {
+    if (concluido) {
+      return "bg-green-100 text-green-800"; // Verde para serviços concluídos
+    } else if (estaPausado) {
+      return "bg-yellow-100 text-yellow-800"; // Amarelo para serviços pausados
+    } else if (estaEmAndamento) {
+      return "bg-blue-100 text-blue-800"; // Azul para serviços em andamento
+    } else {
+      return "bg-red-100 text-red-800"; // Vermelho para serviços não iniciados
+    }
+  };
+
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('text/plain', index.toString());
   };
@@ -56,6 +69,20 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
     e.preventDefault();
     const dragIndex = parseInt(e.dataTransfer.getData('text/plain'));
     onReorder(dragIndex, index);
+  };
+
+  // Verificar se um serviço está em andamento (iniciado mas não concluído)
+  const isServicoEmAndamento = (servico: any) => {
+    // Aqui você pode adicionar lógica mais específica se tiver dados sobre início de serviço
+    // Por ora, assumimos que iniciou se tiver algum funcionário atribuído e não estiver concluído
+    return !servico.concluido && (servico.funcionarioId !== undefined);
+  };
+
+  // Verificar se um serviço está pausado
+  const isServicoPausado = (servico: any) => {
+    // Lógica para verificar se o serviço está pausado
+    // Aqui você precisará adequar com base na estrutura de dados real do seu aplicativo
+    return !servico.concluido && servico.pausado === true;
   };
 
   return (
@@ -130,18 +157,21 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
             <div className="mt-2">
               <div className="text-xs text-gray-500 mb-1">Serviços:</div>
               <div className="flex flex-wrap gap-1">
-                {ordem.servicos.map((servico, idx) => (
-                  <span 
-                    key={`${servico.tipo}-${idx}`}
-                    className={`text-xs px-2 py-0.5 rounded-full ${
-                      servico.concluido 
-                        ? "bg-green-100 text-green-800" 
-                        : "bg-blue-100 text-blue-800"
-                    }`}
-                  >
-                    {servico.tipo.replace('_', ' ')}
-                  </span>
-                ))}
+                {ordem.servicos.map((servico, idx) => {
+                  const emAndamento = isServicoEmAndamento(servico);
+                  const pausado = isServicoPausado(servico);
+                  
+                  return (
+                    <span 
+                      key={`${servico.tipo}-${idx}`}
+                      className={`text-xs px-2 py-0.5 rounded-full ${
+                        getServicoStatusColor(servico.concluido, emAndamento, pausado)
+                      }`}
+                    >
+                      {servico.tipo.replace('_', ' ')}
+                    </span>
+                  );
+                })}
               </div>
             </div>
           )}
