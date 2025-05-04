@@ -18,19 +18,6 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
   const clienteNome = ordem.cliente?.nome || "Cliente não especificado";
   const progresso = ordem.progressoEtapas !== undefined ? Math.round(ordem.progressoEtapas * 100) : 0;
   
-  // Determina a cor de destaque com base no status ou progresso da ordem
-  const getStatusColor = () => {
-    if (ordem.status === "finalizado" || ordem.status === "entregue") {
-      return "border-l-4 border-l-green-500 bg-green-50";
-    } else if (progresso > 0 && progresso < 100) {
-      return "border-l-4 border-l-blue-500 bg-blue-50";
-    } else if (ordem.status === "aguardando_peca_cliente" || ordem.status === "aguardando_peca_interno") {
-      return "border-l-4 border-l-yellow-500 bg-yellow-50";
-    } else {
-      return "border-l-4 border-l-red-500 bg-red-50";
-    }
-  };
-
   // Define a cor do indicador de progresso baseado no valor
   const getProgressColor = () => {
     if (progresso === 100) {
@@ -102,7 +89,7 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onClick={onClick}
-      className={`group hover:shadow-md border rounded-lg mb-3 shadow-sm transition-all duration-200 cursor-pointer overflow-hidden ${getStatusColor()}`}
+      className="group hover:shadow-md border rounded-lg mb-3 shadow-sm transition-all duration-200 cursor-pointer overflow-hidden bg-white"
     >
       {/* Cabeçalho com informações principais */}
       <div className="grid grid-cols-12 gap-2 p-4 pb-2 items-center border-b border-gray-100">
