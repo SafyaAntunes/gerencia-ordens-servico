@@ -1,4 +1,3 @@
-
 import { Servico, SubAtividade } from "@/types/ordens";
 import { Funcionario } from "@/types/funcionarios";
 
@@ -22,7 +21,7 @@ export interface ServicoState {
   elapsedSeconds: number;
   startTime: number | null;
   pauseTime: number | null;
-  pausas: { inicio: number; fim?: number }[];
+  pausas: {inicio: number; fim?: number; motivo?: string}[];
   funcionariosOptions: Funcionario[];
 }
 
@@ -33,17 +32,18 @@ export interface UseServicoTrackerResult {
   temPermissao: boolean;
   isRunning: boolean;
   isPaused: boolean;
-  displayTime: string;
+  displayTime: number;
   servicoStatus: ServicoStatus;
   progressPercentage: number;
   completedSubatividades: number;
   totalSubatividades: number;
   tempoTotalEstimado: number;
   subatividadesFiltradas: SubAtividade[];
+  pausas: {inicio: number; fim?: number; motivo?: string}[];
   handleLoadFuncionarios: () => Promise<void>;
-  handleSubatividadeToggle: (subatividade: SubAtividade) => void;
+  handleSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
   handleStartClick: () => void;
-  handlePause: () => void;
+  handlePause: (motivo?: string) => void;
   handleResume: () => void;
   handleFinish: () => void;
   handleMarcarConcluido: () => void;

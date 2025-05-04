@@ -145,7 +145,7 @@ export default function EtapaTimer({
     }
   };
   
-  // If the stage is completed, show the saved time without controls but with employee info
+  // If the stage is completed, show the saved time without controls but with employee info and pauses
   if (isEtapaConcluida) {
     return (
       <div className="w-full">
@@ -159,6 +159,9 @@ export default function EtapaTimer({
             <span>Concluído por: {funcionarioNome}</span>
           </div>
         )}
+        
+        {/* Sempre mostrar as pausas, mesmo quando concluído */}
+        <TimerPausas pausas={pausas} />
       </div>
     );
   }
@@ -211,7 +214,7 @@ export default function EtapaTimer({
         onFinish={handleFinish}
       />
       
-      {/* Lista de pausas */}
+      {/* Lista de pausas sempre visível */}
       <TimerPausas pausas={pausas} />
     </div>
   );

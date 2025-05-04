@@ -5,7 +5,6 @@ import { OrderDetailsTab } from "@/components/ordens/detalhes/OrderDetailsTab";
 import { FotosTab } from "@/components/ordens/detalhes/FotosTab";
 import EtapasTracker from "@/components/ordens/EtapasTracker";
 import ProgressoRelatorio from "@/components/ordens/ProgressoRelatorio";
-import PausaRelatorio from "@/components/ordens/PausaRelatorio";
 
 interface OrdemTabsProps {
   ordem: OrdemServico;
@@ -29,7 +28,6 @@ export function OrdemTabs({
         <TabsTrigger value="tracker" className="flex-1">Tracker</TabsTrigger>
         <TabsTrigger value="progresso" className="flex-1">Progresso</TabsTrigger>
         <TabsTrigger value="fotos" className="flex-1">Fotos</TabsTrigger>
-        <TabsTrigger value="relatorio" className="flex-1">Relatório de Pausas</TabsTrigger>
       </TabsList>
       
       <TabsContent value="detalhes">
@@ -46,10 +44,6 @@ export function OrdemTabs({
       
       <TabsContent value="fotos">
         <FotosTab ordem={ordem} />
-      </TabsContent>
-      
-      <TabsContent value="relatorio">
-        <PausaRelatorio ordem={ordem} />
       </TabsContent>
     </Tabs>
   );

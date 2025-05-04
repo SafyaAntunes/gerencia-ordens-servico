@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Servico } from "@/types/ordens";
@@ -9,6 +8,7 @@ import { useServicoTracker, ServicoStatus } from "./hooks/useServicoTracker";
 import ServicoHeader from "./ServicoHeader";
 import ServicoDetails from "./ServicoDetails";
 import ServicoControls from "./ServicoControls";
+import TimerPausas from "../etapa/TimerPausas";
 
 interface ServicoTrackerProps {
   servico: Servico;
@@ -52,7 +52,8 @@ export default function ServicoTracker({
     handleResume,
     handleFinish,
     handleMarcarConcluido,
-    handleReiniciarServico
+    handleReiniciarServico,
+    pausas
   } = useServicoTracker({
     servico,
     ordemId,
@@ -100,6 +101,13 @@ export default function ServicoTracker({
               onSubatividadeToggle={onSubatividadeToggle}
             />
             
+            {/* Mostrar pausas mesmo quando o serviço está concluído */}
+            {isPaused && (
+              <div className="py-2">
+                <TimerPausas pausas={pausas} />
+              </div>
+            )}
+            
             <ServicoControls 
               isRunning={isRunning}
               isPaused={isPaused}
@@ -111,6 +119,13 @@ export default function ServicoTracker({
               onFinishClick={handleFinish}
               onMarcarConcluido={handleMarcarConcluido}
             />
+            
+            {/* Mostrar pausas finalizadas para todos os serviços */}
+            {pausas && pausas.length > 0 && (
+              <div className="py-2">
+                <TimerPausas pausas={pausas} />
+              </div>
+            )}
           </CardContent>
         </CollapsibleContent>
       </Collapsible>

@@ -1,20 +1,13 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { toast } from "sonner";
+import { getFuncionarios } from "@/services/funcionarioService";
+import { Servico, SubAtividade, TipoServico, EtapaOS } from "@/types/ordens";
 import { Funcionario } from "@/types/funcionarios";
-import { SubAtividade } from "@/types/ordens";
-import { 
-  UseServicoTrackerProps, 
-  UseServicoTrackerResult,
-  ServicoStatus 
-} from "./types/servicoTrackerTypes";
-import { 
-  calculateServicoStatus, 
-  computeSubatividadeMetrics 
-} from "./utils/servicoTrackerUtils";
-import { useServicoTimer } from "./utils/servicoTimerUtils";
-import { loadFuncionario } from "./utils/servicoFirebaseUtils";
+import { useAuth } from "@/hooks/useAuth";
+import { UseServicoTrackerProps, UseServicoTrackerResult } from "./types/servicoTrackerTypes";
+import { useOrdemTimer } from "@/hooks/useOrdemTimer";
 
-export type { ServicoStatus };
+export type ServicoStatus = "concluido" | "em_andamento" | "nao_iniciado";
 
 export function useServicoTracker({
   servico,
@@ -23,103 +16,123 @@ export function useServicoTracker({
   funcionarioNome,
   etapa,
   onServicoStatusChange,
-  onSubatividadeToggle,
+  onSubatividadeToggle
 }: UseServicoTrackerProps): UseServicoTrackerResult {
+  const { funcionario, canEditOrder } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
-  const { toast } = useToast();
-
-  // Import timer functionality
+  
+  const timerRef = useRef<any>(null);
+  
+  const temPermissao = canEditOrder(ordemId);
+  
   const {
     isRunning,
     isPaused,
     displayTime,
-    handleStartClick,
-    handlePause,
-    handleResume,
-    handleFinish
-  } = useServicoTimer();
-
-  // Compute derived state using our utility functions
-  const {
-    filtradas: subatividadesFiltradas,
-    completedCount: completedSubatividades,
-    totalCount: totalSubatividades,
-    tempoTotalEstimado,
-    progressPercentage
-  } = useMemo(() => 
-    computeSubatividadeMetrics(servico.subatividades), 
-    [servico.subatividades]
-  );
-
-  const servicoStatus = useMemo((): ServicoStatus => 
-    calculateServicoStatus(
-      servico.concluido, 
-      isPaused, 
-      isRunning, 
-      servico.subatividades
-    ), 
-    [servico.concluido, isPaused, isRunning, servico.subatividades]
-  );
-
-  const temPermissao = true; // Simplified for this example, actual logic would be based on user permissions
-
-  const handleSubatividadeToggle = useCallback((subatividade: SubAtividade) => {
-    if (!ordemId || !servico || !subatividade || !subatividade.id) return;
-    
-    try {
-      console.log("Toggling subatividade:", subatividade.id, "to", !subatividade.concluida);
-      
-      // Call the parent component's toggle handler with the new state
-      onSubatividadeToggle(subatividade.id, !subatividade.concluida);
-    } catch (error) {
-      console.error("Error toggling subatividade:", error);
-      toast({ 
-        title: "Erro", 
-        description: "Não foi possível atualizar a subatividade.",
-        variant: "destructive" 
-      });
+    handleStart,
+    handlePause: pauseTimer,
+    handleResume: resumeTimer,
+    handleFinish: finishTimer,
+    pausas
+  } = useOrdemTimer({
+    ordemId,
+    etapa: etapa as EtapaOS,
+    tipoServico: servico.tipo,
+    onPause: () => {
+      toast.success("Timer pausado");
+    },
+    onResume: () => {
+      toast.success("Timer retomado");
+    },
+    onFinish: () => {
+      toast.success("Timer finalizado");
     }
-  }, [ordemId, servico, onSubatividadeToggle, toast]);
+  });
+  
+  const [pausas, setPausas] = useState<{inicio: number; fim?: number; motivo?: string}[]>([]);
+  
+  const handlePause = (motivo?: string) => {
+    pauseTimer();
+    toast.success("Timer pausado");
+    
+    if (timerRef.current) {
+      const timerPausas = timerRef.current.pausas || [];
+      setPausas([...timerPausas]);
+    }
+  };
+  
+  const handleResume = () => {
+    resumeTimer();
+    toast.success("Timer retomado");
+    
+    if (timerRef.current) {
+      const timerPausas = timerRef.current.pausas || [];
+      setPausas([...timerPausas]);
+    }
+  };
+  
+  useEffect(() => {
+    if (timerRef.current) {
+      const timerPausas = timerRef.current.pausas || [];
+      setPausas(timerPausas);
+    }
+  }, [isRunning, isPaused]);
+  
+  const servicoStatus: ServicoStatus = servico.concluido
+    ? "concluido"
+    : isRunning || isPaused
+      ? "em_andamento"
+      : "nao_iniciado";
+  
+  const completedSubatividades = servico.subatividades?.filter(sub => sub.concluida).length || 0;
+  const totalSubatividades = servico.subatividades?.filter(sub => sub.selecionada).length || 0;
+  const progressPercentage = totalSubatividades > 0 ? Math.round((completedSubatividades / totalSubatividades) * 100) : 0;
+  
+  const tempoTotalEstimado = servico.subatividades?.reduce((total, sub) => {
+    return sub.selecionada && sub.tempoEstimado ? total + sub.tempoEstimado : total;
+  }, 0) || 0;
+  
+  const subatividadesFiltradas = servico.subatividades?.filter(sub => sub.selecionada) || [];
   
   const handleLoadFuncionarios = useCallback(async () => {
-    if (!funcionarioId) return;
-    
     try {
-      const funcionarioData = await loadFuncionario(funcionarioId);
-      if (funcionarioData) {
-        setFuncionariosOptions([funcionarioData]);
+      const funcionariosData = await getFuncionarios();
+      if (funcionariosData) {
+        setFuncionariosOptions(funcionariosData);
       }
     } catch (error) {
-      console.error("Failed to load funcionario:", error);
+      console.error("Erro ao carregar funcionários:", error);
+      toast.error("Erro ao carregar lista de funcionários");
     }
-  }, [funcionarioId]);
-
-  const handleMarcarConcluido = useCallback(() => {
-    onServicoStatusChange(true, funcionarioId, funcionarioNome);
-    handleFinish();
-    toast({
-      title: "Serviço Concluído",
-      description: "Este serviço foi marcado como concluído.",
-    });
-  }, [funcionarioId, funcionarioNome, onServicoStatusChange, handleFinish, toast]);
-
-  const handleReiniciarServico = useCallback(() => {
-    onServicoStatusChange(false, null, null);
-    handleFinish();
-    toast({
-      title: "Serviço Reiniciado",
-      description: "Este serviço foi reiniciado e está pronto para ser trabalhado novamente.",
-    });
-  }, [onServicoStatusChange, handleFinish, toast]);
-
-  // Update timer state when service status changes
-  useEffect(() => {
-    if (servico.concluido) {
-      handleFinish();
+  }, []);
+  
+  const handleSubatividadeToggle = (subatividadeId: string, checked: boolean) => {
+    if (onSubatividadeToggle) {
+      onSubatividadeToggle(subatividadeId, checked);
     }
-  }, [servico.concluido, handleFinish]);
-
+  };
+  
+  const handleStartClick = () => {
+    handleStart();
+  };
+  
+  const handleFinish = () => {
+    finishTimer();
+  };
+  
+  const handleMarcarConcluido = () => {
+    if (onServicoStatusChange) {
+      onServicoStatusChange(true, funcionario?.id, funcionario?.nome);
+    }
+  };
+  
+  const handleReiniciarServico = () => {
+    if (onServicoStatusChange) {
+      onServicoStatusChange(false);
+    }
+  };
+  
   return {
     isOpen,
     setIsOpen,
@@ -134,6 +147,7 @@ export function useServicoTracker({
     totalSubatividades,
     tempoTotalEstimado,
     subatividadesFiltradas,
+    pausas,
     handleLoadFuncionarios,
     handleSubatividadeToggle,
     handleStartClick,
