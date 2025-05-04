@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import OrdemCard from "@/components/ordens/OrdemCard";
-import OrdemListRow from "@/components/ordens/OrdemListRow";
+import OrdemListRow from "@/components/ordens/ordem-list-row";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PlusCircle, Search, Filter, LayoutGrid, LayoutList } from "lucide-react";
