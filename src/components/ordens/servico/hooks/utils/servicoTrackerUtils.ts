@@ -1,44 +1,44 @@
 
-import { SubAtividade } from "@/types/ordens";
 import { ServicoStatus } from "../types/servicoTrackerTypes";
+import { TipoServico } from "@/types/ordens";
 
-// Format time for display
-export function formatTimeDisplay(seconds: number): string {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const remainingSeconds = seconds % 60;
+export const formatTimeDisplay = (seconds: number): string => {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  
+  return [h, m, s]
+    .map(v => v < 10 ? `0${v}` : `${v}`)
+    .join(':');
+};
 
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
-}
-
-// Calculate the service status based on current state
-export function calculateServicoStatus(
-  concluido: boolean,
-  isPaused: boolean,
+export const getServicoStatus = (
   isRunning: boolean,
-  subatividades?: SubAtividade[]
-): ServicoStatus {
-  if (concluido) return "concluido";
-  if (isPaused) return "pausado";
-  if (isRunning) return "em_andamento";
-  if (subatividades?.some(s => s.concluida)) return "em_andamento";
-  return "pendente";
-}
+  isPaused: boolean,
+  concluido: boolean
+): ServicoStatus => {
+  if (concluido) {
+    return "concluido";
+  } else if (isRunning) {
+    return "em_andamento";
+  } else if (isPaused) {
+    return "pausado";
+  } else {
+    return "nao_iniciado";
+  }
+};
 
-// Filter and compute subatividade-related metrics
-export function computeSubatividadeMetrics(subatividades?: SubAtividade[]) {
-  const filtradas = subatividades?.filter(s => s.selecionada) || [];
-  const completedCount = filtradas.filter(s => s.concluida).length;
-  const totalCount = filtradas.length;
-  const tempoTotalEstimado = filtradas.reduce((acc, curr) => acc + (curr.tempoEstimado || 0), 0);
-  
-  const progressPercentage = totalCount === 0 ? 0 : Math.round((completedCount / totalCount) * 100);
-  
-  return {
-    filtradas,
-    completedCount,
-    totalCount,
-    tempoTotalEstimado,
-    progressPercentage
+export const formatTipoServico = (tipo: TipoServico): string => {
+  const labels: Record<TipoServico, string> = {
+    bloco: "Bloco",
+    biela: "Biela",
+    cabecote: "Cabeçote",
+    virabrequim: "Virabrequim",
+    eixo_comando: "Eixo de Comando",
+    montagem: "Montagem",
+    dinamometro: "Dinamômetro",
+    lavagem: "Lavagem"
   };
-}
+  
+  return labels[tipo] || tipo;
+};

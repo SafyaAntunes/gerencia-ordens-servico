@@ -9,8 +9,9 @@ interface ServicoControlsProps {
   isPaused: boolean;
   temPermissao: boolean;
   concluido: boolean;
+  todasSubatividadesConcluidas: boolean;
   onStartClick: () => void;
-  onPauseClick: () => void;
+  onPauseClick: (motivo?: string) => void;
   onResumeClick: () => void;
   onFinishClick: () => void;
   onMarcarConcluido: () => void;
@@ -21,6 +22,7 @@ export default function ServicoControls({
   isPaused,
   temPermissao,
   concluido,
+  todasSubatividadesConcluidas,
   onStartClick,
   onPauseClick,
   onResumeClick,
@@ -34,7 +36,7 @@ export default function ServicoControls({
   };
   
   const handlePausaConfirm = (motivo: string) => {
-    onPauseClick();
+    onPauseClick(motivo);
     setPausaDialogOpen(false);
   };
 
@@ -98,7 +100,9 @@ export default function ServicoControls({
             variant="default" 
             size="sm" 
             onClick={onMarcarConcluido}
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+            disabled={!todasSubatividadesConcluidas}
+            className={`w-full ${todasSubatividadesConcluidas ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400'} text-white`}
+            title={!todasSubatividadesConcluidas ? "Complete todas as subatividades primeiro" : "Marcar como concluído"}
           >
             <CheckCircle2 className="h-4 w-4 mr-1" />
             Marcar Concluído

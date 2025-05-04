@@ -2,7 +2,7 @@
 import { Servico, SubAtividade } from "@/types/ordens";
 import { Funcionario } from "@/types/funcionarios";
 
-export type ServicoStatus = "nao_iniciado" | "em_andamento" | "concluido";
+export type ServicoStatus = "nao_iniciado" | "em_andamento" | "pausado" | "concluido";
 
 export interface UseServicoTrackerProps {
   servico: Servico;

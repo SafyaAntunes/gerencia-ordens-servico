@@ -7,6 +7,7 @@ import { Funcionario } from "@/types/funcionarios";
 import { useAuth } from "@/hooks/useAuth";
 import { UseServicoTrackerProps, UseServicoTrackerResult, ServicoStatus } from "./types/servicoTrackerTypes";
 import { useOrdemTimer } from "@/hooks/useOrdemTimer";
+import { getServicoStatus } from "./utils/servicoTrackerUtils";
 
 export function useServicoTracker({
   servico,
@@ -46,7 +47,8 @@ export function useServicoTracker({
     },
     onFinish: () => {
       toast.success("Timer finalizado");
-    }
+    },
+    isEtapaConcluida: servico.concluido
   });
   
   const handlePause = (motivo?: string) => {
@@ -59,13 +61,8 @@ export function useServicoTracker({
     toast.success("Timer retomado");
   };
   
-  // Use pausas from useOrdemTimer directly instead of duplicating state
-  
-  const servicoStatus: ServicoStatus = servico.concluido
-    ? "concluido"
-    : isRunning || isPaused
-      ? "em_andamento"
-      : "nao_iniciado";
+  // Determine service status based on running, paused and completed states
+  const servicoStatus: ServicoStatus = getServicoStatus(isRunning, isPaused, servico.concluido);
   
   const completedSubatividades = servico.subatividades?.filter(sub => sub.concluida).length || 0;
   const totalSubatividades = servico.subatividades?.filter(sub => sub.selecionada).length || 0;
@@ -104,6 +101,11 @@ export function useServicoTracker({
   };
   
   const handleMarcarConcluido = () => {
+    // Se o timer ainda estiver rodando, finalizar primeiro
+    if (isRunning || isPaused) {
+      finishTimer();
+    }
+    
     if (onServicoStatusChange) {
       onServicoStatusChange(true, funcionario?.id, funcionario?.nome);
     }

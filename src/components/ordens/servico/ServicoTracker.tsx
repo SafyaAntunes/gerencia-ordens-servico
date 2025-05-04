@@ -70,6 +70,10 @@ export default function ServicoTracker({
     handleLoadFuncionarios();
   }, [handleLoadFuncionarios]);
 
+  // Verifica se todas subatividades selecionadas estão concluídas
+  const todasSubatividadesConcluidas = subatividadesFiltradas.length === 0 || 
+    (subatividadesFiltradas.length > 0 && subatividadesFiltradas.every(sub => sub.concluida));
+
   return (
     <Card className={cn("w-full", className)}>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -114,6 +118,7 @@ export default function ServicoTracker({
               isPaused={isPaused}
               temPermissao={temPermissao}
               concluido={servico.concluido}
+              todasSubatividadesConcluidas={todasSubatividadesConcluidas}
               onStartClick={handleStartClick}
               onPauseClick={handlePause}
               onResumeClick={handleResume}
