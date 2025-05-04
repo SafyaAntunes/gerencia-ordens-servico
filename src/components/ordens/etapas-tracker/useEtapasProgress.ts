@@ -13,59 +13,68 @@ export function useEtapasProgress() {
     
     // Filtrar etapas relevantes para esta ordem
     const etapasRelevantes = etapasPossiveis.filter(etapa => {
-      if (etapa === "retifica") {
-        return ordemAtual.servicos?.some(s => 
-          ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo));
-      } else if (etapa === "montagem") {
+      if (etapa === "montagem") {
         return ordemAtual.servicos?.some(s => s.tipo === "montagem");
       } else if (etapa === "dinamometro") {
         return ordemAtual.servicos?.some(s => s.tipo === "dinamometro");
-      } else if (etapa === "lavagem") {
-        // Sempre incluir lavagem
-        return true;
-      } else if (etapa === "inspecao_inicial" || etapa === "inspecao_final") {
-        // Sempre incluir inspeções
-        return true;
       }
       return true;
     });
     
-    // Contar etapas concluídas
-    const etapasConcluidas = etapasRelevantes.filter(etapa => {
-      // Para inspeção inicial e final, precisamos verificar todas as inspeções de serviços
+    // Calcular pontos para etapas (cada etapa vale 2 pontos)
+    const etapasPontosPossiveis = etapasRelevantes.length * 2;
+    let etapasPontosObtidos = 0;
+    
+    etapasRelevantes.forEach(etapa => {
+      // Verificar se é etapa de inspeção inicial ou final
       if (etapa === "inspecao_inicial" || etapa === "inspecao_final") {
         const servicosTipos = ordemAtual.servicos
           .filter(s => ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo))
           .map(s => s.tipo);
+
+        if (servicosTipos.length > 0) {
+          const etapasConcluidas = servicosTipos.filter(tipo => {
+            const chaveEtapa = `${etapa}_${tipo}` as any;
+            return ordemAtual.etapasAndamento[chaveEtapa]?.concluido === true;
+          }).length;
           
-        // Verificar se todas as inspeções para este tipo estão concluídas
-        return servicosTipos.every(tipo => {
-          const chaveEtapa = `${etapa}_${tipo}` as any;
-          return ordemAtual.etapasAndamento[chaveEtapa]?.concluido === true;
-        });
+          // Se todas estão concluídas, damos 2 pontos, se algumas, 1 ponto
+          if (etapasConcluidas === servicosTipos.length) {
+            etapasPontosObtidos += 2;
+          } else if (etapasConcluidas > 0) {
+            etapasPontosObtidos += 1;
+          }
+        }
       }
-      
       // Para outras etapas, verificar diretamente
-      return ordemAtual.etapasAndamento[etapa]?.concluido === true;
-    }).length;
+      else if (ordemAtual.etapasAndamento[etapa]?.concluido) {
+        etapasPontosObtidos += 2; // Etapa concluída = 2 pontos
+      } else if (ordemAtual.etapasAndamento[etapa]?.iniciado) {
+        etapasPontosObtidos += 1; // Etapa iniciada mas não concluída = 1 ponto
+      }
+    });
     
-    // Contar serviços concluídos
+    // Calcular pontos para serviços (cada serviço vale 1 ponto)
     const servicosAtivos = ordemAtual.servicos?.filter(s => {
-      return s.subatividades?.some(sub => sub.selecionada) || true;
+      return s.subatividades?.some(sub => sub.selecionada);
     }) || [];
-    const totalServicos = servicosAtivos.length;
-    const servicosConcluidos = servicosAtivos.filter(s => s.concluido).length;
+    
+    const servicosPontosPossiveis = servicosAtivos.length;
+    const servicosPontosObtidos = servicosAtivos.filter(s => s.concluido).length;
     
     // Calcular progresso total
-    const totalItens = (etapasRelevantes.length * 2) + (totalServicos * 1);
-    const itensConcluidos = (etapasConcluidas * 2) + (servicosConcluidos * 1);
+    const pontosTotaisPossiveis = etapasPontosPossiveis + servicosPontosPossiveis;
+    const pontosTotaisObtidos = etapasPontosObtidos + servicosPontosObtidos;
     
-    const progresso = totalItens > 0 ? Math.round((itensConcluidos / totalItens) * 100) : 0;
+    const progresso = pontosTotaisPossiveis > 0 
+      ? Math.round((pontosTotaisObtidos / pontosTotaisPossiveis) * 100) 
+      : 0;
+    
     setProgressoTotal(progresso);
     
     // Atualizar progresso no banco de dados
-    if (ordemAtual.id && totalItens > 0) {
-      const progressoFracao = itensConcluidos / totalItens;
+    if (ordemAtual.id && pontosTotaisPossiveis > 0) {
+      const progressoFracao = pontosTotaisObtidos / pontosTotaisPossiveis;
       atualizarProgressoNoDB(ordemAtual.id, progressoFracao);
     }
   }, []);

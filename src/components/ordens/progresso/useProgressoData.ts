@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { OrdemServico, EtapaOS } from "@/types/ordens";
 
@@ -198,10 +199,39 @@ export function useProgressoData(ordem: OrdemServico) {
   };
   
   const calcularProgressoTotal = () => {
-    const progressoEtapasMedia = progressoEtapas.reduce((total, etapa) => total + etapa.progresso, 0) / progressoEtapas.length;
-    const progressoServicosMedia = progressoServicos.reduce((total, servico) => total + servico.progresso, 0) / progressoServicos.length;
+    // Nova lógica unificada para cálculo de progresso
+    // Contamos as etapas relevantes e os serviços selecionados
+    const etapasRelevantes = progressoEtapas.filter(etapa => {
+      // Filtramos etapas irrelevantes para esta ordem
+      if (etapa.etapa === "montagem") {
+        return ordem.servicos.some(s => s.tipo === "montagem");
+      } else if (etapa.etapa === "dinamometro") {
+        return ordem.servicos.some(s => s.tipo === "dinamometro");
+      }
+      return true;
+    });
+
+    // Cada etapa concluída tem peso 2
+    const etapasPontosPossiveis = etapasRelevantes.length * 2;
+    const etapasPontosObtidos = etapasRelevantes.reduce((total, etapa) => 
+      total + (etapa.concluida ? 2 : (etapa.progresso > 0 ? 1 : 0)), 0);
     
-    return Math.round((progressoEtapasMedia * 2 + progressoServicosMedia * 1) / 3);
+    // Cada serviço concluído tem peso 1
+    const servicosAtivos = progressoServicos.filter(s => {
+      const servico = ordem.servicos.find(serv => serv.tipo === s.tipo);
+      return servico && servico.subatividades && 
+             servico.subatividades.some(sub => sub.selecionada);
+    });
+    const servicosPontosPossiveis = servicosAtivos.length;
+    const servicosPontosObtidos = servicosAtivos.filter(s => s.concluido).length;
+    
+    // Calcular progresso total
+    const pontosTotaisPossiveis = etapasPontosPossiveis + servicosPontosPossiveis;
+    const pontosTotaisObtidos = etapasPontosObtidos + servicosPontosObtidos;
+    
+    return pontosTotaisPossiveis > 0 
+      ? Math.round((pontosTotaisObtidos / pontosTotaisPossiveis) * 100) 
+      : 0;
   };
   
   const formatarTipoServico = (tipo: string): string => {
