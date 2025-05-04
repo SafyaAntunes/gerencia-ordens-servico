@@ -52,24 +52,42 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
 
   // Verificar se um serviço está em andamento (iniciado mas não concluído)
   const isServicoEmAndamento = (servico: any) => {
-    // Verificamos se o serviço não está concluído e tem funcionário atribuído ou tem algum registro de tempo
-    // ou se tem alguma etapa associada que está iniciada mas não concluída
+    // Se o serviço estiver concluído, não está em andamento
     if (servico.concluido) return false;
     
-    // Verificação se tem funcionário atribuído ou data de início
-    if (servico.funcionarioId || servico.dataInicio) return true;
+    // Verificações para determinar se está em andamento
     
-    // Verificação nas etapasAndamento
+    // 1. Verificar se tem funcionário atribuído
+    if (servico.funcionarioId) return true;
+    
+    // 2. Verificar se tem data de início
+    if (servico.dataInicio) return true;
+    
+    // 3. Verificação nas etapasAndamento
     if (typeof servico.tipo === 'string' && ordem.etapasAndamento) {
-      const etapa = ordem.etapasAndamento[servico.tipo as any];
-      if (etapa?.iniciado && !etapa?.concluido) return true;
+      // 3.1 Verificar etapa direta correspondente ao tipo
+      const etapaDireta = ordem.etapasAndamento[servico.tipo as any];
+      if (etapaDireta?.iniciado && !etapaDireta?.concluido) return true;
       
-      // Se o tipo de serviço está associado a uma etapa em andamento
+      // 3.2 Verificar etapa de retífica para serviços específicos
+      if (['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo) && 
+          ordem.etapasAndamento['retifica']?.iniciado && 
+          !ordem.etapasAndamento['retifica']?.concluido) {
+        return true;
+      }
+      
+      // 3.3 Verificar etapas específicas que possam estar associadas a este serviço
       for (const [etapaKey, etapaValue] of Object.entries(ordem.etapasAndamento)) {
-        if (etapaValue?.servicoTipo === servico.tipo && etapaValue.iniciado && !etapaValue.concluido) {
+        const etapaObj = etapaValue as any;
+        if (etapaObj?.servicoTipo === servico.tipo && etapaObj.iniciado && !etapaObj.concluido) {
           return true;
         }
       }
+    }
+    
+    // 4. Verificar timer ativo (caso o serviço tenha um timer associado)
+    if (ordem.timers && ordem.timers[servico.tipo] && ordem.timers[servico.tipo].isRunning) {
+      return true;
     }
     
     return false;
@@ -82,22 +100,46 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
     
     // Verificação nas etapasAndamento
     if (typeof servico.tipo === 'string' && ordem.etapasAndamento) {
-      const etapa = ordem.etapasAndamento[servico.tipo as any];
-      // Verifica se há pausas não encerradas
-      if (etapa?.pausas?.length > 0 && etapa.pausas.some(p => !p.fim)) return true;
+      // Verificar etapa direta
+      const etapaDireta = ordem.etapasAndamento[servico.tipo as any];
+      if (etapaDireta?.pausas?.length > 0 && etapaDireta.pausas.some(p => !p.fim)) return true;
       
-      // Verifica se alguma etapa vinculada ao tipo de serviço está pausada
+      // Verificar etapa de retífica para serviços específicos
+      if (['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo) && 
+          ordem.etapasAndamento['retifica']?.pausas?.length > 0 && 
+          ordem.etapasAndamento['retifica']?.pausas?.some(p => !p.fim)) {
+        return true;
+      }
+      
+      // Verificar outras etapas relacionadas
       for (const [etapaKey, etapaValue] of Object.entries(ordem.etapasAndamento)) {
-        if (etapaValue?.servicoTipo === servico.tipo && 
-            etapaValue.pausas?.length > 0 && 
-            etapaValue.pausas.some(p => !p.fim)) {
+        const etapaObj = etapaValue as any;
+        if (etapaObj?.servicoTipo === servico.tipo && 
+            etapaObj.pausas?.length > 0 && 
+            etapaObj.pausas.some((p: any) => !p.fim)) {
           return true;
         }
       }
     }
     
+    // Verificar timer pausado
+    if (ordem.timers && ordem.timers[servico.tipo] && ordem.timers[servico.tipo].isPaused) {
+      return true;
+    }
+    
     return false;
   };
+
+  // Verificar os status dos serviços para debugging
+  React.useEffect(() => {
+    if (ordem?.servicos) {
+      ordem.servicos.forEach(servico => {
+        const emAndamento = isServicoEmAndamento(servico);
+        const pausado = isServicoPausado(servico);
+        console.log(`Serviço: ${servico.tipo}, Concluído: ${servico.concluido}, Em Andamento: ${emAndamento}, Pausado: ${pausado}`);
+      });
+    }
+  }, [ordem]);
 
   return (
     <div 
