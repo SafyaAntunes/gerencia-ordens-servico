@@ -5,6 +5,7 @@ import { useConfiguracoesServico } from '@/hooks/useConfiguracoesServico';
 
 export function useEtapaTimerData(etapa: EtapaOS, tipoServico?: TipoServico) {
   const [tempoPadrao, setTempoPadrao] = useState<number>(0);
+  const [tempoEstimadoMS, setTempoEstimadoMS] = useState<number>(0);
 
   // Convert EtapaOS to TipoAtividade for the configuration hook
   const getTipoAtividade = (etapa: EtapaOS): TipoAtividade | undefined => {
@@ -28,13 +29,20 @@ export function useEtapaTimerData(etapa: EtapaOS, tipoServico?: TipoServico) {
         const partes = configuracaoServico.horaPadrao.split(':');
         const horasEmMinutos = parseInt(partes[0], 10) * 60;
         const minutos = parseInt(partes[1], 10);
-        setTempoPadrao(horasEmMinutos + minutos);
+        const totalMinutos = horasEmMinutos + minutos;
+        
+        setTempoPadrao(totalMinutos);
+        
+        // Also store as milliseconds for easier calculation elsewhere
+        const milliseconds = totalMinutos * 60 * 1000;
+        setTempoEstimadoMS(milliseconds);
       }
     }
   }, [tipoServico, itens, etapa]);
 
   return {
     tempoPadrao,
+    tempoEstimadoMS,
     tipoAtividade
   };
 }

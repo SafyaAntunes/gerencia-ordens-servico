@@ -7,6 +7,7 @@ import { ptBR } from "date-fns/locale";
 import { OrdemServico, StatusOS, EtapaOS } from "@/types/ordens";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ClienteMotorInfo } from "./ClienteMotorInfo";
+import { useEffect, useState } from "react";
 
 interface OrderDetailsTabProps {
   ordem: OrdemServico;
@@ -14,6 +15,54 @@ interface OrderDetailsTabProps {
 }
 
 export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps) {
+  const [temposPorEtapa, setTemposPorEtapa] = useState<Record<string, number>>({});
+  const [tempoTotal, setTempoTotal] = useState<number>(0);
+
+  useEffect(() => {
+    if (ordem) {
+      calcularTemposPorEtapa(ordem);
+    }
+  }, [ordem]);
+
+  const calcularTemposPorEtapa = (ordem: OrdemServico) => {
+    const tempos: Record<string, number> = {};
+    let total = 0;
+    
+    // 1. Verificar tempos nas etapas
+    Object.entries(ordem.etapasAndamento || {}).forEach(([etapa, dadosEtapa]) => {
+      if (dadosEtapa.tempoEstimado) {
+        const etapaKey = etapa.split('_')[0]; // Remover sufixo específico do serviço
+        const tempoEstimadoMs = dadosEtapa.tempoEstimado * 60 * 60 * 1000; // horas para ms
+        
+        tempos[etapaKey] = (tempos[etapaKey] || 0) + tempoEstimadoMs;
+        total += tempoEstimadoMs;
+      }
+    });
+    
+    // 2. Verificar subatividades nos serviços
+    ordem.servicos.forEach(servico => {
+      if (servico.subatividades) {
+        servico.subatividades
+          .filter(sub => sub.selecionada)
+          .forEach(sub => {
+            if (sub.tempoEstimado) {
+              const tempoEstimadoMs = sub.tempoEstimado * 60 * 60 * 1000; // horas para ms
+              tempos['retifica'] = (tempos['retifica'] || 0) + tempoEstimadoMs;
+              total += tempoEstimadoMs;
+            }
+          });
+      }
+    });
+    
+    // 3. Usar o tempo total estimado armazenado se disponível
+    if (ordem.tempoTotalEstimado && ordem.tempoTotalEstimado > 0) {
+      total = ordem.tempoTotalEstimado;
+    }
+    
+    setTemposPorEtapa(tempos);
+    setTempoTotal(total);
+  };
+
   const statusLabels: Record<StatusOS, string> = {
     orcamento: "Orçamento",
     aguardando_aprovacao: "Aguardando Aprovação",
@@ -40,38 +89,6 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
     
     return `${horas}h${minutos > 0 ? ` ${minutos}m` : ''}`;
   };
-
-  // Calcular tempo estimado por etapa
-  const calcularTemposPorEtapa = () => {
-    const tempos: Record<string, number> = {};
-    
-    // Verificar tempos nas etapas
-    Object.entries(ordem.etapasAndamento || {}).forEach(([etapa, dadosEtapa]) => {
-      if (dadosEtapa.tempoEstimado) {
-        const etapaKey = etapa.split('_')[0]; // Remover sufixo específico do serviço
-        tempos[etapaKey] = (tempos[etapaKey] || 0) + (dadosEtapa.tempoEstimado * 60 * 60 * 1000);
-      }
-    });
-    
-    // Verificar subatividades nos serviços
-    ordem.servicos.forEach(servico => {
-      if (servico.subatividades) {
-        servico.subatividades
-          .filter(sub => sub.selecionada)
-          .forEach(sub => {
-            if (sub.tempoEstimado) {
-              tempos['retifica'] = (tempos['retifica'] || 0) + (sub.tempoEstimado * 60 * 60 * 1000);
-            }
-          });
-      }
-    });
-    
-    return tempos;
-  };
-
-  const temposPorEtapa = calcularTemposPorEtapa();
-  const tempoTotal = ordem.tempoTotalEstimado || 
-    Object.values(temposPorEtapa).reduce((total, tempo) => total + tempo, 0);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
