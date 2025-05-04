@@ -73,16 +73,26 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
 
   // Verificar se um serviço está em andamento (iniciado mas não concluído)
   const isServicoEmAndamento = (servico: any) => {
-    // Aqui você pode adicionar lógica mais específica se tiver dados sobre início de serviço
-    // Por ora, assumimos que iniciou se tiver algum funcionário atribuído e não estiver concluído
-    return !servico.concluido && (servico.funcionarioId !== undefined);
+    // Melhorada a lógica para detectar serviços em andamento
+    // Verificamos se o serviço não está concluído e tem funcionário atribuído ou tem algum registro de tempo
+    return !servico.concluido && (
+      servico.funcionarioId !== undefined || 
+      servico.dataInicio !== undefined || 
+      (typeof servico.tipo === 'string' && ordem.etapasAndamento && 
+       ordem.etapasAndamento[servico.tipo as any]?.iniciado && 
+       !ordem.etapasAndamento[servico.tipo as any]?.concluido)
+    );
   };
 
   // Verificar se um serviço está pausado
   const isServicoPausado = (servico: any) => {
     // Lógica para verificar se o serviço está pausado
-    // Aqui você precisará adequar com base na estrutura de dados real do seu aplicativo
-    return !servico.concluido && servico.pausado === true;
+    return !servico.concluido && servico.pausado === true || (
+      typeof servico.tipo === 'string' && 
+      ordem.etapasAndamento && 
+      ordem.etapasAndamento[servico.tipo as any]?.pausas?.length > 0 &&
+      !ordem.etapasAndamento[servico.tipo as any]?.pausas?.every(p => p.fim)
+    );
   };
 
   return (
@@ -160,6 +170,9 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
                 {ordem.servicos.map((servico, idx) => {
                   const emAndamento = isServicoEmAndamento(servico);
                   const pausado = isServicoPausado(servico);
+                  
+                  // Log para debug
+                  console.log(`Serviço ${servico.tipo}: concluído=${servico.concluido}, emAndamento=${emAndamento}, pausado=${pausado}`);
                   
                   return (
                     <span 
