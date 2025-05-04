@@ -1,25 +1,12 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
-import OrdemCard from "@/components/ordens/OrdemCard";
-import OrdemListRow from "@/components/ordens/ordem-list-row";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { PlusCircle, Search, Filter, LayoutGrid, LayoutList } from "lucide-react";
-import { OrdemServico, StatusOS, Prioridade } from "@/types/ordens";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { toast } from "sonner";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import { getOrdensByFuncionarioEspecialidades } from "@/services/funcionarioService";
+import { useOrdensData } from "@/hooks/useOrdensData";
+import OrdensHeader from "@/components/ordens/OrdensHeader";
+import OrdemFilters from "@/components/ordens/OrdemFilters";
+import OrdensContent from "@/components/ordens/OrdensContent";
 
 interface OrdensProps {
   onLogout?: () => void;
@@ -28,147 +15,36 @@ interface OrdensProps {
 export default function Ordens({ onLogout }: OrdensProps) {
   const navigate = useNavigate();
   const { funcionario } = useAuth();
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [prioridadeFilter, setPrioridadeFilter] = useState("all");
-  const [progressoFilter, setProgressoFilter] = useState("all");
-  const [ordens, setOrdens] = useState<OrdemServico[]>([]);
-  const [loading, setLoading] = useState(true);
+  const isTecnico = funcionario?.nivelPermissao === 'tecnico';
+  
+  // Set view type with local storage persistence
   const [viewType, setViewType] = useState<"grid" | "list">(() => {
-    // Recuperar preferência do localStorage, ou usar grid como padrão
     const savedViewType = localStorage.getItem("ordens-view-type");
     return (savedViewType as "grid" | "list") || "grid";
   });
-  const isTecnico = funcionario?.nivelPermissao === 'tecnico';
 
-  // Salvar a preferência de visualização no localStorage sempre que mudar
+  // Save view preference to localStorage when it changes
   useEffect(() => {
     localStorage.setItem("ordens-view-type", viewType);
   }, [viewType]);
 
-  useEffect(() => {
-    const fetchOrdens = async () => {
-      setLoading(true);
-      try {
-        let ordensData: OrdemServico[] = [];
-        
-        if (isTecnico && funcionario?.especialidades?.length) {
-          const especialidadesOrdens = await getOrdensByFuncionarioEspecialidades(funcionario.especialidades);
-          ordensData = especialidadesOrdens as OrdemServico[];
-        } else {
-          const q = query(collection(db, "ordens_servico"), orderBy("dataAbertura", "desc"));
-          const querySnapshot = await getDocs(q);
-          
-          const ordensWithClienteMotores = await Promise.all(
-            querySnapshot.docs.map(async (doc) => {
-              const data = doc.data();
-              
-              if (data.cliente && data.cliente.id) {
-                try {
-                  const motoresRef = collection(db, `clientes/${data.cliente.id}/motores`);
-                  const motoresSnapshot = await getDocs(motoresRef);
-                  const motores = motoresSnapshot.docs.map(motorDoc => ({
-                    id: motorDoc.id,
-                    ...motorDoc.data()
-                  }));
-                  
-                  data.cliente.motores = motores;
-                } catch (error) {
-                  console.error("Erro ao carregar motores do cliente:", error);
-                }
-              }
-              
-              let progressoEtapas = data.progressoEtapas;
-              
-              if (progressoEtapas === undefined) {
-                let etapas = ["lavagem", "inspecao_inicial"];
-                
-                if (data.servicos?.some((s: any) => 
-                  ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo))) {
-                  etapas.push("retifica");
-                }
-                
-                if (data.servicos?.some((s: any) => s.tipo === "montagem")) {
-                  etapas.push("montagem");
-                }
-                
-                if (data.servicos?.some((s: any) => s.tipo === "dinamometro")) {
-                  etapas.push("dinamometro");
-                }
-                
-                etapas.push("inspecao_final");
-                
-                const etapasAndamento = data.etapasAndamento || {};
-                const etapasConcluidas = etapas.filter(etapa => 
-                  etapasAndamento[etapa]?.concluido
-                ).length;
-                
-                progressoEtapas = etapasConcluidas / etapas.length;
-              }
-              
-              return {
-                ...data,
-                id: doc.id,
-                dataAbertura: data.dataAbertura?.toDate() || new Date(),
-                dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
-                progressoEtapas: progressoEtapas
-              } as OrdemServico;
-            })
-          );
-          
-          ordensData = ordensWithClienteMotores;
-        }
-        
-        setOrdens(ordensData);
-      } catch (error) {
-        console.error("Error fetching orders:", error);
-        toast.error("Erro ao carregar ordens de serviço.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchOrdens();
-  }, [isTecnico, funcionario]);
-
-  const handleReorder = (dragIndex: number, dropIndex: number) => {
-    const reorderedOrdens = [...ordens];
-    const [draggedItem] = reorderedOrdens.splice(dragIndex, 1);
-    reorderedOrdens.splice(dropIndex, 0, draggedItem);
-    setOrdens(reorderedOrdens);
-  };
-
-  const filteredOrdens = ordens.filter((ordem) => {
-    if (!ordem) return false;
-    
-    const searchMatch = 
-      (ordem.nome || '').toLowerCase().includes(search.toLowerCase()) ||
-      (ordem.cliente?.nome || '').toLowerCase().includes(search.toLowerCase());
-    
-    const statusMatch = statusFilter === "all" ? true : ordem.status === statusFilter;
-    const prioridadeMatch = prioridadeFilter === "all" ? true : ordem.prioridade === prioridadeFilter;
-    
-    let progressoMatch = true;
-    const progresso = ordem.progressoEtapas !== undefined ? ordem.progressoEtapas * 100 : 0;
-    
-    switch (progressoFilter) {
-      case "nao_iniciado":
-        progressoMatch = progresso === 0;
-        break;
-      case "em_andamento":
-        progressoMatch = progresso > 0 && progresso < 100;
-        break;
-      case "quase_concluido":
-        progressoMatch = progresso >= 75 && progresso < 100;
-        break;
-      case "concluido":
-        progressoMatch = progresso === 100;
-        break;
-      default:
-        progressoMatch = true;
-    }
-
-    return searchMatch && statusMatch && prioridadeMatch && progressoMatch;
+  // Use custom hook for ordem data and filtering
+  const {
+    filteredOrdens,
+    loading,
+    search,
+    setSearch,
+    statusFilter,
+    setStatusFilter,
+    prioridadeFilter,
+    setPrioridadeFilter,
+    progressoFilter,
+    setProgressoFilter,
+    handleReorder
+  } = useOrdensData({
+    isTecnico,
+    funcionarioId: funcionario?.id,
+    especialidades: funcionario?.especialidades
   });
 
   const handleNovaOrdem = () => {
@@ -179,128 +55,39 @@ export default function Ordens({ onLogout }: OrdensProps) {
     navigate(`/ordens/${id}`);
   };
 
+  const title = isTecnico 
+    ? `Ordens de Serviço - Minhas Especialidades`
+    : 'Ordens de Serviço';
+
   return (
     <Layout onLogout={onLogout}>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">
-          {isTecnico 
-            ? `Ordens de Serviço - Minhas Especialidades`
-            : 'Ordens de Serviço'}
-        </h1>
-        
-        <div className="flex items-center gap-4">
-          <ToggleGroup type="single" value={viewType} onValueChange={(value) => value && setViewType(value as "grid" | "list")}>
-            <ToggleGroupItem value="grid" aria-label="Visualização em grid">
-              <LayoutGrid className="h-4 w-4" />
-            </ToggleGroupItem>
-            <ToggleGroupItem value="list" aria-label="Visualização em lista">
-              <LayoutList className="h-4 w-4" />
-            </ToggleGroupItem>
-          </ToggleGroup>
+      <OrdensHeader
+        title={title}
+        isTecnico={isTecnico}
+        viewType={viewType}
+        onViewTypeChange={setViewType}
+        onNovaOrdem={handleNovaOrdem}
+      />
 
-          {!isTecnico && (
-            <Button onClick={handleNovaOrdem}>
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Nova Ordem
-            </Button>
-          )}
-        </div>
-      </div>
+      <OrdemFilters
+        search={search}
+        setSearch={setSearch}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        prioridadeFilter={prioridadeFilter}
+        setPrioridadeFilter={setPrioridadeFilter}
+        progressoFilter={progressoFilter}
+        setProgressoFilter={setProgressoFilter}
+      />
 
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-6">
-        <div className="flex items-center space-x-2">
-          <Input
-            type="search"
-            placeholder="Buscar ordem..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <Search className="h-5 w-5 text-muted-foreground -ml-8" />
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Filter className="h-5 w-5 text-muted-foreground mr-2" />
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Filtrar por status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os status</SelectItem>
-              <SelectItem value="orcamento">Orçamento</SelectItem>
-              <SelectItem value="aguardando_aprovacao">Aguardando Aprovação</SelectItem>
-              <SelectItem value="retifica">Retífica</SelectItem>
-              <SelectItem value="aguardando_peca_cliente">Aguardando Peça (Cliente)</SelectItem>
-              <SelectItem value="aguardando_peca_interno">Aguardando Peça (Interno)</SelectItem>
-              <SelectItem value="finalizado">Finalizado</SelectItem>
-              <SelectItem value="entregue">Entregue</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div className="flex items-center space-x-2 col-span-1 md:col-span-2 lg:col-span-1">
-          <div className="flex items-center space-x-2 w-full">
-            <Select value={prioridadeFilter} onValueChange={setPrioridadeFilter}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Filtrar por prioridade" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as prioridades</SelectItem>
-                <SelectItem value="alta">Alta</SelectItem>
-                <SelectItem value="media">Média</SelectItem>
-                <SelectItem value="baixa">Baixa</SelectItem>
-                <SelectItem value="urgente">Urgente</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Select value={progressoFilter} onValueChange={setProgressoFilter}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Filtrar por progresso" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os progressos</SelectItem>
-                <SelectItem value="nao_iniciado">Não iniciado (0%)</SelectItem>
-                <SelectItem value="em_andamento">Em andamento</SelectItem>
-                <SelectItem value="quase_concluido">Quase concluído (≥75%)</SelectItem>
-                <SelectItem value="concluido">Concluído (100%)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="text-center py-8">Carregando ordens...</div>
-      ) : filteredOrdens.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          {isTecnico 
-            ? "Nenhuma ordem encontrada para suas especialidades."
-            : "Nenhuma ordem encontrada com os filtros selecionados."}
-        </div>
-      ) : viewType === "grid" ? (
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {filteredOrdens.map((ordem, index) => (
-            <OrdemCard 
-              key={ordem.id} 
-              ordem={ordem}
-              index={index}
-              onReorder={handleReorder}
-              onClick={() => handleVerOrdem(ordem.id)}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {filteredOrdens.map((ordem, index) => (
-            <OrdemListRow
-              key={ordem.id}
-              ordem={ordem}
-              index={index}
-              onReorder={handleReorder}
-              onClick={() => handleVerOrdem(ordem.id)}
-            />
-          ))}
-        </div>
-      )}
+      <OrdensContent
+        loading={loading}
+        filteredOrdens={filteredOrdens}
+        isTecnico={isTecnico}
+        viewType={viewType}
+        onReorder={handleReorder}
+        onVerOrdem={handleVerOrdem}
+      />
     </Layout>
   );
 }
