@@ -1,9 +1,10 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { OrdemServico, StatusOS } from "@/types/ordens";
+import { OrdemServico, StatusOS, EtapaOS } from "@/types/ordens";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ClienteMotorInfo } from "./ClienteMotorInfo";
 
@@ -22,6 +23,55 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
     finalizado: "Finalizado",
     entregue: "Entregue"
   };
+
+  const etapasNomes: Record<string, string> = {
+    lavagem: "Lavagem",
+    inspecao_inicial: "Inspeção Inicial",
+    retifica: "Retífica",
+    montagem: "Montagem",
+    dinamometro: "Dinamômetro",
+    inspecao_final: "Inspeção Final"
+  };
+
+  const formatarTempo = (ms: number) => {
+    if (!ms) return "0h";
+    const horas = Math.floor(ms / (1000 * 60 * 60));
+    const minutos = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return `${horas}h${minutos > 0 ? ` ${minutos}m` : ''}`;
+  };
+
+  // Calcular tempo estimado por etapa
+  const calcularTemposPorEtapa = () => {
+    const tempos: Record<string, number> = {};
+    
+    // Verificar tempos nas etapas
+    Object.entries(ordem.etapasAndamento || {}).forEach(([etapa, dadosEtapa]) => {
+      if (dadosEtapa.tempoEstimado) {
+        const etapaKey = etapa.split('_')[0]; // Remover sufixo específico do serviço
+        tempos[etapaKey] = (tempos[etapaKey] || 0) + (dadosEtapa.tempoEstimado * 60 * 60 * 1000);
+      }
+    });
+    
+    // Verificar subatividades nos serviços
+    ordem.servicos.forEach(servico => {
+      if (servico.subatividades) {
+        servico.subatividades
+          .filter(sub => sub.selecionada)
+          .forEach(sub => {
+            if (sub.tempoEstimado) {
+              tempos['retifica'] = (tempos['retifica'] || 0) + (sub.tempoEstimado * 60 * 60 * 1000);
+            }
+          });
+      }
+    });
+    
+    return tempos;
+  };
+
+  const temposPorEtapa = calcularTemposPorEtapa();
+  const tempoTotal = ordem.tempoTotalEstimado || 
+    Object.values(temposPorEtapa).reduce((total, tempo) => total + tempo, 0);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -84,6 +134,27 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
               {ordem.prioridade === 'alta' && 'Alta'}
               {ordem.prioridade === 'urgente' && 'Urgente'}
             </Badge>
+          </div>
+          
+          <Separator />
+          
+          <div>
+            <p className="text-sm text-muted-foreground mb-2">Tempo Total Estimado</p>
+            <p className="font-medium text-lg">{formatarTempo(tempoTotal)}</p>
+            
+            <div className="mt-2 space-y-1">
+              <p className="text-sm text-muted-foreground">Detalhamento por etapa:</p>
+              <div className="ml-2 space-y-1">
+                {Object.entries(temposPorEtapa).map(([etapa, tempo]) => (
+                  tempo > 0 && (
+                    <div key={etapa} className="flex justify-between items-center">
+                      <span className="text-sm">{etapasNomes[etapa] || etapa}</span>
+                      <span className="text-sm font-medium">{formatarTempo(tempo)}</span>
+                    </div>
+                  )
+                ))}
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

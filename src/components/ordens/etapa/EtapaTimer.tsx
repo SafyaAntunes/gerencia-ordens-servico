@@ -1,4 +1,3 @@
-
 import { formatTime } from "@/utils/timerUtils";
 import { useOrdemTimer } from "@/hooks/useOrdemTimer";
 import { EtapaOS, TipoServico, TipoAtividade } from "@/types/ordens";
@@ -201,6 +200,7 @@ export default function EtapaTimer({
         </div>
       )}
       
+      {/* Timer controls */}
       <TimerControls
         isRunning={isRunning}
         isPaused={isPaused}

@@ -8,3 +8,4 @@ export * from './useEtapaOperations';
 export * from './useEtapaSubatividades';
 export * from './useEtapaStatusHandlers';
 export * from './useSubatividadesVerifier';
+export * from './useEtapaTimerData';
