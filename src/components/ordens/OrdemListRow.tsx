@@ -5,6 +5,7 @@ import { OrdemServico } from "@/types/ordens";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Progress } from "@/components/ui/progress";
 import { MoveVertical } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface OrdemListRowProps {
   ordem: OrdemServico;
@@ -27,6 +28,19 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
       return "border-l-4 border-l-yellow-500 bg-yellow-50";
     } else {
       return "border-l-4 border-l-red-500 bg-red-50";
+    }
+  };
+
+  // Define a cor do indicador de progresso baseado no valor
+  const getProgressColor = () => {
+    if (progresso === 100) {
+      return "bg-green-500";
+    } else if (progresso >= 75) {
+      return "bg-emerald-500";
+    } else if (progresso >= 25) {
+      return "bg-blue-500";
+    } else {
+      return "bg-red-500";
     }
   };
 
@@ -172,16 +186,7 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
         </div>
         <Progress 
           value={progresso} 
-          className="h-2"
-          indicatorClassName={
-            progresso === 100 
-              ? "bg-green-500" 
-              : progresso >= 75 
-                ? "bg-emerald-500" 
-                : progresso >= 25 
-                  ? "bg-blue-500" 
-                  : "bg-red-500"
-          } 
+          className={cn("h-2", getProgressColor())}
         />
       </div>
     </div>
