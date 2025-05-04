@@ -41,7 +41,8 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
     const fetchOrdens = async () => {
       setIsLoading(true);
       try {
-        const q = query(collection(db, "ordens"), orderBy("dataAbertura", "desc"));
+        // Alterado de "ordens" para "ordens_servico" para corresponder com a coleção correta
+        const q = query(collection(db, "ordens_servico"), orderBy("dataAbertura", "desc"));
         const querySnapshot = await getDocs(q);
         
         const ordensData: OrdemServico[] = [];
@@ -141,6 +142,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
           statusCounts["Aguardando Aprovação"]++;
           break;
         case 'fabricacao':
+        case 'retifica':
           statusCounts["Em Fabricação"]++;
           break;
         case 'aguardando_peca_cliente':

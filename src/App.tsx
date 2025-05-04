@@ -75,6 +75,12 @@ const AppRoutes = () => {
         </PrivateRoute>
       } />
       
+      <Route path="/dashboard" element={
+        <PrivateRoute>
+          <Dashboard onLogout={handleLogout} />
+        </PrivateRoute>
+      } />
+      
       {/* Ordens - todos os níveis têm acesso à listagem */}
       <Route path="/ordens" element={
         <PrivateRoute>
