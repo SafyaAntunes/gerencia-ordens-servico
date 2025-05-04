@@ -16,6 +16,19 @@ interface OrdemListRowProps {
 export default function OrdemListRow({ ordem, index, onReorder, onClick }: OrdemListRowProps) {
   const clienteNome = ordem.cliente?.nome || "Cliente não especificado";
   const progresso = ordem.progressoEtapas !== undefined ? Math.round(ordem.progressoEtapas * 100) : 0;
+  
+  // Determina a cor de destaque com base no status ou progresso da ordem
+  const getStatusColor = () => {
+    if (ordem.status === "finalizado" || ordem.status === "entregue") {
+      return "border-l-4 border-l-green-500 bg-green-50";
+    } else if (progresso > 0 && progresso < 100) {
+      return "border-l-4 border-l-blue-500 bg-blue-50";
+    } else if (ordem.status === "aguardando_peca_cliente" || ordem.status === "aguardando_peca_interno") {
+      return "border-l-4 border-l-yellow-500 bg-yellow-50";
+    } else {
+      return "border-l-4 border-l-red-500 bg-red-50";
+    }
+  };
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('text/plain', index.toString());
@@ -38,7 +51,7 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onClick={onClick}
-      className="group bg-white hover:bg-gray-50 border border-gray-200 rounded-lg mb-3 shadow-sm transition-all duration-200 cursor-pointer overflow-hidden"
+      className={`group hover:shadow-md border rounded-lg mb-3 shadow-sm transition-all duration-200 cursor-pointer overflow-hidden ${getStatusColor()}`}
     >
       {/* Cabeçalho com informações principais */}
       <div className="grid grid-cols-12 gap-2 p-4 pb-2 items-center border-b border-gray-100">
@@ -97,6 +110,27 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
           <div className="text-sm text-gray-700">
             {ordem.nome || "Sem título"}
           </div>
+          
+          {/* Lista de serviços */}
+          {ordem.servicos && ordem.servicos.length > 0 && (
+            <div className="mt-2">
+              <div className="text-xs text-gray-500 mb-1">Serviços:</div>
+              <div className="flex flex-wrap gap-1">
+                {ordem.servicos.map((servico, idx) => (
+                  <span 
+                    key={`${servico.tipo}-${idx}`}
+                    className={`text-xs px-2 py-0.5 rounded-full ${
+                      servico.concluido 
+                        ? "bg-green-100 text-green-800" 
+                        : "bg-blue-100 text-blue-800"
+                    }`}
+                  >
+                    {servico.tipo.replace('_', ' ')}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Data de Término */}
@@ -107,6 +141,26 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
               format(new Date(ordem.dataPrevistaEntrega), "dd/MM/yy", { locale: ptBR }) :
               "N/D"}
           </div>
+          
+          {/* Etapas concluídas */}
+          {ordem.etapasAndamento && (
+            <div className="mt-2 text-xs">
+              <div className="text-gray-500">Etapas concluídas:</div>
+              <div>
+                {Object.entries(ordem.etapasAndamento)
+                  .filter(([_, etapa]) => etapa.concluido)
+                  .map(([etapaKey], idx, arr) => (
+                    <span key={etapaKey}>
+                      {etapaKey.replace('_', ' ')}
+                      {idx < arr.length - 1 ? ', ' : ''}
+                    </span>
+                  ))}
+                {Object.entries(ordem.etapasAndamento).filter(([_, etapa]) => etapa.concluido).length === 0 && 
+                  <span>Nenhuma</span>
+                }
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -116,7 +170,19 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
           <span>Progresso</span>
           <span>{progresso}%</span>
         </div>
-        <Progress value={progresso} className="h-2" />
+        <Progress 
+          value={progresso} 
+          className="h-2"
+          indicatorClassName={
+            progresso === 100 
+              ? "bg-green-500" 
+              : progresso >= 75 
+                ? "bg-emerald-500" 
+                : progresso >= 25 
+                  ? "bg-blue-500" 
+                  : "bg-red-500"
+          } 
+        />
       </div>
     </div>
   );

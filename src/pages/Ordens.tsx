@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -34,8 +35,17 @@ export default function Ordens({ onLogout }: OrdensProps) {
   const [progressoFilter, setProgressoFilter] = useState("all");
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewType, setViewType] = useState<"grid" | "list">("grid");
+  const [viewType, setViewType] = useState<"grid" | "list">(() => {
+    // Recuperar preferência do localStorage, ou usar grid como padrão
+    const savedViewType = localStorage.getItem("ordens-view-type");
+    return (savedViewType as "grid" | "list") || "grid";
+  });
   const isTecnico = funcionario?.nivelPermissao === 'tecnico';
+
+  // Salvar a preferência de visualização no localStorage sempre que mudar
+  useEffect(() => {
+    localStorage.setItem("ordens-view-type", viewType);
+  }, [viewType]);
 
   useEffect(() => {
     const fetchOrdens = async () => {
