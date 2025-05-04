@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -146,17 +147,32 @@ export default function ProgressoRelatorio({ ordem }: ProgressoRelatorioProps) {
   };
   
   const calcularTempoEstimado = () => {
+    // Obter o tempo total estimado da ordem, se disponível
+    if (ordem.tempoTotalEstimado) {
+      setTempoEstimado(ordem.tempoTotalEstimado);
+      return;
+    }
+    
+    // Se não houver valor estimado armazenado, calcular baseado nas subatividades e etapas
     let total = 0;
     
+    // Calcular tempo estimado com base nas subatividades de serviços
     ordem.servicos.forEach(servico => {
       if (servico.subatividades) {
         servico.subatividades
           .filter(sub => sub.selecionada)
           .forEach(sub => {
             if (sub.tempoEstimado) {
-              total += sub.tempoEstimado * 60 * 60 * 1000;
+              total += sub.tempoEstimado * 60 * 60 * 1000; // Converter de horas para ms
             }
           });
+      }
+    });
+    
+    // Adicionar tempo estimado das etapas de lavagem, inspeção inicial e inspeção final
+    Object.entries(ordem.etapasAndamento).forEach(([etapa, dadosEtapa]) => {
+      if (['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa) && dadosEtapa.tempoEstimado) {
+        total += dadosEtapa.tempoEstimado * 60 * 60 * 1000; // Converter horas para ms
       }
     });
     

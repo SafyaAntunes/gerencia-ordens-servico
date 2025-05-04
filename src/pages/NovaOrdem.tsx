@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -96,10 +95,10 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         }
       }
       
-      // Calcular tempo total estimado
+      // Calcular tempo total estimado - MODIFICADO PARA INCLUIR TODAS AS ETAPAS
       let tempoTotalEstimado = 0;
       
-      // Calcular tempo estimado para as subatividades dos serviços
+      // Calcular tempo estimado para as subatividades dos serviços de retífica
       if (values.servicosSubatividades) {
         Object.entries(values.servicosSubatividades).forEach(([tipo, subs]: [string, any]) => {
           (subs as SubAtividade[]).forEach(sub => {
@@ -110,7 +109,7 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         });
       }
       
-      // Calcular tempo estimado para atividades específicas de cada serviço
+      // Calcular tempo estimado para atividades específicas de cada serviço (lavagem, inspeção inicial, inspeção final)
       if (values.atividadesEspecificas) {
         Object.entries(values.atividadesEspecificas).forEach(([servicoTipo, atividades]: [string, any]) => {
           Object.entries(atividades).forEach(([tipoAtividade, subs]: [string, any]) => {
@@ -211,7 +210,10 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
                 const tempoEmHoras = horas + (minutos / 60);
                 
                 // Adicionar ao tempo estimado da etapa
-                etapasAndamento[etapaTipo].tempoEstimado += servicoConfig.tempoPadrao || tempoEmHoras;
+                etapasAndamento[etapaTipo].tempoEstimado += tempoEmHoras;
+                
+                // Também adicionar ao tempo total estimado da OS (convertendo para milissegundos)
+                tempoTotalEstimado += tempoEmHoras;
               }
             });
           }
@@ -241,7 +243,7 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         fotosEntrada: fotosEntradaUrls,
         fotosSaida: fotosSaidaUrls,
         progressoEtapas: 0,
-        tempoTotalEstimado: tempoTotalEstimado || 0
+        tempoTotalEstimado: tempoTotalEstimado * 60 * 60 * 1000 // Convertendo horas para milissegundos
       };
       
       await setDoc(doc(db, "ordens_servico", values.id), newOrder);
