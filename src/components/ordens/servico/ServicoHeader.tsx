@@ -83,7 +83,7 @@ export default function ServicoHeader({
           )}
           
           {servicoStatus === "pausado" && (
-            <Badge variant="warning" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
               Pausado
             </Badge>
           )}
