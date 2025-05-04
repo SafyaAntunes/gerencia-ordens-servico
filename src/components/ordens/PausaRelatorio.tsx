@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OrdemServico, EtapaOS, PausaRegistro } from "@/types/ordens";
@@ -83,8 +82,9 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
         }
       }
       
-      // Para inspeção inicial e final com tipos de serviço específicos
-      if (etapa === 'inspecao_inicial' || etapa === 'inspecao_final') {
+      // Para inspeção inicial e final, lavagem com tipos de serviço específicos
+      const etapasComServico = ['lavagem', 'inspecao_inicial', 'inspecao_final'];
+      if (etapasComServico.includes(etapa)) {
         const tiposServico = ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'];
         
         tiposServico.forEach(tipo => {
@@ -95,13 +95,14 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
             try {
               const parsed = JSON.parse(tipoData);
               if (parsed.pausas && parsed.pausas.length > 0) {
-                const etapaInfo = ordem.etapasAndamento?.[etapa];
+                const etapaKey = `${etapa}_${tipo}`;
+                const etapaInfo = ordem.etapasAndamento?.[etapaKey as any] || ordem.etapasAndamento?.[etapa];
                 const funcionario = etapaInfo?.funcionarioNome || '';
                 
                 parsed.pausas.forEach((pausa: PausaRegistro) => {
                   pausasAgregadas.push({
                     ...pausa,
-                    etapa: `${etapa}_${tipo}`,
+                    etapa: etapaKey,
                     funcionarioNome: funcionario
                   });
                 });

@@ -59,7 +59,7 @@ export function ProgressoSummaryCard({
           <div className="space-y-4">
             {Object.entries(temposPorEtapa).map(([etapa, tempo]) => (
               <div key={etapa} className="flex justify-between items-center">
-                <span className="font-medium">{etapasNomes[etapa as EtapaOS]}</span>
+                <span className="font-medium">{etapasNomes[etapa as EtapaOS] || etapa}</span>
                 <span>{formatarTempo(tempo)}</span>
               </div>
             ))}

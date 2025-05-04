@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { OrdemServico, EtapaOS } from "@/types/ordens";
 
@@ -50,12 +49,15 @@ export function useProgressoData(ordem: OrdemServico) {
             pecasConcluidas++;
           }
         });
+
+        // Verifica se a etapa geral também está concluída
+        const etapaConcluida = pecasConcluidas === totalPecas || !!ordem.etapasAndamento[etapa]?.concluido;
         
         return {
           etapa,
           nome: etapasNomes[etapa],
-          progresso: Math.round((pecasConcluidas / totalPecas) * 100),
-          concluida: pecasConcluidas === totalPecas
+          progresso: etapaConcluida ? 100 : Math.round((pecasConcluidas / totalPecas) * 100),
+          concluida: etapaConcluida
         };
       }
       
@@ -131,6 +133,25 @@ export function useProgressoData(ordem: OrdemServico) {
         }
       });
     });
+
+    // Verificar também os timers gerais de cada etapa
+    ['lavagem', 'inspecao_inicial', 'retifica', 'montagem', 'dinamometro', 'inspecao_final'].forEach(etapa => {
+      const storageKey = `timer_${ordem.id}_${etapa}`;
+      const data = localStorage.getItem(storageKey);
+      
+      if (data) {
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.totalTime) {
+            total += parsed.totalTime;
+            const etapaKey = etapa as EtapaOS;
+            temposPorEtapa[etapaKey] = (temposPorEtapa[etapaKey] || 0) + parsed.totalTime;
+          }
+        } catch {
+          // Ignore parsing errors
+        }
+      }
+    });
     
     return { total, temposPorEtapa };
   };
@@ -190,8 +211,9 @@ export function useProgressoData(ordem: OrdemServico) {
   const formatarTempo = (ms: number) => {
     const horas = Math.floor(ms / (1000 * 60 * 60));
     const minutos = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+    const segundos = Math.floor((ms % (1000 * 60)) / 1000);
     
-    return `${horas}h${minutos > 0 ? ` ${minutos}m` : ''}`;
+    return `${horas}h ${minutos}m ${segundos}s`;
   };
   
   return {
