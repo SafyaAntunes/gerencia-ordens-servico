@@ -92,7 +92,7 @@ export function useOrdemTimer({
   };
   
   // Calculate total time (saved + current if running)
-  const currentElapsedTime = state.isRunning && !state.isPaused ? state.elapsedTime : 0;
+  const currentElapsedTime = state.isRunning && !state.isPaused ? state.elapsedTime : state.elapsedTime;
   const displayTime = state.totalTime + currentElapsedTime;
 
   return {
