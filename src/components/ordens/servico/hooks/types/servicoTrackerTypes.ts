@@ -1,7 +1,8 @@
+
 import { Servico, SubAtividade } from "@/types/ordens";
 import { Funcionario } from "@/types/funcionarios";
 
-export type ServicoStatus = "pendente" | "em_andamento" | "pausado" | "concluido" | "desabilitado";
+export type ServicoStatus = "nao_iniciado" | "em_andamento" | "concluido";
 
 export interface UseServicoTrackerProps {
   servico: Servico;
@@ -17,7 +18,7 @@ export interface ServicoState {
   isOpen: boolean;
   isRunning: boolean;
   isPaused: boolean;
-  displayTime: string;
+  displayTime: number;
   elapsedSeconds: number;
   startTime: number | null;
   pauseTime: number | null;

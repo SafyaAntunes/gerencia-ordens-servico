@@ -4,12 +4,12 @@ import { formatTime } from "@/utils/timerUtils";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Clock, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
-import { ServicoStatus } from "./hooks/useServicoTracker";
+import { ServicoStatus } from "./hooks/types/servicoTrackerTypes";
 import { Button } from "@/components/ui/button";
 
 interface ServicoHeaderProps {
   tipo: TipoServico;
-  displayTime: string;
+  displayTime: number;
   servicoStatus: ServicoStatus;
   progressPercentage: number;
   completedSubatividades: number;
@@ -62,7 +62,7 @@ export default function ServicoHeader({
           
           <div className="flex items-center text-sm text-muted-foreground mt-1">
             <Clock className="h-4 w-4 mr-1" />
-            <span>Tempo: {displayTime}</span>
+            <span>Tempo: {formatTime(displayTime)}</span>
             {tempoTotalEstimado > 0 && (
               <span className="ml-2">/ Estimado: {formatTime(tempoTotalEstimado * 3600 * 1000)}</span>
             )}
@@ -82,7 +82,7 @@ export default function ServicoHeader({
             </Badge>
           )}
           
-          {servicoStatus === "pendente" && (
+          {servicoStatus === "nao_iniciado" && (
             <Badge variant="outline" className="bg-gray-100">
               Não iniciado
             </Badge>

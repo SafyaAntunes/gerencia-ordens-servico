@@ -1,13 +1,12 @@
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import { getFuncionarios } from "@/services/funcionarioService";
 import { Servico, SubAtividade, TipoServico, EtapaOS } from "@/types/ordens";
 import { Funcionario } from "@/types/funcionarios";
 import { useAuth } from "@/hooks/useAuth";
-import { UseServicoTrackerProps, UseServicoTrackerResult } from "./types/servicoTrackerTypes";
+import { UseServicoTrackerProps, UseServicoTrackerResult, ServicoStatus } from "./types/servicoTrackerTypes";
 import { useOrdemTimer } from "@/hooks/useOrdemTimer";
-
-export type ServicoStatus = "concluido" | "em_andamento" | "nao_iniciado";
 
 export function useServicoTracker({
   servico,
@@ -50,34 +49,17 @@ export function useServicoTracker({
     }
   });
   
-  const [pausas, setPausas] = useState<{inicio: number; fim?: number; motivo?: string}[]>([]);
-  
   const handlePause = (motivo?: string) => {
-    pauseTimer();
+    pauseTimer(motivo);
     toast.success("Timer pausado");
-    
-    if (timerRef.current) {
-      const timerPausas = timerRef.current.pausas || [];
-      setPausas([...timerPausas]);
-    }
   };
   
   const handleResume = () => {
     resumeTimer();
     toast.success("Timer retomado");
-    
-    if (timerRef.current) {
-      const timerPausas = timerRef.current.pausas || [];
-      setPausas([...timerPausas]);
-    }
   };
   
-  useEffect(() => {
-    if (timerRef.current) {
-      const timerPausas = timerRef.current.pausas || [];
-      setPausas(timerPausas);
-    }
-  }, [isRunning, isPaused]);
+  // Use pausas from useOrdemTimer directly instead of duplicating state
   
   const servicoStatus: ServicoStatus = servico.concluido
     ? "concluido"
