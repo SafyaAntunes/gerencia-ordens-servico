@@ -18,17 +18,9 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
   const clienteNome = ordem.cliente?.nome || "Cliente não especificado";
   const progresso = ordem.progressoEtapas !== undefined ? Math.round(ordem.progressoEtapas * 100) : 0;
   
-  // Define a cor do indicador de progresso baseado no valor
+  // Define a cor do indicador de progresso para azul conforme solicitado na imagem
   const getProgressColor = () => {
-    if (progresso === 100) {
-      return "bg-green-500";
-    } else if (progresso >= 75) {
-      return "bg-emerald-500";
-    } else if (progresso >= 25) {
-      return "bg-blue-500";
-    } else {
-      return "bg-red-500";
-    }
+    return "bg-blue-500"; // Mantém a barra de progresso sempre azul
   };
 
   // Define a cor de fundo para cada serviço de acordo com seu status
@@ -60,26 +52,51 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
 
   // Verificar se um serviço está em andamento (iniciado mas não concluído)
   const isServicoEmAndamento = (servico: any) => {
-    // Melhorada a lógica para detectar serviços em andamento
     // Verificamos se o serviço não está concluído e tem funcionário atribuído ou tem algum registro de tempo
-    return !servico.concluido && (
-      servico.funcionarioId !== undefined || 
-      servico.dataInicio !== undefined || 
-      (typeof servico.tipo === 'string' && ordem.etapasAndamento && 
-       ordem.etapasAndamento[servico.tipo as any]?.iniciado && 
-       !ordem.etapasAndamento[servico.tipo as any]?.concluido)
-    );
+    // ou se tem alguma etapa associada que está iniciada mas não concluída
+    if (servico.concluido) return false;
+    
+    // Verificação se tem funcionário atribuído ou data de início
+    if (servico.funcionarioId || servico.dataInicio) return true;
+    
+    // Verificação nas etapasAndamento
+    if (typeof servico.tipo === 'string' && ordem.etapasAndamento) {
+      const etapa = ordem.etapasAndamento[servico.tipo as any];
+      if (etapa?.iniciado && !etapa?.concluido) return true;
+      
+      // Se o tipo de serviço está associado a uma etapa em andamento
+      for (const [etapaKey, etapaValue] of Object.entries(ordem.etapasAndamento)) {
+        if (etapaValue?.servicoTipo === servico.tipo && etapaValue.iniciado && !etapaValue.concluido) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
   };
 
   // Verificar se um serviço está pausado
   const isServicoPausado = (servico: any) => {
-    // Lógica para verificar se o serviço está pausado
-    return !servico.concluido && servico.pausado === true || (
-      typeof servico.tipo === 'string' && 
-      ordem.etapasAndamento && 
-      ordem.etapasAndamento[servico.tipo as any]?.pausas?.length > 0 &&
-      !ordem.etapasAndamento[servico.tipo as any]?.pausas?.every(p => p.fim)
-    );
+    // Se estiver explicitamente marcado como pausado
+    if (!servico.concluido && servico.pausado === true) return true;
+    
+    // Verificação nas etapasAndamento
+    if (typeof servico.tipo === 'string' && ordem.etapasAndamento) {
+      const etapa = ordem.etapasAndamento[servico.tipo as any];
+      // Verifica se há pausas não encerradas
+      if (etapa?.pausas?.length > 0 && etapa.pausas.some(p => !p.fim)) return true;
+      
+      // Verifica se alguma etapa vinculada ao tipo de serviço está pausada
+      for (const [etapaKey, etapaValue] of Object.entries(ordem.etapasAndamento)) {
+        if (etapaValue?.servicoTipo === servico.tipo && 
+            etapaValue.pausas?.length > 0 && 
+            etapaValue.pausas.some(p => !p.fim)) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
   };
 
   return (
@@ -157,9 +174,6 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
                 {ordem.servicos.map((servico, idx) => {
                   const emAndamento = isServicoEmAndamento(servico);
                   const pausado = isServicoPausado(servico);
-                  
-                  // Log para debug
-                  console.log(`Serviço ${servico.tipo}: concluído=${servico.concluido}, emAndamento=${emAndamento}, pausado=${pausado}`);
                   
                   return (
                     <span 
