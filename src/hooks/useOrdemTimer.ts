@@ -59,6 +59,14 @@ export function useOrdemTimer({
       return;
     }
     
+    // Fechar qualquer pausa ativa antes de finalizar
+    if (state.isPaused) {
+      dispatch({
+        type: "CLOSE_PAUSA",
+        payload: { now: Date.now() }
+      });
+    }
+    
     // Calculate the final time before dispatching the finish action
     // Só adiciona o elapsed time ao total se o timer estiver rodando e não pausado
     const finalTime = state.isRunning && !state.isPaused ? state.elapsedTime : 0;

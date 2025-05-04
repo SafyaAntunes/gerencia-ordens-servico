@@ -41,10 +41,21 @@ export function useTimerState({
         return;
       }
       
+      // Se houver uma pausa ativa (sem fim) no momento do carregamento,
+      // fechar a pausa para evitar pausas "penduradas"
+      const temPausaAtiva = savedData.pausas?.some(p => !p.fim);
+      
       dispatch({
         type: "LOAD_SAVED_DATA",
         payload: { savedData }
       });
+      
+      if (temPausaAtiva) {
+        dispatch({
+          type: "CLOSE_PAUSA",
+          payload: { now: Date.now() }
+        });
+      }
     } else {
       console.log("No saved timer data found for", {ordemId, etapa, tipoServico});
     }
@@ -70,6 +81,22 @@ export function useTimerState({
     state.usarCronometro,
     state.pausas
   ]);
+  
+  // Lidar com eventos de visibilidade da página para salvar estado quando usuário sai da página
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && state.isRunning && !state.isPaused) {
+        console.log("Página oculta, salvando o estado atual do timer");
+        persistTimerState(ordemId, etapa as EtapaOS, tipoServico as TipoServico, state);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [ordemId, etapa, tipoServico, state]);
   
   // Update timer at regular intervals
   useEffect(() => {

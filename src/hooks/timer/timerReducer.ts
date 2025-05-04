@@ -1,3 +1,4 @@
+
 import { TimerState } from "@/types/timer";
 import { EtapaOS, TipoServico } from "@/types/ordens";
 import { saveTimerData } from "@/utils/timerStorage";
@@ -40,6 +41,10 @@ export function timerReducer(state: TimerState, action: TimerAction): TimerState
     case "PAUSE_TIMER": {
       console.log("PAUSE_TIMER action:", action.payload);
       const { now, motivo } = action.payload;
+      
+      // Salvar o tempo decorrido até o momento da pausa
+      const currentElapsedTime = state.startTime ? now - state.startTime - state.totalPausedTime : 0;
+      
       const novaPausa = {
         inicio: now,
         motivo
@@ -49,6 +54,8 @@ export function timerReducer(state: TimerState, action: TimerAction): TimerState
         ...state,
         isPaused: true,
         pauseTime: now,
+        // Manter o elapsedTime para não zerar o cronômetro
+        elapsedTime: currentElapsedTime > 0 ? currentElapsedTime : state.elapsedTime,
         pausas: [...state.pausas, novaPausa]
       };
     }
@@ -104,7 +111,7 @@ export function timerReducer(state: TimerState, action: TimerAction): TimerState
 
     case "UPDATE_ELAPSED_TIME": {
       const { now } = action.payload;
-      if (!state.startTime) return state;
+      if (!state.startTime || state.isPaused) return state;
       
       const timeElapsed = now - state.startTime - state.totalPausedTime;
       

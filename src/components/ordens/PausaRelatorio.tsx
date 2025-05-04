@@ -5,6 +5,7 @@ import { OrdemServico, EtapaOS, PausaRegistro } from "@/types/ordens";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { User } from "lucide-react";
+import { generateTimerStorageKey } from "@/utils/timerUtils";
 
 interface PausaRelatorioProps {
   ordem: OrdemServico;
@@ -34,7 +35,7 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
       funcionarioNome?: string;
     })[] = [];
     
-    // Obter pausas das etapas
+    // Obter pausas das etapas do objeto ordem.etapasAndamento
     Object.entries(ordem.etapasAndamento || {}).forEach(([etapaKey, info]) => {
       if (info?.pausas && info.pausas.length > 0) {
         info.pausas.forEach(pausa => {
@@ -43,6 +44,72 @@ export default function PausaRelatorio({ ordem }: PausaRelatorioProps) {
             etapa: etapaKey,
             funcionarioNome: info.funcionarioNome
           });
+        });
+      }
+    });
+    
+    // Lista de etapas para verificar no localStorage
+    const etapasParaVerificar: EtapaOS[] = [
+      'lavagem',
+      'inspecao_inicial',
+      'inspecao_final',
+      'retifica',
+      'montagem',
+      'dinamometro'
+    ];
+    
+    // Verificar etapas no localStorage para pausas
+    etapasParaVerificar.forEach(etapa => {
+      // Para etapas gerais sem tipo de serviço específico
+      const etapaStorageKey = generateTimerStorageKey(ordem.id, etapa);
+      const etapaData = localStorage.getItem(etapaStorageKey);
+      
+      if (etapaData) {
+        try {
+          const parsed = JSON.parse(etapaData);
+          if (parsed.pausas && parsed.pausas.length > 0) {
+            const funcionario = ordem.etapasAndamento?.[etapa]?.funcionarioNome || '';
+            
+            parsed.pausas.forEach((pausa: PausaRegistro) => {
+              pausasAgregadas.push({
+                ...pausa,
+                etapa,
+                funcionarioNome: funcionario
+              });
+            });
+          }
+        } catch {
+          // Ignorar erro de parsing
+        }
+      }
+      
+      // Para inspeção inicial e final com tipos de serviço específicos
+      if (etapa === 'inspecao_inicial' || etapa === 'inspecao_final') {
+        const tiposServico = ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'];
+        
+        tiposServico.forEach(tipo => {
+          const tipoStorageKey = generateTimerStorageKey(ordem.id, etapa, tipo);
+          const tipoData = localStorage.getItem(tipoStorageKey);
+          
+          if (tipoData) {
+            try {
+              const parsed = JSON.parse(tipoData);
+              if (parsed.pausas && parsed.pausas.length > 0) {
+                const etapaInfo = ordem.etapasAndamento?.[etapa];
+                const funcionario = etapaInfo?.funcionarioNome || '';
+                
+                parsed.pausas.forEach((pausa: PausaRegistro) => {
+                  pausasAgregadas.push({
+                    ...pausa,
+                    etapa: `${etapa}_${tipo}`,
+                    funcionarioNome: funcionario
+                  });
+                });
+              }
+            } catch {
+              // Ignorar erro de parsing
+            }
+          }
         });
       }
     });
