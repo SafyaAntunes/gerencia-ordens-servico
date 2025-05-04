@@ -2,14 +2,14 @@
 import { toast } from "sonner";
 import { EtapaOS, TipoServico } from "@/types/ordens";
 import { useEtapaPermissoes } from "./useEtapaPermissoes";
-import { useEtapaSubatividades } from "./useEtapaSubatividades";
+import { useSubatividadesVerifier } from "./useSubatividadesVerifier";
 
 export function useEtapaOperations(
   etapa: EtapaOS,
   servicoTipo?: TipoServico
 ) {
   const { funcionario, podeAtribuirFuncionario, podeReabrirAtividade } = useEtapaPermissoes(etapa, servicoTipo);
-  const { verificarSubatividadesConcluidas } = useEtapaSubatividades();
+  const { verificarSubatividadesConcluidas } = useSubatividadesVerifier();
   
   const handleTimerStart = (): boolean => {
     console.log("handleTimerStart chamado em useEtapaOperations");
@@ -41,9 +41,9 @@ export function useEtapaOperations(
       return false;
     }
     
-    // Verificar se todas as subatividades estão concluídas
+    // Verificar se todas as subatividades estão concluídas - IMPORTANTE
     if (servicos && !verificarSubatividadesConcluidas(servicos)) {
-      return false;
+      return false; // Vai mostrar toast de erro na função verificarSubatividadesConcluidas
     }
 
     // Não abrimos mais o diálogo para atribuir funcionário ao concluir
