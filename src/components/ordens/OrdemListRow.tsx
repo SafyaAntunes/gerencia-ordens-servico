@@ -18,9 +18,9 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
   const clienteNome = ordem.cliente?.nome || "Cliente não especificado";
   const progresso = ordem.progressoEtapas !== undefined ? Math.round(ordem.progressoEtapas * 100) : 0;
   
-  // Define a cor do indicador de progresso para azul conforme solicitado na imagem
+  // Define a cor do indicador de progresso baseado no valor
   const getProgressColor = () => {
-    return "bg-blue-500"; // Mantém a barra de progresso sempre azul
+    return "bg-blue-500"; // Mantém a parte concluída da barra de progresso azul
   };
 
   // Define a cor de fundo para cada serviço de acordo com seu status
@@ -230,7 +230,8 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
         </div>
         <Progress 
           value={progresso} 
-          className={cn("h-2", getProgressColor())}
+          className="h-2 bg-gray-200"
+          indicatorClassName={cn(getProgressColor())}
         />
       </div>
     </div>
