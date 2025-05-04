@@ -1,4 +1,5 @@
 
+import React, { useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { OrdemServico } from "@/types/ordens";
@@ -131,7 +132,7 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
   };
 
   // Verificar os status dos serviços para debugging
-  React.useEffect(() => {
+  useEffect(() => {
     if (ordem?.servicos) {
       ordem.servicos.forEach(servico => {
         const emAndamento = isServicoEmAndamento(servico);

@@ -107,6 +107,9 @@ export type PausaRegistro = {
   motivo?: string;
 };
 
+// Importar tipo TimerState para o tipo timers
+import { TimerState } from '@/types/timer';
+
 export type OrdemServico = {
   id: string;
   nome: string;
@@ -135,4 +138,8 @@ export type OrdemServico = {
   fotosEntrada?: FotoBase64[] | any[];
   fotosSaida?: FotoBase64[] | any[];
   tempoTotalEstimado?: number; // Tempo total estimado para todas as etapas e subatividades
+  // Adicionar propriedade timers para armazenar estado dos timers de serviços
+  timers?: {
+    [key: string]: TimerState;
+  };
 };
