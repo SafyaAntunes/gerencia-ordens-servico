@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
@@ -155,14 +154,8 @@ export default function EtapaCard({
   // Esta função será chamada pelo componente EtapaTimer quando o cronômetro for iniciado
   const handleCustomTimerStart = (): boolean => {
     console.log("handleCustomTimerStart chamado em EtapaCard");
-    
-    if (podeAtribuirFuncionario) {
-      setDialogAction('start');
-      setAtribuirFuncionarioDialogOpen(true);
-      return false; // Não inicia o timer até que o funcionário seja confirmado
-    }
-    
-    return true; // Permite que o timer inicie
+    // Removida a lógica para abrir diálogo de atribuição de funcionário
+    return true; // Sempre permite que o timer inicie
   };
 
   return (

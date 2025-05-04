@@ -1,7 +1,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { User, RefreshCw } from "lucide-react";
+import { User } from "lucide-react";
 
 interface EtapaHeaderProps {
   etapaNome: string;
@@ -44,17 +44,7 @@ export default function EtapaHeader({
           <User className="h-4 w-4 mr-1" />
           <span>Concluído por: {funcionarioNome}</span>
           
-          {podeReiniciar && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="ml-auto text-blue-500 hover:text-blue-700"
-              onClick={onReiniciar}
-            >
-              <RefreshCw className="h-4 w-4 mr-1" />
-              Reiniciar
-            </Button>
-          )}
+          {/* Removed the restart button */}
         </div>
       )}
     </>

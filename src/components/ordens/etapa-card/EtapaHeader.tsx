@@ -42,6 +42,7 @@ export default function EtapaHeader({
         <div className="mb-4 flex items-center text-sm text-muted-foreground">
           <User className="h-4 w-4 mr-1" />
           <span>Concluído por: {funcionarioNome}</span>
+          {/* Removed restart button */}
         </div>
       )}
     </>
