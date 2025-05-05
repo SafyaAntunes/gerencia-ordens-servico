@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +29,7 @@ import StatusChart from "@/components/dashboard/StatusChart";
 import ExportButton from "@/components/common/ExportButton";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { DateRange } from "react-day-picker";
 
 interface RelatoriosProducaoProps extends LogoutProps {}
 
@@ -44,10 +44,9 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
   // Filtros adicionais
   const [tipoServicoFilter, setTipoServicoFilter] = useState<string>("todos");
   const [responsavelFilter, setResponsavelFilter] = useState<string>("todos");
-  const [dateRange, setDateRange] = useState<{
-    from: Date | undefined;
-    to: Date | undefined;
-  }>({
+  
+  // Fix the type definition for dateRange to use DateRange from react-day-picker
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: undefined,
     to: undefined,
   });
@@ -150,7 +149,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     }
     
     // Filtro por período
-    if (dateRange.from) {
+    if (dateRange?.from) {
       const fromDate = new Date(dateRange.from);
       fromDate.setHours(0, 0, 0, 0);
       
@@ -160,7 +159,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
       });
     }
     
-    if (dateRange.to) {
+    if (dateRange?.to) {
       const toDate = new Date(dateRange.to);
       toDate.setHours(23, 59, 59, 999);
       
@@ -643,7 +642,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
                         className="w-full justify-start text-left font-normal mt-1"
                       >
                         <Calendar className="mr-2 h-4 w-4" />
-                        {dateRange.from ? (
+                        {dateRange?.from ? (
                           dateRange.to ? (
                             <>
                               {format(dateRange.from, "dd/MM/yyyy")} - {format(dateRange.to, "dd/MM/yyyy")}
@@ -664,12 +663,13 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
                         selected={dateRange}
                         onSelect={setDateRange}
                         locale={ptBR}
+                        className="pointer-events-auto"
                       />
                       <div className="p-3 border-t flex justify-between">
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => setDateRange({from: undefined, to: undefined})}
+                          onClick={() => setDateRange(undefined)}
                         >
                           Limpar
                         </Button>
@@ -707,7 +707,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
                 </div>
               )}
               
-              {(searchTerm || tipoServicoFilter !== "todos" || responsavelFilter !== "todos" || dateRange.from) && 
+              {(searchTerm || tipoServicoFilter !== "todos" || responsavelFilter !== "todos" || dateRange?.from) && 
                 filteredOrdens.length === 0 && (
                 <div className="text-sm text-muted-foreground p-2 border rounded-md">
                   Nenhuma ordem encontrada com os critérios informados.
