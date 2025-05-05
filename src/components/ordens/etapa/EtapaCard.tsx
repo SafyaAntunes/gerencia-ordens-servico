@@ -156,17 +156,6 @@ export default function EtapaCard({
     setFuncionarioSelecionadoId(value);
     const funcionarioSelecionado = funcionariosOptions.find(f => f.id === value);
     setFuncionarioSelecionadoNome(funcionarioSelecionado?.nome || "");
-    
-    // Se a etapa já foi iniciada, atualizar o funcionário responsável
-    if (etapaInfo?.iniciado && onEtapaStatusChange) {
-      onEtapaStatusChange(
-        etapa,
-        !!etapaInfo?.concluido,
-        value,
-        funcionarioSelecionado?.nome || "",
-        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
-      );
-    }
   };
   
   const handleMarcarConcluidoClick = () => {
@@ -210,6 +199,29 @@ export default function EtapaCard({
     }
     
     return true; // Permite que o timer inicie automaticamente
+  };
+  
+  // Nova função para salvar o responsável
+  const handleSaveResponsavel = () => {
+    if (!funcionarioSelecionadoId) {
+      toast.error("É necessário selecionar um responsável para salvar");
+      return;
+    }
+    
+    if (onEtapaStatusChange) {
+      // Manter o status atual (concluído ou não) mas atualizar o funcionário
+      const etapaConcluida = isEtapaConcluida(etapaInfo);
+      
+      onEtapaStatusChange(
+        etapa,
+        etapaConcluida,
+        funcionarioSelecionadoId,
+        funcionarioSelecionadoNome,
+        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+      );
+      
+      toast.success(`Responsável ${funcionarioSelecionadoNome} salvo com sucesso!`);
+    }
   };
 
   return (
@@ -267,6 +279,7 @@ export default function EtapaCard({
           onMarcarConcluido={handleMarcarConcluidoClick}
           onTimerStart={handleTimerStart}
           onCustomStart={handleCustomTimerStart}
+          onSaveResponsavel={handleSaveResponsavel}
         />
       )}
       

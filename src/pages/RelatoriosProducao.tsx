@@ -399,13 +399,34 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
       const etapaInfo = ordemSelecionada?.etapasAndamento[etapa];
       if (!etapaInfo) return "Não iniciada";
       
+      // Calculando tempo estimado (exemplo, poderia ser baseado em alguma configuração)
+      const tempoEstimadoEtapa = (() => {
+        switch(etapa) {
+          case 'lavagem': return 3600000; // 1 hora em ms
+          case 'inspecao_inicial': return 7200000; // 2 horas em ms
+          case 'retifica': return 28800000; // 8 horas em ms
+          case 'montagem': return 14400000; // 4 horas em ms
+          case 'dinamometro': return 10800000; // 3 horas em ms
+          case 'inspecao_final': return 7200000; // 2 horas em ms
+          default: return 7200000; // 2 horas em ms como padrão
+        }
+      })();
+      
       if (etapaInfo.concluido) {
         if (etapaInfo.iniciado && etapaInfo.finalizado) {
           const tempoTotal = etapaInfo.finalizado.getTime() - etapaInfo.iniciado.getTime();
+          const produtividade = Math.round((tempoEstimadoEtapa / tempoTotal) * 100);
+          
           return (
             <div>
-              <div>Concluída em: {formatTime(tempoTotal)}</div>
-              <div className="text-xs text-gray-500">
+              <div className="flex flex-col">
+                <div>Tempo estimado: {formatTime(tempoEstimadoEtapa)}</div>
+                <div>Tempo registrado: {formatTime(tempoTotal)}</div>
+                <div className={`font-semibold ${produtividade >= 100 ? 'text-green-600' : 'text-amber-600'}`}>
+                  Produtividade: {produtividade}%
+                </div>
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
                 Por: {etapaInfo.funcionarioNome || "Não atribuído"}
               </div>
             </div>
@@ -417,20 +438,33 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
       if (etapaInfo.iniciado) {
         const agora = new Date();
         const tempoDecorrido = agora.getTime() - etapaInfo.iniciado.getTime();
+        const produtividadeAtual = Math.round((tempoDecorrido / tempoEstimadoEtapa) * 100);
+        
         return (
           <div>
-            <div className="flex items-center">
-              <Clock className="h-4 w-4 mr-1 text-amber-500" />
-              <span>Em andamento: {formatTime(tempoDecorrido)}</span>
+            <div className="flex flex-col">
+              <div>Tempo estimado: {formatTime(tempoEstimadoEtapa)}</div>
+              <div className="flex items-center">
+                <Clock className="h-4 w-4 mr-1 text-amber-500" />
+                <span>Tempo registrado: {formatTime(tempoDecorrido)}</span>
+              </div>
+              <div className={`font-semibold ${produtividadeAtual <= 100 ? 'text-green-600' : 'text-amber-600'}`}>
+                Produtividade: {produtividadeAtual > 100 ? '< 100' : produtividadeAtual}%
+              </div>
             </div>
-            <div className="text-xs text-gray-500">
+            <div className="text-xs text-gray-500 mt-1">
               Por: {etapaInfo.funcionarioNome || "Não atribuído"}
             </div>
           </div>
         );
       }
       
-      return "Não iniciada";
+      return (
+        <div>
+          <div>Tempo estimado: {formatTime(tempoEstimadoEtapa)}</div>
+          <div>Não iniciada</div>
+        </div>
+      );
     };
     
     return (
@@ -805,54 +839,132 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
           <TabsList>
             <TabsTrigger value="status">Ordens por Status</TabsTrigger>
             <TabsTrigger value="servicos">Serviços por Tipo</TabsTrigger>
-            <TabsTrigger value="produtividade">Produtividade</TabsTrigger>
           </TabsList>
           
           <TabsContent value="status" className="space-y-6">
-            <StatusChart 
-              title="Ordens por Status" 
-              description="Distribuição das ordens de serviço por status" 
-              data={ordensPorStatus}
-            />
+            <Card>
+              <CardHeader>
+                <CardTitle>Ordens por Status</CardTitle>
+                <CardDescription>
+                  Distribuição das ordens de serviço por status
+                </CardDescription>
+                <div className="w-full flex justify-end pt-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 border-dashed"
+                      >
+                        <Filter className="mr-2 h-4 w-4" />
+                        Filtrar por Período
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <div className="p-4">
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-sm">Filtrar dados</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Selecione o período para filtrar os dados
+                          </p>
+                        </div>
+                        <div className="pt-4 pb-2">
+                          <CalendarComponent
+                            initialFocus
+                            mode="range"
+                            defaultMonth={new Date()}
+                            selected={dateRange}
+                            onSelect={setDateRange}
+                            locale={ptBR}
+                            className="rounded-md border"
+                          />
+                        </div>
+                        <div className="flex items-center pt-4">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="mr-2"
+                            onClick={() => setDateRange(undefined)}
+                          >
+                            Limpar
+                          </Button>
+                          <Button size="sm">Aplicar</Button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </CardHeader>
+              <CardContent className="h-[300px]">
+                <StatusChart 
+                  title="" 
+                  description="" 
+                  data={ordensPorStatus}
+                />
+              </CardContent>
+            </Card>
           </TabsContent>
           
           <TabsContent value="servicos" className="space-y-6">
-            <StatusChart 
-              title="Serviços por Tipo" 
-              description="Distribuição dos serviços por tipo" 
-              data={servicosPorTipo}
-            />
-          </TabsContent>
-          
-          <TabsContent value="produtividade" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Produtividade Mensal</CardTitle>
+                <CardTitle>Serviços por Tipo</CardTitle>
                 <CardDescription>
-                  Ordens concluídas e tempo médio por mês
+                  Distribuição dos serviços por tipo
                 </CardDescription>
+                <div className="w-full flex justify-end pt-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 border-dashed"
+                      >
+                        <Filter className="mr-2 h-4 w-4" />
+                        Filtrar por Período
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <div className="p-4">
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-sm">Filtrar dados</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Selecione o período para filtrar os dados
+                          </p>
+                        </div>
+                        <div className="pt-4 pb-2">
+                          <CalendarComponent
+                            initialFocus
+                            mode="range"
+                            defaultMonth={new Date()}
+                            selected={dateRange}
+                            onSelect={setDateRange}
+                            locale={ptBR}
+                            className="rounded-md border"
+                          />
+                        </div>
+                        <div className="flex items-center pt-4">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="mr-2"
+                            onClick={() => setDateRange(undefined)}
+                          >
+                            Limpar
+                          </Button>
+                          <Button size="sm">Aplicar</Button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </CardHeader>
               <CardContent className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RechartsBarChart
-                    data={produtividadeMensal}
-                    margin={{
-                      top: 20,
-                      right: 30,
-                      left: 20,
-                      bottom: 5,
-                    }}
-                    barGap={8}
-                  >
-                    <XAxis dataKey="mes" />
-                    <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
-                    <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
-                    <Tooltip />
-                    <Legend />
-                    <Bar yAxisId="left" dataKey="ordens" name="Ordens Concluídas" fill="#8B5CF6" />
-                    <Bar yAxisId="right" dataKey="tempo_medio" name="Tempo Médio (dias)" fill="#F97316" />
-                  </RechartsBarChart>
-                </ResponsiveContainer>
+                <StatusChart 
+                  title="" 
+                  description="" 
+                  data={servicosPorTipo}
+                />
               </CardContent>
             </Card>
           </TabsContent>
