@@ -6,11 +6,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { SubAtividade } from "@/types/ordens";
 import { useOrdemDetalhes } from "@/hooks/useOrdemDetalhes";
 import OrdemForm from "@/components/ordens/OrdemForm";
-import { OrdemHeader } from "@/components/ordens/detalhes/OrdemHeader";
 import { OrdemTabs } from "@/components/ordens/detalhes/OrdemTabs";
 import { DeleteOrdemDialog } from "@/components/ordens/detalhes/DeleteOrdemDialog";
 import { LoadingOrdem } from "@/components/ordens/detalhes/LoadingOrdem";
 import { NotFoundOrdem } from "@/components/ordens/detalhes/NotFoundOrdem";
+import { OrdemHeaderCustom } from "@/components/ordens/detalhes/OrdemHeaderCustom";
 
 interface OrdemDetalhesProps extends LogoutProps {}
 
@@ -53,12 +53,13 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
 
   return (
     <Layout onLogout={onLogout}>
-      <OrdemHeader 
+      <OrdemHeaderCustom 
         id={ordem.id}
         nome={ordem.nome}
         canEdit={!isEditando && canEditThisOrder}
         onEditClick={() => setIsEditando(true)}
         onDeleteClick={() => setDeleteDialogOpen(true)}
+        ordem={ordem}
       />
 
       {isEditando ? (

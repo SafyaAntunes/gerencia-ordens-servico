@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PlusCircle, Search, Building, Phone, Mail, FilterX, Car } from "lucide-react";
@@ -28,6 +27,8 @@ import ClienteForm from "@/components/clientes/ClienteForm";
 import ClienteCard from "@/components/clientes/ClienteCard";
 import ClienteDetalhes from "@/components/clientes/ClienteDetalhes";
 import { toast } from "sonner";
+import ExportButton from "@/components/common/ExportButton";
+import ImportButton from "@/components/common/ImportButton";
 
 interface ClientesProps {
   onLogout?: () => void;
@@ -145,6 +146,45 @@ export default function Clientes({ onLogout }: ClientesProps) {
     navigate(`/clientes/editar/${cliente.id}`);
   };
   
+  const handleImportClientes = async (data: any) => {
+    if (!Array.isArray(data)) {
+      toast.error('Formato inválido. Esperado uma lista de clientes.');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    let successCount = 0;
+    
+    try {
+      for (const clienteData of data) {
+        // Verificar se o cliente tem dados mínimos necessários
+        if (!clienteData.nome) {
+          continue;
+        }
+        
+        const cliente: Cliente = {
+          id: '',  // ID será gerado no servidor
+          ...clienteData,
+        };
+        
+        const success = await saveCliente(cliente);
+        if (success) successCount++;
+      }
+      
+      toast.success(`${successCount} cliente(s) importado(s) com sucesso!`);
+      fetchClientes();
+    } catch (error) {
+      console.error('Erro ao importar clientes:', error);
+      toast.error('Erro ao importar clientes.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  const validateClienteData = (data: any): boolean => {
+    return Array.isArray(data) && data.some(item => !!item.nome);
+  };
+  
   return (
     <Layout onLogout={onLogout}>
       <div className="animate-fade-in space-y-6">
@@ -156,10 +196,22 @@ export default function Clientes({ onLogout }: ClientesProps) {
             </p>
           </div>
           
-          <Button onClick={handleOpenAddDialog}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Novo Cliente
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            <ImportButton 
+              onImport={handleImportClientes} 
+              validateData={validateClienteData}
+              disabled={isSubmitting}
+            />
+            <ExportButton 
+              data={clientes}
+              fileName="clientes.json"
+              disabled={clientes.length === 0}
+            />
+            <Button onClick={handleOpenAddDialog}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Novo Cliente
+            </Button>
+          </div>
         </div>
         
         <div className="flex gap-4">

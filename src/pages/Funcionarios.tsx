@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PlusCircle, Filter, Search, Users, CheckCircle2, FilterX } from "lucide-react";
 import Layout from "@/components/layout/Layout";
@@ -38,6 +37,7 @@ import { toast } from "sonner";
 import { getFuncionarios, saveFuncionario, deleteFuncionario, getFuncionario } from "@/services/funcionarioService";
 import { useAuth } from "@/hooks/useAuth";
 import { useParams } from "react-router-dom";
+import ExportImportButtons from "@/components/common/ExportImportButtons";
 
 interface FuncionariosProps {
   onLogout?: () => void;
@@ -224,6 +224,47 @@ export default function Funcionarios({ onLogout, meuPerfil = false }: Funcionari
     ? "Visualize e edite suas informações" 
     : "Gerencie os funcionários da sua retífica";
   
+  const handleImportFuncionarios = async (data: any) => {
+    if (!Array.isArray(data)) {
+      toast.error('Formato inválido. Esperado uma lista de funcionários.');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    let successCount = 0;
+    
+    try {
+      for (const funcionarioData of data) {
+        // Verificar se o funcionário tem dados mínimos necessários
+        if (!funcionarioData.nome) {
+          continue;
+        }
+        
+        const funcionario: Funcionario = {
+          id: '',  // ID será gerado no servidor
+          ...funcionarioData,
+          especialidades: funcionarioData.especialidades || [],
+          ativo: funcionarioData.ativo !== undefined ? funcionarioData.ativo : true,
+        };
+        
+        const success = await saveFuncionario(funcionario);
+        if (success) successCount++;
+      }
+      
+      toast.success(`${successCount} funcionário(s) importado(s) com sucesso!`);
+      fetchFuncionarios();
+    } catch (error) {
+      console.error('Erro ao importar funcionários:', error);
+      toast.error('Erro ao importar funcionários.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  const validateFuncionarioData = (data: any): boolean => {
+    return Array.isArray(data) && data.some(item => !!item.nome);
+  };
+  
   return (
     <Layout onLogout={onLogout}>
       <div className="animate-fade-in space-y-6">
@@ -235,12 +276,23 @@ export default function Funcionarios({ onLogout, meuPerfil = false }: Funcionari
             </p>
           </div>
           
-          {canManageFuncionarios && (
-            <Button onClick={handleOpenAddDialog} className="bg-blue-600 hover:bg-blue-700">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Novo Funcionário
-            </Button>
-          )}
+          <div className="flex gap-2 flex-wrap">
+            {canManageFuncionarios && (
+              <>
+                <ExportImportButtons
+                  data={funcionarios}
+                  onImport={handleImportFuncionarios}
+                  fileName="funcionarios.json"
+                  validateData={validateFuncionarioData}
+                  disabled={isSubmitting}
+                />
+                <Button onClick={handleOpenAddDialog} className="bg-blue-600 hover:bg-blue-700">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Novo Funcionário
+                </Button>
+              </>
+            )}
+          </div>
         </div>
         
         {!isMeuPerfil && (
