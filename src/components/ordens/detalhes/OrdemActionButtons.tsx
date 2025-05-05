@@ -3,8 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { OrdemServico } from '@/types/ordens';
 import { FileDown, FileImage } from 'lucide-react';
-import { downloadImages } from '@/utils/exportImportUtils';
-import { exportToCsv } from '@/utils/exportImportUtils';
+import { downloadImages, exportToCsv } from '@/utils/exportImportUtils';
 
 interface OrdemActionButtonsProps {
   ordem: OrdemServico;

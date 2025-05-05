@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
@@ -154,8 +155,10 @@ export default function EtapaCard({
   // Esta função será chamada pelo componente EtapaTimer quando o cronômetro for iniciado
   const handleCustomTimerStart = (): boolean => {
     console.log("handleCustomTimerStart chamado em EtapaCard");
-    // Removida a lógica para abrir diálogo de atribuição de funcionário
-    return true; // Sempre permite que o timer inicie
+    // Vamos abrir o diálogo de atribuição de funcionário para que o usuário escolha quem está iniciando a etapa
+    setDialogAction('start');
+    setAtribuirFuncionarioDialogOpen(true);
+    return false; // Não permite que o timer inicie automaticamente
   };
 
   return (
@@ -173,7 +176,9 @@ export default function EtapaCard({
         servicos={servicos} 
         onAllServicosConcluidos={() => {
           if (onEtapaStatusChange && !isEtapaConcluida(etapaInfo)) {
-            onEtapaStatusChange(etapa, true, funcionario?.id, funcionario?.nome);
+            // Não atribuir automaticamente, deixar o usuário escolher através do diálogo
+            setDialogAction('finish');
+            setAtribuirFuncionarioDialogOpen(true);
           }
         }} 
       />

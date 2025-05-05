@@ -87,7 +87,7 @@ export default function ServicoTracker({
               completedSubatividades={completedSubatividades}
               totalSubatividades={totalSubatividades}
               tempoTotalEstimado={tempoTotalEstimado}
-              funcionarioNome={servico.funcionarioNome}
+              funcionarioNome={servico.concluido ? servico.funcionarioNome : undefined}
               concluido={servico.concluido}
               temPermissao={temPermissao}
               onToggleOpen={() => setIsOpen(!isOpen)}
@@ -130,4 +130,3 @@ export default function ServicoTracker({
       </Collapsible>
     </Card>
   );
-}
