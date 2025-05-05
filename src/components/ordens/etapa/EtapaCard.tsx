@@ -5,19 +5,17 @@ import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { useEtapaCard } from "./useEtapaCard";
-import { getFuncionarios } from "@/services/funcionarioService";
-import { Funcionario } from "@/types/funcionarios";
 import { 
   EtapaHeader, 
   EtapaProgressDisplay, 
   EtapaTimerSection, 
-  EtapaServicosLista 
+  EtapaServicosLista,
+  FuncionarioSelector
 } from "./components";
 import { useSubatividadesVerifier } from "./hooks/useSubatividadesVerifier";
 import { useEtapaStatusHandlers } from "./hooks/useEtapaStatusHandlers";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { User, Save } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useFuncionarioSelection } from "./hooks/useFuncionarioSelection";
+import { useEtapaResponsavel } from "./hooks/useEtapaResponsavel";
 
 interface EtapaCardProps {
   ordemId: string;
@@ -56,7 +54,6 @@ export default function EtapaCard({
   onEtapaStatusChange
 }: EtapaCardProps) {
   const { funcionario } = useAuth();
-  const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
   const { todasSubatividadesConcluidas } = useSubatividadesVerifier();
   const { 
     isAtivo, 
@@ -73,78 +70,32 @@ export default function EtapaCard({
     handleMarcarConcluido
   } = useEtapaCard(etapa, servicoTipo);
   
-  // Estado para armazenar o ID e nome do funcionário selecionado
-  // IMPORTANTE: Priorização corrigida para usar o funcionário da etapa no carregamento
-  const [funcionarioSelecionadoId, setFuncionarioSelecionadoId] = useState<string>("");
-  const [funcionarioSelecionadoNome, setFuncionarioSelecionadoNome] = useState<string>("");
+  // Estado para armazenar o ID e nome do funcionário selecionado utilizando o hook personalizado
+  const {
+    funcionariosOptions,
+    funcionarioSelecionadoId,
+    funcionarioSelecionadoNome,
+    handleFuncionarioChange
+  } = useFuncionarioSelection({
+    etapaInfo,
+    funcionarioId,
+    funcionarioNome
+  });
   
-  // Fetch funcionarios from database
-  useEffect(() => {
-    const carregarFuncionarios = async () => {
-      try {
-        const funcionariosData = await getFuncionarios();
-        if (funcionariosData) {
-          setFuncionariosOptions(funcionariosData);
-          
-          // Atualizar a ordem de prioridade para usar etapaInfo primeiro
-          if (etapaInfo?.funcionarioId) {
-            setFuncionarioSelecionadoId(etapaInfo.funcionarioId);
-            if (etapaInfo.funcionarioNome) {
-              setFuncionarioSelecionadoNome(etapaInfo.funcionarioNome);
-            } else {
-              // Buscar nome do funcionário se não estiver definido
-              const funcionarioEncontrado = funcionariosData.find(f => f.id === etapaInfo.funcionarioId);
-              if (funcionarioEncontrado) {
-                setFuncionarioSelecionadoNome(funcionarioEncontrado.nome);
-              }
-            }
-          } 
-          // Se não tiver etapaInfo, usar o funcionarioId do parâmetro
-          else if (funcionarioId) {
-            setFuncionarioSelecionadoId(funcionarioId);
-            if (funcionarioNome) {
-              setFuncionarioSelecionadoNome(funcionarioNome);
-            } else {
-              // Buscar nome do funcionário se não estiver definido
-              const funcionarioEncontrado = funcionariosData.find(f => f.id === funcionarioId);
-              if (funcionarioEncontrado) {
-                setFuncionarioSelecionadoNome(funcionarioEncontrado.nome);
-              }
-            }
-          }
-          // Em último caso, usar o funcionário atual
-          else if (funcionario?.id) {
-            setFuncionarioSelecionadoId(funcionario.id);
-            setFuncionarioSelecionadoNome(funcionario.nome || "");
-          }
-          
-          // Verificar se o funcionário salvo existe na lista e logar aviso
-          if (etapaInfo?.funcionarioId) {
-            const funcionarioExiste = funcionariosData.some(f => f.id === etapaInfo.funcionarioId);
-            if (!funcionarioExiste) {
-              console.warn(`Funcionário com ID ${etapaInfo.funcionarioId} não encontrado na lista.`);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Erro ao carregar funcionários:", error);
-        toast.error("Erro ao carregar lista de funcionários");
-      }
-    };
-    
-    carregarFuncionarios();
-  }, [etapaInfo, funcionario, funcionarioId, funcionarioNome]);
-
-  // Atualizar o estado quando etapaInfo mudar
-  useEffect(() => {
-    if (etapaInfo?.funcionarioId) {
-      console.log("Atualizando funcionário selecionado a partir de etapaInfo:", etapaInfo.funcionarioId, etapaInfo.funcionarioNome);
-      setFuncionarioSelecionadoId(etapaInfo.funcionarioId);
-      setFuncionarioSelecionadoNome(etapaInfo.funcionarioNome || "");
-    }
-  }, [etapaInfo?.funcionarioId, etapaInfo?.funcionarioNome]);
-
-  const etapaComCronometro = ['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa);
+  // Gerenciamento do responsável com hook personalizado
+  const {
+    handleSaveResponsavel,
+    handleCustomTimerStart,
+    handleMarcarConcluidoClick
+  } = useEtapaResponsavel({
+    etapa,
+    servicoTipo,
+    funcionarioSelecionadoId,
+    funcionarioSelecionadoNome,
+    isEtapaConcluida,
+    onEtapaStatusChange,
+    etapaInfo
+  });
   
   useEffect(() => {
     if (etapaInfo?.iniciado && !etapaInfo?.concluido) {
@@ -172,92 +123,8 @@ export default function EtapaCard({
       );
     }
   };
-  
-  const handleFuncionarioChange = (value: string) => {
-    setFuncionarioSelecionadoId(value);
-    const funcionarioSelecionado = funcionariosOptions.find(f => f.id === value);
-    setFuncionarioSelecionadoNome(funcionarioSelecionado?.nome || "");
-  };
-  
-  const handleMarcarConcluidoClick = () => {
-    if (!todasSubatividadesConcluidas(servicos)) {
-      toast.error("É necessário concluir todas as subatividades antes de finalizar a etapa");
-      return;
-    }
-    
-    if (onEtapaStatusChange) {
-      // Usa o ID e nome do funcionário selecionado
-      console.log("Concluindo etapa com funcionário:", funcionarioSelecionadoNome || funcionario?.nome);
-      
-      onEtapaStatusChange(
-        etapa, 
-        true, 
-        funcionarioSelecionadoId || funcionario?.id, 
-        funcionarioSelecionadoNome || funcionario?.nome,
-        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
-      );
-    }
-  };
 
-  // Esta função será chamada pelo componente EtapaTimer quando o cronômetro for iniciado
-  const handleCustomTimerStart = (): boolean => {
-    console.log("handleCustomTimerStart chamado em EtapaCard");
-    
-    if (!funcionarioSelecionadoId) {
-      toast.error("É necessário selecionar um responsável antes de iniciar a etapa");
-      return false;
-    }
-    
-    // Se estamos iniciando a etapa, vamos atualizar o status com o funcionário responsável
-    if (onEtapaStatusChange && !etapaInfo?.iniciado) {
-      onEtapaStatusChange(
-        etapa,
-        false,
-        funcionarioSelecionadoId,
-        funcionarioSelecionadoNome,
-        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
-      );
-    }
-    
-    return true; // Permite que o timer inicie automaticamente
-  };
-  
-  // Função para salvar o responsável - FIXED to work during execution
-  const handleSaveResponsavel = () => {
-    if (!funcionarioSelecionadoId) {
-      toast.error("É necessário selecionar um responsável para salvar");
-      return;
-    }
-    
-    if (onEtapaStatusChange) {
-      // Manter o status atual (concluído ou não) mas atualizar o funcionário
-      const etapaConcluida = isEtapaConcluida(etapaInfo);
-      const isIniciada = etapaInfo?.iniciado ? true : false;
-      
-      console.log("Salvando responsável:", {
-        etapa,
-        concluida: etapaConcluida,
-        iniciada: isIniciada,
-        funcionarioId: funcionarioSelecionadoId,
-        funcionarioNome: funcionarioSelecionadoNome,
-        servicoTipo: (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
-      });
-      
-      // IMPORTANT: Keep the current iniciado state from etapaInfo instead of setting it to false
-      onEtapaStatusChange(
-        etapa,
-        etapaConcluida,
-        funcionarioSelecionadoId,
-        funcionarioSelecionadoNome,
-        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
-      );
-      
-      toast.success(`Responsável ${funcionarioSelecionadoNome} salvo com sucesso!`);
-    } else {
-      console.error("onEtapaStatusChange não está definido");
-      toast.error("Não foi possível salvar o responsável");
-    }
-  };
+  const etapaComCronometro = ['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa);
 
   return (
     <Card className="p-6 mb-4">
@@ -278,44 +145,13 @@ export default function EtapaCard({
       />
       
       {!isEtapaConcluida(etapaInfo) && (
-        <div className="mb-4">
-          <div className="flex items-center text-sm font-medium mb-1">
-            <User className="h-4 w-4 mr-1" />
-            Responsável
-          </div>
-          
-          <div className="flex space-x-2">
-            <div className="flex-1">
-              <Select 
-                value={funcionarioSelecionadoId} 
-                onValueChange={handleFuncionarioChange}
-                disabled={isEtapaConcluida(etapaInfo)}
-              >
-                <SelectTrigger className="w-full bg-white">
-                  <SelectValue placeholder="Selecione o responsável" />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  {funcionariosOptions.map((func) => (
-                    <SelectItem key={func.id} value={func.id}>
-                      {func.nome} {func.id === funcionario?.id ? "(você)" : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              className="bg-green-50 hover:bg-green-100 border-green-200 text-green-700"
-              onClick={handleSaveResponsavel}
-              disabled={isEtapaConcluida(etapaInfo)}
-            >
-              <Save className="h-4 w-4 mr-1" />
-              Salvar
-            </Button>
-          </div>
-        </div>
+        <FuncionarioSelector
+          funcionarioSelecionadoId={funcionarioSelecionadoId}
+          funcionariosOptions={funcionariosOptions}
+          isEtapaConcluida={isEtapaConcluida(etapaInfo)}
+          onFuncionarioChange={handleFuncionarioChange}
+          onSaveResponsavel={handleSaveResponsavel}
+        />
       )}
       
       {etapaComCronometro && (

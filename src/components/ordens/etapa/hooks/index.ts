@@ -9,3 +9,5 @@ export * from './useEtapaSubatividades';
 export * from './useEtapaStatusHandlers';
 export * from './useSubatividadesVerifier';
 export * from './useEtapaTimerData';
+export * from './useFuncionarioSelection';
+export * from './useEtapaResponsavel';
