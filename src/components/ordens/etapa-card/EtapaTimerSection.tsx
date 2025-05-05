@@ -3,7 +3,7 @@ import { EtapaOS, TipoServico } from "@/types/ordens";
 import OrdemCronometro from "../OrdemCronometro";
 import useEtapaTimerSection from "@/hooks/useEtapaTimerSection";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Save } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 
 interface EtapaTimerSectionProps {
   ordemId: string;
@@ -20,23 +20,13 @@ interface EtapaTimerSectionProps {
 }
 
 export default function EtapaTimerSection(props: EtapaTimerSectionProps) {
-  const { timerProps, concluirButtonProps, saveResponsavelProps } = useEtapaTimerSection(props);
+  const { timerProps, concluirButtonProps } = useEtapaTimerSection(props);
   
   return (
     <div className="p-4 border rounded-md mb-4">
       <OrdemCronometro {...timerProps} />
       
       <div className="flex space-x-2 mt-4">
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex-1 bg-green-50 hover:bg-green-100 border-green-200 text-green-700"
-          onClick={saveResponsavelProps.onClick}
-        >
-          <Save className="h-4 w-4 mr-1" />
-          Salvar Responsável
-        </Button>
-        
         {!concluirButtonProps.isConcluida && (
           <Button 
             variant="default" 

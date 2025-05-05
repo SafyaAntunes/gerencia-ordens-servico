@@ -25,8 +25,7 @@ export default function useEtapaTimerSection({
   onEtapaConcluida,
   onMarcarConcluido,
   onTimerStart,
-  onCustomStart,
-  onSaveResponsavel
+  onCustomStart
 }: UseEtapaTimerSectionProps) {
   // We can add additional logic here if needed in the future
   
@@ -47,9 +46,6 @@ export default function useEtapaTimerSection({
       isConcluida: isEtapaConcluida,
       onClick: onMarcarConcluido,
       className: ""
-    },
-    saveResponsavelProps: {
-      onClick: onSaveResponsavel
     }
   };
 }

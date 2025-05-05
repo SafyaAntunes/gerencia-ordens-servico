@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
@@ -15,7 +16,8 @@ import {
 import { useSubatividadesVerifier } from "./hooks/useSubatividadesVerifier";
 import { useEtapaStatusHandlers } from "./hooks/useEtapaStatusHandlers";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { User } from "lucide-react";
+import { User, Save } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface EtapaCardProps {
   ordemId: string;
@@ -200,7 +202,7 @@ export default function EtapaCard({
     return true; // Permite que o timer inicie automaticamente
   };
   
-  // Nova função para salvar o responsável
+  // Função para salvar o responsável
   const handleSaveResponsavel = () => {
     if (!funcionarioSelecionadoId) {
       toast.error("É necessário selecionar um responsável para salvar");
@@ -211,6 +213,14 @@ export default function EtapaCard({
       // Manter o status atual (concluído ou não) mas atualizar o funcionário
       const etapaConcluida = isEtapaConcluida(etapaInfo);
       
+      console.log("Salvando responsável:", {
+        etapa,
+        concluida: etapaConcluida,
+        funcionarioId: funcionarioSelecionadoId,
+        funcionarioNome: funcionarioSelecionadoNome,
+        servicoTipo: (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+      });
+      
       onEtapaStatusChange(
         etapa,
         etapaConcluida,
@@ -220,6 +230,9 @@ export default function EtapaCard({
       );
       
       toast.success(`Responsável ${funcionarioSelecionadoNome} salvo com sucesso!`);
+    } else {
+      console.error("onEtapaStatusChange não está definido");
+      toast.error("Não foi possível salvar o responsável");
     }
   };
 
@@ -247,22 +260,38 @@ export default function EtapaCard({
             <User className="h-4 w-4 mr-1" />
             Responsável
           </div>
-          <Select 
-            value={funcionarioSelecionadoId} 
-            onValueChange={handleFuncionarioChange}
-            disabled={isEtapaConcluida(etapaInfo)}
-          >
-            <SelectTrigger className="w-full bg-white">
-              <SelectValue placeholder="Selecione o responsável" />
-            </SelectTrigger>
-            <SelectContent className="bg-white">
-              {funcionariosOptions.map((func) => (
-                <SelectItem key={func.id} value={func.id}>
-                  {func.nome} {func.id === funcionario?.id ? "(você)" : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          
+          <div className="flex space-x-2">
+            <div className="flex-1">
+              <Select 
+                value={funcionarioSelecionadoId} 
+                onValueChange={handleFuncionarioChange}
+                disabled={isEtapaConcluida(etapaInfo)}
+              >
+                <SelectTrigger className="w-full bg-white">
+                  <SelectValue placeholder="Selecione o responsável" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  {funcionariosOptions.map((func) => (
+                    <SelectItem key={func.id} value={func.id}>
+                      {func.nome} {func.id === funcionario?.id ? "(você)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-green-50 hover:bg-green-100 border-green-200 text-green-700"
+              onClick={handleSaveResponsavel}
+              disabled={isEtapaConcluida(etapaInfo)}
+            >
+              <Save className="h-4 w-4 mr-1" />
+              Salvar
+            </Button>
+          </div>
         </div>
       )}
       

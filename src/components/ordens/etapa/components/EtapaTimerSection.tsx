@@ -3,7 +3,6 @@ import { EtapaOS, TipoServico } from "@/types/ordens";
 import { Button } from "@/components/ui/button";
 import EtapaTimerWrapper from "./EtapaTimerWrapper";
 import EtapaConcluirButton from "./EtapaConcluirButton";
-import { Save } from "lucide-react";
 
 interface EtapaTimerSectionProps {
   ordemId: string;
@@ -29,8 +28,7 @@ export default function EtapaTimerSection({
   onEtapaConcluida,
   onMarcarConcluido,
   onTimerStart,
-  onCustomStart,
-  onSaveResponsavel
+  onCustomStart
 }: EtapaTimerSectionProps) {
   const handleTimerFinish = (tempoTotal: number) => {
     onEtapaConcluida(tempoTotal);
@@ -51,16 +49,6 @@ export default function EtapaTimerSection({
       />
       
       <div className="flex space-x-2 mt-4">
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex-1 bg-green-50 hover:bg-green-100 border-green-200 text-green-700"
-          onClick={onSaveResponsavel}
-        >
-          <Save className="h-4 w-4 mr-1" />
-          Salvar Responsável
-        </Button>
-        
         <EtapaConcluirButton 
           isConcluida={isEtapaConcluida} 
           onClick={onMarcarConcluido} 
