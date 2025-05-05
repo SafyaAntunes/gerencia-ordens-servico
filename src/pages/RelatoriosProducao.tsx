@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileBarChart, ActivitySquare, BarChart, Wrench, Search, Clock, Filter, Calendar } from "lucide-react";
 import { LogoutProps } from "@/types/props";
-import { collection, getDocs, doc, getDoc, query, where } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { OrdemServico, EtapaOS } from "@/types/ordens";
 import { Input } from "@/components/ui/input";
@@ -45,7 +45,6 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
   const [tipoServicoFilter, setTipoServicoFilter] = useState<string>("todos");
   const [responsavelFilter, setResponsavelFilter] = useState<string>("todos");
   
-  // Fix the type definition for dateRange to use DateRange from react-day-picker
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: undefined,
     to: undefined,
@@ -74,7 +73,9 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     const fetchOrdens = async () => {
       setIsLoading(true);
       try {
-        const querySnapshot = await getDocs(collection(db, "ordens"));
+        // Alterado para buscar da coleção correta 'ordens_servico' ao invés de 'ordens'
+        const q = query(collection(db, "ordens_servico"), orderBy("dataAbertura", "desc"));
+        const querySnapshot = await getDocs(q);
         const ordens: OrdemServico[] = [];
         
         querySnapshot.forEach((doc) => {
@@ -185,6 +186,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     }
   };
   
+  // Calcula serviços por tipo a partir dos dados reais
   const servicosPorTipo = (() => {
     const contagem: Record<string, number> = {};
     
@@ -217,6 +219,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
       .sort((a, b) => b.total - a.total); // Ordena por quantidade decrescente
   })();
   
+  // Calcula ordens por status a partir dos dados reais
   const ordensPorStatus = (() => {
     const contagem: Record<string, number> = {
       orcamento: 0,
@@ -234,17 +237,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     
     return Object.entries(contagem)
       .map(([status, quantidade]) => {
-        let nome = status;
-        
-        switch (status) {
-          case 'orcamento': nome = 'Orçamento'; break;
-          case 'aguardando_aprovacao': nome = 'Aguardando'; break;
-          case 'fabricacao': nome = 'Em Fabricação'; break;
-          case 'aguardando_peca_cliente': nome = 'Aguardando Peça (Cliente)'; break;
-          case 'aguardando_peca_interno': nome = 'Aguardando Peça (Interno)'; break;
-          case 'finalizado': nome = 'Finalizado'; break;
-          case 'entregue': nome = 'Entregue'; break;
-        }
+        let nome = getStatusLabel(status);
         
         return {
           name: nome,
@@ -254,10 +247,12 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
       .sort((a, b) => b.total - a.total); // Ordena por quantidade decrescente
   })();
   
+  // Calcula produtividade mensal a partir dos dados reais
   const produtividadeMensal = (() => {
     const meses: Record<string, { ordens: number, tempo_medio: number, tempoTotal: number }> = {};
     const hoje = new Date();
     
+    // Inicializa os últimos 6 meses
     for (let i = 5; i >= 0; i--) {
       const data = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
       const mesAno = `${data.getMonth() + 1}/${data.getFullYear()}`;
@@ -271,11 +266,37 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
         
         if (meses[mesAno]) {
           meses[mesAno].ordens += 1;
-          meses[mesAno].tempoTotal += 2.5;
+          
+          // Calcular tempo médio real se disponível
+          if (ordem.etapasAndamento) {
+            let tempoTotal = 0;
+            let etapasConcluidas = 0;
+            
+            Object.entries(ordem.etapasAndamento).forEach(([_, etapa]) => {
+              if (etapa.concluido && etapa.iniciado && etapa.finalizado) {
+                const tempoEtapa = etapa.finalizado.getTime() - etapa.iniciado.getTime();
+                tempoTotal += tempoEtapa;
+                etapasConcluidas++;
+              }
+            });
+            
+            // Converter para dias
+            if (etapasConcluidas > 0) {
+              const tempoMedioDias = tempoTotal / (1000 * 60 * 60 * 24 * etapasConcluidas);
+              meses[mesAno].tempoTotal += tempoMedioDias;
+            } else {
+              // Fallback para um valor estimado se não houver dados reais
+              meses[mesAno].tempoTotal += 2.5;
+            }
+          } else {
+            // Fallback para um valor estimado se não houver dados de etapas
+            meses[mesAno].tempoTotal += 2.5;
+          }
         }
       }
     });
     
+    // Calcular médias finais
     Object.keys(meses).forEach(mesAno => {
       if (meses[mesAno].ordens > 0) {
         meses[mesAno].tempo_medio = parseFloat((meses[mesAno].tempoTotal / meses[mesAno].ordens).toFixed(1));
@@ -295,15 +316,16 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     });
   })();
   
-  const totalOrdens = ordensPorStatus.reduce((sum, item) => sum + item.total, 0);
-  const totalOrdensFinalizadas = ordensPorStatus.find(item => item.name === "Finalizado")?.total || 0;
-  const totalOrdensEntregues = ordensPorStatus.find(item => item.name === "Entregue")?.total || 0;
+  // Métricas de totais
+  const totalOrdens = ordensDados.length;
+  const totalOrdensFinalizadas = ordensDados.filter(ordem => ordem.status === 'finalizado').length;
+  const totalOrdensEntregues = ordensDados.filter(ordem => ordem.status === 'entregue').length;
   const taxaFinalizacao = ((totalOrdensFinalizadas + totalOrdensEntregues) / (totalOrdens || 1)) * 100;
   
   // Cores para os gráficos
   const STATUS_COLORS = {
     'Orçamento': '#8B5CF6',
-    'Aguardando': '#F97316',
+    'Aguardando Aprovação': '#F97316',
     'Em Fabricação': '#0EA5E9',
     'Aguardando Peça (Cliente)': '#84cc16',
     'Aguardando Peça (Interno)': '#10b981',
@@ -327,10 +349,12 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     { value: 'lavagem', label: 'Lavagem' }
   ];
   
+  // Função para buscar detalhes de uma ordem específica
   const buscarOrdem = async (id: string) => {
     setIsLoading(true);
     try {
-      const ordemRef = doc(db, "ordens", id);
+      // Alterado para buscar da coleção correta 'ordens_servico'
+      const ordemRef = doc(db, "ordens_servico", id);
       const ordemDoc = await getDoc(ordemRef);
       
       if (ordemDoc.exists()) {
@@ -354,15 +378,15 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     }
   };
   
-  // Preparar dados para exportação CSV
+  // Preparar dados para exportação CSV (em formato correto para CSV)
   const prepararDadosExportacao = () => {
     return filteredOrdens.map(ordem => ({
       id: ordem.id,
       nome: ordem.nome,
-      cliente: ordem.cliente.nome,
+      cliente: ordem.cliente?.nome || 'Não informado',
       status: getStatusLabel(ordem.status),
-      dataAbertura: format(new Date(ordem.dataAbertura), 'dd/MM/yyyy'),
-      dataPrevistaEntrega: format(new Date(ordem.dataPrevistaEntrega), 'dd/MM/yyyy'),
+      dataAbertura: ordem.dataAbertura ? format(new Date(ordem.dataAbertura), 'dd/MM/yyyy') : 'Não informada',
+      dataPrevistaEntrega: ordem.dataPrevistaEntrega ? format(new Date(ordem.dataPrevistaEntrega), 'dd/MM/yyyy') : 'Não informada',
       quantidadeServicos: ordem.servicos?.length || 0,
       prioridade: ordem.prioridade || 'normal'
     }));
