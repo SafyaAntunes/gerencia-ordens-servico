@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { exportToJson } from '@/utils/exportImportUtils';
+import { exportToCsv } from '@/utils/exportImportUtils';
 import { FileDown } from 'lucide-react';
 
 interface ExportButtonProps {
@@ -24,7 +24,7 @@ const ExportButton: React.FC<ExportButtonProps> = ({
   buttonText = 'Exportar'
 }) => {
   const handleExport = () => {
-    exportToJson(data, fileName);
+    exportToCsv(data, fileName);
   };
 
   return (

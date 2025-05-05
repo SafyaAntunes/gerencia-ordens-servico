@@ -1,61 +1,66 @@
 
 import React, { useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { importFromJson } from '@/utils/exportImportUtils';
-import { Import } from 'lucide-react';
+import { importFromCSV } from '@/utils/exportImportUtils';
 import { toast } from 'sonner';
+import { FileUp } from 'lucide-react';
 
 interface ImportButtonProps {
-  onImport: (data: any) => void;
-  acceptedFileTypes?: string;
+  onImport: (data: any[]) => void;
+  validateData?: (data: any[]) => boolean;
   variant?: 'default' | 'outline' | 'secondary' | 'ghost' | 'link' | 'destructive';
   size?: 'default' | 'sm' | 'lg' | 'icon';
   className?: string;
   disabled?: boolean;
   buttonText?: string;
-  validateData?: (data: any) => boolean;
 }
 
 const ImportButton: React.FC<ImportButtonProps> = ({
   onImport,
-  acceptedFileTypes = '.json',
+  validateData,
   variant = 'outline',
   size = 'default',
   className = '',
   disabled = false,
-  buttonText = 'Importar',
-  validateData
+  buttonText = 'Importar'
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImportClick = () => {
+  const handleClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
     try {
-      const data = await importFromJson(file);
-      
-      if (validateData && !validateData(data)) {
-        toast.error('O arquivo não contém dados válidos.');
+      // Verifica a extensão do arquivo
+      if (!file.name.toLowerCase().endsWith('.csv')) {
+        toast.error('Por favor, selecione um arquivo CSV.');
         return;
       }
+
+      const importedData = await importFromCSV(file);
       
-      onImport(data);
-      toast.success('Dados importados com sucesso!');
-    } catch (error) {
-      console.error('Erro ao importar arquivo:', error);
-      toast.error('Erro ao importar arquivo. Verifique se o formato é válido.');
-    } finally {
-      // Limpar o input para permitir importar o mesmo arquivo novamente
+      // Validação opcional dos dados
+      if (validateData && !validateData(importedData)) {
+        toast.error('Os dados importados são inválidos ou incompatíveis.');
+        return;
+      }
+
+      onImport(importedData);
+      toast.success('Importação concluída com sucesso!');
+      
+      // Limpa o input para permitir importar o mesmo arquivo novamente
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+    } catch (error) {
+      console.error('Erro na importação:', error);
+      toast.error('Falha ao importar dados. Verifique o formato do arquivo.');
     }
   };
 
@@ -64,18 +69,18 @@ const ImportButton: React.FC<ImportButtonProps> = ({
       <input
         type="file"
         ref={fileInputRef}
-        accept={acceptedFileTypes}
-        style={{ display: 'none' }}
         onChange={handleFileChange}
+        accept=".csv"
+        className="hidden"
       />
       <Button
         variant={variant}
         size={size}
         className={className}
-        onClick={handleImportClick}
+        onClick={handleClick}
         disabled={disabled}
       >
-        <Import className="mr-2" />
+        <FileUp className="mr-2" />
         {buttonText}
       </Button>
     </>

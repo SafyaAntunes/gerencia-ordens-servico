@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { OrdemServico } from '@/types/ordens';
 import { FileDown, FileImage } from 'lucide-react';
 import { downloadImages } from '@/utils/exportImportUtils';
-import { exportToJson } from '@/utils/exportImportUtils';
+import { exportToCsv } from '@/utils/exportImportUtils';
 
 interface OrdemActionButtonsProps {
   ordem: OrdemServico;
@@ -30,7 +30,7 @@ const OrdemActionButtons: React.FC<OrdemActionButtonsProps> = ({
     if (onExport) {
       onExport();
     } else {
-      exportToJson(ordem, `ordem_${ordem.id}.json`);
+      exportToCsv(ordem, `ordem_${ordem.id}.csv`);
     }
   };
   

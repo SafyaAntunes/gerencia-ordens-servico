@@ -1,5 +1,14 @@
 
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  Tooltip, 
+  ResponsiveContainer, 
+  LabelList,
+  Cell
+} from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type ChartData = {
@@ -14,6 +23,17 @@ interface StatusChartProps {
   className?: string;
 }
 
+// Cores para os diferentes status e tipos de serviço
+const COLORS = [
+  '#8B5CF6', // Vivid Purple
+  '#F97316', // Bright Orange
+  '#0EA5E9', // Ocean Blue
+  '#84cc16', // Lime Green
+  '#10b981', // Emerald
+  '#14b8a6', // Teal
+  '#22c55e'  // Green
+];
+
 export default function StatusChart({ 
   title, 
   description, 
@@ -27,21 +47,18 @@ export default function StatusChart({
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={data}>
-            <XAxis 
+        <ResponsiveContainer width="100%" height={400}>
+          <BarChart 
+            data={data} 
+            layout="vertical"
+            margin={{ top: 20, right: 70, left: 70, bottom: 20 }}
+          >
+            <XAxis type="number" />
+            <YAxis 
+              type="category" 
               dataKey="name" 
-              stroke="#888888" 
-              fontSize={12} 
-              tickLine={false} 
-              axisLine={false} 
-            />
-            <YAxis
-              stroke="#888888"
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={(value) => `${value}`}
+              width={120}
+              tick={{ fontSize: 14 }}
             />
             <Tooltip
               contentStyle={{
@@ -51,14 +68,28 @@ export default function StatusChart({
                 border: "none",
               }}
               formatter={(value: number) => [`${value}`, "Total"]}
-              labelStyle={{ fontWeight: "bold", marginBottom: "4px" }}
             />
             <Bar 
               dataKey="total" 
-              fill="hsl(var(--primary))" 
-              radius={[4, 4, 0, 0]} 
-              className="animate-slide-in"
-            />
+              radius={[0, 4, 4, 0]}
+              barSize={32}
+            >
+              {data.map((entry, index) => (
+                <Cell 
+                  key={`cell-${index}`} 
+                  fill={COLORS[index % COLORS.length]} 
+                />
+              ))}
+              <LabelList 
+                dataKey="total" 
+                position="right" 
+                style={{ 
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  fill: '#333'
+                }} 
+              />
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileBarChart, ActivitySquare, BarChart, Wrench, Search, Clock, Filter } from "lucide-react";
+import { FileBarChart, ActivitySquare, BarChart, Wrench, Search, Clock, Filter, Calendar } from "lucide-react";
 import { LogoutProps } from "@/types/props";
 import { collection, getDocs, doc, getDoc, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -18,12 +19,17 @@ import {
   YAxis, 
   Tooltip, 
   Legend,
-  PieChart,
-  Pie,
   Cell
 } from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import StatusChart from "@/components/dashboard/StatusChart";
+import ExportButton from "@/components/common/ExportButton";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 interface RelatoriosProducaoProps extends LogoutProps {}
 
@@ -34,6 +40,36 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
   const [ordemSelecionada, setOrdemSelecionada] = useState<OrdemServico | null>(null);
   const [filteredOrdens, setFilteredOrdens] = useState<OrdemServico[]>([]);
   const [searchType, setSearchType] = useState<"id" | "cliente" | "nome" | "status">("id");
+  
+  // Filtros adicionais
+  const [tipoServicoFilter, setTipoServicoFilter] = useState<string>("todos");
+  const [responsavelFilter, setResponsavelFilter] = useState<string>("todos");
+  const [dateRange, setDateRange] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({
+    from: undefined,
+    to: undefined,
+  });
+  
+  const [funcionarios, setFuncionarios] = useState<{id: string, nome: string}[]>([]);
+  
+  useEffect(() => {
+    const fetchFuncionarios = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "funcionarios"));
+        const funcionariosData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          nome: doc.data().nome,
+        }));
+        setFuncionarios(funcionariosData);
+      } catch (error) {
+        console.error("Erro ao buscar funcionários:", error);
+      }
+    };
+    
+    fetchFuncionarios();
+  }, []);
   
   useEffect(() => {
     const fetchOrdens = async () => {
@@ -65,31 +101,77 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
   }, []);
   
   useEffect(() => {
-    if (!searchTerm.trim()) {
-      setFilteredOrdens(ordensDados);
-      return;
+    if (ordensDados.length === 0) return;
+    
+    let filtradas = [...ordensDados];
+    
+    // Filtro de pesquisa
+    if (searchTerm.trim()) {
+      const searchTermLower = searchTerm.toLowerCase();
+      
+      filtradas = filtradas.filter(ordem => {
+        switch (searchType) {
+          case "id":
+            return ordem.id.toLowerCase().includes(searchTermLower);
+          case "cliente":
+            return ordem.cliente.nome.toLowerCase().includes(searchTermLower);
+          case "nome":
+            return ordem.nome.toLowerCase().includes(searchTermLower);
+          case "status":
+            const statusLabel = getStatusLabel(ordem.status).toLowerCase();
+            return statusLabel.includes(searchTermLower);
+          default:
+            return false;
+        }
+      });
     }
     
-    const searchTermLower = searchTerm.toLowerCase();
+    // Filtro por tipo de serviço
+    if (tipoServicoFilter !== "todos") {
+      filtradas = filtradas.filter(ordem => 
+        ordem.servicos?.some(servico => servico.tipo === tipoServicoFilter)
+      );
+    }
     
-    const filtradas = ordensDados.filter(ordem => {
-      switch (searchType) {
-        case "id":
-          return ordem.id.toLowerCase().includes(searchTermLower);
-        case "cliente":
-          return ordem.cliente.nome.toLowerCase().includes(searchTermLower);
-        case "nome":
-          return ordem.nome.toLowerCase().includes(searchTermLower);
-        case "status":
-          const statusLabel = getStatusLabel(ordem.status).toLowerCase();
-          return statusLabel.includes(searchTermLower);
-        default:
-          return false;
-      }
-    });
+    // Filtro por responsável
+    if (responsavelFilter !== "todos") {
+      filtradas = filtradas.filter(ordem => {
+        // Verificar se o funcionário está atribuído a alguma etapa
+        for (const etapaKey in ordem.etapasAndamento) {
+          const etapa = ordem.etapasAndamento[etapaKey];
+          if (etapa.funcionarioId === responsavelFilter) {
+            return true;
+          }
+        }
+        
+        // Verificar se o funcionário está atribuído a algum serviço
+        return ordem.servicos?.some(servico => servico.funcionarioId === responsavelFilter);
+      });
+    }
+    
+    // Filtro por período
+    if (dateRange.from) {
+      const fromDate = new Date(dateRange.from);
+      fromDate.setHours(0, 0, 0, 0);
+      
+      filtradas = filtradas.filter(ordem => {
+        const dataAbertura = new Date(ordem.dataAbertura);
+        return dataAbertura >= fromDate;
+      });
+    }
+    
+    if (dateRange.to) {
+      const toDate = new Date(dateRange.to);
+      toDate.setHours(23, 59, 59, 999);
+      
+      filtradas = filtradas.filter(ordem => {
+        const dataAbertura = new Date(ordem.dataAbertura);
+        return dataAbertura <= toDate;
+      });
+    }
     
     setFilteredOrdens(filtradas);
-  }, [searchTerm, ordensDados, searchType]);
+  }, [searchTerm, searchType, ordensDados, tipoServicoFilter, responsavelFilter, dateRange]);
   
   const getStatusLabel = (status: string): string => {
     switch (status) {
@@ -114,17 +196,27 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
       });
     });
     
-    return Object.entries(contagem).map(([nome, quantidade]) => ({
-      nome,
-      quantidade,
-      percentual: 0,
-    }));
+    return Object.entries(contagem)
+      .map(([nome, quantidade]) => {
+        let label = nome;
+        switch (nome) {
+          case 'bloco': label = 'Bloco'; break;
+          case 'biela': label = 'Biela'; break;
+          case 'cabecote': label = 'Cabeçote'; break;
+          case 'virabrequim': label = 'Virabrequim'; break;
+          case 'eixo_comando': label = 'Eixo de Comando'; break;
+          case 'montagem': label = 'Montagem'; break;
+          case 'dinamometro': label = 'Dinamômetro'; break;
+          case 'lavagem': label = 'Lavagem'; break;
+        }
+        
+        return {
+          name: label,
+          total: quantidade
+        };
+      })
+      .sort((a, b) => b.total - a.total); // Ordena por quantidade decrescente
   })();
-  
-  const totalServicos = servicosPorTipo.reduce((sum, item) => sum + item.quantidade, 0);
-  servicosPorTipo.forEach(item => {
-    item.percentual = Math.round((item.quantidade / totalServicos) * 100);
-  });
   
   const ordensPorStatus = (() => {
     const contagem: Record<string, number> = {
@@ -141,21 +233,26 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
       contagem[ordem.status] = (contagem[ordem.status] || 0) + 1;
     });
     
-    return Object.entries(contagem).map(([status, quantidade]) => {
-      let nome = status;
-      
-      switch (status) {
-        case 'orcamento': nome = 'Orçamento'; break;
-        case 'aguardando_aprovacao': nome = 'Aguardando'; break;
-        case 'fabricacao': nome = 'Em Fabricação'; break;
-        case 'aguardando_peca_cliente': nome = 'Aguardando Peça (Cliente)'; break;
-        case 'aguardando_peca_interno': nome = 'Aguardando Peça (Interno)'; break;
-        case 'finalizado': nome = 'Finalizado'; break;
-        case 'entregue': nome = 'Entregue'; break;
-      }
-      
-      return { nome, quantidade };
-    });
+    return Object.entries(contagem)
+      .map(([status, quantidade]) => {
+        let nome = status;
+        
+        switch (status) {
+          case 'orcamento': nome = 'Orçamento'; break;
+          case 'aguardando_aprovacao': nome = 'Aguardando'; break;
+          case 'fabricacao': nome = 'Em Fabricação'; break;
+          case 'aguardando_peca_cliente': nome = 'Aguardando Peça (Cliente)'; break;
+          case 'aguardando_peca_interno': nome = 'Aguardando Peça (Interno)'; break;
+          case 'finalizado': nome = 'Finalizado'; break;
+          case 'entregue': nome = 'Entregue'; break;
+        }
+        
+        return {
+          name: nome,
+          total: quantidade
+        };
+      })
+      .sort((a, b) => b.total - a.total); // Ordena por quantidade decrescente
   })();
   
   const produtividadeMensal = (() => {
@@ -199,12 +296,37 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     });
   })();
   
-  const totalOrdens = ordensPorStatus.reduce((sum, item) => sum + item.quantidade, 0);
-  const totalOrdensFinalizadas = ordensPorStatus.find(item => item.nome === "Finalizado")?.quantidade || 0;
-  const totalOrdensEntregues = ordensPorStatus.find(item => item.nome === "Entregue")?.quantidade || 0;
+  const totalOrdens = ordensPorStatus.reduce((sum, item) => sum + item.total, 0);
+  const totalOrdensFinalizadas = ordensPorStatus.find(item => item.name === "Finalizado")?.total || 0;
+  const totalOrdensEntregues = ordensPorStatus.find(item => item.name === "Entregue")?.total || 0;
   const taxaFinalizacao = ((totalOrdensFinalizadas + totalOrdensEntregues) / (totalOrdens || 1)) * 100;
   
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
+  // Cores para os gráficos
+  const STATUS_COLORS = {
+    'Orçamento': '#8B5CF6',
+    'Aguardando': '#F97316',
+    'Em Fabricação': '#0EA5E9',
+    'Aguardando Peça (Cliente)': '#84cc16',
+    'Aguardando Peça (Interno)': '#10b981',
+    'Finalizado': '#14b8a6',
+    'Entregue': '#22c55e'
+  };
+  
+  const getStatusColor = (status: string) => {
+    return STATUS_COLORS[status as keyof typeof STATUS_COLORS] || '#6b7280';
+  };
+  
+  const tiposServico = [
+    { value: 'todos', label: 'Todos os tipos' },
+    { value: 'bloco', label: 'Bloco' },
+    { value: 'biela', label: 'Biela' },
+    { value: 'cabecote', label: 'Cabeçote' },
+    { value: 'virabrequim', label: 'Virabrequim' },
+    { value: 'eixo_comando', label: 'Eixo de Comando' },
+    { value: 'montagem', label: 'Montagem' },
+    { value: 'dinamometro', label: 'Dinamômetro' },
+    { value: 'lavagem', label: 'Lavagem' }
+  ];
   
   const buscarOrdem = async (id: string) => {
     setIsLoading(true);
@@ -231,6 +353,20 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  // Preparar dados para exportação CSV
+  const prepararDadosExportacao = () => {
+    return filteredOrdens.map(ordem => ({
+      id: ordem.id,
+      nome: ordem.nome,
+      cliente: ordem.cliente.nome,
+      status: getStatusLabel(ordem.status),
+      dataAbertura: format(new Date(ordem.dataAbertura), 'dd/MM/yyyy'),
+      dataPrevistaEntrega: format(new Date(ordem.dataPrevistaEntrega), 'dd/MM/yyyy'),
+      quantidadeServicos: ordem.servicos?.length || 0,
+      prioridade: ordem.prioridade || 'normal'
+    }));
   };
   
   const renderOrdemDetalhes = () => {
@@ -394,22 +530,29 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
   return (
     <Layout onLogout={onLogout}>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Relatórios de Produção</h1>
-          <p className="text-muted-foreground">
-            Acompanhe as métricas e estatísticas de produção da empresa
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Relatórios de Produção</h1>
+            <p className="text-muted-foreground">
+              Acompanhe as métricas e estatísticas de produção da empresa
+            </p>
+          </div>
+          <ExportButton 
+            data={prepararDadosExportacao()} 
+            fileName="relatorio_producao.csv"
+            buttonText="Exportar Relatório"
+          />
         </div>
         
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Pesquisar Ordem de Serviço</CardTitle>
+            <CardTitle className="text-lg">Filtros e Pesquisa</CardTitle>
             <CardDescription>
-              Pesquise por diferentes critérios para analisar detalhes da OS
+              Refine os dados do relatório usando os filtros abaixo
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col space-y-4">
+            <div className="space-y-4">
               <div className="flex flex-col sm:flex-row w-full items-center space-y-2 sm:space-y-0 sm:space-x-2">
                 <Select 
                   value={searchType} 
@@ -455,6 +598,97 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
                 </Button>
               </div>
               
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="tipoServico">Tipo de Serviço</Label>
+                  <Select 
+                    value={tipoServicoFilter} 
+                    onValueChange={setTipoServicoFilter}
+                  >
+                    <SelectTrigger id="tipoServico" className="w-full mt-1">
+                      <SelectValue placeholder="Selecione o tipo de serviço" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tiposServico.map(tipo => (
+                        <SelectItem key={tipo.value} value={tipo.value}>{tipo.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="responsavel">Responsável</Label>
+                  <Select 
+                    value={responsavelFilter} 
+                    onValueChange={setResponsavelFilter}
+                  >
+                    <SelectTrigger id="responsavel" className="w-full mt-1">
+                      <SelectValue placeholder="Selecione o funcionário" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos os funcionários</SelectItem>
+                      {funcionarios.map(funcionario => (
+                        <SelectItem key={funcionario.id} value={funcionario.id}>{funcionario.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label>Período</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal mt-1"
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        {dateRange.from ? (
+                          dateRange.to ? (
+                            <>
+                              {format(dateRange.from, "dd/MM/yyyy")} - {format(dateRange.to, "dd/MM/yyyy")}
+                            </>
+                          ) : (
+                            format(dateRange.from, "dd/MM/yyyy")
+                          )
+                        ) : (
+                          <span>Selecione um período</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        initialFocus
+                        mode="range"
+                        defaultMonth={new Date()}
+                        selected={dateRange}
+                        onSelect={setDateRange}
+                        locale={ptBR}
+                      />
+                      <div className="p-3 border-t flex justify-between">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setDateRange({from: undefined, to: undefined})}
+                        >
+                          Limpar
+                        </Button>
+                        <Button 
+                          size="sm"
+                          onClick={() => {
+                            if (document.activeElement instanceof HTMLElement) {
+                              document.activeElement.blur();
+                            }
+                          }}
+                        >
+                          Aplicar
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+              
               {searchTerm && filteredOrdens.length > 0 && (
                 <div className="max-h-60 overflow-y-auto border rounded-md">
                   {filteredOrdens.map((ordem) => (
@@ -473,7 +707,8 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
                 </div>
               )}
               
-              {searchTerm && filteredOrdens.length === 0 && (
+              {(searchTerm || tipoServicoFilter !== "todos" || responsavelFilter !== "todos" || dateRange.from) && 
+                filteredOrdens.length === 0 && (
                 <div className="text-sm text-muted-foreground p-2 border rounded-md">
                   Nenhuma ordem encontrada com os critérios informados.
                 </div>
@@ -492,7 +727,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
             <CardContent>
               <div className="flex items-center">
                 <Wrench className="h-5 w-5 mr-2 text-muted-foreground" />
-                <p className="text-2xl font-bold">{totalServicos}</p>
+                <p className="text-2xl font-bold">{filteredOrdens.reduce((acc, ordem) => acc + (ordem.servicos?.length || 0), 0)}</p>
               </div>
             </CardContent>
           </Card>
@@ -504,7 +739,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
             <CardContent>
               <div className="flex items-center">
                 <FileBarChart className="h-5 w-5 mr-2 text-muted-foreground" />
-                <p className="text-2xl font-bold">{totalOrdens}</p>
+                <p className="text-2xl font-bold">{filteredOrdens.length}</p>
               </div>
             </CardContent>
           </Card>
@@ -516,7 +751,9 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
             <CardContent>
               <div className="flex items-center">
                 <ActivitySquare className="h-5 w-5 mr-2 text-muted-foreground" />
-                <p className="text-2xl font-bold">{totalOrdensFinalizadas + totalOrdensEntregues}</p>
+                <p className="text-2xl font-bold">
+                  {filteredOrdens.filter(ordem => ordem.status === 'finalizado' || ordem.status === 'entregue').length}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -528,107 +765,74 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
             <CardContent>
               <div className="flex items-center">
                 <BarChart className="h-5 w-5 mr-2 text-muted-foreground" />
-                <p className="text-2xl font-bold">{taxaFinalizacao.toFixed(2)}%</p>
+                <p className="text-2xl font-bold">
+                  {filteredOrdens.length > 0 
+                    ? (filteredOrdens.filter(ordem => 
+                        ordem.status === 'finalizado' || ordem.status === 'entregue'
+                      ).length / filteredOrdens.length * 100).toFixed(2) 
+                    : "0.00"}%
+                </p>
               </div>
             </CardContent>
           </Card>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Serviços por Tipo</CardTitle>
-              <CardDescription>
-                Distribuição dos serviços por tipo
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={servicosPorTipo}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={true}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="quantidade"
-                    nameKey="nome"
-                  >
-                    {servicosPorTipo.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [value, "Quantidade"]} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+        <Tabs defaultValue="status" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="status">Ordens por Status</TabsTrigger>
+            <TabsTrigger value="servicos">Serviços por Tipo</TabsTrigger>
+            <TabsTrigger value="produtividade">Produtividade</TabsTrigger>
+          </TabsList>
           
-          <Card>
-            <CardHeader>
-              <CardTitle>Ordens por Status</CardTitle>
-              <CardDescription>
-                Distribuição das ordens de serviço por status
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={ordensPorStatus}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={true}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="quantidade"
-                    nameKey="nome"
-                  >
-                    {ordensPorStatus.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [value, "Quantidade"]} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          <TabsContent value="status" className="space-y-6">
+            <StatusChart 
+              title="Ordens por Status" 
+              description="Distribuição das ordens de serviço por status" 
+              data={ordensPorStatus}
+            />
+          </TabsContent>
           
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle>Produtividade Mensal</CardTitle>
-              <CardDescription>
-                Ordens concluídas e tempo médio por mês
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <RechartsBarChart
-                  data={produtividadeMensal}
-                  margin={{
-                    top: 20,
-                    right: 30,
-                    left: 20,
-                    bottom: 5,
-                  }}
-                >
-                  <XAxis dataKey="mes" />
-                  <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
-                  <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
-                  <Tooltip />
-                  <Legend />
-                  <Bar yAxisId="left" dataKey="ordens" name="Ordens Concluídas" fill="#8884d8" />
-                  <Bar yAxisId="right" dataKey="tempo_medio" name="Tempo Médio (dias)" fill="#82ca9d" />
-                </RechartsBarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
+          <TabsContent value="servicos" className="space-y-6">
+            <StatusChart 
+              title="Serviços por Tipo" 
+              description="Distribuição dos serviços por tipo" 
+              data={servicosPorTipo}
+            />
+          </TabsContent>
+          
+          <TabsContent value="produtividade" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Produtividade Mensal</CardTitle>
+                <CardDescription>
+                  Ordens concluídas e tempo médio por mês
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RechartsBarChart
+                    data={produtividadeMensal}
+                    margin={{
+                      top: 20,
+                      right: 30,
+                      left: 20,
+                      bottom: 5,
+                    }}
+                    barGap={8}
+                  >
+                    <XAxis dataKey="mes" />
+                    <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
+                    <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+                    <Tooltip />
+                    <Legend />
+                    <Bar yAxisId="left" dataKey="ordens" name="Ordens Concluídas" fill="#8B5CF6" />
+                    <Bar yAxisId="right" dataKey="tempo_medio" name="Tempo Médio (dias)" fill="#F97316" />
+                  </RechartsBarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </Layout>
   );
