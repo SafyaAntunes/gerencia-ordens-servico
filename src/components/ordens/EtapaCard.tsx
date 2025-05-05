@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, Servico, TipoServico } from "@/types/ordens";
@@ -273,6 +272,33 @@ export default function EtapaCard({
     return handleIniciarTimer();
   };
 
+  // Add a new handler for the Save Responsavel functionality
+  const handleSaveResponsavel = () => {
+    if (!funcionario?.id) {
+      toast.error("É necessário estar logado para salvar o responsável");
+      return;
+    }
+    
+    // If dialog is open for funcionario selection, use the selected one
+    const funcId = funcionarioSelecionadoId || funcionario.id;
+    const funcNome = funcionarioSelecionadoNome || funcionario.nome;
+    
+    if (onEtapaStatusChange) {
+      // Keep the current status (completed or not) but update the responsible person
+      const etapaConcluida = isEtapaConcluida();
+      
+      onEtapaStatusChange(
+        etapa,
+        etapaConcluida,
+        funcId,
+        funcNome,
+        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+      );
+      
+      toast.success(`Responsável ${funcNome} salvo com sucesso!`);
+    }
+  };
+
   return (
     <Card className="p-6 mb-4">
       <EtapaHeader 
@@ -298,6 +324,7 @@ export default function EtapaCard({
           onMarcarConcluido={handleMarcarConcluido}
           onTimerStart={handleTimerStart}
           onCustomStart={handleCustomTimerStart}
+          onSaveResponsavel={handleSaveResponsavel}
         />
       )}
       
