@@ -29,8 +29,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
   const [metricas, setMetricas] = useState({
     osTotal: 0,
     osPendentes: 0,
-    tempoOperacao: "0h 0m",
-    tempoPausa: "0h 0m",
+    osFinalizadasMes: 0,
     eficiencia: 0,
   });
   const [statusData, setStatusData] = useState<{ name: string; total: number }[]>([]);
@@ -79,11 +78,33 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       ordem => !['finalizado', 'entregue'].includes(ordem.status)
     ).length;
     
-    let tempoTotalMs = 0;
-    let tempoPausaMs = 0;
+    // Calcular OSs finalizadas no mês atual
+    const dataAtual = new Date();
+    const primeiroDiaMes = new Date(dataAtual.getFullYear(), dataAtual.getMonth(), 1);
+    const ultimoDiaMes = new Date(dataAtual.getFullYear(), dataAtual.getMonth() + 1, 0);
+    
+    const finalizadasMes = ordensData.filter(ordem => {
+      if (ordem.status === 'finalizado' || ordem.status === 'entregue') {
+        // Verificar se a OS foi finalizada neste mês
+        const dataFinalizada = ordem.etapasAndamento?.inspecao_final?.finalizado;
+        if (dataFinalizada) {
+          const dataConclusao = dataFinalizada instanceof Date ? 
+            dataFinalizada : new Date(dataFinalizada);
+          return dataConclusao >= primeiroDiaMes && dataConclusao <= ultimoDiaMes;
+        }
+      }
+      return false;
+    }).length;
+    
+    // Calcular eficiência média baseada na proporção entre tempo operacional e tempo total
+    let eficienciaTotal = 0;
+    let osComTempoRegistrado = 0;
     
     ordensData.forEach(ordem => {
-      if (ordem.tempoRegistros) {
+      if (ordem.tempoRegistros && ordem.tempoRegistros.length > 0) {
+        let tempoTotalMs = 0;
+        let tempoPausaMs = 0;
+        
         ordem.tempoRegistros.forEach(registro => {
           const inicio = registro.inicio instanceof Date ? registro.inicio : new Date(registro.inicio);
           const fim = registro.fim instanceof Date ? registro.fim : (registro.fim ? new Date(registro.fim) : new Date());
@@ -101,24 +122,23 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
             });
           }
         });
+        
+        const tempoOperacional = tempoTotalMs - tempoPausaMs;
+        if (tempoTotalMs > 0) {
+          eficienciaTotal += (tempoOperacional / tempoTotalMs) * 100;
+          osComTempoRegistrado++;
+        }
       }
     });
     
-    const tempoOperacaoHoras = Math.floor(tempoTotalMs / (1000 * 60 * 60));
-    const tempoOperacaoMinutos = Math.floor((tempoTotalMs % (1000 * 60 * 60)) / (1000 * 60));
-    
-    const tempoPausaHoras = Math.floor(tempoPausaMs / (1000 * 60 * 60));
-    const tempoPausaMinutos = Math.floor((tempoPausaMs % (1000 * 60 * 60)) / (1000 * 60));
-    
-    const tempoOperacional = tempoTotalMs - tempoPausaMs;
-    const eficiencia = tempoTotalMs > 0 ? Math.round((tempoOperacional / tempoTotalMs) * 100) : 0;
+    const eficienciaMedia = osComTempoRegistrado > 0 ? 
+      Math.round(eficienciaTotal / osComTempoRegistrado) : 0;
     
     setMetricas({
       osTotal: total,
       osPendentes: pendentes,
-      tempoOperacao: `${tempoOperacaoHoras}h ${tempoOperacaoMinutos}m`,
-      tempoPausa: `${tempoPausaHoras}h ${tempoPausaMinutos}m`,
-      eficiencia: eficiencia,
+      osFinalizadasMes: finalizadasMes,
+      eficiencia: eficienciaMedia,
     });
   };
   
@@ -248,12 +268,21 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
               />
               
               <MetricCard
-                title="Tempo de Operação"
-                value={metricas.tempoOperacao}
-                icon={<TrendingUp />}
-                description="Total de horas trabalhadas"
+                title="Finalizadas no Mês"
+                value={metricas.osFinalizadasMes}
+                icon={<CheckCircle />}
+                description="OSs concluídas este mês"
                 trend={{ value: 8, isPositive: true }}
                 className="animate-slide-in [animation-delay:200ms]"
+              />
+              
+              <MetricCard
+                title="Eficiência"
+                value={`${metricas.eficiencia}%`}
+                icon={<TrendingUp />}
+                description="Tempo produtivo vs. total"
+                trend={{ value: 3, isPositive: true }}
+                className="animate-slide-in [animation-delay:300ms]"
               />
             </div>
             

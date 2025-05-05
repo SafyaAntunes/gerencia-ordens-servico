@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -93,6 +92,22 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
           ordensData = ordensWithClienteMotores;
         }
         
+        // Tenta recuperar a ordem personalizada do localStorage
+        const savedOrder = localStorage.getItem('ordens-custom-order');
+        if (savedOrder) {
+          try {
+            const orderMap = JSON.parse(savedOrder);
+            // Ordena as ordens conforme a ordem salva
+            ordensData.sort((a, b) => {
+              const orderA = orderMap[a.id] !== undefined ? orderMap[a.id] : 999999;
+              const orderB = orderMap[b.id] !== undefined ? orderMap[b.id] : 999999;
+              return orderA - orderB;
+            });
+          } catch (error) {
+            console.error("Erro ao aplicar ordem personalizada:", error);
+          }
+        }
+        
         setOrdens(ordensData);
       } catch (error) {
         console.error("Error fetching orders:", error);
@@ -110,6 +125,13 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
     const [draggedItem] = reorderedOrdens.splice(dragIndex, 1);
     reorderedOrdens.splice(dropIndex, 0, draggedItem);
     setOrdens(reorderedOrdens);
+    
+    // Salva a nova ordem no localStorage
+    const orderMap: Record<string, number> = {};
+    reorderedOrdens.forEach((ordem, index) => {
+      orderMap[ordem.id] = index;
+    });
+    localStorage.setItem('ordens-custom-order', JSON.stringify(orderMap));
   };
 
   const filteredOrdens = ordens.filter((ordem) => {

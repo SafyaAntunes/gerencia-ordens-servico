@@ -2,7 +2,6 @@
 import { EtapaOS, TipoServico } from "@/types/ordens";
 import EtapaTimerWrapper from "./EtapaTimerWrapper";
 import EtapaConcluirButton from "./EtapaConcluirButton";
-import { User } from "lucide-react";
 
 interface EtapaTimerSectionProps {
   ordemId: string;

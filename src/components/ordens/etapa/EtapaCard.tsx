@@ -73,8 +73,13 @@ export default function EtapaCard({
   } = useEtapaCard(etapa, servicoTipo);
   
   // Estado para armazenar o ID e nome do funcionário selecionado
-  const [funcionarioSelecionadoId, setFuncionarioSelecionadoId] = useState<string>(etapaInfo?.funcionarioId || funcionarioId || "");
-  const [funcionarioSelecionadoNome, setFuncionarioSelecionadoNome] = useState<string>(etapaInfo?.funcionarioNome || funcionarioNome || "");
+  // Usando o funcionário já atribuído como valor inicial, se disponível
+  const [funcionarioSelecionadoId, setFuncionarioSelecionadoId] = useState<string>(
+    etapaInfo?.funcionarioId || funcionarioId || funcionario?.id || ""
+  );
+  const [funcionarioSelecionadoNome, setFuncionarioSelecionadoNome] = useState<string>(
+    etapaInfo?.funcionarioNome || funcionarioNome || funcionario?.nome || ""
+  );
   
   // Fetch funcionarios from database
   useEffect(() => {
@@ -88,6 +93,12 @@ export default function EtapaCard({
           if (etapaInfo?.funcionarioId) {
             setFuncionarioSelecionadoId(etapaInfo.funcionarioId);
             setFuncionarioSelecionadoNome(etapaInfo.funcionarioNome || "");
+            
+            // Verificar se o funcionário existe na lista
+            const funcionarioExiste = funcionariosData.some(f => f.id === etapaInfo.funcionarioId);
+            if (!funcionarioExiste) {
+              console.warn(`Funcionário com ID ${etapaInfo.funcionarioId} não encontrado na lista.`);
+            }
           } 
           // Se não, usar o funcionário atual se disponível
           else if (funcionario?.id && !funcionarioSelecionadoId) {
@@ -103,6 +114,14 @@ export default function EtapaCard({
     
     carregarFuncionarios();
   }, [funcionario, etapaInfo, funcionarioId]);
+
+  // Atualizar o estado quando etapaInfo mudar
+  useEffect(() => {
+    if (etapaInfo?.funcionarioId) {
+      setFuncionarioSelecionadoId(etapaInfo.funcionarioId);
+      setFuncionarioSelecionadoNome(etapaInfo.funcionarioNome || "");
+    }
+  }, [etapaInfo]);
 
   const etapaComCronometro = ['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa);
   
