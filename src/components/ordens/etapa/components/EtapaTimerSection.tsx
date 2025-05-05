@@ -1,12 +1,11 @@
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EtapaOS, TipoServico } from "@/types/ordens";
 import EtapaTimerWrapper from "./EtapaTimerWrapper";
 import EtapaConcluirButton from "./EtapaConcluirButton";
 import { useFuncionarioSelect } from "../hooks/useFuncionarioSelect";
 import { useAuth } from "@/hooks/useAuth";
-import { FormLabel } from "@/components/ui/form";
 import { User } from "lucide-react";
 
 interface EtapaTimerSectionProps {
@@ -57,10 +56,10 @@ export default function EtapaTimerSection({
     <div className="p-4 border rounded-md mb-4">
       {!isEtapaConcluida && (
         <div className="mb-3">
-          <FormLabel className="flex items-center text-sm font-medium mb-1">
+          <div className="flex items-center text-sm font-medium mb-1">
             <User className="h-4 w-4 mr-1" />
             Responsável
-          </FormLabel>
+          </div>
           <Select 
             value={funcionarioSelecionadoId} 
             onValueChange={handleFuncionarioChange}

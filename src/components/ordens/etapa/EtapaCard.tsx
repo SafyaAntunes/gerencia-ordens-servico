@@ -16,7 +16,6 @@ import {
 import { useSubatividadesVerifier } from "./hooks/useSubatividadesVerifier";
 import { useEtapaStatusHandlers } from "./hooks/useEtapaStatusHandlers";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FormLabel } from "@/components/ui/form";
 import { User } from "lucide-react";
 
 interface EtapaCardProps {
@@ -187,10 +186,10 @@ export default function EtapaCard({
       
       {!isEtapaConcluida(etapaInfo) && (
         <div className="mb-4">
-          <FormLabel className="flex items-center text-sm font-medium mb-1">
+          <div className="flex items-center text-sm font-medium mb-1">
             <User className="h-4 w-4 mr-1" />
             Responsável
-          </FormLabel>
+          </div>
           <Select 
             value={funcionarioSelecionadoId} 
             onValueChange={handleFuncionarioChange}
