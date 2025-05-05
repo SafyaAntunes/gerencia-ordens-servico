@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
@@ -202,7 +201,7 @@ export default function EtapaCard({
     return true; // Permite que o timer inicie automaticamente
   };
   
-  // Função para salvar o responsável
+  // Função para salvar o responsável - FIXED to work during execution
   const handleSaveResponsavel = () => {
     if (!funcionarioSelecionadoId) {
       toast.error("É necessário selecionar um responsável para salvar");
@@ -212,15 +211,18 @@ export default function EtapaCard({
     if (onEtapaStatusChange) {
       // Manter o status atual (concluído ou não) mas atualizar o funcionário
       const etapaConcluida = isEtapaConcluida(etapaInfo);
+      const isIniciada = etapaInfo?.iniciado ? true : false;
       
       console.log("Salvando responsável:", {
         etapa,
         concluida: etapaConcluida,
+        iniciada: isIniciada,
         funcionarioId: funcionarioSelecionadoId,
         funcionarioNome: funcionarioSelecionadoNome,
         servicoTipo: (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
       });
       
+      // IMPORTANT: Keep the current iniciado state from etapaInfo instead of setting it to false
       onEtapaStatusChange(
         etapa,
         etapaConcluida,

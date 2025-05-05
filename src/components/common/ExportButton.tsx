@@ -34,6 +34,7 @@ const ExportButton: React.FC<ExportButtonProps> = ({
       className={className}
       onClick={handleExport}
       disabled={disabled || !data}
+      title="Exportar para Excel (CSV)"
     >
       <FileDown className="mr-2" />
       {buttonText}

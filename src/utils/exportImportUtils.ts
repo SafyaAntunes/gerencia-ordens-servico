@@ -76,28 +76,64 @@ export const convertToCSV = (objArray: any[]): string => {
  * Exporta dados para arquivo CSV
  */
 export const exportToCsv = (data: any, fileName: string) => {
+  if (!data) {
+    toast.error("Não há dados para exportar");
+    return;
+  }
+
   try {
-    // Converte para array se não for
-    const dataArray = Array.isArray(data) ? data : [data];
+    // Format data for CSV
+    let csv = '';
     
-    // Converter para CSV
-    const csvContent = convertToCSV(dataArray);
+    // Add headers (keys from the first item)
+    const headers = Object.keys(data[0]);
+    csv += headers.join(';') + '\r\n'; // Use semicolons as delimiters for Excel compatibility
     
-    // Criar blob e baixar
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    // Add rows
+    data.forEach((item: any) => {
+      const row = headers.map(header => {
+        // Handle different types of values
+        const value = item[header];
+        
+        if (value === null || value === undefined) {
+          return '';
+        }
+        
+        if (typeof value === 'object') {
+          if (value instanceof Date) {
+            return value.toLocaleDateString('pt-BR');
+          }
+          // Convert objects to string but escape quotes
+          return JSON.stringify(value).replace(/"/g, '""');
+        }
+        
+        // Convert strings that contain semicolons or quotes
+        if (typeof value === 'string') {
+          if (value.includes(';') || value.includes('"')) {
+            return `"${value.replace(/"/g, '""')}"`;
+          }
+        }
+        
+        return value;
+      });
+      
+      csv += row.join(';') + '\r\n'; // Use semicolons as delimiters for Excel compatibility
+    });
     
-    link.setAttribute('href', url);
-    link.setAttribute('download', fileName);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Add BOM for Excel to properly recognize UTF-8
+    const BOM = "\uFEFF";
+    const csvWithBOM = BOM + csv;
     
-    console.log(`Arquivo exportado: ${fileName}`);
+    // Create blob with correct encoding for Excel compatibility
+    const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8;' });
+    
+    // Download file using FileSaver.js
+    saveAs(blob, `${fileName}.csv`);
+    
+    toast.success("Arquivo exportado com sucesso!");
   } catch (error) {
-    console.error('Erro ao exportar arquivo CSV:', error);
-    throw error;
+    console.error("Erro ao exportar para CSV:", error);
+    toast.error("Erro ao exportar dados");
   }
 };
 
