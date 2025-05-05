@@ -3,7 +3,7 @@ import { TipoServico } from "@/types/ordens";
 import { formatTime } from "@/utils/timerUtils";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Clock, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
+import { Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { ServicoStatus } from "./hooks/types/servicoTrackerTypes";
 import { Button } from "@/components/ui/button";
 
@@ -20,7 +20,7 @@ interface ServicoHeaderProps {
   temPermissao: boolean;
   isOpen: boolean;
   onToggleOpen: () => void;
-  onReiniciarServico: (e: React.MouseEvent) => void;
+  onReiniciarServico: (e: React.MouseEvent) => void; // Mantido para compatibilidade
 }
 
 export default function ServicoHeader({
@@ -35,8 +35,7 @@ export default function ServicoHeader({
   concluido,
   temPermissao,
   isOpen,
-  onToggleOpen,
-  onReiniciarServico
+  onToggleOpen
 }: ServicoHeaderProps) {
   // Helper function to get the title based on tipo
   const getTipoTitle = (tipo: TipoServico): string => {
@@ -103,18 +102,7 @@ export default function ServicoHeader({
       {concluido && funcionarioNome && (
         <div className="text-sm text-muted-foreground">
           Concluído por: {funcionarioNome}
-          
-          {temPermissao && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="ml-2 text-blue-500 hover:text-blue-700 p-0 h-6"
-              onClick={onReiniciarServico}
-            >
-              <RefreshCw className="h-3 w-3 mr-1" />
-              Reiniciar
-            </Button>
-          )}
+          {/* Botão de reiniciar removido */}
         </div>
       )}
       

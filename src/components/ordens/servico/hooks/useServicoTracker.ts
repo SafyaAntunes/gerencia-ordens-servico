@@ -21,6 +21,7 @@ export function useServicoTracker({
   const { funcionario, canEditOrder } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
+  const [responsavelSelecionadoId, setResponsavelSelecionadoId] = useState<string>(funcionario?.id || "");
   
   const timerRef = useRef<any>(null);
   
@@ -93,6 +94,11 @@ export function useServicoTracker({
   };
   
   const handleStartClick = () => {
+    // Usar o ID do funcionário selecionado do dropdown
+    if (!responsavelSelecionadoId) {
+      toast.error("Selecione um responsável antes de iniciar o serviço");
+      return;
+    }
     handleStart();
   };
   
@@ -107,14 +113,18 @@ export function useServicoTracker({
     }
     
     if (onServicoStatusChange) {
-      onServicoStatusChange(true, funcionario?.id, funcionario?.nome);
+      // Usar o responsável selecionado (ou o funcionario atual como fallback)
+      const selectedFuncionarioId = responsavelSelecionadoId || funcionario?.id;
+      const selectedFuncionario = funcionariosOptions.find(f => f.id === selectedFuncionarioId);
+      const selectedFuncionarioNome = selectedFuncionario?.nome || funcionario?.nome;
+      
+      onServicoStatusChange(true, selectedFuncionarioId, selectedFuncionarioNome);
     }
   };
   
   const handleReiniciarServico = () => {
-    if (onServicoStatusChange) {
-      onServicoStatusChange(false);
-    }
+    // Desativado conforme solicitado
+    toast.info("A funcionalidade de reiniciar foi desativada");
   };
   
   return {

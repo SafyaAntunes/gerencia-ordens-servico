@@ -91,7 +91,7 @@ export default function ServicoTracker({
               concluido={servico.concluido}
               temPermissao={temPermissao}
               onToggleOpen={() => setIsOpen(!isOpen)}
-              onReiniciarServico={handleReiniciarServico}
+              onReiniciarServico={() => {}} // Removendo funcionalidade de reiniciar
               isOpen={isOpen}
             />
           </CardContent>

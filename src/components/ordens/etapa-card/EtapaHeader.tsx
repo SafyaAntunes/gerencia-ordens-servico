@@ -7,17 +7,15 @@ interface EtapaHeaderProps {
   status: "concluido" | "em_andamento" | "nao_iniciado";
   isEtapaConcluida: boolean;
   funcionarioNome?: string;
-  podeReiniciar: boolean;
-  onReiniciar: () => void;
+  podeReiniciar: boolean; // Mantido para compatibilidade
+  onReiniciar: () => void; // Mantido para compatibilidade
 }
 
 export default function EtapaHeader({
   etapaNome,
   status,
   isEtapaConcluida,
-  funcionarioNome,
-  podeReiniciar,
-  onReiniciar
+  funcionarioNome
 }: EtapaHeaderProps) {
   return (
     <>
@@ -42,7 +40,7 @@ export default function EtapaHeader({
         <div className="mb-4 flex items-center text-sm text-muted-foreground">
           <User className="h-4 w-4 mr-1" />
           <span>Concluído por: {funcionarioNome}</span>
-          {/* Removed restart button */}
+          {/* Botão de reiniciar removido */}
         </div>
       )}
     </>
