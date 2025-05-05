@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { db, storage } from "@/lib/firebase";
 import { doc, updateDoc } from "firebase/firestore";
@@ -36,7 +37,7 @@ export const useOrdemUpdate = (
         return imageUrls;
       };
       
-      // Preserve existing subactivities
+      // Preserve existing subactivities and worker information
       const preserveExistingSubactivities = (currentServicos = [], newServicosTipos = []) => {
         const servicosMap = currentServicos.reduce((acc, servico) => {
           acc[servico.tipo] = servico;
@@ -80,6 +81,12 @@ export const useOrdemUpdate = (
         });
       };
       
+      // Preservar informações das etapas, incluindo responsáveis
+      const etapasAtualizado = { ...ordem.etapasAndamento };
+      
+      // Garantir que não perdemos informações de responsáveis ao atualizar a ordem
+      console.log("Preservando etapas e responsáveis:", etapasAtualizado);
+      
       const updatedOrder: Partial<OrdemServico> = {
         nome: values.nome,
         cliente: {
@@ -90,7 +97,8 @@ export const useOrdemUpdate = (
         dataPrevistaEntrega: values.dataPrevistaEntrega,
         prioridade: values.prioridade,
         motorId: values.motorId,
-        servicos: preserveExistingSubactivities(ordem.servicos, values.servicosTipos)
+        servicos: preserveExistingSubactivities(ordem.servicos, values.servicosTipos),
+        etapasAndamento: etapasAtualizado // Preservar informações das etapas
       };
       
       if (values.fotosEntrada && values.fotosEntrada.length > 0) {
@@ -112,6 +120,8 @@ export const useOrdemUpdate = (
         );
         updatedOrder.fotosSaida = newSaidaUrls;
       }
+      
+      console.log("Atualizando ordem com dados:", updatedOrder);
       
       const orderRef = doc(db, "ordens_servico", id);
       await updateDoc(orderRef, updatedOrder);
@@ -136,6 +146,7 @@ export const useOrdemUpdate = (
   };
 
   const handleOrdemUpdate = (ordemAtualizada: OrdemServico) => {
+    console.log("Recebendo atualização de ordem:", ordemAtualizada);
     setOrdem(ordemAtualizada);
   };
 

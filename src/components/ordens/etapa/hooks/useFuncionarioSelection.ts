@@ -36,45 +36,61 @@ export function useFuncionarioSelection({
         if (funcionariosData) {
           setFuncionariosOptions(funcionariosData);
           
+          // Variáveis temporárias para rastrear se encontramos ID e nome
+          let foundId = "";
+          let foundNome = "";
+          
           // Atualizar a ordem de prioridade para usar etapaInfo primeiro
           if (etapaInfo?.funcionarioId) {
-            setFuncionarioSelecionadoId(etapaInfo.funcionarioId);
+            foundId = etapaInfo.funcionarioId;
+            
             if (etapaInfo.funcionarioNome) {
-              setFuncionarioSelecionadoNome(etapaInfo.funcionarioNome);
+              foundNome = etapaInfo.funcionarioNome;
             } else {
               // Buscar nome do funcionário se não estiver definido
-              const funcionarioEncontrado = funcionariosData.find(f => f.id === etapaInfo.funcionarioId);
+              const funcionarioEncontrado = funcionariosData.find(f => f.id === foundId);
               if (funcionarioEncontrado) {
-                setFuncionarioSelecionadoNome(funcionarioEncontrado.nome);
+                foundNome = funcionarioEncontrado.nome;
               }
             }
           } 
           // Se não tiver etapaInfo, usar o funcionarioId do parâmetro
           else if (initialFuncionarioId) {
-            setFuncionarioSelecionadoId(initialFuncionarioId);
+            foundId = initialFuncionarioId;
+            
             if (initialFuncionarioNome) {
-              setFuncionarioSelecionadoNome(initialFuncionarioNome);
+              foundNome = initialFuncionarioNome;
             } else {
               // Buscar nome do funcionário se não estiver definido
-              const funcionarioEncontrado = funcionariosData.find(f => f.id === initialFuncionarioId);
+              const funcionarioEncontrado = funcionariosData.find(f => f.id === foundId);
               if (funcionarioEncontrado) {
-                setFuncionarioSelecionadoNome(funcionarioEncontrado.nome);
+                foundNome = funcionarioEncontrado.nome;
               }
             }
           }
           // Em último caso, usar o funcionário atual
           else if (funcionario?.id) {
-            setFuncionarioSelecionadoId(funcionario.id);
-            setFuncionarioSelecionadoNome(funcionario.nome || "");
+            foundId = funcionario.id;
+            foundNome = funcionario.nome || "";
           }
           
-          // Verificar se o funcionário salvo existe na lista e logar aviso
-          if (etapaInfo?.funcionarioId) {
-            const funcionarioExiste = funcionariosData.some(f => f.id === etapaInfo.funcionarioId);
-            if (!funcionarioExiste) {
-              console.warn(`Funcionário com ID ${etapaInfo.funcionarioId} não encontrado na lista.`);
+          // Garantir que o funcionário exista na lista
+          const funcionarioExiste = foundId ? funcionariosData.some(f => f.id === foundId) : false;
+          
+          if (foundId && !funcionarioExiste) {
+            console.warn(`Funcionário com ID ${foundId} não encontrado na lista. Usando atual.`);
+            // Usar o funcionário atual como fallback
+            if (funcionario?.id) {
+              foundId = funcionario.id;
+              foundNome = funcionario.nome || "";
             }
           }
+          
+          console.log("Selecionando funcionário:", { id: foundId, nome: foundNome });
+          
+          // Definir o funcionário selecionado
+          setFuncionarioSelecionadoId(foundId);
+          setFuncionarioSelecionadoNome(foundNome);
         }
       } catch (error) {
         console.error("Erro ao carregar funcionários:", error);
@@ -90,14 +106,27 @@ export function useFuncionarioSelection({
     if (etapaInfo?.funcionarioId) {
       console.log("Atualizando funcionário selecionado a partir de etapaInfo:", etapaInfo.funcionarioId, etapaInfo.funcionarioNome);
       setFuncionarioSelecionadoId(etapaInfo.funcionarioId);
-      setFuncionarioSelecionadoNome(etapaInfo.funcionarioNome || "");
+      
+      if (etapaInfo.funcionarioNome) {
+        setFuncionarioSelecionadoNome(etapaInfo.funcionarioNome);
+      } else {
+        // Buscar nome do funcionário se não estiver definido
+        const funcionarioEncontrado = funcionariosOptions.find(f => f.id === etapaInfo.funcionarioId);
+        if (funcionarioEncontrado) {
+          setFuncionarioSelecionadoNome(funcionarioEncontrado.nome);
+        }
+      }
     }
-  }, [etapaInfo?.funcionarioId, etapaInfo?.funcionarioNome]);
+  }, [etapaInfo?.funcionarioId, etapaInfo?.funcionarioNome, funcionariosOptions]);
   
   const handleFuncionarioChange = (value: string) => {
     setFuncionarioSelecionadoId(value);
     const funcionarioSelecionado = funcionariosOptions.find(f => f.id === value);
-    setFuncionarioSelecionadoNome(funcionarioSelecionado?.nome || "");
+    if (funcionarioSelecionado) {
+      setFuncionarioSelecionadoNome(funcionarioSelecionado.nome);
+    } else {
+      console.warn("Funcionário não encontrado na lista para o ID:", value);
+    }
   };
   
   return {

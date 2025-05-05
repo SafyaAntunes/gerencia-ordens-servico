@@ -1,5 +1,7 @@
+
 import { toast } from "sonner";
 import { EtapaOS, TipoServico } from "@/types/ordens";
+import { useState, useEffect } from "react";
 
 interface UseEtapaResponsavelProps {
   etapa: EtapaOS;
@@ -20,6 +22,17 @@ export function useEtapaResponsavel({
   onEtapaStatusChange,
   etapaInfo
 }: UseEtapaResponsavelProps) {
+  // Estado para rastrear a última seleção de funcionário, garantindo persistência
+  const [lastSavedFuncionarioId, setLastSavedFuncionarioId] = useState<string>("");
+  const [lastSavedFuncionarioNome, setLastSavedFuncionarioNome] = useState<string>("");
+  
+  // Inicializa os valores salvos com os valores atuais de etapaInfo
+  useEffect(() => {
+    if (etapaInfo?.funcionarioId) {
+      setLastSavedFuncionarioId(etapaInfo.funcionarioId);
+      setLastSavedFuncionarioNome(etapaInfo.funcionarioNome || "");
+    }
+  }, [etapaInfo]);
   
   // Função para salvar o responsável - works during execution
   const handleSaveResponsavel = () => {
@@ -31,18 +44,20 @@ export function useEtapaResponsavel({
     if (onEtapaStatusChange) {
       // Manter o status atual (concluído ou não) mas atualizar o funcionário
       const etapaConcluida = isEtapaConcluida(etapaInfo);
-      const isIniciada = etapaInfo?.iniciado ? true : false;
       
       console.log("Salvando responsável:", {
         etapa,
         concluida: etapaConcluida,
-        iniciada: isIniciada,
         funcionarioId: funcionarioSelecionadoId,
         funcionarioNome: funcionarioSelecionadoNome,
         servicoTipo: (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
       });
       
-      // IMPORTANT: Keep the current iniciado state from etapaInfo instead of setting it to false
+      // Atualizar os valores salvos
+      setLastSavedFuncionarioId(funcionarioSelecionadoId);
+      setLastSavedFuncionarioNome(funcionarioSelecionadoNome);
+      
+      // IMPORTANTE: Preservar o estado iniciado da etapaInfo, não resetar
       onEtapaStatusChange(
         etapa,
         etapaConcluida,
@@ -61,7 +76,11 @@ export function useEtapaResponsavel({
   const handleCustomTimerStart = (): boolean => {
     console.log("handleCustomTimerStart chamado em useEtapaResponsavel");
     
-    if (!funcionarioSelecionadoId) {
+    // Use o funcionário selecionado ou o último salvo
+    const funcionarioId = funcionarioSelecionadoId || lastSavedFuncionarioId;
+    const funcionarioNome = funcionarioSelecionadoNome || lastSavedFuncionarioNome;
+    
+    if (!funcionarioId) {
       toast.error("É necessário selecionar um responsável antes de iniciar a etapa");
       return false;
     }
@@ -71,8 +90,8 @@ export function useEtapaResponsavel({
       onEtapaStatusChange(
         etapa,
         false,
-        funcionarioSelecionadoId,
-        funcionarioSelecionadoNome,
+        funcionarioId,
+        funcionarioNome,
         (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
       );
     }
@@ -81,20 +100,24 @@ export function useEtapaResponsavel({
   };
   
   const handleMarcarConcluidoClick = () => {
-    if (!funcionarioSelecionadoId) {
+    // Use o funcionário selecionado ou o último salvo
+    const funcionarioId = funcionarioSelecionadoId || lastSavedFuncionarioId;
+    const funcionarioNome = funcionarioSelecionadoNome || lastSavedFuncionarioNome;
+    
+    if (!funcionarioId) {
       toast.error("É necessário selecionar um responsável antes de concluir a etapa");
       return;
     }
     
     if (onEtapaStatusChange) {
       // Usa o ID e nome do funcionário selecionado
-      console.log("Concluindo etapa com funcionário:", funcionarioSelecionadoNome);
+      console.log("Concluindo etapa com funcionário:", funcionarioNome);
       
       onEtapaStatusChange(
         etapa, 
         true, 
-        funcionarioSelecionadoId, 
-        funcionarioSelecionadoNome,
+        funcionarioId, 
+        funcionarioNome,
         (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
       );
     }
@@ -103,6 +126,8 @@ export function useEtapaResponsavel({
   return {
     handleSaveResponsavel,
     handleCustomTimerStart,
-    handleMarcarConcluidoClick
+    handleMarcarConcluidoClick,
+    lastSavedFuncionarioId,
+    lastSavedFuncionarioNome
   };
 }

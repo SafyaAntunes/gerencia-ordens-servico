@@ -70,6 +70,9 @@ export default function EtapaCard({
     handleMarcarConcluido
   } = useEtapaCard(etapa, servicoTipo);
   
+  // Carregando funcionário selecionado com log para debug
+  console.log("EtapaCard - Carregando com etapaInfo:", etapaInfo);
+  
   // Estado para armazenar o ID e nome do funcionário selecionado utilizando o hook personalizado
   const {
     funcionariosOptions,
@@ -82,11 +85,21 @@ export default function EtapaCard({
     funcionarioNome
   });
   
+  // Log para debug dos valores atuais
+  console.log("Funcionário selecionado:", {
+    id: funcionarioSelecionadoId,
+    nome: funcionarioSelecionadoNome,
+    etapaInfoId: etapaInfo?.funcionarioId,
+    etapaInfoNome: etapaInfo?.funcionarioNome
+  });
+  
   // Gerenciamento do responsável com hook personalizado
   const {
     handleSaveResponsavel,
     handleCustomTimerStart,
-    handleMarcarConcluidoClick
+    handleMarcarConcluidoClick,
+    lastSavedFuncionarioId,
+    lastSavedFuncionarioNome
   } = useEtapaResponsavel({
     etapa,
     servicoTipo,
@@ -97,6 +110,7 @@ export default function EtapaCard({
     etapaInfo
   });
   
+  // Atualizar estado ativo do timer baseado no etapaInfo
   useEffect(() => {
     if (etapaInfo?.iniciado && !etapaInfo?.concluido) {
       setIsAtivo(true);
@@ -113,18 +127,29 @@ export default function EtapaCard({
     }
     
     if (onEtapaStatusChange) {
-      // Usa o ID e nome do funcionário selecionado
+      // Usa o ID e nome do funcionário selecionado ou o último salvo
+      const useId = funcionarioSelecionadoId || lastSavedFuncionarioId || funcionario?.id;
+      const useNome = funcionarioSelecionadoNome || lastSavedFuncionarioNome || funcionario?.nome;
+      
       onEtapaStatusChange(
         etapa, 
         true, 
-        funcionarioSelecionadoId || funcionario?.id, 
-        funcionarioSelecionadoNome || funcionario?.nome,
+        useId, 
+        useNome,
         (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
       );
     }
   };
 
   const etapaComCronometro = ['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa);
+  
+  // Função para exibir o nome do responsável atual (selecionado, etapaInfo ou último salvo)
+  const getResponsavelDisplayName = () => {
+    if (funcionarioSelecionadoNome) return funcionarioSelecionadoNome;
+    if (etapaInfo?.funcionarioNome) return etapaInfo.funcionarioNome;
+    if (lastSavedFuncionarioNome) return lastSavedFuncionarioNome;
+    return "Não definido";
+  };
 
   return (
     <Card className="p-6 mb-4">
@@ -132,7 +157,7 @@ export default function EtapaCard({
         etapaNome={etapaNome}
         status={getEtapaStatus(etapaInfo)}
         isEtapaConcluida={isEtapaConcluida(etapaInfo)}
-        funcionarioNome={funcionarioSelecionadoNome || etapaInfo?.funcionarioNome}
+        funcionarioNome={getResponsavelDisplayName()}
         podeReiniciar={false}
         onReiniciar={() => {}}
       />
@@ -157,8 +182,8 @@ export default function EtapaCard({
       {etapaComCronometro && (
         <EtapaTimerSection 
           ordemId={ordemId}
-          funcionarioId={funcionarioSelecionadoId || funcionarioId}
-          funcionarioNome={funcionarioSelecionadoNome || funcionarioNome}
+          funcionarioId={funcionarioSelecionadoId || lastSavedFuncionarioId || funcionarioId}
+          funcionarioNome={funcionarioSelecionadoNome || lastSavedFuncionarioNome || funcionarioNome}
           etapa={etapa}
           tipoServico={servicoTipo}
           isEtapaConcluida={isEtapaConcluida(etapaInfo)}
@@ -173,8 +198,8 @@ export default function EtapaCard({
       <EtapaServicosLista
         servicos={servicos}
         ordemId={ordemId}
-        funcionarioId={funcionarioSelecionadoId || funcionarioId}
-        funcionarioNome={funcionarioSelecionadoNome || funcionarioNome}
+        funcionarioId={funcionarioSelecionadoId || lastSavedFuncionarioId || funcionarioId}
+        funcionarioNome={funcionarioSelecionadoNome || lastSavedFuncionarioNome || funcionarioNome}
         etapa={etapa}
         onSubatividadeToggle={onSubatividadeToggle}
         onServicoStatusChange={onServicoStatusChange}
