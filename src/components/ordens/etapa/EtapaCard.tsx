@@ -73,10 +73,10 @@ export default function EtapaCard({
   } = useEtapaCard(etapa, servicoTipo);
   
   // Estado para armazenar o ID e nome do funcionário selecionado
-  const [funcionarioSelecionadoId, setFuncionarioSelecionadoId] = useState<string>("");
-  const [funcionarioSelecionadoNome, setFuncionarioSelecionadoNome] = useState<string>("");
+  const [funcionarioSelecionadoId, setFuncionarioSelecionadoId] = useState<string>(etapaInfo?.funcionarioId || funcionarioId || "");
+  const [funcionarioSelecionadoNome, setFuncionarioSelecionadoNome] = useState<string>(etapaInfo?.funcionarioNome || funcionarioNome || "");
   
-  // Fetch real funcionarios from database
+  // Fetch funcionarios from database
   useEffect(() => {
     const carregarFuncionarios = async () => {
       try {
@@ -84,8 +84,13 @@ export default function EtapaCard({
         if (funcionariosData) {
           setFuncionariosOptions(funcionariosData);
           
-          // Inicializa com o funcionário atual
-          if (funcionario?.id) {
+          // Se já temos um funcionário associado com esta etapa, priorizar este
+          if (etapaInfo?.funcionarioId) {
+            setFuncionarioSelecionadoId(etapaInfo.funcionarioId);
+            setFuncionarioSelecionadoNome(etapaInfo.funcionarioNome || "");
+          } 
+          // Se não, usar o funcionário atual se disponível
+          else if (funcionario?.id && !funcionarioSelecionadoId) {
             setFuncionarioSelecionadoId(funcionario.id);
             setFuncionarioSelecionadoNome(funcionario.nome || "");
           }
@@ -97,7 +102,7 @@ export default function EtapaCard({
     };
     
     carregarFuncionarios();
-  }, [funcionario]);
+  }, [funcionario, etapaInfo, funcionarioId]);
 
   const etapaComCronometro = ['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa);
   
@@ -132,6 +137,17 @@ export default function EtapaCard({
     setFuncionarioSelecionadoId(value);
     const funcionarioSelecionado = funcionariosOptions.find(f => f.id === value);
     setFuncionarioSelecionadoNome(funcionarioSelecionado?.nome || "");
+    
+    // Se a etapa já foi iniciada, atualizar o funcionário responsável
+    if (etapaInfo?.iniciado && onEtapaStatusChange) {
+      onEtapaStatusChange(
+        etapa,
+        !!etapaInfo?.concluido,
+        value,
+        funcionarioSelecionado?.nome || "",
+        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+      );
+    }
   };
   
   const handleMarcarConcluidoClick = () => {
@@ -161,6 +177,17 @@ export default function EtapaCard({
     if (!funcionarioSelecionadoId) {
       toast.error("É necessário selecionar um responsável antes de iniciar a etapa");
       return false;
+    }
+    
+    // Se estamos iniciando a etapa, vamos atualizar o status com o funcionário responsável
+    if (onEtapaStatusChange && !etapaInfo?.iniciado) {
+      onEtapaStatusChange(
+        etapa,
+        false,
+        funcionarioSelecionadoId,
+        funcionarioSelecionadoNome,
+        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+      );
     }
     
     return true; // Permite que o timer inicie automaticamente
