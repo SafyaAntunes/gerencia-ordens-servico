@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
@@ -73,13 +74,9 @@ export default function EtapaCard({
   } = useEtapaCard(etapa, servicoTipo);
   
   // Estado para armazenar o ID e nome do funcionário selecionado
-  // Usando o funcionário já atribuído como valor inicial, se disponível
-  const [funcionarioSelecionadoId, setFuncionarioSelecionadoId] = useState<string>(
-    etapaInfo?.funcionarioId || funcionarioId || funcionario?.id || ""
-  );
-  const [funcionarioSelecionadoNome, setFuncionarioSelecionadoNome] = useState<string>(
-    etapaInfo?.funcionarioNome || funcionarioNome || funcionario?.nome || ""
-  );
+  // IMPORTANTE: Priorização corrigida para usar o funcionário da etapa no carregamento
+  const [funcionarioSelecionadoId, setFuncionarioSelecionadoId] = useState<string>("");
+  const [funcionarioSelecionadoNome, setFuncionarioSelecionadoNome] = useState<string>("");
   
   // Fetch funcionarios from database
   useEffect(() => {
@@ -89,21 +86,44 @@ export default function EtapaCard({
         if (funcionariosData) {
           setFuncionariosOptions(funcionariosData);
           
-          // Se já temos um funcionário associado com esta etapa, priorizar este
+          // Atualizar a ordem de prioridade para usar etapaInfo primeiro
           if (etapaInfo?.funcionarioId) {
             setFuncionarioSelecionadoId(etapaInfo.funcionarioId);
-            setFuncionarioSelecionadoNome(etapaInfo.funcionarioNome || "");
-            
-            // Verificar se o funcionário existe na lista
+            if (etapaInfo.funcionarioNome) {
+              setFuncionarioSelecionadoNome(etapaInfo.funcionarioNome);
+            } else {
+              // Buscar nome do funcionário se não estiver definido
+              const funcionarioEncontrado = funcionariosData.find(f => f.id === etapaInfo.funcionarioId);
+              if (funcionarioEncontrado) {
+                setFuncionarioSelecionadoNome(funcionarioEncontrado.nome);
+              }
+            }
+          } 
+          // Se não tiver etapaInfo, usar o funcionarioId do parâmetro
+          else if (funcionarioId) {
+            setFuncionarioSelecionadoId(funcionarioId);
+            if (funcionarioNome) {
+              setFuncionarioSelecionadoNome(funcionarioNome);
+            } else {
+              // Buscar nome do funcionário se não estiver definido
+              const funcionarioEncontrado = funcionariosData.find(f => f.id === funcionarioId);
+              if (funcionarioEncontrado) {
+                setFuncionarioSelecionadoNome(funcionarioEncontrado.nome);
+              }
+            }
+          }
+          // Em último caso, usar o funcionário atual
+          else if (funcionario?.id) {
+            setFuncionarioSelecionadoId(funcionario.id);
+            setFuncionarioSelecionadoNome(funcionario.nome || "");
+          }
+          
+          // Verificar se o funcionário salvo existe na lista e logar aviso
+          if (etapaInfo?.funcionarioId) {
             const funcionarioExiste = funcionariosData.some(f => f.id === etapaInfo.funcionarioId);
             if (!funcionarioExiste) {
               console.warn(`Funcionário com ID ${etapaInfo.funcionarioId} não encontrado na lista.`);
             }
-          } 
-          // Se não, usar o funcionário atual se disponível
-          else if (funcionario?.id && !funcionarioSelecionadoId) {
-            setFuncionarioSelecionadoId(funcionario.id);
-            setFuncionarioSelecionadoNome(funcionario.nome || "");
           }
         }
       } catch (error) {
@@ -113,15 +133,16 @@ export default function EtapaCard({
     };
     
     carregarFuncionarios();
-  }, [funcionario, etapaInfo, funcionarioId]);
+  }, [etapaInfo, funcionario, funcionarioId, funcionarioNome]);
 
   // Atualizar o estado quando etapaInfo mudar
   useEffect(() => {
     if (etapaInfo?.funcionarioId) {
+      console.log("Atualizando funcionário selecionado a partir de etapaInfo:", etapaInfo.funcionarioId, etapaInfo.funcionarioNome);
       setFuncionarioSelecionadoId(etapaInfo.funcionarioId);
       setFuncionarioSelecionadoNome(etapaInfo.funcionarioNome || "");
     }
-  }, [etapaInfo]);
+  }, [etapaInfo?.funcionarioId, etapaInfo?.funcionarioNome]);
 
   const etapaComCronometro = ['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa);
   
@@ -244,7 +265,7 @@ export default function EtapaCard({
         etapaNome={etapaNome}
         status={getEtapaStatus(etapaInfo)}
         isEtapaConcluida={isEtapaConcluida(etapaInfo)}
-        funcionarioNome={etapaInfo?.funcionarioNome}
+        funcionarioNome={funcionarioSelecionadoNome || etapaInfo?.funcionarioNome}
         podeReiniciar={false}
         onReiniciar={() => {}}
       />
