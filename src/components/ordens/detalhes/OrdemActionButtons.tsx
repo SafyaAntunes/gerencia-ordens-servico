@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { OrdemServico } from '@/types/ordens';
-import { Download, FileImage, Export } from 'lucide-react';
+import { FileDown, FileImage } from 'lucide-react';
 import { downloadImages } from '@/utils/exportImportUtils';
 import { exportToJson } from '@/utils/exportImportUtils';
 
@@ -50,7 +50,7 @@ const OrdemActionButtons: React.FC<OrdemActionButtonsProps> = ({
         disabled={disabled} 
         onClick={handleExport}
       >
-        <Export className="mr-2 h-4 w-4" />
+        <FileDown className="mr-2 h-4 w-4" />
         Exportar Ordem
       </Button>
       

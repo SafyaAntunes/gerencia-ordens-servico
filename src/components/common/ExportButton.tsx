@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { exportToJson } from '@/utils/exportImportUtils';
-import { Export } from 'lucide-react';
+import { FileDown } from 'lucide-react';
 
 interface ExportButtonProps {
   data: any;
@@ -35,7 +35,7 @@ const ExportButton: React.FC<ExportButtonProps> = ({
       onClick={handleExport}
       disabled={disabled || !data}
     >
-      <Export className="mr-2" />
+      <FileDown className="mr-2" />
       {buttonText}
     </Button>
   );
