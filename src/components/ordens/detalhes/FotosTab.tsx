@@ -80,6 +80,10 @@ export function FotosTab({ ordem }: FotosTabProps) {
                       src={foto} 
                       alt={`Foto de entrada ${index + 1}`} 
                       className="object-cover w-full h-full"
+                      onError={(e) => {
+                        console.error("Erro ao carregar imagem:", foto);
+                        (e.target as HTMLImageElement).src = "/placeholder.svg";
+                      }}
                     />
                   </div>
                 ))}
@@ -103,6 +107,10 @@ export function FotosTab({ ordem }: FotosTabProps) {
                       src={foto} 
                       alt={`Foto de saída ${index + 1}`} 
                       className="object-cover w-full h-full"
+                      onError={(e) => {
+                        console.error("Erro ao carregar imagem:", foto);
+                        (e.target as HTMLImageElement).src = "/placeholder.svg";
+                      }}
                     />
                   </div>
                 ))}
