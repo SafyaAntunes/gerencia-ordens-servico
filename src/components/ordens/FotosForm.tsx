@@ -1,10 +1,10 @@
-
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileUpload } from "@/components/ui/file-upload";
-import { Camera, Upload } from "lucide-react";
+import { Camera, Upload, AlertTriangle } from "lucide-react";
 import { useStorage } from "@/hooks/useStorage";
 import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface FotosFormProps {
   fotosEntrada: any[]; // Pode ser File ou string URL
@@ -23,22 +23,27 @@ export default function FotosForm({
 }: FotosFormProps) {
   const [activeTab, setActiveTab] = useState("entrada");
   const { uploadFile, deleteFile } = useStorage();
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const handleAddFotoEntrada = async (file: File | null) => {
     if (file) {
       try {
+        setUploadError(null);
         if (ordemId !== "temp") {
           const url = await uploadFile(file, `ordens/${ordemId}/entrada`);
           if (url) {
             onChangeFotosEntrada([...fotosEntrada, url]);
             toast.success("Arquivo carregado com sucesso!");
+          } else {
+            setUploadError("Falha ao fazer upload da imagem. Verifique as permissões de acesso ao Storage.");
           }
         } else {
           onChangeFotosEntrada([...fotosEntrada, file]);
         }
       } catch (error) {
-        toast.error("Erro ao processar arquivo");
         console.error("Erro no upload:", error);
+        setUploadError("Erro ao processar arquivo. Verifique as permissões de acesso ao Storage.");
+        toast.error("Erro ao processar arquivo");
       }
     }
   };
@@ -61,18 +66,22 @@ export default function FotosForm({
   const handleAddFotoSaida = async (file: File | null) => {
     if (file) {
       try {
+        setUploadError(null);
         if (ordemId !== "temp") {
           const url = await uploadFile(file, `ordens/${ordemId}/saida`);
           if (url) {
             onChangeFotosSaida([...fotosSaida, url]);
             toast.success("Arquivo carregado com sucesso!");
+          } else {
+            setUploadError("Falha ao fazer upload da imagem. Verifique as permissões de acesso ao Storage.");
           }
         } else {
           onChangeFotosSaida([...fotosSaida, file]);
         }
       } catch (error) {
-        toast.error("Erro ao processar arquivo");
         console.error("Erro no upload:", error);
+        setUploadError("Erro ao processar arquivo. Verifique as permissões de acesso ao Storage.");
+        toast.error("Erro ao processar arquivo");
       }
     }
   };
@@ -94,6 +103,13 @@ export default function FotosForm({
 
   return (
     <div>
+      {uploadError && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>{uploadError}</AlertDescription>
+        </Alert>
+      )}
+      
       <Tabs 
         defaultValue="entrada" 
         value={activeTab} 

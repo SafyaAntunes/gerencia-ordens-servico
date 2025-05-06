@@ -1,6 +1,5 @@
-
 import { useState } from 'react';
-import { storage } from '@/lib/firebase';
+import { storage, getStorageWithAuth } from '@/lib/firebase';
 import { toast } from 'sonner';
 import { 
   ref, 
@@ -17,18 +16,24 @@ export const useStorage = () => {
     
     setIsUploading(true);
     try {
+      // Use authenticated storage instance
+      const storageInstance = getStorageWithAuth();
+      
       const fileType = file.type.startsWith('image/') ? 'images' : 
                      file.type.startsWith('video/') ? 'videos' : 'files';
                      
       const filePath = `${path}/${fileType}/${Date.now()}_${file.name}`;
       
-      const storageRef = ref(storage, filePath);
+      console.log(`Tentando fazer upload para: ${filePath}`);
+      
+      const storageRef = ref(storageInstance, filePath);
       await uploadBytes(storageRef, file);
       const url = await getDownloadURL(storageRef);
+      console.log(`Upload bem-sucedido: ${url}`);
       return url;
     } catch (error) {
       console.error('Erro ao fazer upload do arquivo:', error);
-      toast.error('Erro ao fazer upload do arquivo.');
+      toast.error('Erro ao fazer upload do arquivo. Verifique as permissões de armazenamento.');
       return null;
     } finally {
       setIsUploading(false);

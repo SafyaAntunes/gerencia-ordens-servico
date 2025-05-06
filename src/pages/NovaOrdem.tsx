@@ -5,11 +5,11 @@ import Layout from "@/components/layout/Layout";
 import OrdemForm from "@/components/ordens/OrdemForm";
 import { Prioridade, TipoServico, OrdemServico, SubAtividade, EtapaOS, TipoAtividade } from "@/types/ordens";
 import { collection, addDoc, doc, setDoc, getDoc, getDocs, query, where } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { getClientes } from "@/services/clienteService";
 import { getSubatividadesByTipo } from "@/services/subatividadeService";
 import { Cliente, Motor } from "@/types/clientes";
+import { useStorage } from "@/hooks/useStorage";
 
 const toTitleCase = (str: string) => {
   return str
@@ -29,6 +29,7 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
   const [selectedServices, setSelectedServices] = useState<TipoServico[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
+  const { uploadFile } = useStorage();
   
   useEffect(() => {
     const fetchClientes = async () => {
@@ -55,18 +56,29 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         
         for (const file of files) {
           if (file && file instanceof File) {
-            const fileRef = ref(storage, `${folder}/${Date.now()}_${file.name}`);
-            await uploadBytes(fileRef, file);
-            const url = await getDownloadURL(fileRef);
-            imageUrls.push(url);
+            try {
+              const url = await uploadFile(file, folder);
+              if (url) {
+                imageUrls.push(url);
+              } else {
+                console.warn(`Não foi possível fazer upload da imagem: ${file.name}`);
+              }
+            } catch (uploadError) {
+              console.error(`Erro ao fazer upload de ${file.name}:`, uploadError);
+            }
           }
         }
         
         return imageUrls;
       };
       
+      console.log("Processando imagens de entrada...");
       const fotosEntradaUrls = await processImages(values.fotosEntrada || [], `ordens/${values.id}/entrada`);
+      console.log(`${fotosEntradaUrls.length} imagens de entrada processadas`);
+      
+      console.log("Processando imagens de saída...");
       const fotosSaidaUrls = await processImages(values.fotosSaida || [], `ordens/${values.id}/saida`);
+      console.log(`${fotosSaidaUrls.length} imagens de saída processadas`);
       
       let clienteNome = "Cliente não encontrado";
       let clienteTelefone = "";
@@ -256,7 +268,12 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         dataPrevistaEntrega: values.dataPrevistaEntrega,
         prioridade: values.prioridade as Prioridade,
         status: "orcamento",
-        servicos,
+        servicos: values.servicosTipos.map((tipo: TipoServico) => ({
+          tipo,
+          descricao: values.servicosDescricoes?.[tipo] || "",
+          concluido: false,
+          subatividades: values.servicosSubatividades?.[tipo] || []
+        })),
         etapasAndamento,
         tempoRegistros: [],
         fotosEntrada: fotosEntradaUrls,
@@ -265,13 +282,20 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         tempoTotalEstimado: tempoTotalEstimadoMS
       };
       
-      await setDoc(doc(db, "ordens_servico", values.id), newOrder);
+      console.log("Salvando ordem de serviço...", newOrder);
       
-      toast.success("Ordem de serviço criada com sucesso!");
-      navigate("/ordens");
+      try {
+        await setDoc(doc(db, "ordens_servico", values.id), newOrder);
+        toast.success("Ordem de serviço criada com sucesso!");
+        navigate("/ordens");
+      } catch (firestoreError) {
+        console.error("Erro ao salvar no Firestore:", firestoreError);
+        toast.error("Erro ao salvar os dados da ordem no banco.");
+        throw firestoreError;
+      }
     } catch (error) {
       console.error("Error creating order:", error);
-      toast.error("Erro ao criar ordem de serviço");
+      toast.error("Erro ao criar ordem de serviço. Verifique as permissões de armazenamento.");
     } finally {
       setIsSubmitting(false);
     }
