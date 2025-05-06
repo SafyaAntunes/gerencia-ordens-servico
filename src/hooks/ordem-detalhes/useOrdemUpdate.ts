@@ -6,6 +6,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { OrdemServico } from "@/types/ordens";
 import { toast } from "sonner";
 import { SetOrdemFunction } from "./types";
+import { useStorage } from "@/hooks/useStorage";
 
 export const useOrdemUpdate = (
   id: string | undefined, 
@@ -15,27 +16,13 @@ export const useOrdemUpdate = (
   setIsEditando: (editing: boolean) => void
 ) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { uploadFile } = useStorage();
 
   const handleSubmit = async (values: any) => {
     setIsSubmitting(true);
     
     try {
       if (!id || !ordem) return;
-      
-      const processImages = async (files: File[], folder: string, existingUrls: string[] = []): Promise<string[]> => {
-        const imageUrls: string[] = [...existingUrls];
-        
-        for (const file of files) {
-          if (file && file instanceof File) {
-            const fileRef = ref(storage, `${folder}/${Date.now()}_${file.name}`);
-            await uploadBytes(fileRef, file);
-            const url = await getDownloadURL(fileRef);
-            imageUrls.push(url);
-          }
-        }
-        
-        return imageUrls;
-      };
       
       // Preserve existing subactivities and worker information
       const preserveExistingSubactivities = (currentServicos = [], newServicosTipos = []) => {
@@ -101,24 +88,34 @@ export const useOrdemUpdate = (
         etapasAndamento: etapasAtualizado // Preservar informações das etapas
       };
       
+      // Processar fotos de entrada
       if (values.fotosEntrada && values.fotosEntrada.length > 0) {
         const existingEntradaUrls = ordem.fotosEntrada?.filter(url => typeof url === 'string') || [];
-        const newEntradaUrls = await processImages(
-          values.fotosEntrada.filter((f: any) => f instanceof File), 
-          `ordens/${id}/entrada`,
-          existingEntradaUrls
-        );
-        updatedOrder.fotosEntrada = newEntradaUrls;
+        const newEntradaFiles = values.fotosEntrada.filter((f: any) => f instanceof File);
+        
+        // Upload de novos arquivos
+        const newEntradaUrls = [];
+        for (const file of newEntradaFiles) {
+          const url = await uploadFile(file, `ordens/${id}/entrada`);
+          if (url) newEntradaUrls.push(url);
+        }
+        
+        updatedOrder.fotosEntrada = [...existingEntradaUrls, ...newEntradaUrls];
       }
       
+      // Processar fotos de saída
       if (values.fotosSaida && values.fotosSaida.length > 0) {
         const existingSaidaUrls = ordem.fotosSaida?.filter(url => typeof url === 'string') || [];
-        const newSaidaUrls = await processImages(
-          values.fotosSaida.filter((f: any) => f instanceof File), 
-          `ordens/${id}/saida`,
-          existingSaidaUrls
-        );
-        updatedOrder.fotosSaida = newSaidaUrls;
+        const newSaidaFiles = values.fotosSaida.filter((f: any) => f instanceof File);
+        
+        // Upload de novos arquivos
+        const newSaidaUrls = [];
+        for (const file of newSaidaFiles) {
+          const url = await uploadFile(file, `ordens/${id}/saida`);
+          if (url) newSaidaUrls.push(url);
+        }
+        
+        updatedOrder.fotosSaida = [...existingSaidaUrls, ...newSaidaUrls];
       }
       
       console.log("Atualizando ordem com dados:", updatedOrder);

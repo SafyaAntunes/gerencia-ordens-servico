@@ -31,6 +31,7 @@ export function useEtapaResponsavel({
     if (etapaInfo?.funcionarioId) {
       setLastSavedFuncionarioId(etapaInfo.funcionarioId);
       setLastSavedFuncionarioNome(etapaInfo.funcionarioNome || "");
+      console.log(`useEtapaResponsavel: Inicializando com funcionário da etapaInfo - ID: ${etapaInfo.funcionarioId}, Nome: ${etapaInfo.funcionarioNome}`);
     }
   }, [etapaInfo]);
   

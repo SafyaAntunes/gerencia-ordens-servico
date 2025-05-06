@@ -43,7 +43,7 @@ export default function FuncionarioSelector({
         <div className="flex-1">
           <Select 
             key={selectorKey}
-            value={funcionarioSelecionadoId} 
+            value={funcionarioSelecionadoId || ""} 
             onValueChange={onFuncionarioChange}
             disabled={isEtapaConcluida}
           >
