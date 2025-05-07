@@ -32,6 +32,9 @@ export default function FuncionarioSelector({
   const funcionarioNome = funcionariosOptions.find(f => f.id === funcionarioSelecionadoId)?.nome || "Não encontrado";
   console.log("FuncionarioSelector - Renderizando com:", { id: funcionarioSelecionadoId, nome: funcionarioNome });
   
+  // Desabilitar o botão de salvar apenas se não houver funcionário selecionado ou se etapa está concluída
+  const botaoSalvarDesabilitado = isEtapaConcluida || !funcionarioSelecionadoId;
+  
   return (
     <div className="mb-4">
       <div className="flex items-center text-sm font-medium mb-1">
@@ -63,9 +66,9 @@ export default function FuncionarioSelector({
         <Button
           variant="outline"
           size="sm"
-          className="bg-green-50 hover:bg-green-100 border-green-200 text-green-700"
+          className={`${botaoSalvarDesabilitado ? 'bg-gray-100 text-gray-400' : 'bg-green-50 hover:bg-green-100 border-green-200 text-green-700'}`}
           onClick={onSaveResponsavel}
-          disabled={isEtapaConcluida || !funcionarioSelecionadoId}
+          disabled={botaoSalvarDesabilitado}
         >
           <Save className="h-4 w-4 mr-1" />
           Salvar

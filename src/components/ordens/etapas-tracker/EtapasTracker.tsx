@@ -183,30 +183,33 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     if (!ordem?.id || !funcionario?.id) return;
     
     try {
-      let etapasAndamento = { ...ordem.etapasAndamento };
+      // CORREÇÃO: Clonamos o objeto etapasAndamento para evitar mutações diretas
+      let etapasAndamento = { ...ordem.etapasAndamento || {} };
       
-      if ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final') && servicoTipo) {
-        const etapaKey = `${etapa}_${servicoTipo}` as any;
-        
-        etapasAndamento[etapaKey] = {
-          ...etapasAndamento[etapaKey],
-          concluido: concluida,
-          funcionarioId: funcionarioId || funcionario.id,
-          funcionarioNome: funcionarioNome || funcionario.nome,
-          finalizado: concluida ? new Date() : undefined,
-          servicoTipo: servicoTipo
-        };
-      } else {
-        etapasAndamento[etapa] = {
-          ...etapasAndamento[etapa],
-          concluido: concluida,
-          funcionarioId: funcionarioId || funcionario.id,
-          funcionarioNome: funcionarioNome || funcionario.nome,
-          finalizado: concluida ? new Date() : undefined
-        };
-      }
+      // Determinar a chave da etapa com base no tipo de serviço
+      const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final') && servicoTipo) 
+        ? `${etapa}_${servicoTipo}` 
+        : etapa;
       
-      // Corrigir o caminho do documento para "ordens_servico" ao invés de "ordens"
+      console.log(`Atualizando status da etapa ${etapaKey} para funcionário ${funcionarioNome} (${funcionarioId})`);
+      
+      // CORREÇÃO: Preservar dados existentes da etapa (como pausas, timers, etc)
+      const etapaAtual = etapasAndamento[etapaKey] || {};
+      
+      etapasAndamento[etapaKey] = {
+        ...etapaAtual,  // Preserva todos os dados anteriores
+        concluido: concluida,
+        funcionarioId: funcionarioId || etapaAtual.funcionarioId || funcionario.id,
+        funcionarioNome: funcionarioNome || etapaAtual.funcionarioNome || funcionario.nome,
+        finalizado: concluida ? new Date() : etapaAtual.finalizado,
+        iniciado: etapaAtual.iniciado || (funcionarioId ? new Date() : null),  // Mantém data inicio ou atualiza se for nova atribuição
+        // Se for etapa de inspeção, preserva o tipo de serviço
+        ...(servicoTipo ? { servicoTipo } : {})
+      };
+      
+      console.log("Dados da etapa a serem salvos:", etapasAndamento[etapaKey]);
+      
+      // Atualizar no Firebase
       const ordemRef = doc(db, "ordens_servico", ordem.id);
       await updateDoc(ordemRef, { etapasAndamento });
       
@@ -220,7 +223,8 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
       }
       
       const servicoMsg = servicoTipo ? ` - ${formatServicoTipo(servicoTipo)}` : '';
-      toast.success(`Etapa ${etapaNomesBR[etapa] || etapa}${servicoMsg} ${concluida ? 'concluída' : 'reaberta'}`);
+      const acao = concluida ? 'concluída' : funcionarioId ? 'atribuída' : 'atualizada';
+      toast.success(`Etapa ${etapaNomesBR[etapa] || etapa}${servicoMsg} ${acao}`);
     } catch (error) {
       console.error("Erro ao atualizar status da etapa:", error);
       toast.error("Erro ao atualizar status da etapa");

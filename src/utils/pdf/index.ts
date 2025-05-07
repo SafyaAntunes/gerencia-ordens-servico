@@ -12,9 +12,6 @@ export * from "./helpers";
 export * from "./calculators";
 export * from "./types";
 
-// We no longer need this declaration since it's in types.ts
-// and we're avoiding duplicate declarations
-
 export const generateOrderPDF = async (ordem: OrdemServico): Promise<void> => {
   try {
     console.log("Iniciando geração do PDF para ordem:", ordem.id);
@@ -44,21 +41,42 @@ export const generateOrderPDF = async (ordem: OrdemServico): Promise<void> => {
     adicionarTabelaServicos(doc, ordem, progressosData);
     adicionarTabelaEtapas(doc, progressosData, temposData);
     
+    // CORREÇÃO: Melhorar preparação e processamento das fotos
     // Preparar e filtrar fotos para garantir que só fotos válidas sejam adicionadas
+    console.log("Preparando fotos para o PDF");
+    
+    // Processamento melhorado das fotos de entrada
     const fotosEntrada = Array.isArray(ordem.fotosEntrada) 
-      ? ordem.fotosEntrada.filter(foto => foto && (typeof foto === 'string' || foto.data))
+      ? ordem.fotosEntrada.filter(foto => {
+          if (!foto) return false;
+          if (typeof foto === 'string' && foto.length > 0) return true;
+          if (foto && typeof foto === 'object' && ((foto as any).data || (foto as any).url)) return true;
+          return false;
+        })
       : [];
       
+    // Processamento melhorado das fotos de saída
     const fotosSaida = Array.isArray(ordem.fotosSaida) 
-      ? ordem.fotosSaida.filter(foto => foto && (typeof foto === 'string' || foto.data))
+      ? ordem.fotosSaida.filter(foto => {
+          if (!foto) return false;
+          if (typeof foto === 'string' && foto.length > 0) return true;
+          if (foto && typeof foto === 'object' && ((foto as any).data || (foto as any).url)) return true;
+          return false;
+        })
       : [];
     
-    console.log(`Adicionando fotos: ${fotosEntrada.length} entrada, ${fotosSaida.length} saída`);
+    console.log(`Total de fotos encontradas: ${fotosEntrada.length} entrada, ${fotosSaida.length} saída`);
     
     // Garantir que as fotos sejam adicionadas mesmo se houver poucas
     if (fotosEntrada.length > 0 || fotosSaida.length > 0) {
       // Adicionar com await para garantir que todas as imagens sejam processadas
+      console.log("Adicionando fotos ao PDF...");
+      toast.info("Processando imagens para o PDF...");
+      
       await adicionarFotosPDF(doc, fotosEntrada, fotosSaida);
+      console.log("Fotos adicionadas ao PDF com sucesso");
+    } else {
+      console.log("Nenhuma foto encontrada para adicionar ao PDF");
     }
     
     // Salvar PDF

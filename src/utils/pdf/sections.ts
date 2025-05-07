@@ -193,11 +193,21 @@ export const adicionarFotosPDF = async (
       
       for (let i = 0; i < fotosToShow.length; i++) {
         try {
-          const url = typeof fotosToShow[i] === 'string' 
-            ? fotosToShow[i] as string
-            : (fotosToShow[i] as any)?.data || '';
+          // CORREÇÃO: Melhor detecção da URL da imagem
+          let url = '';
           
-          if (!url || url.includes('video') || url.match(/\.(mp4|webm|ogg|mov)$/i)) {
+          if (typeof fotosToShow[i] === 'string') {
+            url = fotosToShow[i] as string;
+          } else if (fotosToShow[i] && typeof fotosToShow[i] === 'object') {
+            if ((fotosToShow[i] as any).data) {
+              url = (fotosToShow[i] as any).data;
+            } else if ((fotosToShow[i] as any).url) {
+              url = (fotosToShow[i] as any).url;
+            }
+          }
+          
+          // Verificação adicional para URL
+          if (!url || url.length === 0 || url.includes('video') || url.match(/\.(mp4|webm|ogg|mov)$/i)) {
             console.log("Ignorando vídeo ou arquivo inválido");
             continue; // Skip videos or invalid files
           }
@@ -211,16 +221,40 @@ export const adicionarFotosPDF = async (
             y += 60; // Height of each image row
           }
           
-          console.log(`Adicionando foto de entrada ${i+1} em posição (${currentPosX}, ${y})`);
+          console.log(`Adicionando foto de entrada ${i+1} em posição (${currentPosX}, ${y}) com URL: ${url.substring(0, 50)}...`);
           
-          // Add image to PDF with better error handling
+          // CORREÇÃO: Usar método de carregamento de imagem com pré-carregamento
           try {
-            // Verifica se a URL é válida para uma imagem
-            if (url && url.length > 0) {
-              doc.addImage(url, 'JPEG', currentPosX, y, imageWidth - 5, 45);
-            } else {
-              throw new Error("URL de imagem vazia");
-            }
+            // Cria um elemento de imagem para pré-carregar antes de adicionar ao PDF
+            const img = new Image();
+            img.crossOrigin = "Anonymous"; // Permitir imagens de outros domínios
+            
+            // Usar uma Promise para garantir que a imagem seja carregada
+            await new Promise<void>((resolve, reject) => {
+              img.onload = () => {
+                try {
+                  doc.addImage(img, 'JPEG', currentPosX, y, imageWidth - 5, 45);
+                  resolve();
+                } catch (error) {
+                  console.error(`Erro ao adicionar imagem ao PDF: ${error}`);
+                  reject(error);
+                }
+              };
+              
+              img.onerror = (error) => {
+                console.error(`Erro ao carregar imagem: ${error}`);
+                reject(error);
+              };
+              
+              // Configurar timeout para não bloquear
+              setTimeout(() => {
+                reject(new Error("Tempo esgotado ao carregar imagem"));
+              }, 5000);
+              
+              // Carregar a imagem
+              img.src = url;
+            });
+            
           } catch (imgError) {
             console.error(`Erro ao adicionar imagem ${i}: ${imgError}`);
             
@@ -238,7 +272,7 @@ export const adicionarFotosPDF = async (
       y += 70; // Espaço adicional após a seção
     }
     
-    // Adicionar fotos de saída com melhor tratamento de erros
+    // Adicionar fotos de saída com o mesmo método melhorado
     if (fotosSaida.length > 0) {
       doc.setFontSize(12);
       doc.text("Fotos de Saída", 14, y);
@@ -249,11 +283,21 @@ export const adicionarFotosPDF = async (
       
       for (let i = 0; i < fotosToShow.length; i++) {
         try {
-          const url = typeof fotosToShow[i] === 'string' 
-            ? fotosToShow[i] as string
-            : (fotosToShow[i] as any)?.data || '';
+          // CORREÇÃO: Mesma lógica melhorada para detectar URL
+          let url = '';
           
-          if (!url || url.includes('video') || url.match(/\.(mp4|webm|ogg|mov)$/i)) {
+          if (typeof fotosToShow[i] === 'string') {
+            url = fotosToShow[i] as string;
+          } else if (fotosToShow[i] && typeof fotosToShow[i] === 'object') {
+            if ((fotosToShow[i] as any).data) {
+              url = (fotosToShow[i] as any).data;
+            } else if ((fotosToShow[i] as any).url) {
+              url = (fotosToShow[i] as any).url;
+            }
+          }
+          
+          // Verificação adicional
+          if (!url || url.length === 0 || url.includes('video') || url.match(/\.(mp4|webm|ogg|mov)$/i)) {
             console.log("Ignorando vídeo ou arquivo inválido");
             continue; // Skip videos or invalid files
           }
@@ -267,16 +311,36 @@ export const adicionarFotosPDF = async (
             y += 60; // Height of each image row
           }
           
-          console.log(`Adicionando foto de saída ${i+1} em posição (${currentPosX}, ${y})`);
+          console.log(`Adicionando foto de saída ${i+1} em posição (${currentPosX}, ${y}) com URL: ${url.substring(0, 50)}...`);
           
-          // Add image to PDF with better error handling
+          // CORREÇÃO: Mesmo método de pré-carregamento
           try {
-            // Verifica se a URL é válida para uma imagem
-            if (url && url.length > 0) {
-              doc.addImage(url, 'JPEG', currentPosX, y, imageWidth - 5, 45);
-            } else {
-              throw new Error("URL de imagem vazia");
-            }
+            const img = new Image();
+            img.crossOrigin = "Anonymous"; 
+            
+            await new Promise<void>((resolve, reject) => {
+              img.onload = () => {
+                try {
+                  doc.addImage(img, 'JPEG', currentPosX, y, imageWidth - 5, 45);
+                  resolve();
+                } catch (error) {
+                  console.error(`Erro ao adicionar imagem ao PDF: ${error}`);
+                  reject(error);
+                }
+              };
+              
+              img.onerror = (error) => {
+                console.error(`Erro ao carregar imagem: ${error}`);
+                reject(error);
+              };
+              
+              setTimeout(() => {
+                reject(new Error("Tempo esgotado ao carregar imagem"));
+              }, 5000);
+              
+              img.src = url;
+            });
+            
           } catch (imgError) {
             console.error(`Erro ao adicionar imagem de saída ${i}: ${imgError}`);
             

@@ -35,7 +35,7 @@ export function useEtapaResponsavel({
     }
   }, [etapaInfo]);
   
-  // Função para salvar o responsável - works during execution
+  // Função para salvar o responsável - Correção: Salva o responsável mesmo quando não há mudança de status
   const handleSaveResponsavel = () => {
     if (!funcionarioSelecionadoId) {
       toast.error("É necessário selecionar um responsável para salvar");
@@ -58,7 +58,20 @@ export function useEtapaResponsavel({
       setLastSavedFuncionarioId(funcionarioSelecionadoId);
       setLastSavedFuncionarioNome(funcionarioSelecionadoNome);
       
-      // IMPORTANTE: Preservar o estado iniciado da etapaInfo, não resetar
+      // CORREÇÃO: Garantir que estamos salvando corretamente no Firestore
+      // Cria uma cópia do objeto etapaInfo para garantir que todos os dados sejam preservados
+      const etapaInfoAtualizado = {
+        ...(etapaInfo || {}),
+        concluido: etapaConcluida,
+        funcionarioId: funcionarioSelecionadoId,
+        funcionarioNome: funcionarioSelecionadoNome,
+        // Preservar outros campos importantes
+        iniciado: etapaInfo?.iniciado || null,
+        finalizado: etapaInfo?.finalizado || null,
+        pausas: etapaInfo?.pausas || []
+      };
+      
+      // Chama o callback com todas as informações necessárias
       onEtapaStatusChange(
         etapa,
         etapaConcluida,
