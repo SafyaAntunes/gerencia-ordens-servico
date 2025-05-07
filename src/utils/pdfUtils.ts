@@ -228,7 +228,7 @@ export const generateOrderPDF = async (ordem: OrdemServico): Promise<void> => {
           
           try {
             const isLeftColumn = i % 2 === 0;
-            const posX = isLeftColumn ? margin : margin + imageWidth; // Renomeado para posX
+            const currentPosX = isLeftColumn ? margin : margin + imageWidth;
             
             // Only get new line for right columns
             if (i > 0 && isLeftColumn) {
@@ -236,13 +236,13 @@ export const generateOrderPDF = async (ordem: OrdemServico): Promise<void> => {
             }
             
             // Add image to PDF (with placeholder if needed)
-            doc.addImage(url, 'JPEG', posX, y, imageWidth - 5, 45);
+            doc.addImage(url, 'JPEG', currentPosX, y, imageWidth - 5, 45);
           } catch (error) {
             console.error('Error adding image to PDF:', error);
             // Add placeholder for failed image
             doc.setDrawColor(200, 200, 200);
-            doc.rect(posX, y, imageWidth - 5, 45); // Usando posX
-            doc.text('Imagem não disponível', posX + 15, y + 25); // Usando posX
+            doc.rect(currentPosX, y, imageWidth - 5, 45);
+            doc.text('Imagem não disponível', currentPosX + 15, y + 25);
           }
         }
         
@@ -267,7 +267,7 @@ export const generateOrderPDF = async (ordem: OrdemServico): Promise<void> => {
           
           try {
             const isLeftColumn = i % 2 === 0;
-            const posX = isLeftColumn ? margin : margin + imageWidth; // Renomeado para posX
+            const currentPosX = isLeftColumn ? margin : margin + imageWidth;
             
             // Only get new line for right columns
             if (i > 0 && isLeftColumn) {
@@ -275,13 +275,13 @@ export const generateOrderPDF = async (ordem: OrdemServico): Promise<void> => {
             }
             
             // Add image to PDF
-            doc.addImage(url, 'JPEG', posX, y, imageWidth - 5, 45);
+            doc.addImage(url, 'JPEG', currentPosX, y, imageWidth - 5, 45);
           } catch (error) {
             console.error('Error adding image to PDF:', error);
             // Add placeholder for failed image
             doc.setDrawColor(200, 200, 200);
-            doc.rect(posX, y, imageWidth - 5, 45); // Usando posX
-            doc.text('Imagem não disponível', posX + 15, y + 25); // Usando posX
+            doc.rect(currentPosX, y, imageWidth - 5, 45);
+            doc.text('Imagem não disponível', currentPosX + 15, y + 25);
           }
         }
       }
