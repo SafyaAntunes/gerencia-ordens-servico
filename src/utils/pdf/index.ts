@@ -1,6 +1,6 @@
 
 import { jsPDF } from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -11,6 +11,16 @@ import { adicionarInfoClienteEDatas, adicionarSecaoProgresso, adicionarTabelaSer
 export * from "./helpers";
 export * from "./calculators";
 export * from "./types";
+
+// Estender o tipo jsPDF para reconhecer o método autoTable
+declare module "jspdf" {
+  interface jsPDF {
+    autoTable: any;
+    previousAutoTable?: {
+      finalY: number;
+    };
+  }
+}
 
 export const generateOrderPDF = async (ordem: OrdemServico): Promise<void> => {
   try {
@@ -27,6 +37,9 @@ export const generateOrderPDF = async (ordem: OrdemServico): Promise<void> => {
       unit: 'mm',
       format: 'a4',
     });
+    
+    // Adicionar autoTable ao doc
+    doc.autoTable = autoTable;
     
     console.log("Documento PDF criado, adicionando seções...");
     

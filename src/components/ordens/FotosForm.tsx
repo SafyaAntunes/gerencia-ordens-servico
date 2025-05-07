@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileUpload } from "@/components/ui/file-upload";
 import { Camera, Upload, AlertTriangle, Trash, Images } from "lucide-react";
@@ -27,6 +28,34 @@ export default function FotosForm({
   const { uploadFiles, deleteFile, storageInfo } = useStorage();
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<{[key: string]: boolean}>({});
+  
+  // Limpar fotos inválidas ou nulas no carregamento inicial
+  useEffect(() => {
+    // Filtrar fotos de entrada inválidas
+    const validFotosEntrada = fotosEntrada.filter(foto => {
+      if (!foto) return false;
+      if (typeof foto === 'string' && foto.startsWith('http')) return true;
+      if (foto && typeof foto === 'object' && foto.data) return true;
+      return foto instanceof File;
+    });
+    
+    // Filtrar fotos de saída inválidas
+    const validFotosSaida = fotosSaida.filter(foto => {
+      if (!foto) return false;
+      if (typeof foto === 'string' && foto.startsWith('http')) return true;
+      if (foto && typeof foto === 'object' && foto.data) return true;
+      return foto instanceof File;
+    });
+    
+    // Atualizar arrays se houver fotos inválidas
+    if (validFotosEntrada.length !== fotosEntrada.length) {
+      onChangeFotosEntrada(validFotosEntrada);
+    }
+    
+    if (validFotosSaida.length !== fotosSaida.length) {
+      onChangeFotosSaida(validFotosSaida);
+    }
+  }, []);
   
   const handleAddFotosEntrada = async (files: File[] | null) => {
     if (files && files.length > 0) {
@@ -145,6 +174,15 @@ export default function FotosForm({
     toast.success(`${selectedKeys.length} arquivos removidos`);
   };
 
+  // Verificar validade de uma URL de imagem/vídeo
+  const isValidFile = (foto: any): boolean => {
+    if (!foto) return false;
+    if (foto instanceof File) return true;
+    if (typeof foto === 'string' && foto.startsWith('http')) return true;
+    if (foto && typeof foto === 'object' && foto.data && typeof foto.data === 'string') return true;
+    return false;
+  };
+
   const toggleFileSelection = (type: 'entrada' | 'saida', index: number) => {
     const key = `${type}-${index}`;
     setSelectedFiles(prev => ({
@@ -161,6 +199,10 @@ export default function FotosForm({
 
   const entriesSelected = countSelectedFiles('entrada');
   const exitSelected = countSelectedFiles('saida');
+
+  // Filtrar somente arquivos válidos para exibição
+  const validFotosEntrada = fotosEntrada.filter(isValidFile);
+  const validFotosSaida = fotosSaida.filter(isValidFile);
 
   return (
     <div>
@@ -214,7 +256,7 @@ export default function FotosForm({
         <TabsContent value="entrada" className="space-y-4">
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-sm font-medium">
-              {fotosEntrada.length} arquivo(s)
+              {validFotosEntrada.length} arquivo(s)
             </h3>
             {entriesSelected > 0 && (
               <Button 
@@ -229,7 +271,7 @@ export default function FotosForm({
             )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {fotosEntrada.map((foto, index) => (
+            {validFotosEntrada.map((foto, index) => (
               <FileUpload
                 key={`entrada-${index}`}
                 value={foto}
@@ -249,7 +291,7 @@ export default function FotosForm({
         <TabsContent value="saida" className="space-y-4">
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-sm font-medium">
-              {fotosSaida.length} arquivo(s)
+              {validFotosSaida.length} arquivo(s)
             </h3>
             {exitSelected > 0 && (
               <Button 
@@ -264,7 +306,7 @@ export default function FotosForm({
             )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {fotosSaida.map((foto, index) => (
+            {validFotosSaida.map((foto, index) => (
               <FileUpload
                 key={`saida-${index}`}
                 value={foto}
