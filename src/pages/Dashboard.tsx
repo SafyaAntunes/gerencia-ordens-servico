@@ -1,3 +1,4 @@
+
 import {
   FileText,
   Clock,
@@ -19,6 +20,7 @@ import { collection, getDocs, query, orderBy, limit, where } from "firebase/fire
 import { db } from "@/lib/firebase";
 import { OrdemServico, StatusOS } from "@/types/ordens";
 import { toast } from "sonner";
+import { Funcionario } from "@/types/funcionarios";
 
 interface DashboardProps extends LogoutProps {}
 
@@ -26,20 +28,21 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
+  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
+  const [funcionariosOcupados, setFuncionariosOcupados] = useState<number>(0);
   const [metricas, setMetricas] = useState({
     osTotal: 0,
     osPendentes: 0,
     osFinalizadasMes: 0,
-    eficiencia: 0,
   });
   const [statusData, setStatusData] = useState<{ name: string; total: number }[]>([]);
   const [servicosData, setServicosData] = useState<{ name: string; total: number }[]>([]);
   
   useEffect(() => {
-    const fetchOrdens = async () => {
+    const fetchData = async () => {
       setIsLoading(true);
       try {
-        // Alterado de "ordens" para "ordens_servico" para corresponder com a coleção correta
+        // Buscar ordens
         const q = query(collection(db, "ordens_servico"), orderBy("dataAbertura", "desc"));
         const querySnapshot = await getDocs(q);
         
@@ -57,18 +60,51 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         
         setOrdens(ordensData);
         
-        calcularMetricas(ordensData);
+        // Buscar funcionários
+        const funcionariosSnapshot = await getDocs(collection(db, "funcionarios"));
+        const funcionariosData: Funcionario[] = [];
+        funcionariosSnapshot.forEach((doc) => {
+          funcionariosData.push({
+            ...doc.data(),
+            id: doc.id
+          } as Funcionario);
+        });
         
+        setFuncionarios(funcionariosData);
+        
+        // Calcular funcionários ocupados
+        const funcionariosAlocados = new Set<string>();
+        ordensData.forEach(ordem => {
+          // Verificar funcionários alocados em serviços
+          ordem.servicos?.forEach(servico => {
+            if (servico.funcionarioId) {
+              funcionariosAlocados.add(servico.funcionarioId);
+            }
+          });
+          
+          // Verificar funcionários alocados em etapas
+          if (ordem.etapasAndamento) {
+            Object.values(ordem.etapasAndamento).forEach(etapa => {
+              if (etapa.funcionarioId) {
+                funcionariosAlocados.add(etapa.funcionarioId);
+              }
+            });
+          }
+        });
+        
+        setFuncionariosOcupados(funcionariosAlocados.size);
+        
+        calcularMetricas(ordensData);
         calcularDadosGraficos(ordensData);
       } catch (error) {
-        console.error("Erro ao buscar ordens:", error);
+        console.error("Erro ao buscar dados:", error);
         toast.error("Erro ao carregar dados do dashboard");
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchOrdens();
+    fetchData();
   }, []);
   
   const calcularMetricas = (ordensData: OrdemServico[]) => {
@@ -96,49 +132,10 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       return false;
     }).length;
     
-    // Calcular eficiência média baseada na proporção entre tempo operacional e tempo total
-    let eficienciaTotal = 0;
-    let osComTempoRegistrado = 0;
-    
-    ordensData.forEach(ordem => {
-      if (ordem.tempoRegistros && ordem.tempoRegistros.length > 0) {
-        let tempoTotalMs = 0;
-        let tempoPausaMs = 0;
-        
-        ordem.tempoRegistros.forEach(registro => {
-          const inicio = registro.inicio instanceof Date ? registro.inicio : new Date(registro.inicio);
-          const fim = registro.fim instanceof Date ? registro.fim : (registro.fim ? new Date(registro.fim) : new Date());
-          
-          const duracaoMs = fim.getTime() - inicio.getTime();
-          tempoTotalMs += duracaoMs;
-          
-          if (registro.pausas && registro.pausas.length > 0) {
-            registro.pausas.forEach(pausa => {
-              const pausaInicio = pausa.inicio instanceof Date ? pausa.inicio : new Date(pausa.inicio);
-              const pausaFim = pausa.fim instanceof Date ? 
-                pausa.fim : (pausa.fim ? new Date(pausa.fim) : new Date());
-              
-              tempoPausaMs += pausaFim.getTime() - pausaInicio.getTime();
-            });
-          }
-        });
-        
-        const tempoOperacional = tempoTotalMs - tempoPausaMs;
-        if (tempoTotalMs > 0) {
-          eficienciaTotal += (tempoOperacional / tempoTotalMs) * 100;
-          osComTempoRegistrado++;
-        }
-      }
-    });
-    
-    const eficienciaMedia = osComTempoRegistrado > 0 ? 
-      Math.round(eficienciaTotal / osComTempoRegistrado) : 0;
-    
     setMetricas({
       osTotal: total,
       osPendentes: pendentes,
       osFinalizadasMes: finalizadasMes,
-      eficiencia: eficienciaMedia,
     });
   };
   
@@ -230,7 +227,12 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
     navigate(`/ordens/${osId}`);
   };
   
+  const handleVerFuncionarios = () => {
+    navigate('/funcionarios');
+  };
+  
   const osRecentes = ordens.slice(0, 5);
+  const funcionariosDisponiveis = funcionarios.length - funcionariosOcupados;
   
   return (
     <Layout>
@@ -253,8 +255,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
                 title="Total de OSs"
                 value={metricas.osTotal}
                 icon={<FileText />}
-                description="Ordens de serviço cadastradas"
-                trend={{ value: 12, isPositive: true }}
                 className="animate-slide-in"
               />
               
@@ -262,8 +262,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
                 title="OSs Pendentes"
                 value={metricas.osPendentes}
                 icon={<Clock />}
-                description="Aguardando conclusão"
-                trend={{ value: 5, isPositive: false }}
                 className="animate-slide-in [animation-delay:100ms]"
               />
               
@@ -271,18 +269,16 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
                 title="Finalizadas no Mês"
                 value={metricas.osFinalizadasMes}
                 icon={<CheckCircle />}
-                description="OSs concluídas este mês"
-                trend={{ value: 8, isPositive: true }}
                 className="animate-slide-in [animation-delay:200ms]"
               />
               
               <MetricCard
-                title="Eficiência"
-                value={`${metricas.eficiencia}%`}
-                icon={<TrendingUp />}
-                description="Tempo produtivo vs. total"
-                trend={{ value: 3, isPositive: true }}
-                className="animate-slide-in [animation-delay:300ms]"
+                title="Funcionários"
+                value={`${funcionariosOcupados}/${funcionarios.length}`}
+                description={funcionariosDisponiveis > 0 ? `${funcionariosDisponiveis} disponíveis` : "Todos ocupados"}
+                icon={<Users />}
+                className="animate-slide-in [animation-delay:300ms] cursor-pointer hover:bg-muted/30"
+                onClick={handleVerFuncionarios}
               />
             </div>
             
@@ -304,8 +300,15 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
             
             <div className="mt-6">
               <Card className="animate-scale-in [animation-delay:300ms]">
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Ordens de Serviço Recentes</CardTitle>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => navigate('/ordens')}
+                  >
+                    Ver todas
+                  </Button>
                 </CardHeader>
                 <CardContent>
                   <Tabs defaultValue="todas">

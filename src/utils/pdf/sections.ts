@@ -164,14 +164,15 @@ export const adicionarTabelaEtapas = (
 };
 
 // Adicionar fotos ao PDF
-export const adicionarFotosPDF = (
+export const adicionarFotosPDF = async (
   doc: jsPDF,
   fotosEntrada: any[],
   fotosSaida: any[]
-): void => {
+): Promise<void> => {
   if (fotosEntrada.length === 0 && fotosSaida.length === 0) return;
   
   try {
+    // Garantir que estamos em uma nova página para as fotos
     doc.addPage();
     doc.setFontSize(14);
     doc.text("Fotos da Ordem", 14, 20);
@@ -181,14 +182,15 @@ export const adicionarFotosPDF = (
     const margin = 14;
     const imageWidth = (pageWidth - margin * 2) / 2; // 2 columns of images
     
-    // Adicionar fotos de entrada
+    // Adicionar fotos de entrada com melhor tratamento de erros
     if (fotosEntrada.length > 0) {
       doc.setFontSize(12);
       doc.text("Fotos de Entrada", 14, y);
-      y += 8;
+      y += 10;
       
-      // Only include the first 4 photos due to PDF size constraints
+      // Limitar a 4 fotos por seção
       const fotosToShow = fotosEntrada.slice(0, 4);
+      
       for (let i = 0; i < fotosToShow.length; i++) {
         try {
           const url = typeof fotosToShow[i] === 'string' 
@@ -196,23 +198,29 @@ export const adicionarFotosPDF = (
             : (fotosToShow[i] as any)?.data || '';
           
           if (!url || url.includes('video') || url.match(/\.(mp4|webm|ogg|mov)$/i)) {
-            continue; // Skip videos
+            console.log("Ignorando vídeo ou arquivo inválido");
+            continue; // Skip videos or invalid files
           }
           
           // Define column position
           const isLeftColumn = i % 2 === 0;
           const currentPosX = isLeftColumn ? margin : margin + imageWidth;
           
-          // Only get new line for even indices (start of a new row)
+          // Avança para nova linha a cada 2 imagens
           if (i > 0 && i % 2 === 0) {
-            y += 50; // Height of each image row
+            y += 60; // Height of each image row
           }
           
-          console.log(`Adicionando foto ${i+1} em posição (${currentPosX}, ${y})`);
+          console.log(`Adicionando foto de entrada ${i+1} em posição (${currentPosX}, ${y})`);
           
-          // Add image to PDF (with placeholder if needed)
+          // Add image to PDF with better error handling
           try {
-            doc.addImage(url, 'JPEG', currentPosX, y, imageWidth - 5, 45);
+            // Verifica se a URL é válida para uma imagem
+            if (url && url.length > 0) {
+              doc.addImage(url, 'JPEG', currentPosX, y, imageWidth - 5, 45);
+            } else {
+              throw new Error("URL de imagem vazia");
+            }
           } catch (imgError) {
             console.error(`Erro ao adicionar imagem ${i}: ${imgError}`);
             
@@ -223,21 +231,22 @@ export const adicionarFotosPDF = (
             doc.text('Imagem não disponível', currentPosX + 15, y + 25);
           }
         } catch (error) {
-          console.error('Error processing image for PDF:', error);
+          console.error('Erro ao processar imagem para PDF:', error);
         }
       }
       
-      y += 60;
+      y += 70; // Espaço adicional após a seção
     }
     
-    // Adicionar fotos de saída
+    // Adicionar fotos de saída com melhor tratamento de erros
     if (fotosSaida.length > 0) {
       doc.setFontSize(12);
       doc.text("Fotos de Saída", 14, y);
-      y += 8;
+      y += 10;
       
-      // Only include the first 4 photos due to PDF size constraints
+      // Limitar a 4 fotos por seção
       const fotosToShow = fotosSaida.slice(0, 4);
+      
       for (let i = 0; i < fotosToShow.length; i++) {
         try {
           const url = typeof fotosToShow[i] === 'string' 
@@ -245,23 +254,29 @@ export const adicionarFotosPDF = (
             : (fotosToShow[i] as any)?.data || '';
           
           if (!url || url.includes('video') || url.match(/\.(mp4|webm|ogg|mov)$/i)) {
-            continue; // Skip videos
+            console.log("Ignorando vídeo ou arquivo inválido");
+            continue; // Skip videos or invalid files
           }
           
           // Define column position
           const isLeftColumn = i % 2 === 0;
           const currentPosX = isLeftColumn ? margin : margin + imageWidth;
           
-          // Only get new line for even indices (start of a new row)
+          // Avança para nova linha a cada 2 imagens
           if (i > 0 && i % 2 === 0) {
-            y += 50; // Height of each image row
+            y += 60; // Height of each image row
           }
           
           console.log(`Adicionando foto de saída ${i+1} em posição (${currentPosX}, ${y})`);
           
           // Add image to PDF with better error handling
           try {
-            doc.addImage(url, 'JPEG', currentPosX, y, imageWidth - 5, 45);
+            // Verifica se a URL é válida para uma imagem
+            if (url && url.length > 0) {
+              doc.addImage(url, 'JPEG', currentPosX, y, imageWidth - 5, 45);
+            } else {
+              throw new Error("URL de imagem vazia");
+            }
           } catch (imgError) {
             console.error(`Erro ao adicionar imagem de saída ${i}: ${imgError}`);
             
@@ -272,7 +287,7 @@ export const adicionarFotosPDF = (
             doc.text('Imagem não disponível', currentPosX + 15, y + 25);
           }
         } catch (error) {
-          console.error('Error processing output image for PDF:', error);
+          console.error('Erro ao processar imagem de saída para PDF:', error);
         }
       }
     }

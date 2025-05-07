@@ -44,7 +44,7 @@ export const generateOrderPDF = async (ordem: OrdemServico): Promise<void> => {
     adicionarTabelaServicos(doc, ordem, progressosData);
     adicionarTabelaEtapas(doc, progressosData, temposData);
     
-    // Adicionar fotos se existirem (filtrar fotos inválidas)
+    // Preparar e filtrar fotos para garantir que só fotos válidas sejam adicionadas
     const fotosEntrada = Array.isArray(ordem.fotosEntrada) 
       ? ordem.fotosEntrada.filter(foto => foto && (typeof foto === 'string' || foto.data))
       : [];
@@ -55,8 +55,10 @@ export const generateOrderPDF = async (ordem: OrdemServico): Promise<void> => {
     
     console.log(`Adicionando fotos: ${fotosEntrada.length} entrada, ${fotosSaida.length} saída`);
     
+    // Garantir que as fotos sejam adicionadas mesmo se houver poucas
     if (fotosEntrada.length > 0 || fotosSaida.length > 0) {
-      adicionarFotosPDF(doc, fotosEntrada, fotosSaida);
+      // Adicionar com await para garantir que todas as imagens sejam processadas
+      await adicionarFotosPDF(doc, fotosEntrada, fotosSaida);
     }
     
     // Salvar PDF

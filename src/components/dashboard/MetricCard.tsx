@@ -8,10 +8,6 @@ interface MetricCardProps {
   value: string | number;
   description?: string;
   icon: ReactNode;
-  trend?: {
-    value: number;
-    isPositive: boolean;
-  };
   className?: string;
 }
 
@@ -20,7 +16,6 @@ export default function MetricCard({
   value,
   description,
   icon,
-  trend,
   className,
 }: MetricCardProps) {
   return (
@@ -35,20 +30,6 @@ export default function MetricCard({
         <div className="text-2xl font-bold">{value}</div>
         {description && (
           <p className="text-xs text-muted-foreground mt-1">{description}</p>
-        )}
-        {trend && (
-          <div className="flex items-center mt-2">
-            <span
-              className={cn(
-                "text-xs font-medium me-1",
-                trend.isPositive ? "text-green-500" : "text-red-500"
-              )}
-            >
-              {trend.isPositive ? "+" : "-"}
-              {Math.abs(trend.value)}%
-            </span>
-            <span className="text-xs text-muted-foreground">vs. mês anterior</span>
-          </div>
         )}
       </CardContent>
     </Card>
