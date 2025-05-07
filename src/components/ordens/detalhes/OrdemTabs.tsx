@@ -43,7 +43,7 @@ export function OrdemTabs({
       </TabsContent>
       
       <TabsContent value="fotos">
-        <FotosTab ordem={ordem} />
+        <FotosTab ordem={ordem} onOrdemUpdate={onOrdemUpdate} />
       </TabsContent>
     </Tabs>
   );
