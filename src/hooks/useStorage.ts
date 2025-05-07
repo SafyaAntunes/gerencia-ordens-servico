@@ -1,15 +1,88 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { storage, getStorageWithAuth } from '@/lib/firebase';
 import { toast } from 'sonner';
 import { 
   ref, 
   uploadBytes, 
   getDownloadURL, 
-  deleteObject 
+  deleteObject,
+  listAll,
+  getMetadata
 } from 'firebase/storage';
+
+interface StorageInfo {
+  bytesUsed: number;
+  maxSize: number; // por padrão, 5GB para o plano Spark do Firebase
+  fileCount: number;
+}
 
 export const useStorage = () => {
   const [isUploading, setIsUploading] = useState(false);
+  const [storageInfo, setStorageInfo] = useState<StorageInfo | null>(null);
+  
+  // Carregar informações de armazenamento ao inicializar o hook
+  useEffect(() => {
+    fetchStorageInfo();
+  }, []);
+
+  // Busca informações sobre o uso do storage
+  const fetchStorageInfo = async () => {
+    try {
+      const maxSize = 5 * 1024 * 1024 * 1024; // 5GB padrão do plano Spark
+      let totalBytes = 0;
+      let totalFiles = 0;
+      
+      // Listar todos os arquivos e somar o tamanho
+      const storageRef = ref(storage);
+      const result = await listAll(storageRef);
+      
+      // Função recursiva para listar todos os arquivos em todos os diretórios
+      const processItems = async (items: any[], path: string) => {
+        for (const item of items) {
+          // Se for um diretório, listar seus itens recursivamente
+          if (item.fullPath.endsWith('/')) { 
+            const subResult = await listAll(ref(storage, item.fullPath));
+            await processItems(subResult.items, item.fullPath);
+            
+            // Processar subdiretórios
+            for (const prefixItem of subResult.prefixes) {
+              const subPrefixResult = await listAll(prefixItem);
+              await processItems(subPrefixResult.items, prefixItem.fullPath);
+            }
+          } 
+          // Se for um arquivo, obter seu tamanho
+          else {
+            try {
+              const metadata = await getMetadata(ref(storage, item.fullPath));
+              totalBytes += metadata.size;
+              totalFiles++;
+            } catch (error) {
+              console.error(`Erro ao obter metadados para ${item.fullPath}`, error);
+            }
+          }
+        }
+      };
+      
+      // Processar arquivos na raiz
+      await processItems(result.items, '/');
+      
+      // Processar diretórios recursivamente
+      for (const prefixItem of result.prefixes) {
+        const prefixResult = await listAll(prefixItem);
+        await processItems(prefixResult.items, prefixItem.fullPath);
+      }
+      
+      setStorageInfo({
+        bytesUsed: totalBytes,
+        maxSize: maxSize,
+        fileCount: totalFiles
+      });
+      
+    } catch (error) {
+      console.error('Erro ao obter informações do storage:', error);
+    }
+  };
   
   const uploadFile = async (file: File, path: string): Promise<string | null> => {
     if (!file) return null;
@@ -30,6 +103,10 @@ export const useStorage = () => {
       await uploadBytes(storageRef, file);
       const url = await getDownloadURL(storageRef);
       console.log(`Upload bem-sucedido: ${url}`);
+      
+      // Atualizar informações de armazenamento após o upload
+      fetchStorageInfo();
+      
       return url;
     } catch (error) {
       console.error('Erro ao fazer upload do arquivo:', error);
@@ -51,6 +128,10 @@ export const useStorage = () => {
         const url = await uploadFile(file, path);
         if (url) urls.push(url);
       }
+      
+      // Atualizar informações de armazenamento após o upload
+      fetchStorageInfo();
+      
       return urls;
     } catch (error) {
       console.error('Erro ao fazer upload dos arquivos:', error);
@@ -73,6 +154,10 @@ export const useStorage = () => {
       if (path) {
         const storageRef = ref(storage, path);
         await deleteObject(storageRef);
+        
+        // Atualizar informações de armazenamento após a exclusão
+        fetchStorageInfo();
+        
         return true;
       }
       console.warn('Caminho do arquivo não encontrado na URL:', url);
@@ -128,6 +213,8 @@ export const useStorage = () => {
     deleteFile,
     uploadBase64Image,
     base64ToFile,
-    isUploading
+    isUploading,
+    storageInfo,
+    fetchStorageInfo
   };
 };

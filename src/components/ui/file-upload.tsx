@@ -1,20 +1,23 @@
 
 import { ChangeEvent, forwardRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { X, Upload, FileVideo } from "lucide-react";
+import { X, Upload, FileVideo, Images, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FileUploadProps {
   value?: File | string | any; // Pode ser File, string URL ou objeto com data: base64
   onChange?: (file: File | null) => void;
   onRemove?: () => void;
+  onSelect?: () => void;
+  isSelected?: boolean;
   accept?: string;
   className?: string;
   maxSize?: number; // Em MB
+  multiple?: boolean; // Suporte para upload múltiplo
 }
 
 const FileUpload = forwardRef<HTMLInputElement, FileUploadProps>(
-  ({ value, onChange, onRemove, accept = "image/*,video/*", className, maxSize = 50 }, ref) => {
+  ({ value, onChange, onRemove, onSelect, isSelected = false, accept = "image/*,video/*", className, maxSize = 50, multiple = false }, ref) => {
     const [preview, setPreview] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [fileType, setFileType] = useState<"image" | "video" | "other">("other");
@@ -62,24 +65,43 @@ const FileUpload = forwardRef<HTMLInputElement, FileUploadProps>(
 
     const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
       setError(null);
-      const file = e.target.files?.[0];
+      const files = e.target.files;
 
-      if (!file) return;
+      if (!files || files.length === 0) return;
       
-      // Validar tamanho do arquivo (em MB)
-      if (file.size > maxSize * 1024 * 1024) {
-        setError(`O arquivo excede o tamanho máximo de ${maxSize}MB`);
-        return;
-      }
+      if (multiple) {
+        // Processar múltiplos arquivos
+        const fileArray = Array.from(files);
+        
+        // Validar tamanho dos arquivos
+        const oversizedFiles = fileArray.filter(file => file.size > maxSize * 1024 * 1024);
+        if (oversizedFiles.length > 0) {
+          setError(`${oversizedFiles.length} arquivo(s) excedem o tamanho máximo de ${maxSize}MB`);
+          return;
+        }
+        
+        if (onChange) {
+          onChange(fileArray as any);
+        }
+      } else {
+        // Processar um único arquivo
+        const file = files[0];
+        
+        // Validar tamanho do arquivo (em MB)
+        if (file.size > maxSize * 1024 * 1024) {
+          setError(`O arquivo excede o tamanho máximo de ${maxSize}MB`);
+          return;
+        }
 
-      // Criar preview
-      const fileUrl = URL.createObjectURL(file);
-      setPreview(fileUrl);
-      setFileType(file.type.startsWith('image/') ? "image" : 
-                 file.type.startsWith('video/') ? "video" : "other");
-      
-      if (onChange) {
-        onChange(file);
+        // Criar preview
+        const fileUrl = URL.createObjectURL(file);
+        setPreview(fileUrl);
+        setFileType(file.type.startsWith('image/') ? "image" : 
+                  file.type.startsWith('video/') ? "video" : "other");
+        
+        if (onChange) {
+          onChange(file);
+        }
       }
     };
 
@@ -91,19 +113,34 @@ const FileUpload = forwardRef<HTMLInputElement, FileUploadProps>(
       }
     };
 
+    const handleSelect = () => {
+      if (onSelect) {
+        onSelect();
+      }
+    };
+
+    const inputId = `file-upload-${Math.random().toString(36).substring(7)}`;
+
+    // Se não houver valor e não for um componente para upload, não renderizar
+    if (!value && !onChange) return null;
+
     return (
       <div className={cn("space-y-2", className)}>
         <input
           type="file"
-          id="file-upload"
+          id={inputId}
           className="sr-only"
           onChange={handleFileChange}
           accept={accept}
           ref={ref}
+          multiple={multiple}
         />
         
         {preview ? (
-          <div className="relative rounded-md overflow-hidden border border-border h-48 group">
+          <div className={cn(
+            "relative rounded-md overflow-hidden border border-border h-48 group",
+            isSelected ? "ring-2 ring-primary" : ""
+          )}>
             {fileType === "image" ? (
               <img
                 src={preview}
@@ -122,20 +159,40 @@ const FileUpload = forwardRef<HTMLInputElement, FileUploadProps>(
               </div>
             )}
             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-              <Button
-                type="button"
-                variant="destructive"
-                size="icon"
-                onClick={handleRemove}
-                className="h-8 w-8"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-2">
+                {onSelect && (
+                  <Button
+                    type="button"
+                    variant={isSelected ? "default" : "secondary"}
+                    size="icon"
+                    onClick={handleSelect}
+                    className="h-8 w-8"
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
+                )}
+                {onRemove && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    onClick={handleRemove}
+                    className="h-8 w-8"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
+            {isSelected && (
+              <div className="absolute top-2 right-2 bg-primary text-white rounded-full p-1">
+                <Check className="h-4 w-4" />
+              </div>
+            )}
           </div>
         ) : (
           <label
-            htmlFor="file-upload"
+            htmlFor={inputId}
             className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-border rounded-md cursor-pointer hover:border-primary/50 transition-colors"
           >
             {error ? (
@@ -150,12 +207,16 @@ const FileUpload = forwardRef<HTMLInputElement, FileUploadProps>(
             ) : (
               <>
                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <Upload className="h-10 w-10 text-muted-foreground mb-2" />
+                  {multiple ? (
+                    <Images className="h-10 w-10 text-muted-foreground mb-2" />
+                  ) : (
+                    <Upload className="h-10 w-10 text-muted-foreground mb-2" />
+                  )}
                   <p className="text-sm font-medium mb-1">
-                    Clique para selecionar
+                    Clique para selecionar {multiple ? "arquivos" : "um arquivo"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Imagens e Vídeos (max. {maxSize}MB)
+                    Imagens e Vídeos (max. {maxSize}MB {multiple ? "cada" : ""})
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     SVG, PNG, JPG, GIF, MP4, WEBM
