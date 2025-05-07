@@ -1,8 +1,7 @@
-
 import { useState, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileUpload } from "@/components/ui/file-upload";
-import { Camera, Upload, AlertTriangle, Trash, Gallery } from "lucide-react";
+import { Camera, Upload, AlertTriangle, Trash, Images } from "lucide-react";
 import { useStorage } from "@/hooks/useStorage";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -206,7 +205,7 @@ export default function FotosForm({
       
       onChangeFotosEntrada(newFotosEntrada);
     } else {
-      // Cria uma cópia para modificação
+      // Cria uma cópia para modifica��ão
       const newFotosSaida = [...fotosSaida];
       
       // Remove cada arquivo selecionado
@@ -390,7 +389,7 @@ export default function FotosForm({
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-muted-foreground/20 rounded-md">
-              <Gallery className="h-10 w-10 text-muted-foreground/50 mb-4" />
+              <Images className="h-10 w-10 text-muted-foreground/50 mb-4" />
               <p className="text-muted-foreground">Nenhum arquivo de entrada adicionado.</p>
               <Button 
                 variant="link" 
@@ -413,7 +412,7 @@ export default function FotosForm({
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-muted-foreground/20 rounded-md">
-              <Gallery className="h-10 w-10 text-muted-foreground/50 mb-4" />
+              <Images className="h-10 w-10 text-muted-foreground/50 mb-4" />
               <p className="text-muted-foreground">Nenhum arquivo de saída adicionado.</p>
               <Button 
                 variant="link" 
