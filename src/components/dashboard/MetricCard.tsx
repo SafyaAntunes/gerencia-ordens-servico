@@ -9,7 +9,7 @@ interface MetricCardProps {
   description?: string;
   icon: ReactNode;
   className?: string;
-  onClick?: () => void;  // Added onClick prop
+  onClick?: () => void;
 }
 
 export default function MetricCard({
@@ -18,22 +18,35 @@ export default function MetricCard({
   description,
   icon,
   className,
-  onClick,  // Added onClick prop to component parameters
+  onClick,
 }: MetricCardProps) {
   return (
     <Card 
-      className={cn("overflow-hidden transition-all", 
-        onClick ? "cursor-pointer hover:bg-muted/30" : "", className)}
-      onClick={onClick}  // Add the onClick handler to the Card component
+      className={cn(
+        "overflow-hidden transition-all", 
+        onClick ? "cursor-pointer hover:bg-muted/30" : "", 
+        className
+      )}
+      onClick={onClick}
     >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <div className="h-8 w-8 rounded-md bg-primary/10 p-1.5 text-primary">
+        <div className={cn(
+          "h-8 w-8 rounded-md p-1.5",
+          title === "OS's Atrasadas" && Number(value) > 0 
+            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" 
+            : "bg-primary/10 text-primary"
+        )}>
           {icon}
         </div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className={cn(
+          "text-2xl font-bold",
+          title === "OS's Atrasadas" && Number(value) > 0 ? "text-red-600 dark:text-red-400" : ""
+        )}>
+          {value}
+        </div>
         {description && (
           <p className="text-xs text-muted-foreground mt-1">{description}</p>
         )}

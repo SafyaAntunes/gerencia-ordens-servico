@@ -3,9 +3,49 @@ import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { FuncionariosDisponibilidade } from "@/components/funcionarios/FuncionariosDisponibilidade";
+import { AlertTriangle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { OrdemServico } from "@/types/ordens";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const Index = () => {
   const navigate = useNavigate();
+  const [osAtrasadas, setOsAtrasadas] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    const fetchOsAtrasadas = async () => {
+      try {
+        const ordensRef = collection(db, 'ordens_servico');
+        const querySnapshot = await getDocs(ordensRef);
+        
+        const ordens: OrdemServico[] = [];
+        querySnapshot.forEach(doc => {
+          const data = doc.data();
+          ordens.push({
+            ...data,
+            id: doc.id,
+            dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
+          } as OrdemServico);
+        });
+        
+        const hoje = new Date();
+        const atrasadas = ordens.filter(ordem => {
+          return ordem.dataPrevistaEntrega < hoje && 
+                 !['finalizado', 'entregue'].includes(ordem.status);
+        });
+        
+        setOsAtrasadas(atrasadas.length);
+      } catch (error) {
+        console.error("Erro ao buscar ordens atrasadas:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchOsAtrasadas();
+  }, []);
 
   return (
     <Layout>
@@ -41,7 +81,28 @@ const Index = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <FuncionariosDisponibilidade />
           
-          {/* Aqui podem ser adicionados outros cards de monitoramento */}
+          {/* Card para OS's atrasadas */}
+          {!loading && osAtrasadas > 0 && (
+            <div className="bg-red-50 dark:bg-red-950/30 rounded-lg shadow-md p-6 border border-red-200 dark:border-red-800">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-red-700 dark:text-red-400 flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5" />
+                  Ordens de Serviço Atrasadas
+                </h2>
+                <span className="text-2xl font-bold text-red-600 dark:text-red-400">{osAtrasadas}</span>
+              </div>
+              <p className="text-red-600 dark:text-red-400 mb-4">
+                Existem {osAtrasadas} {osAtrasadas === 1 ? 'ordem atrasada' : 'ordens atrasadas'} que necessitam de atenção imediata.
+              </p>
+              <Button 
+                onClick={() => navigate("/ordens?filter=atrasadas")} 
+                variant="destructive"
+                className="w-full"
+              >
+                Ver Ordens Atrasadas
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </Layout>

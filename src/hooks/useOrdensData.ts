@@ -166,6 +166,10 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
       case "concluido":
         progressoMatch = progresso === 100;
         break;
+      case "atrasadas":
+        const hoje = new Date();
+        progressoMatch = ordem.dataPrevistaEntrega < hoje && !['finalizado', 'entregue'].includes(ordem.status);
+        break;
       default:
         progressoMatch = true;
     }
