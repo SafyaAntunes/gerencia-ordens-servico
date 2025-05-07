@@ -108,7 +108,12 @@ export const useFuncionariosDisponibilidade = () => {
       
       // Verificar cada ordem
       for (const docSnap of snapshot.docs) {
-        const ordem = { id: docSnap.id, ...docSnap.data() };
+        const ordem = { id: docSnap.id, ...docSnap.data() } as { 
+          id: string; 
+          nome: string;
+          etapasAndamento?: Record<string, any>;
+          [key: string]: any;
+        };
         
         // Verificar etapas em andamento
         if (ordem.etapasAndamento) {
