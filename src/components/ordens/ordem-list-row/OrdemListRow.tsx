@@ -46,6 +46,10 @@ export default function OrdemListRow({
     }
   };
 
+  // Check if the order is overdue
+  const isOverdue = ordem.dataPrevistaEntrega < new Date() && 
+                    !['finalizado', 'entregue'].includes(ordem.status);
+
   return (
     <div 
       draggable
@@ -53,7 +57,10 @@ export default function OrdemListRow({
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onClick={onClick}
-      className={`group hover:shadow-md border rounded-lg mb-3 shadow-sm transition-all duration-200 cursor-pointer overflow-hidden bg-white relative ${isSelected ? 'ring-2 ring-primary' : ''}`}
+      className={`group hover:shadow-md border rounded-lg mb-3 shadow-sm transition-all duration-200 cursor-pointer overflow-hidden bg-white relative ${
+        isSelected ? 'ring-2 ring-primary' : ''} ${
+        isOverdue ? 'bg-red-50 border-red-300 shadow-red-100' : ''
+      }`}
     >
       {isSelectable && (
         <div 
@@ -67,15 +74,18 @@ export default function OrdemListRow({
       <div className={isSelectable ? 'pl-8' : ''}>
         <OrdemListRowHeader 
           ordem={ordem} 
-          index={index} 
+          index={index}
+          isOverdue={isOverdue}
         />
         
         <OrdemListRowDetails 
           ordem={ordem} 
+          isOverdue={isOverdue}
         />
         
         <OrdemListRowProgress 
           progresso={ordem.progressoEtapas !== undefined ? Math.round(ordem.progressoEtapas * 100) : 0}
+          isOverdue={isOverdue}
         />
       </div>
     </div>
