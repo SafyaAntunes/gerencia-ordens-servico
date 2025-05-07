@@ -33,6 +33,7 @@ import { TipoServico } from "@/types/ordens";
 import FuncionarioCard from "@/components/funcionarios/FuncionarioCard";
 import FuncionarioForm from "@/components/funcionarios/FuncionarioForm";
 import FuncionarioDetalhes from "@/components/funcionarios/FuncionarioDetalhes";
+import { FuncionariosDisponibilidadeTable } from "@/components/funcionarios/FuncionariosDisponibilidadeTable";
 import { toast } from "sonner";
 import { getFuncionarios, saveFuncionario, deleteFuncionario, getFuncionario } from "@/services/funcionarioService";
 import { useAuth } from "@/hooks/useAuth";
@@ -294,6 +295,13 @@ export default function Funcionarios({ onLogout, meuPerfil = false }: Funcionari
             )}
           </div>
         </div>
+        
+        {/* Adicionar a tabela de disponibilidade se não estiver no modo "meu perfil" */}
+        {!isMeuPerfil && (
+          <div className="mb-6">
+            <FuncionariosDisponibilidadeTable />
+          </div>
+        )}
         
         {!isMeuPerfil && (
           <div className="flex flex-col sm:flex-row gap-4">
