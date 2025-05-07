@@ -43,7 +43,7 @@ export const useFuncionariosDisponibilidade = () => {
               
               return {
                 ...funcionario,
-                status: ordemStatus ? 'ocupado' as const : 'disponivel' as const,
+                status: ordemStatus ? 'ocupado' : 'disponivel',
                 atividadeAtual: ordemStatus || undefined
               };
             })
@@ -68,7 +68,7 @@ export const useFuncionariosDisponibilidade = () => {
                 
                 return {
                   ...funcionario,
-                  status: ordemStatus ? 'ocupado' as const : 'disponivel' as const,
+                  status: ordemStatus ? 'ocupado' : 'disponivel',
                   atividadeAtual: ordemStatus || undefined
                 };
               })
