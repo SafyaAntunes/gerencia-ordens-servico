@@ -3,7 +3,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFuncionariosDisponibilidade, FuncionarioStatus } from '@/hooks/useFuncionariosDisponibilidade';
-import { format, formatDistance } from 'date-fns';
+import { format, formatDistance, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CircleCheck, Clock, CircleDashed } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -100,11 +100,7 @@ export function FuncionariosDisponibilidadeTable() {
                             ` - ${formatServicoTipo(funcionario.atividadeAtual.servicoTipo)}` : ''}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          <strong>Início:</strong> {formatDistance(
-                            new Date(funcionario.atividadeAtual.inicio),
-                            new Date(),
-                            { addSuffix: true, locale: ptBR }
-                          )}
+                          <strong>Início:</strong> {formatTempoAtividade(funcionario.atividadeAtual.inicio)}
                         </div>
                       </div>
                     ) : (
@@ -151,4 +147,23 @@ function formatServicoTipo(tipo: string): string {
   };
   
   return tiposMap[tipo] || tipo;
+}
+
+// Nova função para formatar o tempo de atividade de forma segura
+function formatTempoAtividade(data: Date | undefined | null): string {
+  if (!data) return 'Sem registro de início';
+  
+  try {
+    const dataInicio = new Date(data);
+    if (!isValid(dataInicio)) return 'Data inválida';
+    
+    return formatDistance(
+      dataInicio,
+      new Date(),
+      { addSuffix: true, locale: ptBR }
+    );
+  } catch (error) {
+    console.error("Erro ao formatar data de início:", error);
+    return 'Erro na data';
+  }
 }

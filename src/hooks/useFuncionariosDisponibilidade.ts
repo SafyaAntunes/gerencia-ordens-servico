@@ -41,9 +41,12 @@ export const useFuncionariosDisponibilidade = () => {
               // Verificar se está em alguma ordem ativa
               const ordemStatus = await verificarStatusFuncionario(funcionario.id);
               
+              // Garante que status seja sempre um valor literal 'disponivel' ou 'ocupado'
+              const status: 'disponivel' | 'ocupado' = ordemStatus ? 'ocupado' : 'disponivel';
+              
               return {
                 ...funcionario,
-                status: ordemStatus ? 'ocupado' : 'disponivel',
+                status,
                 atividadeAtual: ordemStatus || undefined
               };
             })
@@ -62,13 +65,16 @@ export const useFuncionariosDisponibilidade = () => {
         const unsubscribeOrdens = onSnapshot(ordensRef, async () => {
           // Quando qualquer ordem mudar, atualizar status de todos funcionários
           if (funcionariosStatus.length > 0) {
-            const funcionariosAtualizados = await Promise.all(
+            const funcionariosAtualizados: FuncionarioStatus[] = await Promise.all(
               funcionariosStatus.map(async (funcionario) => {
                 const ordemStatus = await verificarStatusFuncionario(funcionario.id);
                 
+                // Garante que status seja sempre um valor literal 'disponivel' ou 'ocupado'
+                const status: 'disponivel' | 'ocupado' = ordemStatus ? 'ocupado' : 'disponivel';
+                
                 return {
                   ...funcionario,
-                  status: ordemStatus ? 'ocupado' : 'disponivel',
+                  status,
                   atividadeAtual: ordemStatus || undefined
                 };
               })
