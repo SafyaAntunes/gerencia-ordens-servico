@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Funcionario } from '@/types/funcionarios';
 
@@ -104,7 +104,7 @@ export const useFuncionariosDisponibilidade = () => {
         where('status', 'in', ['fabricacao', 'orcamento', 'aguardando_aprovacao']),
       );
       
-      const snapshot = await getDoc(q);
+      const snapshot = await getDocs(q);
       
       // Verificar cada ordem
       for (const docSnap of snapshot.docs) {
@@ -113,12 +113,13 @@ export const useFuncionariosDisponibilidade = () => {
         // Verificar etapas em andamento
         if (ordem.etapasAndamento) {
           for (const [etapaKey, etapaInfo] of Object.entries(ordem.etapasAndamento)) {
+            const info = etapaInfo as DocumentData;
             // Se o funcionário estiver atribuído a esta etapa e ela não estiver concluída
             if (
-              etapaInfo.funcionarioId === funcionarioId && 
-              !etapaInfo.concluido && 
-              etapaInfo.iniciado && 
-              !etapaInfo.finalizado
+              info.funcionarioId === funcionarioId && 
+              !info.concluido && 
+              info.iniciado && 
+              !info.finalizado
             ) {
               // Extrair nome da etapa e serviço
               let etapaNome = etapaKey;
@@ -138,7 +139,7 @@ export const useFuncionariosDisponibilidade = () => {
                 ordemNome: ordem.nome,
                 etapa: etapaNome,
                 servicoTipo,
-                inicio: new Date(etapaInfo.iniciado)
+                inicio: new Date(info.iniciado)
               };
             }
           }

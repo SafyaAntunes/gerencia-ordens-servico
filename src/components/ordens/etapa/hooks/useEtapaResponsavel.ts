@@ -126,6 +126,8 @@ export function useEtapaResponsavel({
         }
       };
       
+      console.log("Atualizando etapa com:", atualizacao);
+      
       // Atualizar o documento
       await updateDoc(ordemRef, atualizacao);
       

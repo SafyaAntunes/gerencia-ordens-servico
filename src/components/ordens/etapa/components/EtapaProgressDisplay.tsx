@@ -17,10 +17,12 @@ export default function EtapaProgressDisplay({
   useEffect(() => {
     if (servicos.length === 0) return;
     
+    // Apenas considerar os serviços concluídos, ignorando o status de funcionário atribuído
     const servicosConcluidos = servicos.filter(servico => servico.concluido).length;
     const percentualProgresso = Math.round((servicosConcluidos / servicos.length) * 100);
     setProgresso(percentualProgresso);
     
+    // Notificar quando todos os serviços estiverem concluídos
     if (servicosConcluidos === servicos.length && onAllServicosConcluidos) {
       onAllServicosConcluidos();
     }

@@ -3,6 +3,7 @@ import { useState, useCallback } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { OrdemServico, EtapaOS } from "@/types/ordens";
+import { toast } from "sonner";
 
 export function useEtapasProgress() {
   const [progressoTotal, setProgressoTotal] = useState(0);
@@ -61,6 +62,50 @@ export function useEtapasProgress() {
     
     const servicosPontosPossiveis = servicosAtivos.length;
     const servicosPontosObtidos = servicosAtivos.filter(s => s.concluido).length;
+    
+    // Verificar se a etapa de retífica deve ser marcada como concluída
+    // Se todos os serviços da retífica estão concluídos
+    const servicosRetifica = ordemAtual.servicos?.filter(s => 
+      ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo)
+    );
+    
+    const todosServicosRetificaConcluidos = 
+      servicosRetifica.length > 0 && 
+      servicosRetifica.every(s => s.concluido) &&
+      ordemAtual.status === 'fabricacao';
+    
+    // Se todos os serviços de retífica estão concluídos mas a etapa não está marcada como concluída
+    if (todosServicosRetificaConcluidos && 
+        ordemAtual.etapasAndamento?.retifica && 
+        !ordemAtual.etapasAndamento.retifica.concluido) {
+      
+      // Atualizar automaticamente o status da etapa no Firebase
+      try {
+        const ordemRef = doc(db, "ordens_servico", ordemAtual.id);
+        
+        // Usar o funcionário do último serviço concluído
+        const ultimoServicoConcluido = servicosRetifica.find(s => s.concluido && s.funcionarioId);
+        const funcionarioId = ultimoServicoConcluido?.funcionarioId || ordemAtual.etapasAndamento.retifica.funcionarioId;
+        const funcionarioNome = ultimoServicoConcluido?.funcionarioNome || ordemAtual.etapasAndamento.retifica.funcionarioNome;
+        
+        if (funcionarioId) {
+          // Marcar a etapa como concluída
+          updateDoc(ordemRef, {
+            [`etapasAndamento.retifica.concluido`]: true,
+            [`etapasAndamento.retifica.finalizado`]: new Date(),
+            [`etapasAndamento.retifica.funcionarioId`]: funcionarioId,
+            [`etapasAndamento.retifica.funcionarioNome`]: funcionarioNome || ""
+          }).then(() => {
+            toast.success("Etapa de Retífica concluída automaticamente");
+            etapasPontosObtidos += 2; // Adicionar pontos da retífica
+          }).catch(err => {
+            console.error("Erro ao concluir etapa de retífica:", err);
+          });
+        }
+      } catch (error) {
+        console.error("Erro ao atualizar status da etapa de retífica:", error);
+      }
+    }
     
     // Calcular progresso total
     const pontosTotaisPossiveis = etapasPontosPossiveis + servicosPontosPossiveis;

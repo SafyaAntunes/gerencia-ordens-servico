@@ -3,7 +3,7 @@ import { User, Save } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Funcionario } from "@/types/funcionarios";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 interface FuncionarioSelectorProps {
@@ -27,11 +27,19 @@ export default function FuncionarioSelector({
   lastSavedFuncionarioNome,
   isSaving = false
 }: FuncionarioSelectorProps) {
-  // Encontrar o nome do funcionário para exibição
-  const funcionarioNome = funcionariosOptions.find(f => f.id === funcionarioSelecionadoId)?.nome;
-  const isChanged = funcionarioSelecionadoId !== lastSavedFuncionarioId;
+  // Estado local para rastrear mudanças no funcionário selecionado
+  const [isChanged, setIsChanged] = useState(false);
   
-  // Desabilitar o botão de salvar apenas se não houver funcionário selecionado ou se etapa está concluída ou se não houve mudança
+  // Efeito para detectar mudanças na seleção
+  useEffect(() => {
+    if (funcionarioSelecionadoId !== lastSavedFuncionarioId) {
+      setIsChanged(true);
+    } else {
+      setIsChanged(false);
+    }
+  }, [funcionarioSelecionadoId, lastSavedFuncionarioId]);
+  
+  // Desabilitar o botão de salvar apenas se não houver funcionário selecionado ou se etapa está concluída ou não houve mudança
   const botaoSalvarDesabilitado = isEtapaConcluida || !funcionarioSelecionadoId || (!isChanged && funcionarioSelecionadoId === lastSavedFuncionarioId) || isSaving;
   
   // Função para lidar com o clique no botão salvar
@@ -41,6 +49,7 @@ export default function FuncionarioSelector({
       return;
     }
     onSaveResponsavel();
+    setIsChanged(false); // Resetar o estado após salvar
   };
   
   // Destaque visual se o funcionário foi alterado mas não salvo
