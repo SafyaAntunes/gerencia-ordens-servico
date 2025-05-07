@@ -7,30 +7,6 @@ import { toast } from "sonner";
 import { SetOrdemFunction } from "./types";
 import { useStorage } from "@/hooks/useStorage";
 
-// Função auxiliar para remover campos undefined de um objeto
-const removeUndefinedFields = (obj: any): any => {
-  if (obj === null || obj === undefined || typeof obj !== 'object') {
-    return obj;
-  }
-
-  // Se for um array, aplica recursivamente para cada item
-  if (Array.isArray(obj)) {
-    return obj.map(item => removeUndefinedFields(item)).filter(item => item !== undefined);
-  }
-
-  // Se for um objeto, processa cada propriedade
-  const result: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const value = removeUndefinedFields(obj[key]);
-      if (value !== undefined) {
-        result[key] = value;
-      }
-    }
-  }
-  return result;
-};
-
 export const useOrdemUpdate = (
   id: string | undefined, 
   ordem: OrdemServico | null, 
@@ -199,12 +175,10 @@ export const useOrdemUpdate = (
         updatedOrder.fotosSaida = fotosSaidaAtual;
       }
       
-      // NOVO: Remover campos undefined antes de atualizar o documento
-      const cleanedOrder = removeUndefinedFields(updatedOrder);
-      console.log("Atualizando ordem com dados limpos:", cleanedOrder);
+      console.log("Atualizando ordem com dados:", updatedOrder);
       
       const orderRef = doc(db, "ordens_servico", id);
-      await updateDoc(orderRef, cleanedOrder);
+      await updateDoc(orderRef, updatedOrder);
       
       setOrdem((prev) => {
         if (!prev) return null;
