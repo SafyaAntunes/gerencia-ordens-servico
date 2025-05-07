@@ -122,6 +122,15 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
     fetchOrdens();
   }, [fetchOrdens]);
 
+  // Verificar se há um parâmetro "filter=atrasadas" na URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const filterParam = params.get('filter');
+    if (filterParam === 'atrasadas') {
+      setProgressoFilter('atrasadas');
+    }
+  }, []);
+
   const handleReorder = (dragIndex: number, dropIndex: number) => {
     const reorderedOrdens = [...ordens];
     const [draggedItem] = reorderedOrdens.splice(dragIndex, 1);
@@ -145,7 +154,8 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
     
     const searchMatch = 
       (ordem.nome || '').toLowerCase().includes(search.toLowerCase()) ||
-      (ordem.cliente?.nome || '').toLowerCase().includes(search.toLowerCase());
+      (ordem.cliente?.nome || '').toLowerCase().includes(search.toLowerCase()) ||
+      (ordem.id || '').toLowerCase().includes(search.toLowerCase());
     
     const statusMatch = statusFilter === "all" ? true : ordem.status === statusFilter;
     const prioridadeMatch = prioridadeFilter === "all" ? true : ordem.prioridade === prioridadeFilter;

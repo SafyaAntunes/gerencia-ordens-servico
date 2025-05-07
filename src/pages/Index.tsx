@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { OrdemServico } from "@/types/ordens";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import MetricCard from "@/components/dashboard/MetricCard";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -47,6 +48,10 @@ const Index = () => {
     fetchOsAtrasadas();
   }, []);
 
+  const handleNavigateToAtrasadas = () => {
+    navigate("/ordens?filter=atrasadas");
+  };
+
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8">
@@ -81,27 +86,19 @@ const Index = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <FuncionariosDisponibilidade />
           
-          {/* Card para OS's atrasadas */}
-          {!loading && osAtrasadas > 0 && (
-            <div className="bg-red-50 dark:bg-red-950/30 rounded-lg shadow-md p-6 border border-red-200 dark:border-red-800">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-red-700 dark:text-red-400 flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5" />
-                  Ordens de Serviço Atrasadas
-                </h2>
-                <span className="text-2xl font-bold text-red-600 dark:text-red-400">{osAtrasadas}</span>
-              </div>
-              <p className="text-red-600 dark:text-red-400 mb-4">
-                Existem {osAtrasadas} {osAtrasadas === 1 ? 'ordem atrasada' : 'ordens atrasadas'} que necessitam de atenção imediata.
-              </p>
-              <Button 
-                onClick={() => navigate("/ordens?filter=atrasadas")} 
-                variant="destructive"
-                className="w-full"
-              >
-                Ver Ordens Atrasadas
-              </Button>
-            </div>
+          {/* Card para OS's atrasadas usando o componente MetricCard */}
+          {!loading && (
+            <MetricCard
+              title="OS's Atrasadas"
+              value={osAtrasadas}
+              description={osAtrasadas > 0 
+                ? `Existem ${osAtrasadas} ${osAtrasadas === 1 ? 'ordem atrasada' : 'ordens atrasadas'} que necessitam de atenção imediata.` 
+                : "Não há ordens atrasadas no momento."}
+              icon={<AlertTriangle className="h-5 w-5" />}
+              variant={osAtrasadas > 0 ? "danger" : "success"}
+              onClick={handleNavigateToAtrasadas}
+              className={osAtrasadas > 0 ? "cursor-pointer" : ""}
+            />
           )}
         </div>
       </div>
