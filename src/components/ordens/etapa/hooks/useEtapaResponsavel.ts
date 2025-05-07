@@ -54,12 +54,7 @@ export function useEtapaResponsavel({
         servicoTipo: (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
       });
       
-      // Atualizar os valores salvos
-      setLastSavedFuncionarioId(funcionarioSelecionadoId);
-      setLastSavedFuncionarioNome(funcionarioSelecionadoNome);
-      
-      // CORREÇÃO: Garantir que estamos salvando corretamente no Firestore
-      // Cria uma cópia do objeto etapaInfo para garantir que todos os dados sejam preservados
+      // CORREÇÃO: Garantindo que o objeto etapaInfo é criado mesmo se não existir
       const etapaInfoAtualizado = {
         ...(etapaInfo || {}),
         concluido: etapaConcluida,
@@ -70,6 +65,10 @@ export function useEtapaResponsavel({
         finalizado: etapaInfo?.finalizado || null,
         pausas: etapaInfo?.pausas || []
       };
+      
+      // Atualizar os valores salvos ANTES de chamar o callback
+      setLastSavedFuncionarioId(funcionarioSelecionadoId);
+      setLastSavedFuncionarioNome(funcionarioSelecionadoNome);
       
       // Chama o callback com todas as informações necessárias
       onEtapaStatusChange(
@@ -108,6 +107,10 @@ export function useEtapaResponsavel({
         funcionarioNome,
         (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
       );
+      
+      // Atualizar os valores salvos
+      setLastSavedFuncionarioId(funcionarioId);
+      setLastSavedFuncionarioNome(funcionarioNome);
     }
     
     return true; // Permite que o timer inicie automaticamente
@@ -119,7 +122,7 @@ export function useEtapaResponsavel({
     const funcionarioNome = funcionarioSelecionadoNome || lastSavedFuncionarioNome;
     
     if (!funcionarioId) {
-      toast.error("É necessário selecionar um responsável antes de concluir a etapa");
+      toast.error("É necessário selecionar ou salvar um responsável antes de concluir a etapa");
       return;
     }
     
@@ -134,6 +137,10 @@ export function useEtapaResponsavel({
         funcionarioNome,
         (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
       );
+      
+      // Atualizar os valores salvos
+      setLastSavedFuncionarioId(funcionarioId);
+      setLastSavedFuncionarioNome(funcionarioNome);
     }
   };
   

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
@@ -176,6 +175,8 @@ export default function EtapaCard({
           isEtapaConcluida={isEtapaConcluida(etapaInfo)}
           onFuncionarioChange={handleFuncionarioChange}
           onSaveResponsavel={handleSaveResponsavel}
+          lastSavedFuncionarioId={lastSavedFuncionarioId}
+          lastSavedFuncionarioNome={lastSavedFuncionarioNome}
         />
       )}
       
