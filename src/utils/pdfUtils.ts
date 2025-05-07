@@ -238,6 +238,10 @@ export const generateOrderPDF = async (ordem: OrdemServico): Promise<void> => {
             // Add image to PDF (with placeholder if needed)
             doc.addImage(url, 'JPEG', currentPosX, y, imageWidth - 5, 45);
           } catch (error) {
+            // Define currentPosX here as well to fix the TypeScript error
+            const isLeftColumn = i % 2 === 0;
+            const currentPosX = isLeftColumn ? margin : margin + imageWidth;
+            
             console.error('Error adding image to PDF:', error);
             // Add placeholder for failed image
             doc.setDrawColor(200, 200, 200);
@@ -277,6 +281,10 @@ export const generateOrderPDF = async (ordem: OrdemServico): Promise<void> => {
             // Add image to PDF
             doc.addImage(url, 'JPEG', currentPosX, y, imageWidth - 5, 45);
           } catch (error) {
+            // Define currentPosX here as well to fix the TypeScript error
+            const isLeftColumn = i % 2 === 0;
+            const currentPosX = isLeftColumn ? margin : margin + imageWidth;
+            
             console.error('Error adding image to PDF:', error);
             // Add placeholder for failed image
             doc.setDrawColor(200, 200, 200);
