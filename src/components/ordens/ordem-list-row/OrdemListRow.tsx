@@ -4,19 +4,26 @@ import { OrdemServico } from "@/types/ordens";
 import OrdemListRowHeader from "./OrdemListRowHeader";
 import OrdemListRowDetails from "./OrdemListRowDetails";
 import OrdemListRowProgress from "./OrdemListRowProgress";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface OrdemListRowProps {
   ordem: OrdemServico;
   index: number;
   onReorder: (dragIndex: number, dropIndex: number) => void;
   onClick: () => void;
+  isSelectable?: boolean;
+  isSelected?: boolean;
+  onSelect?: (isSelected: boolean) => void;
 }
 
 export default function OrdemListRow({ 
   ordem, 
   index, 
   onReorder, 
-  onClick 
+  onClick,
+  isSelectable = false,
+  isSelected = false,
+  onSelect
 }: OrdemListRowProps) {
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('text/plain', index.toString());
@@ -32,6 +39,13 @@ export default function OrdemListRow({
     onReorder(dragIndex, index);
   };
 
+  const handleCheckboxClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onSelect) {
+      onSelect(!isSelected);
+    }
+  };
+
   return (
     <div 
       draggable
@@ -39,20 +53,31 @@ export default function OrdemListRow({
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onClick={onClick}
-      className="group hover:shadow-md border rounded-lg mb-3 shadow-sm transition-all duration-200 cursor-pointer overflow-hidden bg-white"
+      className={`group hover:shadow-md border rounded-lg mb-3 shadow-sm transition-all duration-200 cursor-pointer overflow-hidden bg-white relative ${isSelected ? 'ring-2 ring-primary' : ''}`}
     >
-      <OrdemListRowHeader 
-        ordem={ordem} 
-        index={index} 
-      />
+      {isSelectable && (
+        <div 
+          className="absolute left-2 top-2 z-10"
+          onClick={handleCheckboxClick}
+        >
+          <Checkbox checked={isSelected} />
+        </div>
+      )}
       
-      <OrdemListRowDetails 
-        ordem={ordem} 
-      />
-      
-      <OrdemListRowProgress 
-        progresso={ordem.progressoEtapas !== undefined ? Math.round(ordem.progressoEtapas * 100) : 0}
-      />
+      <div className={isSelectable ? 'pl-8' : ''}>
+        <OrdemListRowHeader 
+          ordem={ordem} 
+          index={index} 
+        />
+        
+        <OrdemListRowDetails 
+          ordem={ordem} 
+        />
+        
+        <OrdemListRowProgress 
+          progresso={ordem.progressoEtapas !== undefined ? Math.round(ordem.progressoEtapas * 100) : 0}
+        />
+      </div>
     </div>
   );
 }

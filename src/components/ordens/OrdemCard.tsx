@@ -1,98 +1,36 @@
 
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { Clock, Calendar, ArrowRight, Settings } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { OrdemServico, EtapaOS } from "@/types/ordens";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { Separator } from "@/components/ui/separator";
+import React from "react";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { OrdemServico } from "@/types/ordens";
+import { formatDistance } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface OrdemCardProps {
   ordem: OrdemServico;
-  index: number;
-  onReorder: (dragIndex: number, dropIndex: number) => void;
-  onClick: () => void;
+  index?: number;
+  onReorder?: (dragIndex: number, dropIndex: number) => void;
+  onClick?: () => void;
+  isSelectable?: boolean;
+  isSelected?: boolean;
+  onSelect?: (isSelected: boolean) => void;
 }
 
-export default function OrdemCard({ ordem, index, onReorder, onClick }: OrdemCardProps) {
-  const navigate = useNavigate();
-  
-  if (!ordem) {
-    return null;
-  }
-  
-  const clienteNome = ordem.cliente?.nome || "Cliente não especificado";
-  
-  let motorInfo = null;
-  if (ordem.motorId && ordem.cliente?.motores) {
-    const motor = ordem.cliente.motores.find(m => m.id === ordem.motorId);
-    if (motor) {
-      motorInfo = `${motor.marca} ${motor.modelo}${motor.numeroSerie ? ` - ${motor.numeroSerie}` : ''}${motor.ano ? ` (${motor.ano})` : ''}`;
-    } else {
-      motorInfo = "Motor não encontrado";
-    }
-  }
-  
-  let progresso = 0;
-  
-  if (ordem.progressoEtapas !== undefined) {
-    progresso = Math.round(ordem.progressoEtapas * 100);
-  } else {
-    const etapasPossiveis: EtapaOS[] = ["lavagem", "inspecao_inicial", "retifica", "montagem", "dinamometro", "inspecao_final"];
-    
-    const etapasRelevantes = etapasPossiveis.filter(etapa => {
-      if (etapa === "retifica") {
-        return ordem.servicos?.some(s => 
-          ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo));
-      } else if (etapa === "montagem") {
-        return ordem.servicos?.some(s => s.tipo === "montagem");
-      } else if (etapa === "dinamometro") {
-        return ordem.servicos?.some(s => s.tipo === "dinamometro");
-      } else if (etapa === "lavagem") {
-        return ordem.servicos?.some(s => s.tipo === "lavagem");
-      }
-      return true;
-    });
-    
-    const totalEtapas = etapasRelevantes.length;
-    const etapasConcluidas = etapasRelevantes.filter(etapa => 
-      ordem.etapasAndamento?.[etapa]?.concluido
-    ).length;
-    
-    const servicosAtivos = ordem.servicos?.filter(s => {
-      return s.subatividades?.some(sub => sub.selecionada) || true;
-    }) || [];
-    
-    const totalServicos = servicosAtivos.length;
-    const servicosConcluidos = servicosAtivos.filter(s => s.concluido).length;
-    
-    const pesoEtapas = 2;
-    const pesoServicos = 1;
-    
-    const totalItens = (totalEtapas * pesoEtapas) + (totalServicos * pesoServicos);
-    const itensConcluidos = (etapasConcluidas * pesoEtapas) + (servicosConcluidos * pesoServicos);
-    
-    progresso = totalItens > 0 ? Math.round((itensConcluidos / totalItens) * 100) : 0;
-  }
-  
-  const handleNavigateToDetail = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigate(`/ordens/${ordem.id}`);
-  };
-
-  const handleCardClick = () => {
-    if (onClick) {
-      onClick();
-    } else {
-      navigate(`/ordens/${ordem.id}`);
-    }
-  };
-
+export default function OrdemCard({ 
+  ordem, 
+  index, 
+  onReorder, 
+  onClick,
+  isSelectable = false,
+  isSelected = false,
+  onSelect
+}: OrdemCardProps) {
   const handleDragStart = (e: React.DragEvent) => {
-    e.dataTransfer.setData('text/plain', index.toString());
+    if (index !== undefined && onReorder) {
+      e.dataTransfer.setData('text/plain', index.toString());
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -101,103 +39,136 @@ export default function OrdemCard({ ordem, index, onReorder, onClick }: OrdemCar
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const dragIndex = parseInt(e.dataTransfer.getData('text/plain'));
-    onReorder(dragIndex, index);
+    if (index !== undefined && onReorder) {
+      const dragIndex = parseInt(e.dataTransfer.getData('text/plain'));
+      onReorder(dragIndex, index);
+    }
+  };
+
+  const handleCheckboxClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onSelect) {
+      onSelect(!isSelected);
+    }
+  };
+
+  const handleCardClick = () => {
+    if (onClick) {
+      onClick();
+    }
+  };
+
+  // Calculate progress percentage
+  const progressPercentage = ordem.progressoEtapas !== undefined 
+    ? Math.round(ordem.progressoEtapas * 100) 
+    : 0;
+
+  // Calculate time until deadline
+  const timeUntilDeadline = ordem.dataPrevistaEntrega 
+    ? formatDistance(
+        new Date(ordem.dataPrevistaEntrega), 
+        new Date(),
+        { addSuffix: true, locale: ptBR }
+      )
+    : 'Data não definida';
+
+  // Get status badge styling
+  const getStatusBadgeVariant = () => {
+    switch (ordem.status) {
+      case 'aguardando_aprovacao': return 'warning';
+      case 'fabricacao': return 'default';
+      case 'finalizado': return 'success';
+      case 'entregue': return 'success';
+      case 'aguardando_peca_cliente':
+      case 'aguardando_peca_interno': return 'warning';
+      default: return 'secondary';
+    }
+  };
+  
+  // Get status text
+  const getStatusText = () => {
+    switch (ordem.status) {
+      case 'orcamento': return 'Orçamento';
+      case 'aguardando_aprovacao': return 'Aguardando Aprovação';
+      case 'fabricacao': return 'Em Fabricação';
+      case 'aguardando_peca_cliente': return 'Aguardando Peça (Cliente)';
+      case 'aguardando_peca_interno': return 'Aguardando Peça (Interno)';
+      case 'finalizado': return 'Finalizado';
+      case 'entregue': return 'Entregue';
+      default: return ordem.status;
+    }
+  };
+  
+  // Get priority badge styling
+  const getPrioridadeBadgeVariant = () => {
+    switch (ordem.prioridade) {
+      case 'baixa': return 'outline';
+      case 'media': return 'secondary';
+      case 'alta': return 'warning';
+      case 'urgente': return 'destructive';
+      default: return 'outline';
+    }
+  };
+  
+  // Get priority text
+  const getPrioridadeText = () => {
+    switch (ordem.prioridade) {
+      case 'baixa': return 'Baixa';
+      case 'media': return 'Média';
+      case 'alta': return 'Alta';
+      case 'urgente': return 'Urgente';
+      default: return ordem.prioridade;
+    }
   };
 
   return (
     <Card 
-      draggable
+      draggable={onReorder !== undefined}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
-      className="card-hover cursor-pointer overflow-hidden"
       onClick={handleCardClick}
+      className={`group hover:shadow-md transition-all duration-200 cursor-pointer ${isSelected ? 'ring-2 ring-primary' : ''}`}
     >
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-2 relative">
+        {isSelectable && (
+          <div 
+            className="absolute left-2 top-2 z-10"
+            onClick={handleCheckboxClick}
+          >
+            <Checkbox checked={isSelected} />
+          </div>
+        )}
         <div className="flex justify-between items-start">
-          <div>
-            <p className="text-sm font-bold">
-              OS: {ordem.id}
-            </p>
-            
-            <CardTitle className="text-lg mt-1">{ordem.nome || "Sem título"}</CardTitle>
-            
-            <p className="text-sm text-muted-foreground mt-1">
-              Cliente: {clienteNome}
-            </p>
-            {motorInfo && (
-              <p className="text-xs flex items-center gap-1 mt-1">
-                <Settings className="h-3 w-3" />
-                {motorInfo}
-              </p>
-            )}
+          <div className={`font-semibold text-lg ${isSelectable ? 'ml-8' : ''}`}>
+            {ordem.nome}
           </div>
-          <StatusBadge status={ordem.prioridade || "media"} />
+          <Badge variant={getStatusBadgeVariant()}>{getStatusText()}</Badge>
         </div>
+        <div className="text-sm text-muted-foreground">{ordem.cliente?.nome}</div>
       </CardHeader>
-      
-      <CardContent className="pb-3">
-        <div className="flex flex-wrap gap-4 mb-3">
-          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <Calendar className="h-4 w-4" />
-            <span>
-              {ordem.dataAbertura ? 
-                format(new Date(ordem.dataAbertura), "dd MMM yyyy", { locale: ptBR }) :
-                "Data não definida"}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <Clock className="h-4 w-4" />
-            <span>
-              Previsão: {ordem.dataPrevistaEntrega ? 
-                format(new Date(ordem.dataPrevistaEntrega), "dd MMM yyyy", { locale: ptBR }) :
-                "Não definida"}
-            </span>
-          </div>
+
+      <CardContent className="pb-2">
+        <div className="text-sm mb-2">
+          <span className="font-medium">Entrega:</span> {timeUntilDeadline}
+        </div>
+
+        <div className="flex justify-between items-center mb-1">
+          <span className="text-xs font-medium">Progresso</span>
+          <span className="text-xs">{progressPercentage}%</span>
         </div>
         
-        <div>
-          <div className="flex justify-between items-center mb-1.5">
-            <span className="text-sm font-medium">Progresso</span>
-            <span className="text-xs text-muted-foreground">{progresso}%</span>
-          </div>
-          <Progress value={progresso} className="h-2" />
-        </div>
-        
-        <div className="mt-3">
-          <StatusBadge status={ordem.status || "orcamento"} size="md" />
-        </div>
+        <Progress value={progressPercentage} className="h-2" />
       </CardContent>
       
-      <Separator />
-      
-      <CardFooter className="flex justify-between pt-3">
-        <div className="flex flex-wrap gap-1">
-          {(ordem.servicos || []).map((servico, index) => (
-            <span 
-              key={index}
-              className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground"
-            >
-              {servico.tipo === 'bloco' && 'Bloco'}
-              {servico.tipo === 'biela' && 'Biela'}
-              {servico.tipo === 'cabecote' && 'Cabeçote'}
-              {servico.tipo === 'virabrequim' && 'Virabrequim'}
-              {servico.tipo === 'eixo_comando' && 'Eixo de Comando'}
-              {servico.tipo === 'montagem' && 'Montagem'}
-              {servico.tipo === 'dinamometro' && 'Dinamômetro'}
-              {servico.tipo === 'lavagem' && 'Lavagem'}
-            </span>
-          ))}
+      <CardFooter className="pt-2 flex justify-between">
+        <Badge variant={getPrioridadeBadgeVariant()} className="capitalize">
+          {getPrioridadeText()}
+        </Badge>
+        
+        <div className="text-xs text-muted-foreground">
+          ID: {ordem.id.substring(0, 8)}
         </div>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-8 w-8"
-          onClick={handleNavigateToDetail}
-        >
-          <ArrowRight className="h-4 w-4" />
-        </Button>
       </CardFooter>
     </Card>
   );

@@ -7,6 +7,9 @@ import { useOrdensData } from "@/hooks/useOrdensData";
 import OrdensHeader from "@/components/ordens/OrdensHeader";
 import OrdemFilters from "@/components/ordens/OrdemFilters";
 import OrdensContent from "@/components/ordens/OrdensContent";
+import { doc, deleteDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { toast } from "sonner";
 
 interface OrdensProps {
   onLogout?: () => void;
@@ -40,7 +43,8 @@ export default function Ordens({ onLogout }: OrdensProps) {
     setPrioridadeFilter,
     progressoFilter,
     setProgressoFilter,
-    handleReorder
+    handleReorder,
+    refreshOrdens
   } = useOrdensData({
     isTecnico,
     funcionarioId: funcionario?.id,
@@ -53,6 +57,32 @@ export default function Ordens({ onLogout }: OrdensProps) {
 
   const handleVerOrdem = (id: string) => {
     navigate(`/ordens/${id}`);
+  };
+
+  const handleDeleteOrdens = async (ids: string[]) => {
+    // Verificar permissão do usuário
+    if (funcionario?.nivelPermissao !== 'admin' && funcionario?.nivelPermissao !== 'gerente') {
+      toast.error("Você não tem permissão para excluir ordens de serviço");
+      return;
+    }
+
+    try {
+      // Usar Promise.all para excluir todas as ordens em paralelo
+      await Promise.all(
+        ids.map(async (id) => {
+          const ordemRef = doc(db, "ordens_servico", id);
+          await deleteDoc(ordemRef);
+        })
+      );
+      
+      // Atualizar a lista de ordens
+      await refreshOrdens();
+      
+      toast.success(`${ids.length} ${ids.length === 1 ? 'ordem excluída' : 'ordens excluídas'} com sucesso`);
+    } catch (error) {
+      console.error("Erro ao excluir ordens:", error);
+      toast.error("Erro ao excluir ordens de serviço");
+    }
   };
 
   const title = isTecnico 
@@ -87,6 +117,7 @@ export default function Ordens({ onLogout }: OrdensProps) {
         viewType={viewType}
         onReorder={handleReorder}
         onVerOrdem={handleVerOrdem}
+        onDeleteOrdens={handleDeleteOrdens}
       />
     </Layout>
   );

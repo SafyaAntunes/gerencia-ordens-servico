@@ -139,6 +139,23 @@ export const useOrdens = () => {
     }
   };
 
+  const deleteMultipleOrdens = async (ids: string[]) => {
+    try {
+      await Promise.all(
+        ids.map(async (id) => {
+          const ordemRef = doc(db, 'ordens_servico', id);
+          await deleteDoc(ordemRef);
+        })
+      );
+      toast.success(`${ids.length} ${ids.length === 1 ? 'ordem excluída' : 'ordens excluídas'} com sucesso`);
+      return true;
+    } catch (error) {
+      console.error("Erro ao excluir ordens:", error);
+      toast.error('Erro ao excluir ordens de serviço.');
+      return false;
+    }
+  };
+
   return {
     ordens,
     loading,
@@ -146,6 +163,7 @@ export const useOrdens = () => {
     getOrdem,
     saveOrdem,
     updateOrdem,
-    deleteOrdem
+    deleteOrdem,
+    deleteMultipleOrdens
   };
 };
