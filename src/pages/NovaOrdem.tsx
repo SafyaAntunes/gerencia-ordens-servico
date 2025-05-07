@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -51,6 +52,10 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
     setIsSubmitting(true);
     
     try {
+      // Garantir que os arrays de fotos existam
+      const fotosEntrada = Array.isArray(values.fotosEntrada) ? values.fotosEntrada : [];
+      const fotosSaida = Array.isArray(values.fotosSaida) ? values.fotosSaida : [];
+      
       const processImages = async (files: File[], folder: string): Promise<string[]> => {
         const imageUrls: string[] = [];
         
@@ -73,11 +78,11 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
       };
       
       console.log("Processando imagens de entrada...");
-      const fotosEntradaUrls = await processImages(values.fotosEntrada || [], `ordens/${values.id}/entrada`);
+      const fotosEntradaUrls = await processImages(fotosEntrada, `ordens/${values.id}/entrada`);
       console.log(`${fotosEntradaUrls.length} imagens de entrada processadas`);
       
       console.log("Processando imagens de saída...");
-      const fotosSaidaUrls = await processImages(values.fotosSaida || [], `ordens/${values.id}/saida`);
+      const fotosSaidaUrls = await processImages(fotosSaida, `ordens/${values.id}/saida`);
       console.log(`${fotosSaidaUrls.length} imagens de saída processadas`);
       
       let clienteNome = "Cliente não encontrado";
@@ -276,6 +281,7 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         })),
         etapasAndamento,
         tempoRegistros: [],
+        // Garantindo que os arrays de fotos existam, mesmo que vazios
         fotosEntrada: fotosEntradaUrls,
         fotosSaida: fotosSaidaUrls,
         progressoEtapas: 0,
