@@ -2,6 +2,7 @@
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { FuncionariosDisponibilidade } from "@/components/funcionarios/FuncionariosDisponibilidade";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -34,6 +35,13 @@ const Index = () => {
             <p className="text-gray-600 mb-4">Configure parâmetros do sistema</p>
             <Button onClick={() => navigate("/configuracoes")}>Acessar Configurações</Button>
           </div>
+        </div>
+        
+        {/* Seção de status e monitoramento */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <FuncionariosDisponibilidade />
+          
+          {/* Aqui podem ser adicionados outros cards de monitoramento */}
         </div>
       </div>
     </Layout>

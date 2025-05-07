@@ -62,7 +62,7 @@ export function useEtapaResponsavel({
           if (etapaData?.funcionarioId) {
             setLastSavedFuncionarioId(etapaData.funcionarioId);
             setLastSavedFuncionarioNome(etapaData.funcionarioNome || "");
-            console.log(`Dados carregados do Firestore: Funcionário ${etapaData.funcionarioNome} (${etapaData.funcionarioId})`);
+            console.log(`Dados carregados do Firestore para etapa ${etapaKey}: Funcionário ${etapaData.funcionarioNome} (${etapaData.funcionarioId})`);
           }
         }
       } catch (error) {
@@ -114,11 +114,16 @@ export function useEtapaResponsavel({
       
       // Preparar objeto para atualização
       const atualizacao = {
-        [`etapasAndamento.${etapaKey}.funcionarioId`]: funcionarioSelecionadoId,
-        [`etapasAndamento.${etapaKey}.funcionarioNome`]: funcionarioSelecionadoNome,
-        [`etapasAndamento.${etapaKey}.concluido`]: etapaConcluida,
-        // Se for primeira atribuição, definir data de início
-        [`etapasAndamento.${etapaKey}.iniciado`]: etapaAtual.iniciado || new Date(),
+        [`etapasAndamento.${etapaKey}`]: {
+          ...etapaAtual,  // Preserva todos os dados anteriores
+          funcionarioId: funcionarioSelecionadoId,
+          funcionarioNome: funcionarioSelecionadoNome,
+          concluido: etapaConcluida,
+          // Se for primeira atribuição, definir data de início
+          iniciado: etapaAtual.iniciado || new Date(),
+          // Garantir que o tipo de serviço seja preservado para inspeções
+          ...(servicoTipo ? { servicoTipo } : {})
+        }
       };
       
       // Atualizar o documento

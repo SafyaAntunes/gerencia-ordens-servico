@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -195,7 +196,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         ? `${etapa}_${servicoTipo}` 
         : etapa;
       
-      console.log(`Atualizando status da etapa ${etapaKey} para funcionário ${funcionarioNome} (${funcionarioId})`);
+      console.log(`Atualizando status da etapa ${etapaKey} para funcionário ${funcionarioNome} (${funcionarioId}), concluída: ${concluida}`);
       
       // Obter documento atual para garantir dados atualizados
       const ordemRef = doc(db, "ordens_servico", ordem.id);
@@ -217,12 +218,15 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
           concluido: concluida,
           funcionarioId: funcionarioId,
           funcionarioNome: funcionarioNome || "",
-          finalizado: concluida ? new Date() : etapaAtual.finalizado,
+          finalizado: concluida ? new Date() : null, // Definir como null quando reaberto
           iniciado: etapaAtual.iniciado || new Date(),  // Mantém data inicio ou atualiza se for nova atribuição
           // Se for etapa de inspeção, preserva o tipo de serviço
           ...(servicoTipo ? { servicoTipo } : {})
         }
       };
+      
+      // Log para depuração
+      console.log("Dados a serem salvos:", atualizacao);
       
       // Atualizar no Firebase
       await updateDoc(ordemRef, atualizacao);
@@ -236,6 +240,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         etapasAndamento: etapasAndamentoAtualizado
       };
       
+      // Atualizar estado local diretamente para refletir mudanças imediatamente
       if (onOrdemUpdate) {
         onOrdemUpdate(ordemAtualizada);
       }
@@ -288,7 +293,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
           <EtapasSelector 
             etapasAtivas={etapasAtivas} 
             selectedEtapa={selectedEtapa}
-            etapasDisponiveis={etapasDisponiveis}
+            etapasDisponiveis={verificarEtapasDisponiveis()}
             onEtapaSelect={(etapa) => {
               setSelectedEtapa(etapa);
               setSelectedServicoTipo(null);
@@ -296,11 +301,21 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
             isRetificaHabilitada={() => ordem.status === 'fabricacao'}
             isInspecaoFinalHabilitada={() => {
               const { etapasAndamento } = ordem;
-              return (
-                etapasAndamento['retifica']?.concluido === true ||
-                etapasAndamento['montagem']?.concluido === true ||
-                etapasAndamento['dinamometro']?.concluido === true
-              );
+              
+              // Melhorar a lógica de verificação para a etapa de inspeção final
+              // Verificar se pelo menos uma das etapas principais está concluída
+              const retificaConcluida = etapasAndamento?.['retifica']?.concluido === true;
+              const montagemConcluida = etapasAndamento?.['montagem']?.concluido === true;
+              const dinamometroConcluida = etapasAndamento?.['dinamometro']?.concluido === true;
+              
+              // Log para depuração
+              console.log("Estado de conclusão das etapas:", {
+                retifica: retificaConcluida,
+                montagem: montagemConcluida,
+                dinamometro: dinamometroConcluida
+              });
+              
+              return retificaConcluida || montagemConcluida || dinamometroConcluida;
             }}
           />
           
