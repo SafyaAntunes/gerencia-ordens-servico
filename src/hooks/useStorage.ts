@@ -1,15 +1,101 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { storage, getStorageWithAuth } from '@/lib/firebase';
 import { toast } from 'sonner';
 import { 
   ref, 
   uploadBytes, 
   getDownloadURL, 
-  deleteObject 
+  deleteObject,
+  listAll,
+  getMetadata,
+  getStorage,
+  StorageReference
 } from 'firebase/storage';
+
+type StorageStats = {
+  used: number; // em bytes
+  total: number; // em bytes
+  percentage: number; // percentual utilizado (0-100)
+};
 
 export const useStorage = () => {
   const [isUploading, setIsUploading] = useState(false);
+  const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
+  
+  // Constante para o total de armazenamento disponível (5GB)
+  const TOTAL_STORAGE = 5 * 1024 * 1024 * 1024; // 5GB em bytes
+  
+  // Calcula o espaço usado no storage
+  const calculateStorageUsage = async () => {
+    try {
+      // Obtém o storage autenticado
+      const storageInstance = getStorageWithAuth();
+      const rootRef = ref(storageInstance, '');
+      
+      // Lista todos os arquivos e pastas no root
+      const listResult = await listAll(rootRef);
+      
+      // Função recursiva para calcular tamanho
+      const calculateSize = async (references: StorageReference[]): Promise<number> => {
+        let totalSize = 0;
+        
+        for (const itemRef of references) {
+          try {
+            // Tenta obter metadados para calcular o tamanho
+            const metadata = await getMetadata(itemRef);
+            totalSize += metadata.size || 0;
+          } catch (error) {
+            // Se for uma pasta, lista todos os itens dentro
+            try {
+              const subList = await listAll(itemRef);
+              const subFiles = [...subList.items];
+              const subDirs = await Promise.all(
+                subList.prefixes.map(async (prefix) => {
+                  const subPrefixList = await listAll(prefix);
+                  return subPrefixList.items;
+                })
+              );
+              
+              // Calcula recursivamente para os subitens
+              const subSize = await calculateSize([
+                ...subFiles,
+                ...subDirs.flat()
+              ]);
+              totalSize += subSize;
+            } catch (listError) {
+              console.error('Erro ao listar subitens:', listError);
+            }
+          }
+        }
+        
+        return totalSize;
+      };
+      
+      // Calcula tamanho total de todos os arquivos no root
+      const usedSize = await calculateSize([
+        ...listResult.items,
+        ...listResult.prefixes
+      ]);
+      
+      // Atualiza os stats de armazenamento
+      setStorageStats({
+        used: usedSize,
+        total: TOTAL_STORAGE,
+        percentage: (usedSize / TOTAL_STORAGE) * 100
+      });
+      
+      return usedSize;
+    } catch (error) {
+      console.error('Erro ao calcular uso do storage:', error);
+      return 0;
+    }
+  };
+  
+  // Inicializa o cálculo de armazenamento ao carregar o componente
+  useEffect(() => {
+    calculateStorageUsage();
+  }, []);
   
   const uploadFile = async (file: File, path: string): Promise<string | null> => {
     if (!file) return null;
@@ -30,6 +116,10 @@ export const useStorage = () => {
       await uploadBytes(storageRef, file);
       const url = await getDownloadURL(storageRef);
       console.log(`Upload bem-sucedido: ${url}`);
+      
+      // Recalcula o espaço usado após o upload
+      calculateStorageUsage();
+      
       return url;
     } catch (error) {
       console.error('Erro ao fazer upload do arquivo:', error);
@@ -47,10 +137,15 @@ export const useStorage = () => {
     const urls: string[] = [];
     
     try {
-      for (const file of files) {
-        const url = await uploadFile(file, path);
+      // Upload em paralelo para melhorar performance
+      const uploadPromises = files.map(file => uploadFile(file, path));
+      const results = await Promise.all(uploadPromises);
+      
+      // Filtrar resultados nulos
+      results.forEach(url => {
         if (url) urls.push(url);
-      }
+      });
+      
       return urls;
     } catch (error) {
       console.error('Erro ao fazer upload dos arquivos:', error);
@@ -58,6 +153,9 @@ export const useStorage = () => {
       return urls;
     } finally {
       setIsUploading(false);
+      
+      // Recalcula o espaço usado após todos os uploads
+      calculateStorageUsage();
     }
   };
 
@@ -73,6 +171,10 @@ export const useStorage = () => {
       if (path) {
         const storageRef = ref(storage, path);
         await deleteObject(storageRef);
+        
+        // Recalcula o espaço usado após exclusão
+        calculateStorageUsage();
+        
         return true;
       }
       console.warn('Caminho do arquivo não encontrado na URL:', url);
@@ -122,12 +224,23 @@ export const useStorage = () => {
     }
   };
 
+  // Função para formatar tamanho em bytes para um formato legível
+  const formatStorageSize = (bytes: number): string => {
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    if (bytes === 0) return '0 Byte';
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return (bytes / Math.pow(1024, i)).toFixed(2) + ' ' + sizes[i];
+  };
+
   return {
     uploadFile,
     uploadFiles,
     deleteFile,
     uploadBase64Image,
     base64ToFile,
-    isUploading
+    isUploading,
+    storageStats,
+    calculateStorageUsage,
+    formatStorageSize
   };
 };
