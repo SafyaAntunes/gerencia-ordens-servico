@@ -69,8 +69,12 @@ export function FotosTab({ ordem, onOrdemUpdate }: FotosTabProps) {
   // Processar os arquivos quando a ordem mudar
   useEffect(() => {
     console.log("Processando arquivos da ordem:", ordem.id);
-    setFotosEntradaUrls(getUniqueUrls(ordem.fotosEntrada));
-    setFotosSaidaUrls(getUniqueUrls(ordem.fotosSaida));
+    // Garantir que os arrays existam, mesmo que vazios
+    const fotosEntrada = ordem.fotosEntrada || [];
+    const fotosSaida = ordem.fotosSaida || [];
+    
+    setFotosEntradaUrls(getUniqueUrls(fotosEntrada));
+    setFotosSaidaUrls(getUniqueUrls(fotosSaida));
     // Limpar seleções quando a ordem mudar
     setSelecionados({});
     setTipoSelecionado(null);
@@ -124,7 +128,7 @@ export function FotosTab({ ordem, onOrdemUpdate }: FotosTabProps) {
     // URLs selecionadas para exclusão
     const urlsParaExcluir = Object.keys(selecionados).filter(url => selecionados[url]);
     
-    // Clonar arrays de fotos
+    // Clonar arrays de fotos, garantindo que existam
     let novasFotosEntrada = [...(ordem.fotosEntrada || [])];
     let novasFotosSaida = [...(ordem.fotosSaida || [])];
     
@@ -204,8 +208,8 @@ export function FotosTab({ ordem, onOrdemUpdate }: FotosTabProps) {
     // Atualizar ordem com arrays filtrados
     const ordemAtualizada = {
       ...ordem,
-      fotosEntrada: entradaFiltrada,
-      fotosSaida: saidaFiltrada
+      fotosEntrada: entradaFiltrada || [],
+      fotosSaida: saidaFiltrada || []
     };
     
     onOrdemUpdate(ordemAtualizada);

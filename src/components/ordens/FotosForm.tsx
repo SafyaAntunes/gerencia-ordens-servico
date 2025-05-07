@@ -29,10 +29,14 @@ export default function FotosForm({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<{[key: string]: boolean}>({});
   
+  // Garantir que os arrays de fotos existam
+  const fotosEntradaArray = Array.isArray(fotosEntrada) ? fotosEntrada : [];
+  const fotosSaidaArray = Array.isArray(fotosSaida) ? fotosSaida : [];
+  
   // Limpar fotos inválidas ou nulas no carregamento inicial
   useEffect(() => {
     // Filtrar fotos de entrada inválidas
-    const validFotosEntrada = fotosEntrada.filter(foto => {
+    const validFotosEntrada = fotosEntradaArray.filter(foto => {
       if (!foto) return false;
       if (typeof foto === 'string' && foto.startsWith('http')) return true;
       if (foto && typeof foto === 'object' && foto.data) return true;
@@ -40,7 +44,7 @@ export default function FotosForm({
     });
     
     // Filtrar fotos de saída inválidas
-    const validFotosSaida = fotosSaida.filter(foto => {
+    const validFotosSaida = fotosSaidaArray.filter(foto => {
       if (!foto) return false;
       if (typeof foto === 'string' && foto.startsWith('http')) return true;
       if (foto && typeof foto === 'object' && foto.data) return true;
@@ -48,11 +52,11 @@ export default function FotosForm({
     });
     
     // Atualizar arrays se houver fotos inválidas
-    if (validFotosEntrada.length !== fotosEntrada.length) {
+    if (validFotosEntrada.length !== fotosEntradaArray.length) {
       onChangeFotosEntrada(validFotosEntrada);
     }
     
-    if (validFotosSaida.length !== fotosSaida.length) {
+    if (validFotosSaida.length !== fotosSaidaArray.length) {
       onChangeFotosSaida(validFotosSaida);
     }
   }, []);
@@ -64,13 +68,13 @@ export default function FotosForm({
         if (ordemId !== "temp") {
           const urls = await uploadFiles(files, `ordens/${ordemId}/entrada`);
           if (urls.length > 0) {
-            onChangeFotosEntrada([...fotosEntrada, ...urls]);
+            onChangeFotosEntrada([...fotosEntradaArray, ...urls]);
             toast.success(`${urls.length} arquivos carregados com sucesso!`);
           } else {
             setUploadError("Falha ao fazer upload das imagens. Verifique as permissões de acesso ao Storage.");
           }
         } else {
-          onChangeFotosEntrada([...fotosEntrada, ...files]);
+          onChangeFotosEntrada([...fotosEntradaArray, ...files]);
         }
       } catch (error) {
         console.error("Erro no upload:", error);
@@ -87,13 +91,13 @@ export default function FotosForm({
         if (ordemId !== "temp") {
           const urls = await uploadFiles(files, `ordens/${ordemId}/saida`);
           if (urls.length > 0) {
-            onChangeFotosSaida([...fotosSaida, ...urls]);
+            onChangeFotosSaida([...fotosSaidaArray, ...urls]);
             toast.success(`${urls.length} arquivos carregados com sucesso!`);
           } else {
             setUploadError("Falha ao fazer upload das imagens. Verifique as permissões de acesso ao Storage.");
           }
         } else {
-          onChangeFotosSaida([...fotosSaida, ...files]);
+          onChangeFotosSaida([...fotosSaidaArray, ...files]);
         }
       } catch (error) {
         console.error("Erro no upload:", error);
@@ -107,13 +111,13 @@ export default function FotosForm({
     const selectedKeys = Object.keys(selectedFiles).filter(key => selectedFiles[key]);
     if (selectedKeys.length === 0) return;
     
-    const newFotos = [...fotosEntrada];
+    const newFotos = [...fotosEntradaArray];
     const deletedIndices: number[] = [];
     
     // Tentar excluir arquivos do storage
     for (const key of selectedKeys) {
       const index = parseInt(key.replace('entrada-', ''));
-      const foto = fotosEntrada[index];
+      const foto = fotosEntradaArray[index];
       
       if (typeof foto === 'string' && foto.startsWith('http')) {
         try {
@@ -143,13 +147,13 @@ export default function FotosForm({
     const selectedKeys = Object.keys(selectedFiles).filter(key => selectedFiles[key]);
     if (selectedKeys.length === 0) return;
     
-    const newFotos = [...fotosSaida];
+    const newFotos = [...fotosSaidaArray];
     const deletedIndices: number[] = [];
     
     // Tentar excluir arquivos do storage
     for (const key of selectedKeys) {
       const index = parseInt(key.replace('saida-', ''));
-      const foto = fotosSaida[index];
+      const foto = fotosSaidaArray[index];
       
       if (typeof foto === 'string' && foto.startsWith('http')) {
         try {
@@ -201,8 +205,8 @@ export default function FotosForm({
   const exitSelected = countSelectedFiles('saida');
 
   // Filtrar somente arquivos válidos para exibição
-  const validFotosEntrada = fotosEntrada.filter(isValidFile);
-  const validFotosSaida = fotosSaida.filter(isValidFile);
+  const validFotosEntrada = fotosEntradaArray.filter(isValidFile);
+  const validFotosSaida = fotosSaidaArray.filter(isValidFile);
 
   return (
     <div>

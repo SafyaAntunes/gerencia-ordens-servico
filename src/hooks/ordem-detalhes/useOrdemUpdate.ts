@@ -87,6 +87,10 @@ export const useOrdemUpdate = (
         etapasAndamento: etapasAtualizado // Preservar informações das etapas
       };
       
+      // Garantir que fotosEntrada e fotosSaida sejam sempre arrays
+      const fotosEntradaAtual = Array.isArray(ordem.fotosEntrada) ? ordem.fotosEntrada : [];
+      const fotosSaidaAtual = Array.isArray(ordem.fotosSaida) ? ordem.fotosSaida : [];
+
       // CORRIGIDO: Processamento de fotos de entrada
       if (values.fotosEntrada && Array.isArray(values.fotosEntrada)) {
         // Filtrar apenas arquivos válidos (File ou string URL)
@@ -124,6 +128,9 @@ export const useOrdemUpdate = (
         
         updatedOrder.fotosEntrada = [...existingEntradaUrls, ...newEntradaUrls];
         console.log("Total de fotos de entrada após update:", updatedOrder.fotosEntrada.length);
+      } else {
+        // Garantir que fotosEntrada seja sempre um array, mesmo que vazio
+        updatedOrder.fotosEntrada = fotosEntradaAtual;
       }
       
       // CORRIGIDO: Processamento de fotos de saída
@@ -163,6 +170,9 @@ export const useOrdemUpdate = (
         
         updatedOrder.fotosSaida = [...existingSaidaUrls, ...newSaidaUrls];
         console.log("Total de fotos de saída após update:", updatedOrder.fotosSaida.length);
+      } else {
+        // Garantir que fotosSaida seja sempre um array, mesmo que vazio
+        updatedOrder.fotosSaida = fotosSaidaAtual;
       }
       
       console.log("Atualizando ordem com dados:", updatedOrder);
@@ -191,6 +201,16 @@ export const useOrdemUpdate = (
 
   const handleOrdemUpdate = (ordemAtualizada: OrdemServico) => {
     console.log("Recebendo atualização de ordem:", ordemAtualizada);
+    
+    // Garantir que os arrays de fotos existam
+    if (!ordemAtualizada.fotosEntrada) {
+      ordemAtualizada.fotosEntrada = [];
+    }
+    
+    if (!ordemAtualizada.fotosSaida) {
+      ordemAtualizada.fotosSaida = [];
+    }
+    
     setOrdem(ordemAtualizada);
   };
 
