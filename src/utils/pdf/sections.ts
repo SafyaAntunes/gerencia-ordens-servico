@@ -2,7 +2,7 @@
 import { jsPDF } from "jspdf";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { OrdemServico } from "@/types/ordens";
+import { OrdemServico, EtapaOS } from "@/types/ordens";
 import { statusLabels, etapasNomes, formatarTempo } from "./helpers";
 import { PDFProgressoData, PDFTempoData } from "./types";
 
@@ -34,6 +34,57 @@ export const adicionarInfoClienteEDatas = (
     doc.text(`Previsão de Entrega: ${format(new Date(ordem.dataPrevistaEntrega), 'dd/MM/yyyy', { locale: ptBR })}`, 14, 74);
   }
   doc.text(`Prioridade: ${ordem.prioridade?.toUpperCase() || 'Não definida'}`, 14, 81);
+};
+
+// Adicionar seção de responsáveis e funcionários
+export const adicionarSecaoResponsaveis = (
+  doc: jsPDF,
+  ordem: OrdemServico
+): void => {
+  // Se não houver informações de responsáveis para mostrar, pular esta seção
+  const temResponsaveis = ordem.servicos.some(s => s.funcionarioNome);
+  if (!temResponsaveis) return;
+  
+  const currentY = doc.previousAutoTable?.finalY || 130;
+  
+  doc.setFontSize(14);
+  doc.text("Funcionários Responsáveis", 14, currentY + 10);
+  
+  const responsaveisData: string[][] = [];
+  
+  // Adicionar funcionários responsáveis pelos serviços
+  ordem.servicos.forEach(servico => {
+    if (servico.funcionarioNome) {
+      responsaveisData.push([
+        etapasNomes[servico.tipo] || servico.tipo,
+        servico.funcionarioNome || "Não atribuído",
+        servico.dataConclusao 
+          ? format(new Date(servico.dataConclusao), 'dd/MM/yyyy', { locale: ptBR }) 
+          : "Em andamento"
+      ]);
+    }
+  });
+  
+  // Adicionar funcionários responsáveis pelas etapas
+  Object.entries(ordem.etapasAndamento || {}).forEach(([etapa, dados]) => {
+    if (dados.funcionarioNome) {
+      responsaveisData.push([
+        etapasNomes[etapa] || etapa,
+        dados.funcionarioNome || "Não atribuído",
+        dados.finalizado 
+          ? format(new Date(dados.finalizado), 'dd/MM/yyyy', { locale: ptBR }) 
+          : "Em andamento"
+      ]);
+    }
+  });
+  
+  if (responsaveisData.length > 0) {
+    doc.autoTable({
+      startY: currentY + 15,
+      head: [['Etapa/Serviço', 'Funcionário', 'Data de Conclusão']],
+      body: responsaveisData,
+    });
+  }
 };
 
 // Adicionar seção de progresso
@@ -69,12 +120,14 @@ export const adicionarTabelaServicos = (
   const servicosData = ordem.servicos.map(servico => [
     servico.tipo,
     progressoServicos[servico.tipo] ? `${progressoServicos[servico.tipo]}%` : '0%',
-    servico.descricao || '-'
+    servico.funcionarioNome || '-',
+    servico.descricao || '-',
+    servico.concluido ? 'Concluído' : 'Em andamento'
   ]);
   
   doc.autoTable({
     startY: 137,
-    head: [['Tipo de Serviço', 'Progresso', 'Descrição']],
+    head: [['Tipo de Serviço', 'Progresso', 'Responsável', 'Descrição', 'Status']],
     body: servicosData,
   });
 };
@@ -154,18 +207,19 @@ export const adicionarFotosPDF = (
           console.log(`Adicionando foto ${i+1} em posição (${currentPosX}, ${y})`);
           
           // Add image to PDF (with placeholder if needed)
-          doc.addImage(url, 'JPEG', currentPosX, y, imageWidth - 5, 45);
+          try {
+            doc.addImage(url, 'JPEG', currentPosX, y, imageWidth - 5, 45);
+          } catch (imgError) {
+            console.error(`Erro ao adicionar imagem ${i}: ${imgError}`);
+            
+            // Desenhar um retângulo como placeholder
+            doc.setDrawColor(200, 200, 200);
+            doc.rect(currentPosX, y, imageWidth - 5, 45);
+            doc.setFontSize(8);
+            doc.text('Imagem não disponível', currentPosX + 15, y + 25);
+          }
         } catch (error) {
-          console.error('Error adding image to PDF:', error);
-          
-          // Define position for placeholder
-          const isLeftColumn = i % 2 === 0;
-          const currentPosX = isLeftColumn ? margin : margin + imageWidth;
-          
-          // Add placeholder for failed image
-          doc.setDrawColor(200, 200, 200);
-          doc.rect(currentPosX, y, imageWidth - 5, 45);
-          doc.text('Imagem não disponível', currentPosX + 15, y + 25);
+          console.error('Error processing image for PDF:', error);
         }
       }
       
@@ -201,19 +255,20 @@ export const adicionarFotosPDF = (
           
           console.log(`Adicionando foto de saída ${i+1} em posição (${currentPosX}, ${y})`);
           
-          // Add image to PDF
-          doc.addImage(url, 'JPEG', currentPosX, y, imageWidth - 5, 45);
+          // Add image to PDF with better error handling
+          try {
+            doc.addImage(url, 'JPEG', currentPosX, y, imageWidth - 5, 45);
+          } catch (imgError) {
+            console.error(`Erro ao adicionar imagem de saída ${i}: ${imgError}`);
+            
+            // Desenhar um retângulo como placeholder
+            doc.setDrawColor(200, 200, 200);
+            doc.rect(currentPosX, y, imageWidth - 5, 45);
+            doc.setFontSize(8);
+            doc.text('Imagem não disponível', currentPosX + 15, y + 25);
+          }
         } catch (error) {
-          console.error('Error adding image to PDF:', error);
-          
-          // Define position for placeholder
-          const isLeftColumn = i % 2 === 0;
-          const currentPosX = isLeftColumn ? margin : margin + imageWidth;
-          
-          // Add placeholder for failed image
-          doc.setDrawColor(200, 200, 200);
-          doc.rect(currentPosX, y, imageWidth - 5, 45);
-          doc.text('Imagem não disponível', currentPosX + 15, y + 25);
+          console.error('Error processing output image for PDF:', error);
         }
       }
     }

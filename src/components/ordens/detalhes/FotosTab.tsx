@@ -19,6 +19,7 @@ interface FotosTabProps {
 interface MidiaItem {
   url: string;
   tipo: 'imagem' | 'video';
+  valida: boolean;
 }
 
 export function FotosTab({ ordem, onOrdemUpdate }: FotosTabProps) {
@@ -39,6 +40,13 @@ export function FotosTab({ ordem, onOrdemUpdate }: FotosTabProps) {
     return 'imagem';
   };
   
+  // Função para validar URL
+  const isValidUrl = (url: string): boolean => {
+    if (!url) return false;
+    // Verificação básica se a URL é válida
+    return url.startsWith('http') || url.startsWith('data:');
+  };
+  
   // Função para extrair URLs únicas e detectar tipo
   const getUniqueUrls = (fotos: any[] | undefined) => {
     if (!fotos || !Array.isArray(fotos)) return [];
@@ -46,12 +54,12 @@ export function FotosTab({ ordem, onOrdemUpdate }: FotosTabProps) {
     const urlMap = new Map<string, MidiaItem>();
     
     fotos.forEach(foto => {
-      if (typeof foto === 'string') {
+      if (typeof foto === 'string' && isValidUrl(foto)) {
         const tipo = detectarTipoArquivo(foto);
-        urlMap.set(foto, { url: foto, tipo });
-      } else if (foto && typeof foto === 'object' && foto.data) {
+        urlMap.set(foto, { url: foto, tipo, valida: true });
+      } else if (foto && typeof foto === 'object' && foto.data && isValidUrl(foto.data)) {
         const tipo = detectarTipoArquivo(foto.data);
-        urlMap.set(foto.data, { url: foto.data, tipo });
+        urlMap.set(foto.data, { url: foto.data, tipo, valida: true });
       }
     });
     
@@ -93,6 +101,22 @@ export function FotosTab({ ordem, onOrdemUpdate }: FotosTabProps) {
     return Object.values(selecionados).filter(Boolean).length;
   };
   
+  // Verificar se uma URL de imagem é válida
+  const handleImageError = (url: string, tipo: 'entrada' | 'saida') => {
+    console.error("Erro ao carregar imagem:", url);
+    
+    // Marcar a imagem como inválida em seu respectivo array
+    if (tipo === 'entrada') {
+      setFotosEntradaUrls(prev => 
+        prev.map(item => item.url === url ? { ...item, valida: false } : item)
+      );
+    } else {
+      setFotosSaidaUrls(prev => 
+        prev.map(item => item.url === url ? { ...item, valida: false } : item)
+      );
+    }
+  };
+  
   // Excluir itens selecionados
   const excluirSelecionados = async () => {
     if (!onOrdemUpdate || contarSelecionados() === 0) return;
@@ -101,8 +125,8 @@ export function FotosTab({ ordem, onOrdemUpdate }: FotosTabProps) {
     const urlsParaExcluir = Object.keys(selecionados).filter(url => selecionados[url]);
     
     // Clonar arrays de fotos
-    const novasFotosEntrada = [...ordem.fotosEntrada || []];
-    const novasFotosSaida = [...ordem.fotosSaida || []];
+    let novasFotosEntrada = [...(ordem.fotosEntrada || [])];
+    let novasFotosSaida = [...(ordem.fotosSaida || [])];
     
     let contadorExcluidos = 0;
     
@@ -110,15 +134,25 @@ export function FotosTab({ ordem, onOrdemUpdate }: FotosTabProps) {
     for (const url of urlsParaExcluir) {
       try {
         if (tipoSelecionado === 'entrada') {
-          const index = novasFotosEntrada.indexOf(url);
-          if (index !== -1) {
-            novasFotosEntrada.splice(index, 1);
-          }
+          // Filtrar URLs diretamente (string) ou objetos com a URL em data
+          novasFotosEntrada = novasFotosEntrada.filter(foto => {
+            if (typeof foto === 'string') {
+              return foto !== url;
+            } else if (foto && typeof foto === 'object' && foto.data) {
+              return foto.data !== url;
+            }
+            return true;
+          });
         } else if (tipoSelecionado === 'saida') {
-          const index = novasFotosSaida.indexOf(url);
-          if (index !== -1) {
-            novasFotosSaida.splice(index, 1);
-          }
+          // Filtrar URLs diretamente (string) ou objetos com a URL em data
+          novasFotosSaida = novasFotosSaida.filter(foto => {
+            if (typeof foto === 'string') {
+              return foto !== url;
+            } else if (foto && typeof foto === 'object' && foto.data) {
+              return foto.data !== url;
+            }
+            return true;
+          });
         }
         
         // Excluir do Firebase Storage
@@ -143,6 +177,46 @@ export function FotosTab({ ordem, onOrdemUpdate }: FotosTabProps) {
     setSelecionados({});
   };
   
+  // Limpar URLs inválidas da ordem
+  const limparUrlsInvalidas = () => {
+    if (!onOrdemUpdate) return;
+    
+    // Filtrar apenas fotos válidas
+    const fotosEntradaValidas = fotosEntradaUrls
+      .filter(item => item.valida)
+      .map(item => item.url);
+      
+    const fotosSaidaValidas = fotosSaidaUrls
+      .filter(item => item.valida)
+      .map(item => item.url);
+    
+    // Filtrar os arrays originais mantendo apenas URLs válidas
+    const entradaFiltrada = ordem.fotosEntrada?.filter(foto => {
+      const url = typeof foto === 'string' ? foto : (foto as any)?.data;
+      return url && fotosEntradaValidas.includes(url);
+    });
+    
+    const saidaFiltrada = ordem.fotosSaida?.filter(foto => {
+      const url = typeof foto === 'string' ? foto : (foto as any)?.data;
+      return url && fotosSaidaValidas.includes(url);
+    });
+    
+    // Atualizar ordem com arrays filtrados
+    const ordemAtualizada = {
+      ...ordem,
+      fotosEntrada: entradaFiltrada,
+      fotosSaida: saidaFiltrada
+    };
+    
+    onOrdemUpdate(ordemAtualizada);
+    toast.success("Arquivos inválidos removidos com sucesso!");
+  };
+  
+  // Verificar se há fotos inválidas
+  const temFotosInvalidas = 
+    fotosEntradaUrls.some(item => !item.valida) || 
+    fotosSaidaUrls.some(item => !item.valida);
+  
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -150,18 +224,29 @@ export function FotosTab({ ordem, onOrdemUpdate }: FotosTabProps) {
         <div className="flex gap-2">
           {fotosEntradaUrls.length > 0 && (
             <DownloadImagesButton 
-              imageUrls={fotosEntradaUrls.map(item => item.url)} 
+              imageUrls={fotosEntradaUrls.filter(item => item.valida).map(item => item.url)} 
               zipName={`fotos-entrada-ordem-${ordem.id}`} 
               buttonText="Baixar Fotos de Entrada" 
             />
           )}
           {fotosSaidaUrls.length > 0 && (
             <DownloadImagesButton 
-              imageUrls={fotosSaidaUrls.map(item => item.url)} 
+              imageUrls={fotosSaidaUrls.filter(item => item.valida).map(item => item.url)} 
               zipName={`fotos-saida-ordem-${ordem.id}`}
               buttonText="Baixar Fotos de Saída"
               variant="secondary" 
             />
+          )}
+          
+          {temFotosInvalidas && onOrdemUpdate && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={limparUrlsInvalidas}
+            >
+              <Trash className="h-4 w-4 mr-2" />
+              Limpar inválidas
+            </Button>
           )}
         </div>
       </div>
@@ -190,12 +275,12 @@ export function FotosTab({ ordem, onOrdemUpdate }: FotosTabProps) {
         <Card>
           <CardHeader className="flex flex-row justify-between items-center">
             <CardTitle>Fotos de Entrada</CardTitle>
-            <Badge variant="outline">{fotosEntradaUrls.length}</Badge>
+            <Badge variant="outline">{fotosEntradaUrls.filter(item => item.valida).length}</Badge>
           </CardHeader>
           <CardContent>
-            {fotosEntradaUrls.length > 0 ? (
+            {fotosEntradaUrls.filter(item => item.valida).length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {fotosEntradaUrls.map((item, index) => (
+                {fotosEntradaUrls.filter(item => item.valida).map((item, index) => (
                   <div 
                     key={index} 
                     className="relative aspect-square rounded-md overflow-hidden group border border-border hover:border-primary transition-colors"
@@ -217,10 +302,7 @@ export function FotosTab({ ordem, onOrdemUpdate }: FotosTabProps) {
                           alt={`Arquivo ${index + 1}`} 
                           className="object-cover w-full h-full cursor-pointer"
                           onClick={() => abrirModal(item)}
-                          onError={(e) => {
-                            console.error("Erro ao carregar imagem:", item.url);
-                            (e.target as HTMLImageElement).src = "/placeholder.svg";
-                          }}
+                          onError={() => handleImageError(item.url, 'entrada')}
                         />
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                           <Button 
@@ -245,9 +327,7 @@ export function FotosTab({ ordem, onOrdemUpdate }: FotosTabProps) {
                           src={item.url} 
                           className="object-cover w-full h-full cursor-pointer"
                           onClick={() => abrirModal(item)}
-                          onError={(e) => {
-                            console.error("Erro ao carregar vídeo:", item.url);
-                          }}
+                          onError={() => handleImageError(item.url, 'entrada')}
                         />
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                           <Button 
@@ -271,7 +351,7 @@ export function FotosTab({ ordem, onOrdemUpdate }: FotosTabProps) {
                 ))}
               </div>
             ) : (
-              <p className="text-muted-foreground">Nenhum arquivo de entrada.</p>
+              <p className="text-muted-foreground">Nenhum arquivo de entrada válido.</p>
             )}
           </CardContent>
         </Card>
@@ -279,12 +359,12 @@ export function FotosTab({ ordem, onOrdemUpdate }: FotosTabProps) {
         <Card>
           <CardHeader className="flex flex-row justify-between items-center">
             <CardTitle>Fotos de Saída</CardTitle>
-            <Badge variant="outline">{fotosSaidaUrls.length}</Badge>
+            <Badge variant="outline">{fotosSaidaUrls.filter(item => item.valida).length}</Badge>
           </CardHeader>
           <CardContent>
-            {fotosSaidaUrls.length > 0 ? (
+            {fotosSaidaUrls.filter(item => item.valida).length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {fotosSaidaUrls.map((item, index) => (
+                {fotosSaidaUrls.filter(item => item.valida).map((item, index) => (
                   <div 
                     key={index} 
                     className="relative aspect-square rounded-md overflow-hidden group border border-border hover:border-primary transition-colors"
@@ -306,10 +386,7 @@ export function FotosTab({ ordem, onOrdemUpdate }: FotosTabProps) {
                           alt={`Arquivo ${index + 1}`} 
                           className="object-cover w-full h-full cursor-pointer"
                           onClick={() => abrirModal(item)}
-                          onError={(e) => {
-                            console.error("Erro ao carregar imagem:", item.url);
-                            (e.target as HTMLImageElement).src = "/placeholder.svg";
-                          }}
+                          onError={() => handleImageError(item.url, 'saida')}
                         />
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                           <Button 
@@ -334,9 +411,7 @@ export function FotosTab({ ordem, onOrdemUpdate }: FotosTabProps) {
                           src={item.url} 
                           className="object-cover w-full h-full cursor-pointer"
                           onClick={() => abrirModal(item)}
-                          onError={(e) => {
-                            console.error("Erro ao carregar vídeo:", item.url);
-                          }}
+                          onError={() => handleImageError(item.url, 'saida')}
                         />
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                           <Button 
@@ -360,7 +435,7 @@ export function FotosTab({ ordem, onOrdemUpdate }: FotosTabProps) {
                 ))}
               </div>
             ) : (
-              <p className="text-muted-foreground">Nenhum arquivo de saída.</p>
+              <p className="text-muted-foreground">Nenhum arquivo de saída válido.</p>
             )}
           </CardContent>
         </Card>
