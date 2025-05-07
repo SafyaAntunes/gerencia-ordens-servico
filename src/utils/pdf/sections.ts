@@ -1,5 +1,6 @@
 
 import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { OrdemServico, EtapaOS } from "@/types/ordens";
@@ -79,7 +80,8 @@ export const adicionarSecaoResponsaveis = (
   });
   
   if (responsaveisData.length > 0) {
-    doc.autoTable({
+    // Corrigimos a forma de chamar autoTable
+    autoTable(doc, {
       startY: currentY + 15,
       head: [['Etapa/Serviço', 'Funcionário', 'Data de Conclusão']],
       body: responsaveisData,
@@ -125,7 +127,8 @@ export const adicionarTabelaServicos = (
     servico.concluido ? 'Concluído' : 'Em andamento'
   ]);
   
-  doc.autoTable({
+  // Corrigimos a forma de chamar autoTable
+  autoTable(doc, {
     startY: 137,
     head: [['Tipo de Serviço', 'Progresso', 'Responsável', 'Descrição', 'Status']],
     body: servicosData,
@@ -152,7 +155,8 @@ export const adicionarTabelaEtapas = (
     formatarTempo(temposPorEtapa[etapa] || 0)
   ]);
   
-  doc.autoTable({
+  // Corrigimos a forma de chamar autoTable
+  autoTable(doc, {
     startY: currentY + 15,
     head: [['Etapa', 'Progresso', 'Tempo Registrado']],
     body: etapasData,

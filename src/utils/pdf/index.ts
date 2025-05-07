@@ -12,15 +12,8 @@ export * from "./helpers";
 export * from "./calculators";
 export * from "./types";
 
-// Estender o tipo jsPDF para reconhecer o método autoTable
-declare module "jspdf" {
-  interface jsPDF {
-    autoTable: any;
-    previousAutoTable?: {
-      finalY: number;
-    };
-  }
-}
+// We no longer need this declaration since it's in types.ts
+// and we're avoiding duplicate declarations
 
 export const generateOrderPDF = async (ordem: OrdemServico): Promise<void> => {
   try {
@@ -38,8 +31,9 @@ export const generateOrderPDF = async (ordem: OrdemServico): Promise<void> => {
       format: 'a4',
     });
     
-    // Adicionar autoTable ao doc
-    doc.autoTable = autoTable;
+    // Adicionar autoTable ao doc corretamente
+    // O tipo do autoTable é próprio do plugin, então precisamos usá-lo corretamente
+    autoTable(doc, {});  // Inicializa com opções vazias
     
     console.log("Documento PDF criado, adicionando seções...");
     
