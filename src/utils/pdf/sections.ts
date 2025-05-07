@@ -17,18 +17,22 @@ export const adicionarInfoClienteEDatas = (
   
   doc.setFontSize(11);
   doc.text(`Data: ${format(new Date(), 'dd/MM/yyyy', { locale: ptBR })}`, 14, 28);
-  doc.text(`Status: ${statusLabels[ordem.status as any] || ordem.status}`, 14, 35);
+  doc.text(`Status: ${statusLabels[ordem.status] || ordem.status}`, 14, 35);
   
   // Client info
   doc.setFontSize(14);
   doc.text("Informações do Cliente", 14, 45);
   doc.setFontSize(11);
   doc.text(`Cliente: ${ordem.cliente?.nome || 'Não informado'}`, 14, 53);
-  doc.text(`Motor: ${ordem.motorId || 'Não informado'}`, 14, 60);
+  if (ordem.motorId) {
+    doc.text(`Motor: ${ordem.motorId || 'Não informado'}`, 14, 60);
+  }
   
   // Dates section
   doc.text(`Data de Abertura: ${format(new Date(ordem.dataAbertura), 'dd/MM/yyyy', { locale: ptBR })}`, 14, 67);
-  doc.text(`Previsão de Entrega: ${format(new Date(ordem.dataPrevistaEntrega), 'dd/MM/yyyy', { locale: ptBR })}`, 14, 74);
+  if (ordem.dataPrevistaEntrega) {
+    doc.text(`Previsão de Entrega: ${format(new Date(ordem.dataPrevistaEntrega), 'dd/MM/yyyy', { locale: ptBR })}`, 14, 74);
+  }
   doc.text(`Prioridade: ${ordem.prioridade?.toUpperCase() || 'Não definida'}`, 14, 81);
 };
 
@@ -55,6 +59,10 @@ export const adicionarTabelaServicos = (
   ordem: OrdemServico,
   { progressoServicos }: PDFProgressoData
 ): void => {
+  if (!ordem.servicos || ordem.servicos.length === 0) {
+    return; // Skip if no services
+  }
+  
   doc.setFontSize(14);
   doc.text("Serviços", 14, 133);
   
@@ -77,6 +85,10 @@ export const adicionarTabelaEtapas = (
   { progressoEtapas }: PDFProgressoData,
   { temposPorEtapa }: PDFTempoData
 ): void => {
+  if (Object.keys(progressoEtapas).length === 0) {
+    return; // Skip if no etapas
+  }
+  
   const currentY = doc.previousAutoTable?.finalY || 150;
   doc.setFontSize(14);
   doc.text("Etapas", 14, currentY + 10);
@@ -102,98 +114,111 @@ export const adicionarFotosPDF = (
 ): void => {
   if (fotosEntrada.length === 0 && fotosSaida.length === 0) return;
   
-  doc.addPage();
-  doc.setFontSize(14);
-  doc.text("Fotos da Ordem", 14, 20);
-  
-  let y = 30;
-  const pageWidth = doc.internal.pageSize.width;
-  const margin = 14;
-  const imageWidth = (pageWidth - margin * 2) / 2; // 2 columns of images
-  
-  // Adicionar fotos de entrada
-  if (fotosEntrada.length > 0) {
-    doc.setFontSize(12);
-    doc.text("Fotos de Entrada", 14, y);
-    y += 8;
+  try {
+    doc.addPage();
+    doc.setFontSize(14);
+    doc.text("Fotos da Ordem", 14, 20);
     
-    // Only include the first 4 photos due to PDF size constraints
-    const fotosToShow = fotosEntrada.slice(0, 4);
-    for (let i = 0; i < fotosToShow.length; i++) {
-      const url = typeof fotosToShow[i] === 'string' 
-        ? fotosToShow[i] as string
-        : (fotosToShow[i] as any)?.data || '';
+    let y = 30;
+    const pageWidth = doc.internal.pageSize.width;
+    const margin = 14;
+    const imageWidth = (pageWidth - margin * 2) / 2; // 2 columns of images
+    
+    // Adicionar fotos de entrada
+    if (fotosEntrada.length > 0) {
+      doc.setFontSize(12);
+      doc.text("Fotos de Entrada", 14, y);
+      y += 8;
       
-      if (!url || url.includes('video') || url.match(/\.(mp4|webm|ogg|mov)$/i)) {
-        continue; // Skip videos
-      }
-      
-      try {
-        const isLeftColumn = i % 2 === 0;
-        const currentPosX = isLeftColumn ? margin : margin + imageWidth;
-        
-        // Only get new line for right columns
-        if (i > 0 && isLeftColumn) {
-          y += 50; // Height of each image row
+      // Only include the first 4 photos due to PDF size constraints
+      const fotosToShow = fotosEntrada.slice(0, 4);
+      for (let i = 0; i < fotosToShow.length; i++) {
+        try {
+          const url = typeof fotosToShow[i] === 'string' 
+            ? fotosToShow[i] as string
+            : (fotosToShow[i] as any)?.data || '';
+          
+          if (!url || url.includes('video') || url.match(/\.(mp4|webm|ogg|mov)$/i)) {
+            continue; // Skip videos
+          }
+          
+          // Define column position
+          const isLeftColumn = i % 2 === 0;
+          const currentPosX = isLeftColumn ? margin : margin + imageWidth;
+          
+          // Only get new line for even indices (start of a new row)
+          if (i > 0 && i % 2 === 0) {
+            y += 50; // Height of each image row
+          }
+          
+          console.log(`Adicionando foto ${i+1} em posição (${currentPosX}, ${y})`);
+          
+          // Add image to PDF (with placeholder if needed)
+          doc.addImage(url, 'JPEG', currentPosX, y, imageWidth - 5, 45);
+        } catch (error) {
+          console.error('Error adding image to PDF:', error);
+          
+          // Define position for placeholder
+          const isLeftColumn = i % 2 === 0;
+          const currentPosX = isLeftColumn ? margin : margin + imageWidth;
+          
+          // Add placeholder for failed image
+          doc.setDrawColor(200, 200, 200);
+          doc.rect(currentPosX, y, imageWidth - 5, 45);
+          doc.text('Imagem não disponível', currentPosX + 15, y + 25);
         }
-        
-        // Add image to PDF (with placeholder if needed)
-        doc.addImage(url, 'JPEG', currentPosX, y, imageWidth - 5, 45);
-      } catch (error) {
-        // Define currentPosX here as well to fix the TypeScript error
-        const isLeftColumn = i % 2 === 0;
-        const currentPosX = isLeftColumn ? margin : margin + imageWidth;
-        
-        console.error('Error adding image to PDF:', error);
-        // Add placeholder for failed image
-        doc.setDrawColor(200, 200, 200);
-        doc.rect(currentPosX, y, imageWidth - 5, 45);
-        doc.text('Imagem não disponível', currentPosX + 15, y + 25);
       }
+      
+      y += 60;
     }
     
-    y += 60;
-  }
-  
-  // Adicionar fotos de saída
-  if (fotosSaida.length > 0) {
-    doc.setFontSize(12);
-    doc.text("Fotos de Saída", 14, y);
-    y += 8;
-    
-    // Only include the first 4 photos due to PDF size constraints
-    const fotosToShow = fotosSaida.slice(0, 4);
-    for (let i = 0; i < fotosToShow.length; i++) {
-      const url = typeof fotosToShow[i] === 'string' 
-        ? fotosToShow[i] as string
-        : (fotosToShow[i] as any)?.data || '';
+    // Adicionar fotos de saída
+    if (fotosSaida.length > 0) {
+      doc.setFontSize(12);
+      doc.text("Fotos de Saída", 14, y);
+      y += 8;
       
-      if (!url || url.includes('video') || url.match(/\.(mp4|webm|ogg|mov)$/i)) {
-        continue; // Skip videos
-      }
-      
-      try {
-        const isLeftColumn = i % 2 === 0;
-        const currentPosX = isLeftColumn ? margin : margin + imageWidth;
-        
-        // Only get new line for right columns
-        if (i > 0 && isLeftColumn) {
-          y += 50; // Height of each image row
+      // Only include the first 4 photos due to PDF size constraints
+      const fotosToShow = fotosSaida.slice(0, 4);
+      for (let i = 0; i < fotosToShow.length; i++) {
+        try {
+          const url = typeof fotosToShow[i] === 'string' 
+            ? fotosToShow[i] as string
+            : (fotosToShow[i] as any)?.data || '';
+          
+          if (!url || url.includes('video') || url.match(/\.(mp4|webm|ogg|mov)$/i)) {
+            continue; // Skip videos
+          }
+          
+          // Define column position
+          const isLeftColumn = i % 2 === 0;
+          const currentPosX = isLeftColumn ? margin : margin + imageWidth;
+          
+          // Only get new line for even indices (start of a new row)
+          if (i > 0 && i % 2 === 0) {
+            y += 50; // Height of each image row
+          }
+          
+          console.log(`Adicionando foto de saída ${i+1} em posição (${currentPosX}, ${y})`);
+          
+          // Add image to PDF
+          doc.addImage(url, 'JPEG', currentPosX, y, imageWidth - 5, 45);
+        } catch (error) {
+          console.error('Error adding image to PDF:', error);
+          
+          // Define position for placeholder
+          const isLeftColumn = i % 2 === 0;
+          const currentPosX = isLeftColumn ? margin : margin + imageWidth;
+          
+          // Add placeholder for failed image
+          doc.setDrawColor(200, 200, 200);
+          doc.rect(currentPosX, y, imageWidth - 5, 45);
+          doc.text('Imagem não disponível', currentPosX + 15, y + 25);
         }
-        
-        // Add image to PDF
-        doc.addImage(url, 'JPEG', currentPosX, y, imageWidth - 5, 45);
-      } catch (error) {
-        // Define currentPosX here as well to fix the TypeScript error
-        const isLeftColumn = i % 2 === 0;
-        const currentPosX = isLeftColumn ? margin : margin + imageWidth;
-        
-        console.error('Error adding image to PDF:', error);
-        // Add placeholder for failed image
-        doc.setDrawColor(200, 200, 200);
-        doc.rect(currentPosX, y, imageWidth - 5, 45);
-        doc.text('Imagem não disponível', currentPosX + 15, y + 25);
       }
     }
+  } catch (error) {
+    console.error("Erro ao adicionar fotos ao PDF:", error);
+    // Continue with PDF generation without images
   }
 };

@@ -5,6 +5,7 @@ import { OrdemServico } from '@/types/ordens';
 import { FileDown, FileImage, FileText } from 'lucide-react';
 import { downloadImages, exportToCsv } from '@/utils/exportImportUtils';
 import { generateOrderPDF } from '@/utils/pdf';
+import { toast } from 'sonner';
 
 interface OrdemActionButtonsProps {
   ordem: OrdemServico;
@@ -30,7 +31,7 @@ const OrdemActionButtons: React.FC<OrdemActionButtonsProps> = ({
     if (onExport) {
       onExport();
     } else {
-      exportToCsv(ordem, `ordem_${ordem.id}.csv`);
+      exportToCsv([ordem], `ordem_${ordem.id}.csv`);
     }
   };
   
@@ -43,7 +44,13 @@ const OrdemActionButtons: React.FC<OrdemActionButtonsProps> = ({
   };
   
   const handleGeneratePdf = async () => {
-    await generateOrderPDF(ordem);
+    try {
+      console.log("Chamando função generateOrderPDF para a ordem:", ordem.id);
+      await generateOrderPDF(ordem);
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      toast.error("Erro ao gerar PDF da ordem");
+    }
   };
   
   return (

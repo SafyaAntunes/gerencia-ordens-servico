@@ -14,6 +14,7 @@ export * from "./types";
 
 export const generateOrderPDF = async (ordem: OrdemServico): Promise<void> => {
   try {
+    console.log("Iniciando geração do PDF para ordem:", ordem.id);
     toast.info("Gerando PDF da ordem...");
     
     // Calcular dados necessários para o PDF
@@ -27,6 +28,8 @@ export const generateOrderPDF = async (ordem: OrdemServico): Promise<void> => {
       format: 'a4',
     });
     
+    console.log("Documento PDF criado, adicionando seções...");
+    
     // Adicionar seções ao PDF
     adicionarInfoClienteEDatas(doc, ordem);
     adicionarSecaoProgresso(doc, progressosData, temposData);
@@ -36,12 +39,16 @@ export const generateOrderPDF = async (ordem: OrdemServico): Promise<void> => {
     // Adicionar fotos se existirem
     const fotosEntrada = ordem.fotosEntrada || [];
     const fotosSaida = ordem.fotosSaida || [];
+    
+    console.log(`Adicionando fotos: ${fotosEntrada.length} entrada, ${fotosSaida.length} saída`);
     adicionarFotosPDF(doc, fotosEntrada, fotosSaida);
     
     // Salvar PDF
     const fileName = `ordem_${ordem.id.slice(-5)}_${format(new Date(), 'dd-MM-yyyy', { locale: ptBR })}.pdf`;
+    console.log("Salvando PDF com nome:", fileName);
     doc.save(fileName);
     
+    console.log("PDF gerado com sucesso!");
     toast.success("PDF gerado com sucesso!");
   } catch (error) {
     console.error("Erro ao gerar PDF:", error);
