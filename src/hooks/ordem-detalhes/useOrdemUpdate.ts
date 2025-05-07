@@ -87,9 +87,9 @@ export const useOrdemUpdate = (
         etapasAndamento: etapasAtualizado // Preservar informações das etapas
       };
       
-      // Processar fotos de entrada - CORRIGIDO
-      if (values.fotosEntrada && values.fotosEntrada.length > 0) {
-        // Filtrar apenas arquivos válidos (File ou string URL válida)
+      // CORRIGIDO: Processamento de fotos de entrada
+      if (values.fotosEntrada && Array.isArray(values.fotosEntrada)) {
+        // Filtrar apenas arquivos válidos (File ou string URL)
         const validFotosEntrada = values.fotosEntrada.filter((f: any) => {
           if (f instanceof File) return true;
           if (typeof f === 'string' && f.startsWith('http')) return true;
@@ -97,7 +97,7 @@ export const useOrdemUpdate = (
           return false;
         });
         
-        // Fotos existentes que são URLs (strings)
+        // Fotos existentes que são URLs ou objetos com data
         const existingEntradaUrls = validFotosEntrada.filter((f: any) => 
           typeof f === 'string' || (f && typeof f === 'object' && f.data)
         );
@@ -124,14 +124,11 @@ export const useOrdemUpdate = (
         
         updatedOrder.fotosEntrada = [...existingEntradaUrls, ...newEntradaUrls];
         console.log("Total de fotos de entrada após update:", updatedOrder.fotosEntrada.length);
-      } else {
-        // Se não houver fotos novas, definir como array vazio (removendo todas as fotos)
-        updatedOrder.fotosEntrada = [];
       }
       
-      // Processar fotos de saída - CORRIGIDO
-      if (values.fotosSaida && values.fotosSaida.length > 0) {
-        // Filtrar apenas arquivos válidos (File ou string URL válida)
+      // CORRIGIDO: Processamento de fotos de saída
+      if (values.fotosSaida && Array.isArray(values.fotosSaida)) {
+        // Filtrar apenas arquivos válidos (File ou string URL)
         const validFotosSaida = values.fotosSaida.filter((f: any) => {
           if (f instanceof File) return true;
           if (typeof f === 'string' && f.startsWith('http')) return true;
@@ -139,7 +136,7 @@ export const useOrdemUpdate = (
           return false;
         });
         
-        // Fotos existentes que são URLs (strings)
+        // Fotos existentes que são URLs ou objetos com data
         const existingSaidaUrls = validFotosSaida.filter((f: any) => 
           typeof f === 'string' || (f && typeof f === 'object' && f.data)
         );
@@ -166,9 +163,6 @@ export const useOrdemUpdate = (
         
         updatedOrder.fotosSaida = [...existingSaidaUrls, ...newSaidaUrls];
         console.log("Total de fotos de saída após update:", updatedOrder.fotosSaida.length);
-      } else {
-        // Se não houver fotos novas, definir como array vazio (removendo todas as fotos)
-        updatedOrder.fotosSaida = [];
       }
       
       console.log("Atualizando ordem com dados:", updatedOrder);

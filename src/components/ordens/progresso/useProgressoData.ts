@@ -29,7 +29,32 @@ export function useProgressoData(ordem: OrdemServico) {
     setTemposPorEtapa(temposEtapas);
     calcularTempoEstimado();
     calcularDiasEmAndamento();
+    
+    // NOVO: Verificar automaticamente se retífica deve ser marcada como concluída
+    verificarEtapaRetifica();
   }, [ordem]);
+  
+  // NOVO: Função para verificar se a etapa de retífica deve ser marcada como concluída
+  const verificarEtapaRetifica = () => {
+    // Se a etapa já está marcada como concluída, não fazer nada
+    if (ordem.etapasAndamento?.retifica?.concluido) return;
+    
+    // Obter todos os serviços principais que não sejam lavagem, montagem ou dinamômetro
+    const servicosPrincipais = ordem.servicos.filter(servico => 
+      ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo)
+    );
+    
+    // Se não há serviços principais, a retífica não é relevante
+    if (servicosPrincipais.length === 0) return;
+    
+    // Verificar se todos os serviços principais estão concluídos
+    const todosServicosConcluidos = servicosPrincipais.every(servico => servico.concluido);
+    
+    // Se todos os serviços estão concluídos, a etapa de retífica deveria estar concluída
+    if (todosServicosConcluidos) {
+      console.log("Todos os serviços de retífica estão concluídos, mas a etapa não está marcada como concluída");
+    }
+  };
   
   const calcularProgressoEtapas = () => {
     const etapas: EtapaOS[] = ["lavagem", "inspecao_inicial", "retifica", "montagem", "dinamometro", "inspecao_final"];
@@ -60,17 +85,56 @@ export function useProgressoData(ordem: OrdemServico) {
           progresso: etapaConcluida ? 100 : Math.round((pecasConcluidas / totalPecas) * 100),
           concluida: etapaConcluida
         };
+      } else if (etapa === 'retifica') {
+        // MODIFICADO: Melhorar a lógica de progresso para retífica
+        const etapaInfo = ordem.etapasAndamento[etapa];
+        const concluida = etapaInfo?.concluido || false;
+        
+        // Se já está marcada como concluída, retornar 100%
+        if (concluida) {
+          return {
+            etapa,
+            nome: etapasNomes[etapa],
+            progresso: 100,
+            concluida: true
+          };
+        }
+        
+        // Caso contrário, calcular baseado nos serviços de retífica
+        const servicosPrincipais = ordem.servicos.filter(servico => 
+          ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo)
+        );
+        
+        // Se não há serviços principais, a retífica não é relevante
+        if (servicosPrincipais.length === 0) {
+          return { etapa, nome: etapasNomes[etapa], progresso: 0, concluida: false };
+        }
+        
+        // Contar serviços concluídos
+        const servicosConcluidos = servicosPrincipais.filter(servico => servico.concluido).length;
+        const progresso = Math.round((servicosConcluidos / servicosPrincipais.length) * 100);
+        
+        // A etapa está concluída se todos os serviços estão concluídos
+        const etapaConcluida = servicosConcluidos === servicosPrincipais.length;
+        
+        return {
+          etapa,
+          nome: etapasNomes[etapa],
+          progresso: progresso,
+          concluida: etapaConcluida
+        };
+      } else {
+        // Para outras etapas (montagem, dinamômetro)
+        const etapaInfo = ordem.etapasAndamento[etapa];
+        const concluida = etapaInfo?.concluido || false;
+        
+        return {
+          etapa,
+          nome: etapasNomes[etapa],
+          progresso: concluida ? 100 : (etapaInfo?.iniciado ? 50 : 0),
+          concluida
+        };
       }
-      
-      const etapaInfo = ordem.etapasAndamento[etapa];
-      const concluida = etapaInfo?.concluido || false;
-      
-      return {
-        etapa,
-        nome: etapasNomes[etapa],
-        progresso: concluida ? 100 : (etapaInfo?.iniciado ? 50 : 0),
-        concluida
-      };
     });
     
     setProgressoEtapas(progressos);

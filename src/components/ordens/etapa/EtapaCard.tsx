@@ -110,6 +110,25 @@ export default function EtapaCard({
     }
   }, [etapaInfo, setIsAtivo]);
   
+  // NOVO: Verificar se todos os serviços estão concluídos e concluir a etapa automaticamente
+  useEffect(() => {
+    // Verificar somente para a etapa de retífica
+    if (etapa === 'retifica' && !isEtapaConcluida(etapaInfo) && servicos.length > 0) {
+      const todosServicosConcluidos = servicos.every(servico => servico.concluido);
+      
+      if (todosServicosConcluidos && onEtapaStatusChange) {
+        console.log("Todos os serviços de retífica concluídos, concluindo a etapa automaticamente");
+        
+        // Usa o ID e nome do funcionário selecionado, último salvo ou funcionário atual
+        const useId = funcionarioSelecionadoId || lastSavedFuncionarioId || etapaInfo?.funcionarioId || funcionario?.id;
+        const useNome = funcionarioSelecionadoNome || lastSavedFuncionarioNome || etapaInfo?.funcionarioNome || funcionario?.nome;
+        
+        onEtapaStatusChange(etapa, true, useId, useNome);
+      }
+    }
+  }, [etapa, servicos, isEtapaConcluida, etapaInfo, onEtapaStatusChange, funcionarioSelecionadoId, 
+      lastSavedFuncionarioId, funcionarioSelecionadoNome, lastSavedFuncionarioNome, funcionario]);
+  
   const handleEtapaConcluida = (tempoTotal: number) => {
     // Verificar se todas as subatividades estão concluídas
     if (!todasSubatividadesConcluidas(servicos)) {
@@ -157,6 +176,7 @@ export default function EtapaCard({
         servicos={servicos} 
         onAllServicosConcluidos={() => {
           // Não fazer nada automático, deixar usuário clicar em concluir
+          // ou usar o efeito automático para etapa de retífica
         }} 
       />
       
