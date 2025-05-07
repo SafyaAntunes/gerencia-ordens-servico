@@ -11,7 +11,6 @@ import { DeleteOrdemDialog } from "@/components/ordens/detalhes/DeleteOrdemDialo
 import { LoadingOrdem } from "@/components/ordens/detalhes/LoadingOrdem";
 import { NotFoundOrdem } from "@/components/ordens/detalhes/NotFoundOrdem";
 import { OrdemHeaderCustom } from "@/components/ordens/detalhes/OrdemHeaderCustom";
-import { StorageInfo } from "@/components/common/StorageInfo";
 
 interface OrdemDetalhesProps extends LogoutProps {}
 
@@ -54,20 +53,15 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
 
   return (
     <Layout onLogout={onLogout}>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 mb-4">
-        <div className="md:col-span-2">
-          <OrdemHeaderCustom 
-            id={ordem.id}
-            nome={ordem.nome}
-            canEdit={!isEditando && canEditThisOrder}
-            onEditClick={() => setIsEditando(true)}
-            onDeleteClick={() => setDeleteDialogOpen(true)}
-            ordem={ordem}
-          />
-        </div>
-        <div className="md:col-span-1">
-          <StorageInfo />
-        </div>
+      <div className="mb-4">
+        <OrdemHeaderCustom 
+          id={ordem.id}
+          nome={ordem.nome}
+          canEdit={!isEditando && canEditThisOrder}
+          onEditClick={() => setIsEditando(true)}
+          onDeleteClick={() => setDeleteDialogOpen(true)}
+          ordem={ordem}
+        />
       </div>
 
       {isEditando ? (

@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { storage, getStorageWithAuth } from '@/lib/firebase';
 import { toast } from 'sonner';
 import { 
@@ -15,20 +15,21 @@ interface StorageInfo {
   bytesUsed: number;
   maxSize: number; // por padrão, 5GB para o plano Spark do Firebase
   fileCount: number;
+  lastUpdated: Date;
 }
 
 export const useStorage = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [storageInfo, setStorageInfo] = useState<StorageInfo | null>(null);
+  const [isFetchingStorage, setIsFetchingStorage] = useState(false);
   
-  // Carregar informações de armazenamento ao inicializar o hook
-  useEffect(() => {
-    fetchStorageInfo();
-  }, []);
-
   // Busca informações sobre o uso do storage
-  const fetchStorageInfo = async () => {
+  const fetchStorageInfo = useCallback(async () => {
+    if (isFetchingStorage) return;
+    
+    setIsFetchingStorage(true);
     try {
+      console.log("Buscando informações de armazenamento...");
       const maxSize = 5 * 1024 * 1024 * 1024; // 5GB padrão do plano Spark
       let totalBytes = 0;
       let totalFiles = 0;
@@ -73,16 +74,27 @@ export const useStorage = () => {
         await processItems(prefixResult.items, prefixItem.fullPath);
       }
       
+      console.log(`Informações de armazenamento: ${totalBytes} bytes, ${totalFiles} arquivos`);
+      
       setStorageInfo({
         bytesUsed: totalBytes,
         maxSize: maxSize,
-        fileCount: totalFiles
+        fileCount: totalFiles,
+        lastUpdated: new Date()
       });
       
     } catch (error) {
       console.error('Erro ao obter informações do storage:', error);
+      throw error;
+    } finally {
+      setIsFetchingStorage(false);
     }
-  };
+  }, [isFetchingStorage]);
+  
+  // Inicializar informações de armazenamento
+  useEffect(() => {
+    fetchStorageInfo().catch(err => console.error("Erro ao buscar informações iniciais:", err));
+  }, [fetchStorageInfo]);
   
   const uploadFile = async (file: File, path: string): Promise<string | null> => {
     if (!file) return null;
@@ -105,7 +117,7 @@ export const useStorage = () => {
       console.log(`Upload bem-sucedido: ${url}`);
       
       // Atualizar informações de armazenamento após o upload
-      fetchStorageInfo();
+      fetchStorageInfo().catch(err => console.error("Erro ao atualizar informações após upload:", err));
       
       return url;
     } catch (error) {
@@ -130,7 +142,7 @@ export const useStorage = () => {
       }
       
       // Atualizar informações de armazenamento após o upload
-      fetchStorageInfo();
+      fetchStorageInfo().catch(err => console.error("Erro ao atualizar informações após upload múltiplo:", err));
       
       return urls;
     } catch (error) {
@@ -156,7 +168,7 @@ export const useStorage = () => {
         await deleteObject(storageRef);
         
         // Atualizar informações de armazenamento após a exclusão
-        fetchStorageInfo();
+        fetchStorageInfo().catch(err => console.error("Erro ao atualizar informações após exclusão:", err));
         
         return true;
       }
@@ -214,6 +226,7 @@ export const useStorage = () => {
     uploadBase64Image,
     base64ToFile,
     isUploading,
+    isFetchingStorage,
     storageInfo,
     fetchStorageInfo
   };

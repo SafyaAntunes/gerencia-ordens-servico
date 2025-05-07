@@ -10,6 +10,9 @@ import { toast } from "sonner";
 declare module "jspdf" {
   interface jsPDF {
     autoTable: (options: any) => jsPDF;
+    previousAutoTable?: {
+      finalY: number;
+    };
   }
 }
 
@@ -52,11 +55,11 @@ const calcularProgressos = (ordem: OrdemServico) => {
   
   Object.entries(ordem.etapasAndamento || {}).forEach(([etapa, dados]) => {
     const etapaBase = etapa.split('_')[0] as EtapaOS;
-    const progresso = dados.concluida ? 100 : dados.progresso || 0;
+    const progresso = dados.concluido ? 100 : 0; // Corrigido: concluido em vez de concluida e removido progresso
     progressoEtapas[etapaBase] = progresso;
     
     totalEtapas++;
-    if (dados.concluida) completedEtapas++;
+    if (dados.concluido) completedEtapas++; // Corrigido: concluido em vez de concluida
   });
   
   // Progresso por serviço
@@ -84,13 +87,14 @@ const calcularTempos = (ordem: OrdemServico) => {
   const temposPorEtapa: Record<string, number> = {};
   let tempoTotalRegistrado = 0;
   
-  // Calcular tempo por etapa
+  // Calcular tempo por etapa - usando tempo estimado já que tempoTotal não existe
   Object.entries(ordem.etapasAndamento || {}).forEach(([etapa, dadosEtapa]) => {
     const etapaBase = etapa.split('_')[0] as EtapaOS;
-    const tempoTotal = dadosEtapa.tempoTotal || 0;
+    // Use tempoEstimado em vez de tempoTotal que não existe
+    const tempoEtapa = dadosEtapa.tempoEstimado ? dadosEtapa.tempoEstimado * 60 * 60 * 1000 : 0; // Convertendo horas para ms
     
-    temposPorEtapa[etapaBase] = (temposPorEtapa[etapaBase] || 0) + tempoTotal;
-    tempoTotalRegistrado += tempoTotal;
+    temposPorEtapa[etapaBase] = (temposPorEtapa[etapaBase] || 0) + tempoEtapa;
+    tempoTotalRegistrado += tempoEtapa;
   });
   
   // Calcular tempo estimado total
@@ -224,7 +228,7 @@ export const generateOrderPDF = async (ordem: OrdemServico): Promise<void> => {
           
           try {
             const isLeftColumn = i % 2 === 0;
-            const xPos = isLeftColumn ? margin : margin + imageWidth;
+            const posX = isLeftColumn ? margin : margin + imageWidth; // Renomeado para posX
             
             // Only get new line for right columns
             if (i > 0 && isLeftColumn) {
@@ -232,13 +236,13 @@ export const generateOrderPDF = async (ordem: OrdemServico): Promise<void> => {
             }
             
             // Add image to PDF (with placeholder if needed)
-            doc.addImage(url, 'JPEG', xPos, y, imageWidth - 5, 45);
+            doc.addImage(url, 'JPEG', posX, y, imageWidth - 5, 45);
           } catch (error) {
             console.error('Error adding image to PDF:', error);
             // Add placeholder for failed image
             doc.setDrawColor(200, 200, 200);
-            doc.rect(xPos, y, imageWidth - 5, 45);
-            doc.text('Imagem não disponível', xPos + 15, y + 25);
+            doc.rect(posX, y, imageWidth - 5, 45); // Usando posX
+            doc.text('Imagem não disponível', posX + 15, y + 25); // Usando posX
           }
         }
         
@@ -263,7 +267,7 @@ export const generateOrderPDF = async (ordem: OrdemServico): Promise<void> => {
           
           try {
             const isLeftColumn = i % 2 === 0;
-            const xPos = isLeftColumn ? margin : margin + imageWidth;
+            const posX = isLeftColumn ? margin : margin + imageWidth; // Renomeado para posX
             
             // Only get new line for right columns
             if (i > 0 && isLeftColumn) {
@@ -271,13 +275,13 @@ export const generateOrderPDF = async (ordem: OrdemServico): Promise<void> => {
             }
             
             // Add image to PDF
-            doc.addImage(url, 'JPEG', xPos, y, imageWidth - 5, 45);
+            doc.addImage(url, 'JPEG', posX, y, imageWidth - 5, 45);
           } catch (error) {
             console.error('Error adding image to PDF:', error);
             // Add placeholder for failed image
             doc.setDrawColor(200, 200, 200);
-            doc.rect(xPos, y, imageWidth - 5, 45);
-            doc.text('Imagem não disponível', xPos + 15, y + 25);
+            doc.rect(posX, y, imageWidth - 5, 45); // Usando posX
+            doc.text('Imagem não disponível', posX + 15, y + 25); // Usando posX
           }
         }
       }

@@ -1,12 +1,20 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { useStorage } from "@/hooks/useStorage";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { HardDrive } from "lucide-react";
+import { HardDrive, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
-export function StorageInfo() {
+interface StorageInfoProps {
+  className?: string;
+  showRefreshButton?: boolean;
+}
+
+export function StorageInfo({ className, showRefreshButton = true }: StorageInfoProps) {
   const { storageInfo, fetchStorageInfo } = useStorage();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Format bytes to human readable format
   const formatBytes = (bytes: number, decimals = 2) => {
@@ -21,6 +29,20 @@ export function StorageInfo() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   };
   
+  // Handle refresh button click
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchStorageInfo();
+      toast.success("Informações de armazenamento atualizadas");
+    } catch (error) {
+      toast.error("Erro ao atualizar informações de armazenamento");
+      console.error(error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+  
   React.useEffect(() => {
     fetchStorageInfo();
   }, [fetchStorageInfo]);
@@ -32,12 +54,23 @@ export function StorageInfo() {
   const usagePercentage = Math.round((usedSpace / totalSpace) * 100);
   
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="pb-2">
+    <Card className={`shadow-sm ${className}`}>
+      <CardHeader className="pb-2 flex flex-row items-center justify-between">
         <CardTitle className="text-md flex items-center">
           <HardDrive className="mr-2 h-5 w-5" />
           Armazenamento
         </CardTitle>
+        {showRefreshButton && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={handleRefresh} 
+            disabled={isRefreshing}
+            className="h-8 w-8"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
