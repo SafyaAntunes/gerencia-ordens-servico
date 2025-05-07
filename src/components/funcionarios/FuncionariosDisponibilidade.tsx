@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useFuncionariosDisponibilidade, FuncionarioStatus } from '@/hooks/useFuncionariosDisponibilidade';
 import { CircleCheck, Clock } from "lucide-react";
-import { format, formatDistance } from 'date-fns';
+import { format, formatDistance, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -36,9 +36,14 @@ export function FuncionariosDisponibilidade() {
       <CardHeader>
         <CardTitle className="flex justify-between items-center">
           <span>Disponibilidade de Funcionários</span>
-          <Badge variant="outline">
-            {funcionariosDisponiveis.length} disponíveis
-          </Badge>
+          <div className="flex gap-2">
+            <Badge variant="outline" className="bg-green-50">
+              {funcionariosDisponiveis.length} disponíveis
+            </Badge>
+            <Badge variant="outline" className="bg-amber-50">
+              {funcionariosOcupados.length} em serviço
+            </Badge>
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -94,11 +99,7 @@ export function FuncionariosDisponibilidade() {
                               ''}
                           </div>
                           <div>
-                            Início: {formatDistance(
-                              new Date(funcionario.atividadeAtual.inicio),
-                              new Date(),
-                              { addSuffix: true, locale: ptBR }
-                            )}
+                            Início: {formatTempoAtividade(funcionario.atividadeAtual.inicio)}
                           </div>
                         </div>
                       )}
@@ -141,4 +142,23 @@ function formatServicoTipo(tipo: string): string {
   };
   
   return tiposMap[tipo] || tipo;
+}
+
+// Função para formatar o tempo de atividade de forma segura
+function formatTempoAtividade(data: Date | undefined | null): string {
+  if (!data) return 'Sem registro de início';
+  
+  try {
+    const dataInicio = new Date(data);
+    if (!isValid(dataInicio)) return 'Data inválida';
+    
+    return formatDistance(
+      dataInicio,
+      new Date(),
+      { addSuffix: true, locale: ptBR }
+    );
+  } catch (error) {
+    console.error("Erro ao formatar data de início:", error);
+    return 'Erro na data';
+  }
 }

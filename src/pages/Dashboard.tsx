@@ -5,6 +5,8 @@ import {
   Users,
   CheckCircle,
   TrendingUp,
+  Calendar,
+  Filter,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
@@ -16,20 +18,34 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 import { LogoutProps } from "@/types/props";
-import { collection, getDocs, query, orderBy, limit, where } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, limit, where, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { OrdemServico, StatusOS } from "@/types/ordens";
 import { toast } from "sonner";
 import { Funcionario } from "@/types/funcionarios";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format, startOfMonth, endOfMonth, isWithinInterval, addMonths, subMonths } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { useFuncionariosDisponibilidade } from "@/hooks/useFuncionariosDisponibilidade";
 
 interface DashboardProps extends LogoutProps {}
+
+// Interface para filtros de data
+interface DateFilter {
+  startDate: Date;
+  endDate: Date;
+}
 
 const Dashboard = ({ onLogout }: DashboardProps) => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
-  const [funcionariosOcupados, setFuncionariosOcupados] = useState<number>(0);
+  
+  // Utilizamos o hook useFuncionariosDisponibilidade para ter acesso aos dados em tempo real
+  const { funcionariosDisponiveis, funcionariosOcupados, loading: loadingFuncionarios } = useFuncionariosDisponibilidade();
+  
   const [metricas, setMetricas] = useState({
     osTotal: 0,
     osPendentes: 0,
@@ -38,6 +54,36 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
   const [statusData, setStatusData] = useState<{ name: string; total: number }[]>([]);
   const [servicosData, setServicosData] = useState<{ name: string; total: number }[]>([]);
   
+  // Estados para gerenciar filtros de data
+  const [dateFilter, setDateFilter] = useState<DateFilter>({
+    startDate: startOfMonth(new Date()),
+    endDate: endOfMonth(new Date())
+  });
+  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
+
+  // Filtros para cada card
+  const [osFinalizadasFilter, setOsFinalizadasFilter] = useState<DateFilter>({
+    startDate: startOfMonth(new Date()),
+    endDate: endOfMonth(new Date())
+  });
+  
+  // Funções para navegação de meses
+  const handlePreviousMonth = () => {
+    const previousMonth = subMonths(dateFilter.startDate, 1);
+    setDateFilter({
+      startDate: startOfMonth(previousMonth),
+      endDate: endOfMonth(previousMonth)
+    });
+  };
+
+  const handleNextMonth = () => {
+    const nextMonth = addMonths(dateFilter.startDate, 1);
+    setDateFilter({
+      startDate: startOfMonth(nextMonth),
+      endDate: endOfMonth(nextMonth)
+    });
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
@@ -72,28 +118,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         
         setFuncionarios(funcionariosData);
         
-        // Calcular funcionários ocupados
-        const funcionariosAlocados = new Set<string>();
-        ordensData.forEach(ordem => {
-          // Verificar funcionários alocados em serviços
-          ordem.servicos?.forEach(servico => {
-            if (servico.funcionarioId) {
-              funcionariosAlocados.add(servico.funcionarioId);
-            }
-          });
-          
-          // Verificar funcionários alocados em etapas
-          if (ordem.etapasAndamento) {
-            Object.values(ordem.etapasAndamento).forEach(etapa => {
-              if (etapa.funcionarioId) {
-                funcionariosAlocados.add(etapa.funcionarioId);
-              }
-            });
-          }
-        });
-        
-        setFuncionariosOcupados(funcionariosAlocados.size);
-        
         calcularMetricas(ordensData);
         calcularDadosGraficos(ordensData);
       } catch (error) {
@@ -107,6 +131,13 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
     fetchData();
   }, []);
   
+  // Reprocessar métricas quando filtros de data mudarem
+  useEffect(() => {
+    if (ordens.length > 0) {
+      calcularMetricas(ordens);
+    }
+  }, [dateFilter, osFinalizadasFilter, ordens]);
+  
   const calcularMetricas = (ordensData: OrdemServico[]) => {
     const total = ordensData.length;
     
@@ -114,19 +145,25 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       ordem => !['finalizado', 'entregue'].includes(ordem.status)
     ).length;
     
-    // Calcular OSs finalizadas no mês atual
-    const dataAtual = new Date();
-    const primeiroDiaMes = new Date(dataAtual.getFullYear(), dataAtual.getMonth(), 1);
-    const ultimoDiaMes = new Date(dataAtual.getFullYear(), dataAtual.getMonth() + 1, 0);
-    
-    const finalizadasMes = ordensData.filter(ordem => {
+    // Calcular OSs finalizadas no período selecionado
+    const finalizadasNoPeriodo = ordensData.filter(ordem => {
       if (ordem.status === 'finalizado' || ordem.status === 'entregue') {
-        // Verificar se a OS foi finalizada neste mês
-        const dataFinalizada = ordem.etapasAndamento?.inspecao_final?.finalizado;
-        if (dataFinalizada) {
-          const dataConclusao = dataFinalizada instanceof Date ? 
-            dataFinalizada : new Date(dataFinalizada);
-          return dataConclusao >= primeiroDiaMes && dataConclusao <= ultimoDiaMes;
+        // Verificar se a OS foi finalizada no período escolhido
+        if (ordem.etapasAndamento?.inspecao_final?.finalizado) {
+          let dataFinalizacao;
+          
+          if (ordem.etapasAndamento.inspecao_final.finalizado instanceof Date) {
+            dataFinalizacao = ordem.etapasAndamento.inspecao_final.finalizado;
+          } else if (ordem.etapasAndamento.inspecao_final.finalizado) {
+            dataFinalizacao = new Date(ordem.etapasAndamento.inspecao_final.finalizado);
+          }
+          
+          if (dataFinalizacao && isWithinInterval(dataFinalizacao, {
+            start: osFinalizadasFilter.startDate,
+            end: osFinalizadasFilter.endDate
+          })) {
+            return true;
+          }
         }
       }
       return false;
@@ -135,7 +172,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
     setMetricas({
       osTotal: total,
       osPendentes: pendentes,
-      osFinalizadasMes: finalizadasMes,
+      osFinalizadasMes: finalizadasNoPeriodo,
     });
   };
   
@@ -149,7 +186,20 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       "Entregue": 0,
     };
     
-    ordensData.forEach(ordem => {
+    // Filtrar ordens para o período selecionado
+    const ordensFiltradas = ordensData.filter(ordem => {
+      if (!ordem.dataAbertura) return false;
+      
+      const dataAbertura = ordem.dataAbertura instanceof Date ? 
+        ordem.dataAbertura : new Date(ordem.dataAbertura);
+      
+      return isWithinInterval(dataAbertura, {
+        start: dateFilter.startDate,
+        end: dateFilter.endDate
+      });
+    });
+    
+    ordensFiltradas.forEach(ordem => {
       switch(ordem.status) {
         case 'orcamento':
           statusCounts["Em Orçamento"]++;
@@ -186,7 +236,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       "Dinamômetro": 0,
     };
     
-    ordensData.forEach(ordem => {
+    ordensFiltradas.forEach(ordem => {
       if (ordem.servicos) {
         ordem.servicos.forEach(servico => {
           switch(servico.tipo) {
@@ -232,7 +282,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
   };
   
   const osRecentes = ordens.slice(0, 5);
-  const funcionariosDisponiveis = funcionarios.length - funcionariosOcupados;
   
   return (
     <Layout>
@@ -244,9 +293,46 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
               Acompanhe as métricas e estatísticas do seu negócio
             </p>
           </div>
+          
+          {/* Filtro global de período */}
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handlePreviousMonth}>
+              Mês anterior
+            </Button>
+            <Popover open={isDateFilterOpen} onOpenChange={setIsDateFilterOpen}>
+              <PopoverTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  className="flex items-center gap-2"
+                >
+                  <Calendar className="h-4 w-4" />
+                  {format(dateFilter.startDate, 'MMM yyyy', { locale: ptBR })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <CalendarComponent
+                  mode="single"
+                  selected={dateFilter.startDate}
+                  onSelect={(date) => {
+                    if (date) {
+                      setDateFilter({
+                        startDate: startOfMonth(date),
+                        endDate: endOfMonth(date)
+                      });
+                      setIsDateFilterOpen(false);
+                    }
+                  }}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            <Button variant="outline" onClick={handleNextMonth}>
+              Próximo mês
+            </Button>
+          </div>
         </div>
         
-        {isLoading ? (
+        {isLoading || loadingFuncionarios ? (
           <div className="text-center py-8">Carregando dados...</div>
         ) : (
           <>
@@ -265,17 +351,53 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
                 className="animate-slide-in [animation-delay:100ms]"
               />
               
-              <MetricCard
-                title="Finalizadas no Mês"
-                value={metricas.osFinalizadasMes}
-                icon={<CheckCircle />}
-                className="animate-slide-in [animation-delay:200ms]"
-              />
+              {/* Card de OSs finalizadas com filtro de período */}
+              <div className="relative">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="absolute top-2 right-2 z-10 h-8 w-8"
+                    >
+                      <Filter className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="p-3 w-auto">
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Filtrar por período</h4>
+                      <CalendarComponent
+                        mode="single"
+                        selected={osFinalizadasFilter.startDate}
+                        onSelect={(date) => {
+                          if (date) {
+                            setOsFinalizadasFilter({
+                              startDate: startOfMonth(date),
+                              endDate: endOfMonth(date)
+                            });
+                          }
+                        }}
+                        initialFocus
+                      />
+                      <div className="text-xs text-center text-muted-foreground">
+                        {format(osFinalizadasFilter.startDate, 'MMMM yyyy', { locale: ptBR })}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <MetricCard
+                  title="Finalizadas no Período"
+                  value={metricas.osFinalizadasMes}
+                  description={`${format(osFinalizadasFilter.startDate, 'MMM yyyy', { locale: ptBR })}`}
+                  icon={<CheckCircle />}
+                  className="animate-slide-in [animation-delay:200ms]"
+                />
+              </div>
               
               <MetricCard
                 title="Funcionários"
-                value={`${funcionariosOcupados}/${funcionarios.length}`}
-                description={funcionariosDisponiveis > 0 ? `${funcionariosDisponiveis} disponíveis` : "Todos ocupados"}
+                value={`${funcionariosOcupados.length}/${funcionariosDisponiveis.length + funcionariosOcupados.length}`}
+                description={funcionariosDisponiveis.length > 0 ? `${funcionariosDisponiveis.length} disponíveis` : "Todos ocupados"}
                 icon={<Users />}
                 className="animate-slide-in [animation-delay:300ms] cursor-pointer hover:bg-muted/30"
                 onClick={handleVerFuncionarios}
@@ -285,14 +407,14 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
             <div className="grid gap-6 grid-cols-1 lg:grid-cols-2 mt-6">
               <StatusChart
                 title="Ordens de Serviço por Status"
-                description="Distribuição de OSs por status atual"
+                description={`Distribuição de OSs por status (${format(dateFilter.startDate, 'MMM yyyy', { locale: ptBR })})`}
                 data={statusData}
                 className="animate-scale-in"
               />
               
               <StatusChart
                 title="Serviços Realizados"
-                description="Distribuição por tipo de serviço"
+                description={`Distribuição por tipo de serviço (${format(dateFilter.startDate, 'MMM yyyy', { locale: ptBR })})`}
                 data={servicosData}
                 className="animate-scale-in [animation-delay:150ms]"
               />
