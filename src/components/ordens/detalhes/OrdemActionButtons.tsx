@@ -2,8 +2,9 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { OrdemServico } from '@/types/ordens';
-import { FileDown, FileImage } from 'lucide-react';
+import { FileDown, FileImage, FileText } from 'lucide-react';
 import { downloadImages, exportToCsv } from '@/utils/exportImportUtils';
+import { generateOrderPDF } from '@/utils/pdfUtils';
 
 interface OrdemActionButtonsProps {
   ordem: OrdemServico;
@@ -41,6 +42,10 @@ const OrdemActionButtons: React.FC<OrdemActionButtonsProps> = ({
     }
   };
   
+  const handleGeneratePdf = async () => {
+    await generateOrderPDF(ordem);
+  };
+  
   return (
     <div className="flex flex-wrap gap-2">
       <Button 
@@ -50,7 +55,17 @@ const OrdemActionButtons: React.FC<OrdemActionButtonsProps> = ({
         onClick={handleExport}
       >
         <FileDown className="mr-2 h-4 w-4" />
-        Exportar Ordem
+        Exportar CSV
+      </Button>
+      
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={disabled}
+        onClick={handleGeneratePdf}
+      >
+        <FileText className="mr-2 h-4 w-4" />
+        Exportar PDF
       </Button>
       
       {hasPhotos && (
