@@ -61,13 +61,14 @@ export const useFuncionariosMetricas = ({ periodoInicio, periodoFim }: UseFuncio
         const ordensSnapshot = await getDocs(ordensQuery);
         const ordens = ordensSnapshot.docs.map(doc => {
           const data = doc.data();
+          // Usando a técnica de type casting sugerida
           return {
             id: doc.id,
             ...data,
             dataConclusao: data.dataConclusao?.toDate(),
             dataAbertura: data.dataAbertura?.toDate(),
             tempoRegistros: data.tempoRegistros || []
-          } as OrdemServico;
+          } as unknown as OrdemServico;
         });
         
         // 3. Calcular métricas para cada funcionário
