@@ -1,4 +1,3 @@
-
 import { ChangeEvent, forwardRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Upload, FileVideo, Images, Check } from "lucide-react";
@@ -6,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 interface FileUploadProps {
   value?: File | string | any; // Pode ser File, string URL ou objeto com data: base64
-  onChange?: (file: File | null) => void;
+  onChange?: (file: File | null | File[]) => void; // Updated to accept File[] for multiple files
   onRemove?: () => void;
   onSelect?: () => void;
   isSelected?: boolean;
@@ -81,7 +80,7 @@ const FileUpload = forwardRef<HTMLInputElement, FileUploadProps>(
         }
         
         if (onChange) {
-          onChange(fileArray as any);
+          onChange(fileArray);
         }
       } else {
         // Processar um único arquivo

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileUpload } from "@/components/ui/file-upload";
@@ -240,7 +239,7 @@ export default function FotosForm({
               />
             ))}
             <FileUpload 
-              onChange={handleAddFotosEntrada} 
+              onChange={(files) => handleAddFotosEntrada(Array.isArray(files) ? files : files ? [files] : null)} 
               accept="image/*,video/*" 
               multiple={true}
             />
@@ -275,7 +274,7 @@ export default function FotosForm({
               />
             ))}
             <FileUpload 
-              onChange={handleAddFotosSaida} 
+              onChange={(files) => handleAddFotosSaida(Array.isArray(files) ? files : files ? [files] : null)} 
               accept="image/*,video/*" 
               multiple={true}
             />
