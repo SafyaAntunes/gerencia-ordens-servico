@@ -9,6 +9,7 @@ interface MetricCardProps {
   description?: string;
   icon: ReactNode;
   className?: string;
+  onClick?: () => void;  // Added onClick prop
 }
 
 export default function MetricCard({
@@ -17,9 +18,14 @@ export default function MetricCard({
   description,
   icon,
   className,
+  onClick,  // Added onClick prop to component parameters
 }: MetricCardProps) {
   return (
-    <Card className={cn("overflow-hidden transition-all", className)}>
+    <Card 
+      className={cn("overflow-hidden transition-all", 
+        onClick ? "cursor-pointer hover:bg-muted/30" : "", className)}
+      onClick={onClick}  // Add the onClick handler to the Card component
+    >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         <div className="h-8 w-8 rounded-md bg-primary/10 p-1.5 text-primary">
