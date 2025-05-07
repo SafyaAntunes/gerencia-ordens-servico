@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { OrdemServico } from '@/types/ordens';
 import { FileDown, FileImage, FileText } from 'lucide-react';
 import { downloadImages, exportToCsv } from '@/utils/exportImportUtils';
-import { generateOrderPDF } from '@/utils/pdfUtils';
+import { generateOrderPDF } from '@/utils/pdf';
 
 interface OrdemActionButtonsProps {
   ordem: OrdemServico;

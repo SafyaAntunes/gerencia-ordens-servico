@@ -4,7 +4,7 @@ import { OrdemServico } from '@/types/ordens';
 import { Button } from '@/components/ui/button';
 import { Edit, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import OrdemActionButtons from '../OrdemActionButtons';
+import OrdemActionButtons from '@/components/ordens/detalhes/OrdemActionButtons';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
