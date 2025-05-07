@@ -179,12 +179,12 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     funcionarioNome?: string,
     servicoTipo?: TipoServico
   ) => {
-    if (!ordem?.id || !funcionario?.id) return;
+    if (!ordem?.id || !funcionarioId) {
+      toast.error("Informações incompletas para atualizar a etapa");
+      return;
+    }
     
     try {
-      // CORREÇÃO: Clonamos o objeto etapasAndamento para evitar mutações diretas
-      let etapasAndamento = { ...ordem.etapasAndamento || {} };
-      
       // Determinar a chave da etapa com base no tipo de serviço
       const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final') && servicoTipo) 
         ? `${etapa}_${servicoTipo}` 
@@ -192,24 +192,17 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
       
       console.log(`Atualizando status da etapa ${etapaKey} para funcionário ${funcionarioNome} (${funcionarioId})`);
       
-      // CORREÇÃO: Preservar dados existentes da etapa (como pausas, timers, etc)
+      // CORREÇÃO: Clonamos o objeto etapasAndamento para evitar mutações diretas
+      let etapasAndamento = { ...ordem.etapasAndamento || {} };
+      
+      // Preservar dados existentes da etapa (como pausas, timers, etc)
       const etapaAtual = etapasAndamento[etapaKey] || {};
-      
-      // IMPORTANTE: Assegurar que os IDs de funcionário são strings válidas
-      const validFuncionarioId = funcionarioId || etapaAtual.funcionarioId || funcionario.id;
-      const validFuncionarioNome = funcionarioNome || etapaAtual.funcionarioNome || funcionario.nome || '';
-      
-      // Log para depuração
-      console.log("Funcionário que será salvo:", {
-        id: validFuncionarioId,
-        nome: validFuncionarioNome
-      });
       
       etapasAndamento[etapaKey] = {
         ...etapaAtual,  // Preserva todos os dados anteriores
         concluido: concluida,
-        funcionarioId: validFuncionarioId,
-        funcionarioNome: validFuncionarioNome,
+        funcionarioId: funcionarioId,
+        funcionarioNome: funcionarioNome || "",
         finalizado: concluida ? new Date() : etapaAtual.finalizado,
         iniciado: etapaAtual.iniciado || new Date(),  // Mantém data inicio ou atualiza se for nova atribuição
         // Se for etapa de inspeção, preserva o tipo de serviço
@@ -237,7 +230,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
       
       if (concluida) {
         acao = 'concluída';
-      } else if (etapaAtual.funcionarioId !== validFuncionarioId) {
+      } else if (etapaAtual.funcionarioId !== funcionarioId) {
         acao = 'atribuída';
       } else {
         acao = 'atualizada';

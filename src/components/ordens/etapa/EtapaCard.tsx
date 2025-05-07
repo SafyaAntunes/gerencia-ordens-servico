@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
@@ -106,7 +107,8 @@ export default function EtapaCard({
     funcionarioSelecionadoNome,
     isEtapaConcluida,
     onEtapaStatusChange,
-    etapaInfo
+    etapaInfo,
+    ordemId // Passar o ordemId para o hook
   });
   
   // Atualizar estado ativo do timer baseado no etapaInfo

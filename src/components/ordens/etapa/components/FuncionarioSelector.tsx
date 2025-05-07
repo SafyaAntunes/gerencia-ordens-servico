@@ -25,16 +25,8 @@ export default function FuncionarioSelector({
   lastSavedFuncionarioId,
   lastSavedFuncionarioNome
 }: FuncionarioSelectorProps) {
-  const [selectorKey, setSelectorKey] = useState(Date.now());
-  
-  // Reset selector quando o ID do funcionário mudar para garantir que o componente atualize
-  useEffect(() => {
-    setSelectorKey(Date.now());
-    console.log("FuncionarioSelector - ID atualizado:", funcionarioSelecionadoId);
-  }, [funcionarioSelecionadoId]);
-  
   // Encontrar o nome do funcionário para exibição
-  const funcionarioNome = funcionariosOptions.find(f => f.id === funcionarioSelecionadoId)?.nome || "Não encontrado";
+  const funcionarioNome = funcionariosOptions.find(f => f.id === funcionarioSelecionadoId)?.nome;
   const isChanged = funcionarioSelecionadoId !== lastSavedFuncionarioId;
   
   // Desabilitar o botão de salvar apenas se não houver funcionário selecionado ou se etapa está concluída ou se não houve mudança
@@ -46,7 +38,6 @@ export default function FuncionarioSelector({
       toast.error("É necessário selecionar um responsável para salvar");
       return;
     }
-    
     onSaveResponsavel();
   };
   
@@ -68,7 +59,6 @@ export default function FuncionarioSelector({
       <div className="flex space-x-2">
         <div className="flex-1">
           <Select 
-            key={selectorKey}
             value={funcionarioSelecionadoId || ""} 
             onValueChange={onFuncionarioChange}
             disabled={isEtapaConcluida}

@@ -2,6 +2,8 @@
 import { toast } from "sonner";
 import { EtapaOS, TipoServico } from "@/types/ordens";
 import { useState, useEffect } from "react";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 interface UseEtapaResponsavelProps {
   etapa: EtapaOS;
@@ -11,6 +13,7 @@ interface UseEtapaResponsavelProps {
   isEtapaConcluida: (etapaInfo?: any) => boolean;
   onEtapaStatusChange?: (etapa: EtapaOS, concluida: boolean, funcionarioId?: string, funcionarioNome?: string, servicoTipo?: TipoServico) => void;
   etapaInfo?: any;
+  ordemId: string;
 }
 
 export function useEtapaResponsavel({
@@ -20,7 +23,8 @@ export function useEtapaResponsavel({
   funcionarioSelecionadoNome,
   isEtapaConcluida,
   onEtapaStatusChange,
-  etapaInfo
+  etapaInfo,
+  ordemId
 }: UseEtapaResponsavelProps) {
   // Estado para rastrear a última seleção de funcionário, garantindo persistência
   const [lastSavedFuncionarioId, setLastSavedFuncionarioId] = useState<string>("");
@@ -35,112 +39,92 @@ export function useEtapaResponsavel({
     }
   }, [etapaInfo]);
   
-  // Função para salvar o responsável - Correção: Salva o responsável mesmo quando não há mudança de status
-  const handleSaveResponsavel = () => {
+  // Função para salvar o responsável diretamente no Firebase
+  const handleSaveResponsavel = async () => {
     if (!funcionarioSelecionadoId) {
       toast.error("É necessário selecionar um responsável para salvar");
       return;
     }
+
+    if (!ordemId) {
+      toast.error("ID da ordem não encontrado");
+      return;
+    }
     
-    if (onEtapaStatusChange) {
-      // Manter o status atual (concluído ou não) mas atualizar o funcionário
+    try {
+      // Determinar a chave da etapa com base no tipo de serviço
+      const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final') && servicoTipo) 
+        ? `${etapa}_${servicoTipo}` 
+        : etapa;
+      
+      console.log(`Salvando responsável para etapa ${etapaKey}: ${funcionarioSelecionadoNome} (${funcionarioSelecionadoId})`);
+      
+      // Buscar etapa atual para preservar dados
+      const etapaAtual = etapaInfo || {};
       const etapaConcluida = isEtapaConcluida(etapaInfo);
       
-      console.log("Salvando responsável:", {
-        etapa,
-        concluida: etapaConcluida,
-        funcionarioId: funcionarioSelecionadoId,
-        funcionarioNome: funcionarioSelecionadoNome,
-        servicoTipo: (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+      // Referência ao documento da ordem
+      const ordemRef = doc(db, "ordens_servico", ordemId);
+      
+      // Atualizar apenas o campo de responsável na etapa específica
+      await updateDoc(ordemRef, {
+        [`etapasAndamento.${etapaKey}.funcionarioId`]: funcionarioSelecionadoId,
+        [`etapasAndamento.${etapaKey}.funcionarioNome`]: funcionarioSelecionadoNome,
+        // Preservar outros campos importantes
+        [`etapasAndamento.${etapaKey}.concluido`]: etapaConcluida,
+        // Se for primeira atribuição, definir data de início
+        [`etapasAndamento.${etapaKey}.iniciado`]: etapaAtual.iniciado || new Date(),
       });
       
-      // CORREÇÃO: Garantindo que o objeto etapaInfo é criado mesmo se não existir
-      const etapaInfoAtualizado = {
-        ...(etapaInfo || {}),
-        concluido: etapaConcluida,
-        funcionarioId: funcionarioSelecionadoId,
-        funcionarioNome: funcionarioSelecionadoNome,
-        // Preservar outros campos importantes
-        iniciado: etapaInfo?.iniciado || null,
-        finalizado: etapaInfo?.finalizado || null,
-        pausas: etapaInfo?.pausas || []
-      };
-      
-      // Atualizar os valores salvos ANTES de chamar o callback
+      // Atualizar valores salvos localmente
       setLastSavedFuncionarioId(funcionarioSelecionadoId);
       setLastSavedFuncionarioNome(funcionarioSelecionadoNome);
       
-      // Chama o callback com todas as informações necessárias
-      onEtapaStatusChange(
-        etapa,
-        etapaConcluida,
-        funcionarioSelecionadoId,
-        funcionarioSelecionadoNome,
-        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
-      );
+      // Chamar callback se existir (para atualizar estado pai)
+      if (onEtapaStatusChange) {
+        onEtapaStatusChange(
+          etapa,
+          etapaConcluida,
+          funcionarioSelecionadoId,
+          funcionarioSelecionadoNome,
+          (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+        );
+      }
       
       toast.success(`Responsável ${funcionarioSelecionadoNome} salvo com sucesso!`);
-    } else {
-      console.error("onEtapaStatusChange não está definido");
+    } catch (error) {
+      console.error("Erro ao salvar responsável:", error);
       toast.error("Não foi possível salvar o responsável");
     }
   };
   
   const handleCustomTimerStart = (): boolean => {
-    console.log("handleCustomTimerStart chamado em useEtapaResponsavel");
-    
-    // Use o funcionário selecionado ou o último salvo
-    const funcionarioId = funcionarioSelecionadoId || lastSavedFuncionarioId;
-    const funcionarioNome = funcionarioSelecionadoNome || lastSavedFuncionarioNome;
-    
-    if (!funcionarioId) {
-      toast.error("É necessário selecionar um responsável antes de iniciar a etapa");
+    if (!funcionarioSelecionadoId && !lastSavedFuncionarioId) {
+      toast.error("É necessário selecionar e salvar um responsável antes de iniciar a etapa");
       return false;
     }
     
-    // Se estamos iniciando a etapa, vamos atualizar o status com o funcionário responsável
-    if (onEtapaStatusChange && !etapaInfo?.iniciado) {
-      onEtapaStatusChange(
-        etapa,
-        false,
-        funcionarioId,
-        funcionarioNome,
-        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
-      );
-      
-      // Atualizar os valores salvos
-      setLastSavedFuncionarioId(funcionarioId);
-      setLastSavedFuncionarioNome(funcionarioNome);
-    }
-    
-    return true; // Permite que o timer inicie automaticamente
+    return true;
   };
   
   const handleMarcarConcluidoClick = () => {
-    // Use o funcionário selecionado ou o último salvo
-    const funcionarioId = funcionarioSelecionadoId || lastSavedFuncionarioId;
-    const funcionarioNome = funcionarioSelecionadoNome || lastSavedFuncionarioNome;
-    
-    if (!funcionarioId) {
-      toast.error("É necessário selecionar ou salvar um responsável antes de concluir a etapa");
+    if (!funcionarioSelecionadoId && !lastSavedFuncionarioId) {
+      toast.error("É necessário selecionar e salvar um responsável antes de concluir a etapa");
       return;
     }
     
+    // Usar o último responsável salvo ou o atualmente selecionado
+    const responsavelId = lastSavedFuncionarioId || funcionarioSelecionadoId;
+    const responsavelNome = lastSavedFuncionarioNome || funcionarioSelecionadoNome;
+    
     if (onEtapaStatusChange) {
-      // Usa o ID e nome do funcionário selecionado
-      console.log("Concluindo etapa com funcionário:", funcionarioNome);
-      
       onEtapaStatusChange(
         etapa, 
         true, 
-        funcionarioId, 
-        funcionarioNome,
+        responsavelId, 
+        responsavelNome,
         (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
       );
-      
-      // Atualizar os valores salvos
-      setLastSavedFuncionarioId(funcionarioId);
-      setLastSavedFuncionarioNome(funcionarioNome);
     }
   };
   
