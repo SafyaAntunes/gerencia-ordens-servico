@@ -2,7 +2,7 @@
 import { toast } from "sonner";
 import { EtapaOS, TipoServico } from "@/types/ordens";
 import { useState, useEffect } from "react";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface UseEtapaResponsavelProps {
@@ -29,6 +29,7 @@ export function useEtapaResponsavel({
   // Estado para rastrear a última seleção de funcionário, garantindo persistência
   const [lastSavedFuncionarioId, setLastSavedFuncionarioId] = useState<string>("");
   const [lastSavedFuncionarioNome, setLastSavedFuncionarioNome] = useState<string>("");
+  const [isSaving, setIsSaving] = useState(false);
   
   // Inicializa os valores salvos com os valores atuais de etapaInfo
   useEffect(() => {
@@ -38,6 +39,39 @@ export function useEtapaResponsavel({
       console.log(`useEtapaResponsavel: Inicializando com funcionário da etapaInfo - ID: ${etapaInfo.funcionarioId}, Nome: ${etapaInfo.funcionarioNome}`);
     }
   }, [etapaInfo]);
+  
+  // Carrega dados diretamente do Firestore ao montar o componente
+  useEffect(() => {
+    const carregarDadosDoFirestore = async () => {
+      if (!ordemId) return;
+      
+      try {
+        const ordemRef = doc(db, "ordens_servico", ordemId);
+        const ordemDoc = await getDoc(ordemRef);
+        
+        if (ordemDoc.exists()) {
+          const dados = ordemDoc.data();
+          
+          // Determinar a chave da etapa com base no tipo de serviço
+          const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final') && servicoTipo) 
+            ? `${etapa}_${servicoTipo}` 
+            : etapa;
+            
+          const etapaData = dados?.etapasAndamento?.[etapaKey];
+          
+          if (etapaData?.funcionarioId) {
+            setLastSavedFuncionarioId(etapaData.funcionarioId);
+            setLastSavedFuncionarioNome(etapaData.funcionarioNome || "");
+            console.log(`Dados carregados do Firestore: Funcionário ${etapaData.funcionarioNome} (${etapaData.funcionarioId})`);
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao carregar dados do responsável:", error);
+      }
+    };
+    
+    carregarDadosDoFirestore();
+  }, [ordemId, etapa, servicoTipo]);
   
   // Função para salvar o responsável diretamente no Firebase
   const handleSaveResponsavel = async () => {
@@ -51,6 +85,8 @@ export function useEtapaResponsavel({
       return;
     }
     
+    setIsSaving(true);
+    
     try {
       // Determinar a chave da etapa com base no tipo de serviço
       const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final') && servicoTipo) 
@@ -59,22 +95,34 @@ export function useEtapaResponsavel({
       
       console.log(`Salvando responsável para etapa ${etapaKey}: ${funcionarioSelecionadoNome} (${funcionarioSelecionadoId})`);
       
-      // Buscar etapa atual para preservar dados
-      const etapaAtual = etapaInfo || {};
-      const etapaConcluida = isEtapaConcluida(etapaInfo);
-      
-      // Referência ao documento da ordem
+      // Obter documento atual para garantir dados atualizados
       const ordemRef = doc(db, "ordens_servico", ordemId);
+      const ordemDoc = await getDoc(ordemRef);
       
-      // Atualizar apenas o campo de responsável na etapa específica
-      await updateDoc(ordemRef, {
+      if (!ordemDoc.exists()) {
+        toast.error("Ordem de serviço não encontrada");
+        setIsSaving(false);
+        return;
+      }
+      
+      const dadosAtuais = ordemDoc.data();
+      
+      // Obter etapa atual para preservar dados
+      const etapasAndamento = dadosAtuais.etapasAndamento || {};
+      const etapaAtual = etapasAndamento[etapaKey] || {};
+      const etapaConcluida = etapaAtual.concluido || false;
+      
+      // Preparar objeto para atualização
+      const atualizacao = {
         [`etapasAndamento.${etapaKey}.funcionarioId`]: funcionarioSelecionadoId,
         [`etapasAndamento.${etapaKey}.funcionarioNome`]: funcionarioSelecionadoNome,
-        // Preservar outros campos importantes
         [`etapasAndamento.${etapaKey}.concluido`]: etapaConcluida,
         // Se for primeira atribuição, definir data de início
         [`etapasAndamento.${etapaKey}.iniciado`]: etapaAtual.iniciado || new Date(),
-      });
+      };
+      
+      // Atualizar o documento
+      await updateDoc(ordemRef, atualizacao);
       
       // Atualizar valores salvos localmente
       setLastSavedFuncionarioId(funcionarioSelecionadoId);
@@ -95,6 +143,8 @@ export function useEtapaResponsavel({
     } catch (error) {
       console.error("Erro ao salvar responsável:", error);
       toast.error("Não foi possível salvar o responsável");
+    } finally {
+      setIsSaving(false);
     }
   };
   
@@ -133,6 +183,7 @@ export function useEtapaResponsavel({
     handleCustomTimerStart,
     handleMarcarConcluidoClick,
     lastSavedFuncionarioId,
-    lastSavedFuncionarioNome
+    lastSavedFuncionarioNome,
+    isSaving
   };
 }

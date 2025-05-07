@@ -3,7 +3,7 @@ import { User, Save } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Funcionario } from "@/types/funcionarios";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 interface FuncionarioSelectorProps {
@@ -14,6 +14,7 @@ interface FuncionarioSelectorProps {
   onSaveResponsavel: () => void;
   lastSavedFuncionarioId?: string;
   lastSavedFuncionarioNome?: string;
+  isSaving?: boolean;
 }
 
 export default function FuncionarioSelector({
@@ -23,14 +24,15 @@ export default function FuncionarioSelector({
   onFuncionarioChange,
   onSaveResponsavel,
   lastSavedFuncionarioId,
-  lastSavedFuncionarioNome
+  lastSavedFuncionarioNome,
+  isSaving = false
 }: FuncionarioSelectorProps) {
   // Encontrar o nome do funcionário para exibição
   const funcionarioNome = funcionariosOptions.find(f => f.id === funcionarioSelecionadoId)?.nome;
   const isChanged = funcionarioSelecionadoId !== lastSavedFuncionarioId;
   
   // Desabilitar o botão de salvar apenas se não houver funcionário selecionado ou se etapa está concluída ou se não houve mudança
-  const botaoSalvarDesabilitado = isEtapaConcluida || !funcionarioSelecionadoId || (!isChanged && funcionarioSelecionadoId === lastSavedFuncionarioId);
+  const botaoSalvarDesabilitado = isEtapaConcluida || !funcionarioSelecionadoId || (!isChanged && funcionarioSelecionadoId === lastSavedFuncionarioId) || isSaving;
   
   // Função para lidar com o clique no botão salvar
   const handleSaveClick = () => {
@@ -61,7 +63,7 @@ export default function FuncionarioSelector({
           <Select 
             value={funcionarioSelecionadoId || ""} 
             onValueChange={onFuncionarioChange}
-            disabled={isEtapaConcluida}
+            disabled={isEtapaConcluida || isSaving}
           >
             <SelectTrigger className={`w-full bg-white ${selectBorderClass}`}>
               <SelectValue placeholder="Selecione o responsável" />
@@ -83,8 +85,8 @@ export default function FuncionarioSelector({
           onClick={handleSaveClick}
           disabled={botaoSalvarDesabilitado}
         >
-          <Save className="h-4 w-4 mr-1" />
-          Salvar
+          <Save className={`h-4 w-4 mr-1 ${isSaving ? 'animate-spin' : ''}`} />
+          {isSaving ? 'Salvando...' : 'Salvar'}
         </Button>
       </div>
     </div>

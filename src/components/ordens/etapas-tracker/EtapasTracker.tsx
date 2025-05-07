@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 import { OrdemServico, EtapaOS, TipoServico } from "@/types/ordens";
@@ -179,8 +179,13 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     funcionarioNome?: string,
     servicoTipo?: TipoServico
   ) => {
-    if (!ordem?.id || !funcionarioId) {
-      toast.error("Informações incompletas para atualizar a etapa");
+    if (!ordem?.id) {
+      toast.error("ID da ordem não encontrado");
+      return;
+    }
+    
+    if (!funcionarioId) {
+      toast.error("É necessário selecionar um responsável");
       return;
     }
     
@@ -192,33 +197,43 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
       
       console.log(`Atualizando status da etapa ${etapaKey} para funcionário ${funcionarioNome} (${funcionarioId})`);
       
-      // CORREÇÃO: Clonamos o objeto etapasAndamento para evitar mutações diretas
-      let etapasAndamento = { ...ordem.etapasAndamento || {} };
+      // Obter documento atual para garantir dados atualizados
+      const ordemRef = doc(db, "ordens_servico", ordem.id);
+      const ordemDoc = await getDoc(ordemRef);
       
-      // Preservar dados existentes da etapa (como pausas, timers, etc)
+      if (!ordemDoc.exists()) {
+        toast.error("Ordem de serviço não encontrada");
+        return;
+      }
+      
+      const dadosAtuais = ordemDoc.data();
+      const etapasAndamento = dadosAtuais.etapasAndamento || {};
       const etapaAtual = etapasAndamento[etapaKey] || {};
       
-      etapasAndamento[etapaKey] = {
-        ...etapaAtual,  // Preserva todos os dados anteriores
-        concluido: concluida,
-        funcionarioId: funcionarioId,
-        funcionarioNome: funcionarioNome || "",
-        finalizado: concluida ? new Date() : etapaAtual.finalizado,
-        iniciado: etapaAtual.iniciado || new Date(),  // Mantém data inicio ou atualiza se for nova atribuição
-        // Se for etapa de inspeção, preserva o tipo de serviço
-        ...(servicoTipo ? { servicoTipo } : {})
+      // Preparar objeto para atualização
+      const atualizacao = {
+        [`etapasAndamento.${etapaKey}`]: {
+          ...etapaAtual,  // Preserva todos os dados anteriores
+          concluido: concluida,
+          funcionarioId: funcionarioId,
+          funcionarioNome: funcionarioNome || "",
+          finalizado: concluida ? new Date() : etapaAtual.finalizado,
+          iniciado: etapaAtual.iniciado || new Date(),  // Mantém data inicio ou atualiza se for nova atribuição
+          // Se for etapa de inspeção, preserva o tipo de serviço
+          ...(servicoTipo ? { servicoTipo } : {})
+        }
       };
       
-      console.log("Dados da etapa a serem salvos:", etapasAndamento[etapaKey]);
-      
       // Atualizar no Firebase
-      const ordemRef = doc(db, "ordens_servico", ordem.id);
-      await updateDoc(ordemRef, { etapasAndamento });
+      await updateDoc(ordemRef, atualizacao);
       
       // IMPORTANTE: Atualizar o estado local com os novos dados
+      const etapasAndamentoAtualizado = { ...ordem.etapasAndamento || {} };
+      etapasAndamentoAtualizado[etapaKey] = atualizacao[`etapasAndamento.${etapaKey}`];
+      
       const ordemAtualizada = {
         ...ordem,
-        etapasAndamento
+        etapasAndamento: etapasAndamentoAtualizado
       };
       
       if (onOrdemUpdate) {

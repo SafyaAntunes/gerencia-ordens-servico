@@ -70,9 +70,6 @@ export default function EtapaCard({
     handleMarcarConcluido
   } = useEtapaCard(etapa, servicoTipo);
   
-  // Carregando funcionário selecionado com log para debug
-  console.log("EtapaCard - Carregando com etapaInfo:", etapaInfo);
-  
   // Estado para armazenar o ID e nome do funcionário selecionado utilizando o hook personalizado
   const {
     funcionariosOptions,
@@ -85,21 +82,14 @@ export default function EtapaCard({
     funcionarioNome
   });
   
-  // Log para debug dos valores atuais
-  console.log("Funcionário selecionado:", {
-    id: funcionarioSelecionadoId,
-    nome: funcionarioSelecionadoNome,
-    etapaInfoId: etapaInfo?.funcionarioId,
-    etapaInfoNome: etapaInfo?.funcionarioNome
-  });
-  
   // Gerenciamento do responsável com hook personalizado
   const {
     handleSaveResponsavel,
     handleCustomTimerStart,
     handleMarcarConcluidoClick,
     lastSavedFuncionarioId,
-    lastSavedFuncionarioNome
+    lastSavedFuncionarioNome,
+    isSaving
   } = useEtapaResponsavel({
     etapa,
     servicoTipo,
@@ -108,7 +98,7 @@ export default function EtapaCard({
     isEtapaConcluida,
     onEtapaStatusChange,
     etapaInfo,
-    ordemId // Passar o ordemId para o hook
+    ordemId
   });
   
   // Atualizar estado ativo do timer baseado no etapaInfo
@@ -146,9 +136,9 @@ export default function EtapaCard({
   
   // Função para exibir o nome do responsável atual (selecionado, etapaInfo ou último salvo)
   const getResponsavelDisplayName = () => {
-    if (funcionarioSelecionadoNome) return funcionarioSelecionadoNome;
-    if (etapaInfo?.funcionarioNome) return etapaInfo.funcionarioNome;
     if (lastSavedFuncionarioNome) return lastSavedFuncionarioNome;
+    if (etapaInfo?.funcionarioNome) return etapaInfo.funcionarioNome;
+    if (funcionarioSelecionadoNome) return funcionarioSelecionadoNome;
     return "Não definido";
   };
 
@@ -179,14 +169,15 @@ export default function EtapaCard({
           onSaveResponsavel={handleSaveResponsavel}
           lastSavedFuncionarioId={lastSavedFuncionarioId}
           lastSavedFuncionarioNome={lastSavedFuncionarioNome}
+          isSaving={isSaving}
         />
       )}
       
       {etapaComCronometro && (
         <EtapaTimerSection 
           ordemId={ordemId}
-          funcionarioId={funcionarioSelecionadoId || lastSavedFuncionarioId || funcionarioId}
-          funcionarioNome={funcionarioSelecionadoNome || lastSavedFuncionarioNome || funcionarioNome}
+          funcionarioId={lastSavedFuncionarioId || funcionarioSelecionadoId || funcionarioId}
+          funcionarioNome={lastSavedFuncionarioNome || funcionarioSelecionadoNome || funcionarioNome}
           etapa={etapa}
           tipoServico={servicoTipo}
           isEtapaConcluida={isEtapaConcluida(etapaInfo)}
@@ -201,8 +192,8 @@ export default function EtapaCard({
       <EtapaServicosLista
         servicos={servicos}
         ordemId={ordemId}
-        funcionarioId={funcionarioSelecionadoId || lastSavedFuncionarioId || funcionarioId}
-        funcionarioNome={funcionarioSelecionadoNome || lastSavedFuncionarioNome || funcionarioNome}
+        funcionarioId={lastSavedFuncionarioId || funcionarioSelecionadoId || funcionarioId}
+        funcionarioNome={lastSavedFuncionarioNome || funcionarioSelecionadoNome || funcionarioNome}
         etapa={etapa}
         onSubatividadeToggle={onSubatividadeToggle}
         onServicoStatusChange={onServicoStatusChange}
