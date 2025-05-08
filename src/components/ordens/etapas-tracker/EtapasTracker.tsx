@@ -18,7 +18,7 @@ interface EtapasTrackerProps {
 }
 
 const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
-  // Removemos lavagem, inspeção inicial e final da lista de etapas
+  // Incluir todas as etapas na lista
   const [etapasAtivas, setEtapasAtivas] = useState<EtapaOS[]>([]);
   const [selectedEtapa, setSelectedEtapa] = useState<EtapaOS | null>(null);
   const [selectedServicoTipo, setSelectedServicoTipo] = useState<TipoServico | null>(null);
@@ -43,12 +43,18 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     }
 
     const etapasDisponiveis = verificarEtapasDisponiveis();
-    // Removemos lavagem, inspeção inicial e final da lista de etapas
+    // Incluir TODAS as etapas na sequência correta
     const allEtapas: EtapaOS[] = [
+      'lavagem',
+      'inspecao_inicial',
       'retifica'
     ];
+    
     if (etapasDisponiveis.montagem) allEtapas.push('montagem');
     if (etapasDisponiveis.dinamometro) allEtapas.push('dinamometro');
+    
+    // Adicionar inspeção final ao final da lista
+    allEtapas.push('inspecao_final');
 
     setEtapasAtivas(allEtapas);
     if (!selectedEtapa && allEtapas.length > 0) {
