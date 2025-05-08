@@ -70,15 +70,16 @@ export const useOrdemUpdate = (
       // Preservar informações das etapas, incluindo responsáveis
       const etapasAtualizado = { ...ordem.etapasAndamento };
       
-      // Garantir que não perdemos informações de responsáveis ao atualizar a ordem
-      console.log("Preservando etapas e responsáveis:", etapasAtualizado);
+      // Garantir que não perdemos informações de cliente
+      const clienteAtualizado = {
+        ...ordem.cliente,
+        id: values.clienteId || ordem.cliente.id,
+      };
       
       const updatedOrder: Partial<OrdemServico> = {
+        id: ordem.id, // Garantir que o ID nunca se perca
         nome: values.nome,
-        cliente: {
-          ...ordem.cliente,
-          id: values.clienteId,
-        },
+        cliente: clienteAtualizado,
         dataAbertura: values.dataAbertura,
         dataPrevistaEntrega: values.dataPrevistaEntrega,
         prioridade: values.prioridade,
@@ -91,7 +92,7 @@ export const useOrdemUpdate = (
       const fotosEntradaAtual = Array.isArray(ordem.fotosEntrada) ? ordem.fotosEntrada : [];
       const fotosSaidaAtual = Array.isArray(ordem.fotosSaida) ? ordem.fotosSaida : [];
 
-      // CORRIGIDO: Processamento de fotos de entrada
+      // Processamento de fotos de entrada
       if (values.fotosEntrada && Array.isArray(values.fotosEntrada)) {
         // Filtrar apenas arquivos válidos (File ou string URL)
         const validFotosEntrada = values.fotosEntrada.filter((f: any) => {
@@ -133,7 +134,7 @@ export const useOrdemUpdate = (
         updatedOrder.fotosEntrada = fotosEntradaAtual;
       }
       
-      // CORRIGIDO: Processamento de fotos de saída
+      // Processamento de fotos de saída
       if (values.fotosSaida && Array.isArray(values.fotosSaida)) {
         // Filtrar apenas arquivos válidos (File ou string URL)
         const validFotosSaida = values.fotosSaida.filter((f: any) => {
@@ -180,6 +181,7 @@ export const useOrdemUpdate = (
       const orderRef = doc(db, "ordens_servico", id);
       await updateDoc(orderRef, updatedOrder);
       
+      // Atualizar o estado da ordem com os dados atualizados
       setOrdem((prev) => {
         if (!prev) return null;
         return { ...prev, ...updatedOrder } as OrdemServico;
@@ -199,6 +201,7 @@ export const useOrdemUpdate = (
     }
   };
 
+  // Permitir sempre salvar a ordem, mesmo que nenhuma alteração tenha sido feita
   const handleOrdemUpdate = (ordemAtualizada: OrdemServico) => {
     console.log("Recebendo atualização de ordem:", ordemAtualizada);
     
@@ -209,6 +212,11 @@ export const useOrdemUpdate = (
     
     if (!ordemAtualizada.fotosSaida) {
       ordemAtualizada.fotosSaida = [];
+    }
+    
+    // Garantir que o id permaneça consistente
+    if (!ordemAtualizada.id && ordem?.id) {
+      ordemAtualizada.id = ordem.id;
     }
     
     setOrdem(ordemAtualizada);
