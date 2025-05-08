@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 
 interface ServicoHeaderProps {
   tipo: TipoServico;
-  displayTime: number;
+  displayTime: string;
   servicoStatus: ServicoStatus;
   progressPercentage: number;
   completedSubatividades: number;
