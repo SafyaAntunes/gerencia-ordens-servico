@@ -22,7 +22,7 @@ export default function ServicoDetails({
   
   // Função para manipular o clique de forma segura
   const handleSubatividadeClick = (subatividade: SubAtividade) => {
-    // Verificações de segurança antes de chamar a função
+    // Verificação apenas se tem permissão
     if (!temPermissao || !subatividade || !onSubatividadeToggle) return;
     
     // Verificar se o objeto é válido antes de chamar a função

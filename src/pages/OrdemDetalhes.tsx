@@ -51,6 +51,37 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
     );
   }
 
+  // Função para lidar com toggles de subatividades durante a edição da ordem
+  const handleSubatividadeToggleInEditMode = (servicoTipo: string, subId: string, checked: boolean) => {
+    if (!ordem || !isEditando) return;
+    
+    const servicosAtualizados = ordem.servicos.map(servico => {
+      if (servico.tipo === servicoTipo) {
+        const subatividadesAtualizadas = servico.subatividades?.map(sub => {
+          if (sub.id === subId) {
+            return { ...sub, concluida: checked };
+          }
+          return sub;
+        }) || [];
+        
+        return {
+          ...servico,
+          subatividades: subatividadesAtualizadas
+        };
+      }
+      return servico;
+    });
+    
+    // Atualiza a ordem localmente
+    const ordemAtualizada = {
+      ...ordem,
+      servicos: servicosAtualizados
+    };
+    
+    // Chama o método para atualizar o estado da ordem
+    handleOrdemUpdate(ordemAtualizada);
+  };
+
   return (
     <Layout onLogout={onLogout}>
       <div className="mb-4">
@@ -91,6 +122,8 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
           defaultFotosEntrada={ordem?.fotosEntrada || []}
           defaultFotosSaida={ordem?.fotosSaida || []}
           onCancel={() => setIsEditando(false)}
+          onSubatividadeToggle={handleSubatividadeToggleInEditMode}
+          isSubatividadeEditingEnabled={true}
         />
       ) : (
         <OrdemTabs
