@@ -138,9 +138,9 @@ export default function EtapaCard({
   };
 
   // MODIFICADO: Adicionar uma verificação se deve mostrar o cronômetro
-  // Apenas mostrar para lavagem, inspeção inicial e inspeção final
-  // E apenas quando não tiver serviço específico associado ou se esse serviço precisar do cronômetro
-  const etapaComCronometro = ['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa);
+  // Apenas mostrar para inspeção inicial e inspeção final
+  // NÃO mostrar para lavagem (agora usaremos apenas o cronômetro do serviço)
+  const etapaComCronometro = ['inspecao_inicial', 'inspecao_final'].includes(etapa);
   
   // Verificar se este card específico precisa de cronômetro
   // Se for um serviço específico dentro de uma etapa, verificar as configurações do serviço
@@ -149,16 +149,21 @@ export default function EtapaCard({
     if (!etapaComCronometro) return false;
     
     // Se for serviço específico (retifica-bloco, retifica-cabecote, etc), não mostrar cronômetro
-    if (servicoTipo && etapa !== 'lavagem' && etapa !== 'inspecao_inicial' && etapa !== 'inspecao_final') {
+    if (servicoTipo && etapa !== 'inspecao_inicial' && etapa !== 'inspecao_final') {
       return false;
     }
     
-    // Se for um serviço específico de inspeção/lavagem, mostrar cronômetro
-    if ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo) {
+    // Se for um serviço específico de inspeção, mostrar cronômetro
+    if ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final') && servicoTipo) {
       return true;
     }
     
-    // Por padrão, mostrar cronômetro para as etapas gerais de lavagem, inspeção inicial e inspeção final
+    // Para a etapa de lavagem, nunca mostrar o cronômetro da etapa (apenas do serviço)
+    if (etapa === 'lavagem') {
+      return false;
+    }
+    
+    // Por padrão, mostrar cronômetro para as etapas gerais de inspeção inicial e inspeção final
     return etapaComCronometro;
   };
   
