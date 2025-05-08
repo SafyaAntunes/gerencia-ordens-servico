@@ -37,10 +37,13 @@ export function AtribuirMultiplosFuncionariosDialog({
   const [funcionariosSelecionados, setFuncionariosSelecionados] = useState<string[]>(funcionariosSelecionadosIds);
   const { funcionariosStatus, funcionariosDisponiveis, loading } = useFuncionariosDisponibilidade();
 
-  // Atualizar os funcionários selecionados quando as props mudarem
+  // Atualizar os funcionários selecionados SOMENTE quando o modal for aberto
+  // E não após cada interação do usuário
   useEffect(() => {
-    setFuncionariosSelecionados(funcionariosSelecionadosIds);
-  }, [funcionariosSelecionadosIds]);
+    if (open) {
+      setFuncionariosSelecionados(funcionariosSelecionadosIds);
+    }
+  }, [open, funcionariosSelecionadosIds]);
   
   // Filtrar funcionários elegíveis
   const funcionariosElegiveis = apenasDisponiveis 
@@ -171,3 +174,4 @@ export function AtribuirMultiplosFuncionariosDialog({
     </Dialog>
   );
 }
+
