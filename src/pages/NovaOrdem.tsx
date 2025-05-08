@@ -47,6 +47,12 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
     fetchClientes();
   }, []);
   
+  // Handle subatividade toggle - empty implementation to satisfy TypeScript
+  const handleSubatividadeToggle = (servicoTipo: string, subatividadeId: string, checked: boolean) => {
+    // This is just a placeholder since we don't need to implement any functionality here
+    console.log(`Toggled subatividade ${subatividadeId} for ${servicoTipo}: ${checked}`);
+  };
+  
   const handleSubmit = async (values: any) => {
     setIsSubmitting(true);
     
@@ -325,6 +331,7 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         onCancel={() => navigate("/ordens")}
         clientes={clientes}
         isLoadingClientes={loading}
+        onSubatividadeToggle={handleSubatividadeToggle}
       />
     </Layout>
   );

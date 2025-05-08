@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
@@ -135,20 +134,20 @@ export const useOrdens = () => {
     try {
       const { id, ...ordemData } = ordem;
       
-      // Clone the object to avoid modifying the original
-      const ordemToSave = { ...ordemData };
+      // Create a new object for Firestore without type constraints
+      const ordemToSaveFirestore: Record<string, any> = { ...ordemData };
       
       // Converter Date para Timestamp
-      if (ordemToSave.dataAbertura instanceof Date) {
-        ordemToSave.dataAbertura = Timestamp.fromDate(ordemToSave.dataAbertura);
+      if (ordemData.dataAbertura instanceof Date) {
+        ordemToSaveFirestore.dataAbertura = Timestamp.fromDate(ordemData.dataAbertura);
       }
       
-      if (ordemToSave.dataPrevistaEntrega instanceof Date) {
-        ordemToSave.dataPrevistaEntrega = Timestamp.fromDate(ordemToSave.dataPrevistaEntrega);
+      if (ordemData.dataPrevistaEntrega instanceof Date) {
+        ordemToSaveFirestore.dataPrevistaEntrega = Timestamp.fromDate(ordemData.dataPrevistaEntrega);
       }
       
       const ordemRef = id ? doc(db, 'ordens_servico', id) : doc(collection(db, 'ordens_servico'));
-      await setDoc(ordemRef, ordemToSave, { merge: true });
+      await setDoc(ordemRef, ordemToSaveFirestore, { merge: true });
       toast.success('Ordem salva com sucesso!');
       return true;
     } catch (error) {
@@ -160,25 +159,22 @@ export const useOrdens = () => {
 
   const updateOrdem = async (ordem: OrdemServico) => {
     try {
-      // Clone do objeto para não modificar o original
-      const ordemUpdate = { ...ordem };
-      
-      // Create a new object for Firestore update
+      // Create a new object for Firestore without type constraints
       const updateData: Record<string, any> = {};
       
       // Convert Date fields to Timestamp for Firestore
-      if (ordemUpdate.dataAbertura instanceof Date) {
-        updateData.dataAbertura = Timestamp.fromDate(ordemUpdate.dataAbertura);
+      if (ordem.dataAbertura instanceof Date) {
+        updateData.dataAbertura = Timestamp.fromDate(ordem.dataAbertura);
       }
       
-      if (ordemUpdate.dataPrevistaEntrega instanceof Date) {
-        updateData.dataPrevistaEntrega = Timestamp.fromDate(ordemUpdate.dataPrevistaEntrega);
+      if (ordem.dataPrevistaEntrega instanceof Date) {
+        updateData.dataPrevistaEntrega = Timestamp.fromDate(ordem.dataPrevistaEntrega);
       }
       
       // Copy all other fields
-      Object.keys(ordemUpdate).forEach(key => {
+      Object.keys(ordem).forEach(key => {
         if (key !== 'id' && key !== 'dataAbertura' && key !== 'dataPrevistaEntrega') {
-          updateData[key] = ordemUpdate[key as keyof typeof ordemUpdate];
+          updateData[key] = ordem[key as keyof typeof ordem];
         }
       });
       
@@ -234,4 +230,3 @@ export const useOrdens = () => {
     deleteMultipleOrdens
   };
 };
-
