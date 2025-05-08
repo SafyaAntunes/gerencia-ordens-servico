@@ -1,3 +1,4 @@
+
 import { useParams } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { LogoutProps } from "@/types/props";
@@ -12,8 +13,8 @@ import { NotFoundOrdem } from "@/components/ordens/detalhes/NotFoundOrdem";
 import { OrdemHeaderCustom } from "@/components/ordens/detalhes/OrdemHeaderCustom";
 import { useState, useEffect } from "react";
 import { Cliente } from "@/types/clientes";
-import { getClientes } from "@/services/clienteService";
 import { toast } from "sonner";
+import { loadOrderFormData } from "@/services/ordemService";
 
 interface OrdemDetalhesProps extends LogoutProps {}
 
@@ -47,8 +48,8 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
       const fetchClientes = async () => {
         setIsLoadingClientes(true);
         try {
-          const clientesData = await getClientes();
-          setClientes(clientesData);
+          const { clientes } = await loadOrderFormData();
+          setClientes(clientes);
         } catch (error) {
           console.error("Erro ao buscar clientes:", error);
           toast.error("Erro ao carregar lista de clientes");

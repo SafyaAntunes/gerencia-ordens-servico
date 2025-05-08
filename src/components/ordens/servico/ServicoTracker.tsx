@@ -10,8 +10,6 @@ import ServicoHeader from "./ServicoHeader";
 import ServicoDetails from "./ServicoDetails";
 import ServicoControls from "./ServicoControls";
 import TimerPausas from "../etapa/TimerPausas";
-import FuncionarioSelector from "../etapa/components/FuncionarioSelector";
-import { PausaRegistro } from "./hooks/types/servicoTrackerTypes";
 
 interface ServicoTrackerProps {
   servico: Servico;
@@ -37,7 +35,6 @@ export default function ServicoTracker({
   const {
     isOpen,
     setIsOpen,
-    funcionariosOptions,
     temPermissao,
     isRunning,
     isPaused,
@@ -55,14 +52,7 @@ export default function ServicoTracker({
     handleResume,
     handleFinish,
     handleMarcarConcluido,
-    handleReiniciarServico,
     pausas,
-    responsavelSelecionadoId,
-    setResponsavelSelecionadoId,
-    handleSaveResponsavel,
-    isSavingResponsavel,
-    lastSavedResponsavelId,
-    lastSavedResponsavelNome
   } = useServicoTracker({
     servico,
     ordemId,
@@ -81,10 +71,6 @@ export default function ServicoTracker({
   // Verifica se todas subatividades selecionadas estão concluídas
   const todasSubatividadesConcluidas = subatividadesFiltradas.length === 0 || 
     (subatividadesFiltradas.length > 0 && subatividadesFiltradas.every(sub => sub.concluida));
-
-  const handleFuncionarioChange = (id: string) => {
-    setResponsavelSelecionadoId(id);
-  };
 
   // Convert progressPercentage to number explicitly to fix the type error
   const progressPercentageNumber = Number(progressPercentage);
@@ -113,7 +99,6 @@ export default function ServicoTracker({
               concluido={servico.concluido}
               temPermissao={temPermissao}
               onToggleOpen={() => setIsOpen(!isOpen)}
-              onReiniciarServico={() => {}} // Removendo funcionalidade de reiniciar
               isOpen={isOpen}
             />
           </CardContent>
@@ -121,20 +106,6 @@ export default function ServicoTracker({
 
         <CollapsibleContent>
           <CardContent className="pt-0">
-            {/* Adicionar seletor de responsável para cada serviço */}
-            {temPermissao && (
-              <FuncionarioSelector 
-                funcionarioSelecionadoId={responsavelSelecionadoId || ""}
-                funcionariosOptions={funcionariosOptions}
-                isEtapaConcluida={servico.concluido}
-                onFuncionarioChange={handleFuncionarioChange}
-                onSaveResponsavel={handleSaveResponsavel}
-                lastSavedFuncionarioId={lastSavedResponsavelId || servico.funcionarioId}
-                lastSavedFuncionarioNome={lastSavedResponsavelNome || servico.funcionarioNome}
-                isSaving={isSavingResponsavel}
-              />
-            )}
-            
             <ServicoDetails 
               descricao={servico.descricao}
               subatividades={subatividadesFiltradas}

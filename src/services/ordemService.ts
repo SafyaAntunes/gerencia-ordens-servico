@@ -11,14 +11,17 @@ export const loadOrderFormData = async (): Promise<{
   let isLoadingClientes = true;
   
   try {
-    const clientesData = await getClientes();
-    clientes = clientesData;
+    const clientes = await getClientes();
+    return { 
+      clientes, 
+      isLoadingClientes: false 
+    };
   } catch (error) {
     console.error("Erro ao buscar clientes:", error);
     toast.error("Erro ao carregar lista de clientes");
-  } finally {
-    isLoadingClientes = false;
+    return { 
+      clientes: [], 
+      isLoadingClientes: false 
+    };
   }
-  
-  return { clientes, isLoadingClientes };
 };
