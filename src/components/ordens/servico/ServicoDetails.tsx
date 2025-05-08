@@ -64,7 +64,7 @@ export default function ServicoDetails({
                     "flex items-center justify-between",
                     temPermissao ? "cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors" : ""
                   )}
-                  onClick={() => handleSubatividadeClick(subatividade)}
+                  onClick={() => temPermissao && handleSubatividadeClick(subatividade)}
                   tabIndex={temPermissao ? 0 : undefined}
                   role={temPermissao ? "button" : undefined}
                   aria-pressed={subatividade.concluida}

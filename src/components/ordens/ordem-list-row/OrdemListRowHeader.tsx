@@ -12,6 +12,7 @@ interface OrdemListRowHeaderProps {
 }
 
 export default function OrdemListRowHeader({ ordem, index }: OrdemListRowHeaderProps) {
+  // Tratamento seguro para o nome do cliente
   const clienteNome = ordem.cliente?.nome || "Cliente não especificado";
   
   return (
@@ -28,7 +29,7 @@ export default function OrdemListRowHeader({ ordem, index }: OrdemListRowHeaderP
       <div className="col-span-1">
         <div className="text-xs text-gray-500 mb-0.5">OS</div>
         <div className="font-semibold text-gray-900">
-          {ordem.id}
+          {ordem.id?.substring(0, 6) || "N/D"}
         </div>
       </div>
 
@@ -43,7 +44,7 @@ export default function OrdemListRowHeader({ ordem, index }: OrdemListRowHeaderP
       {/* Status */}
       <div className="col-span-3">
         <div className="text-xs text-gray-500 mb-0.5">Status</div>
-        <StatusBadge status={ordem.status} size="md" />
+        <StatusBadge status={ordem.status || "fabricacao"} size="md" />
       </div>
       
       {/* Prioridade */}

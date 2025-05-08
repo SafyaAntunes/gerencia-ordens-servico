@@ -21,7 +21,11 @@ export const useOrdemUpdate = (
     setIsSubmitting(true);
     
     try {
-      if (!id || !ordem) return;
+      if (!id || !ordem) {
+        toast.error("ID da ordem ou dados não disponíveis");
+        setIsSubmitting(false);
+        return;
+      }
       
       // Preserve existing subactivities and worker information
       const preserveExistingSubactivities = (currentServicos = [], newServicosTipos = []) => {
@@ -70,15 +74,15 @@ export const useOrdemUpdate = (
       // Preservar informações das etapas, incluindo responsáveis
       const etapasAtualizado = { ...ordem.etapasAndamento };
       
-      // Garantir que não perdemos informações de responsáveis ao atualizar a ordem
-      console.log("Preservando etapas e responsáveis:", etapasAtualizado);
+      // Garantir que não perdemos informações de cliente
+      const clienteAtualizado = {
+        ...ordem.cliente,
+        id: values.clienteId || ordem.cliente?.id,
+      };
       
       const updatedOrder: Partial<OrdemServico> = {
         nome: values.nome,
-        cliente: {
-          ...ordem.cliente,
-          id: values.clienteId,
-        },
+        cliente: clienteAtualizado,
         dataAbertura: values.dataAbertura,
         dataPrevistaEntrega: values.dataPrevistaEntrega,
         prioridade: values.prioridade,
@@ -91,7 +95,7 @@ export const useOrdemUpdate = (
       const fotosEntradaAtual = Array.isArray(ordem.fotosEntrada) ? ordem.fotosEntrada : [];
       const fotosSaidaAtual = Array.isArray(ordem.fotosSaida) ? ordem.fotosSaida : [];
 
-      // CORRIGIDO: Processamento de fotos de entrada
+      // Processamento de fotos de entrada
       if (values.fotosEntrada && Array.isArray(values.fotosEntrada)) {
         // Filtrar apenas arquivos válidos (File ou string URL)
         const validFotosEntrada = values.fotosEntrada.filter((f: any) => {
@@ -133,7 +137,7 @@ export const useOrdemUpdate = (
         updatedOrder.fotosEntrada = fotosEntradaAtual;
       }
       
-      // CORRIGIDO: Processamento de fotos de saída
+      // Processamento de fotos de saída
       if (values.fotosSaida && Array.isArray(values.fotosSaida)) {
         // Filtrar apenas arquivos válidos (File ou string URL)
         const validFotosSaida = values.fotosSaida.filter((f: any) => {
@@ -178,19 +182,31 @@ export const useOrdemUpdate = (
       console.log("Atualizando ordem com dados:", updatedOrder);
       
       const orderRef = doc(db, "ordens_servico", id);
-      await updateDoc(orderRef, updatedOrder);
       
-      setOrdem((prev) => {
-        if (!prev) return null;
-        return { ...prev, ...updatedOrder } as OrdemServico;
-      });
-      
-      if (values.motorId && values.motorId !== ordem.motorId) {
-        await fetchMotorDetails(values.clienteId, values.motorId);
+      try {
+        await updateDoc(orderRef, updatedOrder);
+        
+        // Atualiza o estado da ordem no componente
+        setOrdem((prev) => {
+          if (!prev) return null;
+          return { ...prev, ...updatedOrder } as OrdemServico;
+        });
+        
+        // Buscar detalhes de motor se houver mudança
+        if (values.motorId && values.motorId !== ordem.motorId) {
+          await fetchMotorDetails(values.clienteId, values.motorId);
+        }
+        
+        toast.success("Ordem atualizada com sucesso!");
+      } catch (updateError) {
+        console.error("Erro na operação de atualização:", updateError);
+        toast.error("Erro ao atualizar ordem de serviço no banco de dados");
+        throw updateError; // Re-throw para que seja capturado pelo catch externo
       }
       
-      toast.success("Ordem atualizada com sucesso!");
+      // Sai do modo de edição independentemente de mudanças
       setIsEditando(false);
+      
     } catch (error) {
       console.error("Error updating order:", error);
       toast.error("Erro ao atualizar ordem de serviço");

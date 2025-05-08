@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { OrdemServico } from "@/types/ordens";
 import { toast } from "sonner";
 import { SetOrdemFunction } from "./types";
@@ -25,9 +25,46 @@ export const useOrdemFetch = (id: string | undefined) => {
       
       if (docSnap.exists()) {
         const data = docSnap.data();
+        
+        // Garantir que temos dados completos do cliente
+        let clienteData = data.cliente || {};
+        
+        // Se temos ID do cliente, buscar dados complementares incluindo motores
+        if (clienteData.id) {
+          try {
+            // Buscar dados atualizados do cliente
+            const clienteRef = doc(db, "clientes", clienteData.id);
+            const clienteSnap = await getDoc(clienteRef);
+            
+            if (clienteSnap.exists()) {
+              const clienteAtualizado = clienteSnap.data();
+              clienteData = { 
+                ...clienteData, 
+                ...clienteAtualizado,
+                id: clienteData.id 
+              };
+              
+              // Buscar motores do cliente
+              const motoresRef = collection(db, `clientes/${clienteData.id}/motores`);
+              const motoresSnap = await getDocs(motoresRef);
+              
+              if (!motoresSnap.empty) {
+                const motores = motoresSnap.docs.map(doc => ({
+                  id: doc.id,
+                  ...doc.data()
+                }));
+                clienteData.motores = motores;
+              }
+            }
+          } catch (error) {
+            console.error("Erro ao buscar dados complementares do cliente:", error);
+          }
+        }
+        
         const ordemFormatada: OrdemServico = {
           ...data,
           id: docSnap.id,
+          cliente: clienteData,
           dataAbertura: data.dataAbertura?.toDate() || new Date(),
           dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
         } as OrdemServico;

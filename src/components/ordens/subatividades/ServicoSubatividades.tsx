@@ -41,15 +41,14 @@ export function ServicoSubatividades({
       const resultado = await getSubatividadesByTipo(tipoServicoFormatado as any);
       
       // Combina subatividades já selecionadas com as pré-cadastradas
-      const subsSelecionadas = new Set(subatividades.map(s => s.id));
-      
       const combinadas = resultado.map(sub => {
         const existente = subatividades.find(s => s.id === sub.id);
         if (existente) {
           return {
             ...sub,
             selecionada: true,
-            tempoEstimado: existente.tempoEstimado || sub.tempoEstimado || 0
+            tempoEstimado: existente.tempoEstimado || sub.tempoEstimado || 0,
+            concluida: existente.concluida // Preservar estado concluída
           };
         }
         return sub;
@@ -78,7 +77,9 @@ export function ServicoSubatividades({
       // Atualiza subatividade existente
       updatedSubs[existingIndex] = {
         ...updatedSubs[existingIndex],
-        selecionada: checked
+        selecionada: checked,
+        // Preservar estado concluída se existir
+        concluida: updatedSubs[existingIndex].concluida
       };
     } else if (checked) {
       // Adiciona nova subatividade da lista de presets
@@ -127,6 +128,19 @@ export function ServicoSubatividades({
     
     onChange(updatedSubs);
   };
+  
+  // Função para remover subatividade personalizada
+  const handleRemoveSubatividade = (id: string) => {
+    if (!editable) return;
+    
+    const updatedSubs = subatividades.filter(sub => sub.id !== id);
+    onChange(updatedSubs);
+    
+    toast({
+      title: "Subatividade removida",
+      description: "A subatividade personalizada foi removida com sucesso.",
+    });
+  };
 
   if (isLoading) {
     return (
@@ -155,6 +169,9 @@ export function ServicoSubatividades({
           setCustomSubatividade={setCustomSubatividade}
           setIsAddingCustom={setIsAddingCustom}
           onAddCustom={handleAddCustom}
+          onAdd={handleAddCustom} // Compatibilidade com a interface atualizada
+          onCancel={() => setIsAddingCustom(false)} // Compatibilidade com a interface atualizada
+          disabled={false} // Compatibilidade com a interface atualizada
         />
       )}
 
@@ -164,6 +181,9 @@ export function ServicoSubatividades({
         editable={editable}
         onToggleSubatividade={handleToggleSubatividade}
         onTempoEstimadoChange={handleTempoEstimadoChange}
+        onToggle={handleToggleSubatividade} // Compatibilidade com a interface atualizada
+        onRemove={handleRemoveSubatividade} // Compatibilidade com a interface atualizada
+        disabled={!editable} // Compatibilidade com a interface atualizada
       />
     </div>
   );
