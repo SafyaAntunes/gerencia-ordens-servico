@@ -5,7 +5,7 @@ import { db } from '@/lib/firebase';
 import { Funcionario } from '@/types/funcionarios';
 
 export interface FuncionarioStatus extends Funcionario {
-  status: 'disponivel' | 'ocupado';
+  status: 'disponivel' | 'ocupado' | 'inativo';
   atividadeAtual?: {
     ordemId: string;
     ordemNome: string;
@@ -38,11 +38,21 @@ export const useFuncionariosDisponibilidade = () => {
           // Para cada funcionário, verificar status atual em ordens
           const funcionariosComStatus: FuncionarioStatus[] = await Promise.all(
             funcionariosData.map(async (funcionario) => {
+              // MODIFICADO: Verificar primeiro se o funcionário está ativo
+              // Se não estiver, já retornar com status inativo
+              if (funcionario.ativo === false) {
+                return {
+                  ...funcionario,
+                  status: 'inativo',
+                  atividadeAtual: undefined
+                };
+              }
+
               // Verificar se está em alguma ordem ativa
               const ordemStatus = await verificarStatusFuncionario(funcionario.id);
               
               // Garante que status seja sempre um valor literal 'disponivel' ou 'ocupado'
-              const status: 'disponivel' | 'ocupado' = ordemStatus ? 'ocupado' : 'disponivel';
+              const status: 'disponivel' | 'ocupado' | 'inativo' = ordemStatus ? 'ocupado' : 'disponivel';
               
               return {
                 ...funcionario,
@@ -67,10 +77,19 @@ export const useFuncionariosDisponibilidade = () => {
           if (funcionariosStatus.length > 0) {
             const funcionariosAtualizados: FuncionarioStatus[] = await Promise.all(
               funcionariosStatus.map(async (funcionario) => {
+                // MODIFICADO: Verificar primeiro se o funcionário está ativo
+                if (funcionario.ativo === false) {
+                  return {
+                    ...funcionario,
+                    status: 'inativo',
+                    atividadeAtual: undefined
+                  };
+                }
+
                 const ordemStatus = await verificarStatusFuncionario(funcionario.id);
                 
                 // Garante que status seja sempre um valor literal 'disponivel' ou 'ocupado'
-                const status: 'disponivel' | 'ocupado' = ordemStatus ? 'ocupado' : 'disponivel';
+                const status: 'disponivel' | 'ocupado' | 'inativo' = ordemStatus ? 'ocupado' : 'disponivel';
                 
                 return {
                   ...funcionario,
@@ -169,13 +188,17 @@ export const useFuncionariosDisponibilidade = () => {
   };
 
   // Dados agregados
-  const funcionariosDisponiveis = funcionariosStatus.filter(f => f.status === 'disponivel');
+  // MODIFICADO: Filtrar funcionários disponíveis considerando apenas os ativos
+  const funcionariosDisponiveis = funcionariosStatus.filter(f => f.status === 'disponivel' && f.ativo !== false);
   const funcionariosOcupados = funcionariosStatus.filter(f => f.status === 'ocupado');
+  // Novo: funcionários inativos
+  const funcionariosInativos = funcionariosStatus.filter(f => f.status === 'inativo' || f.ativo === false);
 
   return {
     funcionariosStatus,
     funcionariosDisponiveis,
     funcionariosOcupados,
+    funcionariosInativos,
     loading,
     error
   };

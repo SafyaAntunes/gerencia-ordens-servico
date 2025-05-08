@@ -13,13 +13,26 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { FuncionarioStatus } from "@/hooks/useFuncionariosDisponibilidade";
-import { format, formatDistance } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { FuncionarioStatus } from '@/hooks/useFuncionariosDisponibilidade';
+import { formatDistance } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Clock, CheckCircle } from "lucide-react";
+import { Clock, CheckCircle, CircleX, Clock3, RefreshCw } from "lucide-react";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { forcarLiberacaoFuncionario } from "@/services/funcionarioEmServicoService";
+import { toast } from "sonner";
+import { FuncionariosDisponibilidadeTable } from "./FuncionariosDisponibilidadeTable";
 
 interface FuncionarioStatusTabProps {
   funcionariosStatus: FuncionarioStatus[];
@@ -27,8 +40,24 @@ interface FuncionarioStatusTabProps {
 }
 
 export default function FuncionarioStatusTab({ funcionariosStatus, loading }: FuncionarioStatusTabProps) {
-  const [statusFilter, setStatusFilter] = useState<"todos" | "disponivel" | "ocupado">("todos");
-  const { toast } = useToast();
+  const [statusFilter, setStatusFilter] = useState<"todos" | "disponivel" | "ocupado" | "inativo">("todos");
+  const [viewMode, setViewMode] = useState<"cards" | "table">("table");
+  const [funcionarioParaLiberar, setFuncionarioParaLiberar] = useState<string | null>(null);
+  const [isLiberando, setIsLiberando] = useState(false);
+  
+  const handleLiberarFuncionario = async () => {
+    if (!funcionarioParaLiberar) return;
+    
+    setIsLiberando(true);
+    try {
+      const success = await forcarLiberacaoFuncionario(funcionarioParaLiberar);
+      if (success) {
+        setFuncionarioParaLiberar(null);
+      }
+    } finally {
+      setIsLiberando(false);
+    }
+  };
   
   const filteredFuncionarios = funcionariosStatus.filter(f => {
     if (statusFilter === "todos") return true;
@@ -45,98 +74,165 @@ export default function FuncionarioStatusTab({ funcionariosStatus, loading }: Fu
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-3">
         <h2 className="text-xl font-bold">Status em Tempo Real</h2>
-        <Select
-          value={statusFilter}
-          onValueChange={(value) => setStatusFilter(value as "todos" | "disponivel" | "ocupado")}
-        >
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="Filtrar por status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todos</SelectItem>
-            <SelectItem value="disponivel">Disponíveis</SelectItem>
-            <SelectItem value="ocupado">Ocupados</SelectItem>
-          </SelectContent>
-        </Select>
+        
+        <div className="flex gap-3 items-center">
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => setStatusFilter(value as "todos" | "disponivel" | "ocupado" | "inativo")}
+          >
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Filtrar por status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="disponivel">Disponíveis</SelectItem>
+              <SelectItem value="ocupado">Em serviço</SelectItem>
+              <SelectItem value="inativo">Inativos</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <div className="flex rounded-md border overflow-hidden">
+            <Button 
+              variant={viewMode === "cards" ? "default" : "ghost"} 
+              className={`rounded-none ${viewMode === "cards" ? "" : "text-muted-foreground"}`}
+              onClick={() => setViewMode("cards")}
+              size="sm"
+            >
+              Cards
+            </Button>
+            <Button 
+              variant={viewMode === "table" ? "default" : "ghost"} 
+              className={`rounded-none ${viewMode === "table" ? "" : "text-muted-foreground"}`}
+              onClick={() => setViewMode("table")}
+              size="sm"
+            >
+              Tabela
+            </Button>
+          </div>
+        </div>
       </div>
       
-      {filteredFuncionarios.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">Nenhum funcionário encontrado com esse filtro.</p>
-        </div>
+      {viewMode === "table" ? (
+        <FuncionariosDisponibilidadeTable />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredFuncionarios.map((funcionario) => (
-            <Card 
-              key={funcionario.id}
-              className={
-                funcionario.status === "disponivel" 
-                  ? "border-green-200 dark:border-green-900" 
-                  : "border-amber-200 dark:border-amber-900"
-              }
-            >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+          {filteredFuncionarios.map(funcionario => (
+            <Card key={funcionario.id}>
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <Avatar>
-                      {funcionario.foto ? (
-                        <AvatarImage src={funcionario.foto} alt={funcionario.nome} />
-                      ) : (
-                        <AvatarFallback>
-                          {funcionario.nome.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      )}
+                      <AvatarFallback className="bg-primary/10">
+                        {funcionario.nome.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
                     </Avatar>
-                    <div>
-                      <CardTitle className="text-base">{funcionario.nome}</CardTitle>
-                      <p className="text-xs text-muted-foreground">
-                        {funcionario.especialidades.length > 0 
-                          ? funcionario.especialidades.join(", ") 
-                          : "Sem especialidades"}
-                      </p>
-                    </div>
+                    <CardTitle className="text-base">{funcionario.nome}</CardTitle>
                   </div>
-                  <Badge 
-                    variant={funcionario.status === "disponivel" ? "outline" : "secondary"}
-                    className={
-                      funcionario.status === "disponivel" 
-                        ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200" 
-                        : "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200"
-                    }
-                  >
-                    {funcionario.status === "disponivel" ? (
-                      <><CheckCircle className="h-3 w-3 mr-1" /> Disponível</>
-                    ) : (
-                      <><Clock className="h-3 w-3 mr-1" /> Ocupado</>
-                    )}
-                  </Badge>
+                  
+                  {funcionario.status === 'disponivel' ? (
+                    <Badge variant="success" className="flex gap-1 items-center">
+                      <CheckCircle className="h-3.5 w-3.5" /> 
+                      Disponível
+                    </Badge>
+                  ) : funcionario.status === 'ocupado' ? (
+                    <Badge variant="warning" className="flex gap-1 items-center">
+                      <Clock className="h-3.5 w-3.5" /> 
+                      Ocupado
+                    </Badge>
+                  ) : (
+                    <Badge variant="destructive" className="flex gap-1 items-center">
+                      <CircleX className="h-3.5 w-3.5" /> 
+                      Inativo
+                    </Badge>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
-                {funcionario.status === "ocupado" && funcionario.atividadeAtual && (
-                  <div className="bg-amber-50 dark:bg-amber-900/20 p-2 rounded-md text-sm">
-                    <p><strong>OS:</strong> {funcionario.atividadeAtual.ordemNome}</p>
-                    <p><strong>Etapa:</strong> {formatEtapa(funcionario.atividadeAtual.etapa)}
-                      {funcionario.atividadeAtual.servicoTipo && (
-                        <> - {formatServicoTipo(funcionario.atividadeAtual.servicoTipo)}</>
-                      )}
-                    </p>
-                    <p><strong>Início:</strong> {formatTempoAtividade(funcionario.atividadeAtual.inicio)}</p>
+                {funcionario.status === 'ocupado' && funcionario.atividadeAtual ? (
+                  <div className="text-sm space-y-2">
+                    <div className="flex items-center justify-between text-muted-foreground">
+                      <span>Ordem:</span>
+                      <span className="font-medium text-foreground">{funcionario.atividadeAtual.ordemNome}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-muted-foreground">
+                      <span>Etapa:</span>
+                      <span className="font-medium text-foreground">
+                        {formatEtapa(funcionario.atividadeAtual.etapa)}
+                        {funcionario.atividadeAtual.servicoTipo ? 
+                          ` - ${formatServicoTipo(funcionario.atividadeAtual.servicoTipo)}` : ''}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-muted-foreground">
+                      <span>Tempo:</span>
+                      <span className="flex items-center">
+                        <Clock3 className="h-3.5 w-3.5 mr-1 text-amber-500" /> 
+                        {formatTempoAtividade(funcionario.atividadeAtual.inicio)}
+                      </span>
+                    </div>
+                    
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="w-full mt-2"
+                      onClick={() => setFuncionarioParaLiberar(funcionario.id)}
+                    >
+                      <RefreshCw className="h-3.5 w-3.5 mr-2" />
+                      Forçar liberação
+                    </Button>
                   </div>
-                )}
-                
-                {funcionario.status === "disponivel" && (
-                  <div className="bg-green-50 dark:bg-green-900/20 p-2 rounded-md text-sm">
-                    <p>Disponível para novos serviços</p>
+                ) : funcionario.status === 'inativo' ? (
+                  <div className="text-sm text-center text-muted-foreground py-3">
+                    Funcionário está marcado como inativo no sistema
+                  </div>
+                ) : (
+                  <div className="text-sm text-center text-muted-foreground py-3">
+                    Funcionário disponível para atribuição
                   </div>
                 )}
               </CardContent>
             </Card>
           ))}
+          
+          {filteredFuncionarios.length === 0 && (
+            <div className="col-span-full flex items-center justify-center py-10 text-center">
+              <div className="text-muted-foreground">
+                <CircleX className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                <p>Nenhum funcionário encontrado com o filtro selecionado</p>
+              </div>
+            </div>
+          )}
         </div>
       )}
+      
+      {/* Dialog para confirmar liberação de funcionário */}
+      <AlertDialog 
+        open={!!funcionarioParaLiberar} 
+        onOpenChange={(open) => !open && setFuncionarioParaLiberar(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Liberar funcionário</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja forçar a liberação deste funcionário?
+              Esta ação vai encerrar qualquer atividade em andamento atribuída a ele.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isLiberando}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleLiberarFuncionario}
+              disabled={isLiberando}
+              className={isLiberando ? "opacity-50" : ""}
+            >
+              {isLiberando ? "Liberando..." : "Sim, liberar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -170,16 +266,18 @@ function formatServicoTipo(tipo: string): string {
   return tiposMap[tipo] || tipo;
 }
 
-function formatTempoAtividade(data: Date): string {
+function formatTempoAtividade(data: Date | undefined | null): string {
   if (!data) return 'Sem registro de início';
   
   try {
-    return formatDistance(new Date(data), new Date(), { 
-      addSuffix: true,
-      locale: ptBR 
-    });
+    const dataInicio = new Date(data);
+    return formatDistance(
+      dataInicio,
+      new Date(),
+      { addSuffix: false, locale: ptBR }
+    );
   } catch (error) {
-    console.error("Erro ao formatar data:", error);
-    return 'Data inválida';
+    console.error("Erro ao formatar data de início:", error);
+    return 'Erro na data';
   }
 }

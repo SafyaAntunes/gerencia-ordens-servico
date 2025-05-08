@@ -1,3 +1,4 @@
+
 import { Phone, Mail, Wrench, Shield, Trash, Edit, Eye, User, Circle } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,10 +23,16 @@ export default function FuncionarioCard({
   onDelete,
   hideDeleteButton = false
 }: FuncionarioCardProps) {
-  const [status, setStatus] = useState<'idle' | 'working' | 'paused'>('idle');
+  const [status, setStatus] = useState<'idle' | 'working' | 'paused' | 'inactive'>('idle');
   
   useEffect(() => {
     const checkStatus = () => {
+      // MODIFICADO: Verificar primeiro se o funcionário está inativo
+      if (funcionario.ativo === false) {
+        setStatus('inactive');
+        return;
+      }
+      
       const keys = Object.keys(localStorage);
       const timerKeys = keys.filter(key => key.startsWith('timer_'));
       
@@ -57,7 +64,7 @@ export default function FuncionarioCard({
     const interval = setInterval(checkStatus, 5000);
     
     return () => clearInterval(interval);
-  }, [funcionario.id]);
+  }, [funcionario.id, funcionario.ativo]);
   
   const getStatusColor = () => {
     switch (status) {
@@ -65,6 +72,8 @@ export default function FuncionarioCard({
         return 'text-[#ea384c]';
       case 'paused':
         return 'text-amber-400';
+      case 'inactive':
+        return 'text-gray-400';
       default:
         return 'text-green-500';
     }
@@ -79,7 +88,7 @@ export default function FuncionarioCard({
     .toUpperCase();
     
   return (
-    <Card className="overflow-hidden transition-all duration-200 hover:shadow-md border-border h-full flex flex-col">
+    <Card className={`overflow-hidden transition-all duration-200 hover:shadow-md border-border h-full flex flex-col ${funcionario.ativo === false ? 'opacity-70' : ''}`}>
       <CardHeader className="pb-2">
         <div className="flex items-center gap-4">
           <div className="relative">

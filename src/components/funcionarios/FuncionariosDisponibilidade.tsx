@@ -3,13 +3,19 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useFuncionariosDisponibilidade, FuncionarioStatus } from '@/hooks/useFuncionariosDisponibilidade';
-import { CircleCheck, Clock } from "lucide-react";
+import { CircleCheck, Clock, CircleX } from "lucide-react";
 import { format, formatDistance, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export function FuncionariosDisponibilidade() {
-  const { funcionariosStatus, funcionariosDisponiveis, funcionariosOcupados, loading } = useFuncionariosDisponibilidade();
+  const { 
+    funcionariosStatus, 
+    funcionariosDisponiveis, 
+    funcionariosOcupados, 
+    funcionariosInativos, 
+    loading 
+  } = useFuncionariosDisponibilidade();
   
   if (loading) {
     return (
@@ -43,6 +49,11 @@ export function FuncionariosDisponibilidade() {
             <Badge variant="outline" className="bg-amber-50">
               {funcionariosOcupados.length} em serviço
             </Badge>
+            {funcionariosInativos.length > 0 && (
+              <Badge variant="outline" className="bg-red-50">
+                {funcionariosInativos.length} inativos
+              </Badge>
+            )}
           </div>
         </CardTitle>
       </CardHeader>
@@ -59,7 +70,7 @@ export function FuncionariosDisponibilidade() {
               </h3>
               
               {funcionariosDisponiveis.length === 0 ? (
-                <p className="text-sm text-muted-foreground pl-5">Todos os funcionários estão ocupados.</p>
+                <p className="text-sm text-muted-foreground pl-5">Todos os funcionários estão ocupados ou inativos.</p>
               ) : (
                 <div className="pl-5 space-y-1">
                   {funcionariosDisponiveis.map(funcionario => (
@@ -108,6 +119,25 @@ export function FuncionariosDisponibilidade() {
                 </div>
               )}
             </div>
+            
+            {/* Funcionários inativos */}
+            {funcionariosInativos.length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium flex items-center mb-2">
+                  <CircleX className="h-4 w-4 text-red-500 mr-1" />
+                  Inativos
+                </h3>
+                
+                <div className="pl-5 space-y-1">
+                  {funcionariosInativos.map(funcionario => (
+                    <div key={funcionario.id} className="text-sm flex justify-between">
+                      <span>{funcionario.nome}</span>
+                      <Badge variant="destructive" className="text-xs">Inativo</Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </CardContent>

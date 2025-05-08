@@ -5,12 +5,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFuncionariosDisponibilidade, FuncionarioStatus } from '@/hooks/useFuncionariosDisponibilidade';
 import { format, formatDistance, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CircleCheck, Clock, CircleDashed } from "lucide-react";
+import { CircleCheck, Clock, CircleDashed, CircleX } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { tipoServicoLabels } from "@/types/funcionarios";
 
 export function FuncionariosDisponibilidadeTable() {
-  const { funcionariosStatus, funcionariosDisponiveis, funcionariosOcupados, loading } = useFuncionariosDisponibilidade();
+  const { 
+    funcionariosStatus, 
+    funcionariosDisponiveis, 
+    funcionariosOcupados, 
+    funcionariosInativos, 
+    loading 
+  } = useFuncionariosDisponibilidade();
   
   if (loading) {
     return (
@@ -44,6 +50,11 @@ export function FuncionariosDisponibilidadeTable() {
             <Badge variant="outline" className="bg-amber-50">
               {funcionariosOcupados.length} em serviço
             </Badge>
+            {funcionariosInativos.length > 0 && (
+              <Badge variant="outline" className="bg-red-50">
+                {funcionariosInativos.length} inativos
+              </Badge>
+            )}
           </div>
         </CardTitle>
       </CardHeader>
@@ -66,7 +77,7 @@ export function FuncionariosDisponibilidadeTable() {
               </TableRow>
             ) : (
               funcionariosStatus.map((funcionario) => (
-                <TableRow key={funcionario.id}>
+                <TableRow key={funcionario.id} className={funcionario.status === 'inativo' ? 'opacity-60' : ''}>
                   <TableCell className="font-medium">{funcionario.nome}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
@@ -83,10 +94,15 @@ export function FuncionariosDisponibilidadeTable() {
                         <CircleCheck className="h-3.5 w-3.5" /> 
                         Disponível
                       </Badge>
-                    ) : (
+                    ) : funcionario.status === 'ocupado' ? (
                       <Badge variant="warning" className="flex gap-1 items-center">
                         <Clock className="h-3.5 w-3.5" /> 
                         Ocupado
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive" className="flex gap-1 items-center">
+                        <CircleX className="h-3.5 w-3.5" /> 
+                        Inativo
                       </Badge>
                     )}
                   </TableCell>
@@ -102,6 +118,11 @@ export function FuncionariosDisponibilidadeTable() {
                         <div className="text-xs text-muted-foreground">
                           <strong>Início:</strong> {formatTempoAtividade(funcionario.atividadeAtual.inicio)}
                         </div>
+                      </div>
+                    ) : funcionario.status === 'inativo' ? (
+                      <div className="flex items-center text-muted-foreground">
+                        <CircleX className="h-3.5 w-3.5 mr-1" /> 
+                        Funcionário inativo
                       </div>
                     ) : (
                       <div className="flex items-center text-muted-foreground">
