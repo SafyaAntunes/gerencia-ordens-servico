@@ -85,9 +85,6 @@ export default function ServicoTracker({
     setResponsavelSelecionadoId(id);
   };
 
-  // Convert string to number for progressPercentage
-  const progressValue = Number(progressPercentage);
-
   return (
     <Card className={cn("w-full", className)}>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -97,7 +94,7 @@ export default function ServicoTracker({
               tipo={servico.tipo}
               displayTime={displayTime}
               servicoStatus={servicoStatus}
-              progressPercentage={progressValue}
+              progressPercentage={progressPercentage}
               completedSubatividades={completedSubatividades}
               totalSubatividades={totalSubatividades}
               tempoTotalEstimado={tempoTotalEstimado}

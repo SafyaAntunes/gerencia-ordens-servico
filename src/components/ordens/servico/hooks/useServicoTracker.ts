@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import { getFuncionarios } from "@/services/funcionarioService";
@@ -98,8 +97,10 @@ export function useServicoTracker({
       const dadosAtuais = ordemDoc.data();
       const servicosAtuais = dadosAtuais.servicos || [];
       
+      // Modificação aqui: Atualizar apenas o serviço específico pelo tipo
       // Criar array atualizado de serviços
       const servicosAtualizados = servicosAtuais.map((s: any) => {
+        // Comparar pelo tipo EXATO do serviço atual, sem afetar outros
         if (s.tipo === servico.tipo) {
           return {
             ...s,

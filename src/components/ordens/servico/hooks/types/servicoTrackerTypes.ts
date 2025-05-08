@@ -23,7 +23,7 @@ export interface UseServicoTrackerResult {
   isPaused: boolean;
   displayTime: string;
   servicoStatus: ServicoStatus;
-  progressPercentage: number;
+  progressPercentage: number; // Ensuring this is a number type
   completedSubatividades: number;
   totalSubatividades: number;
   tempoTotalEstimado: number;
