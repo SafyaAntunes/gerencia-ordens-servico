@@ -89,20 +89,27 @@ export const useOrdens = () => {
       // Carregar motores do cliente se houver um cliente vinculado
       if (data.cliente && data.cliente.id) {
         try {
-          const motoresRef = collection(db, `clientes/${data.cliente.id}/motores`);
-          const motoresSnapshot = await getDocs(motoresRef);
-          const motores = motoresSnapshot.docs.map(motorDoc => ({
-            id: motorDoc.id,
-            ...motorDoc.data()
-          }));
-          
-          data.cliente.motores = motores;
-        } catch (error) {
-          console.error("Erro ao carregar motores do cliente:", error);
+          const clienteDoc = await getDoc(doc(db, "clientes", data.cliente.id));
+          if (clienteDoc.exists()) {
+            const clienteData = clienteDoc.data();
+            data.cliente.nome = clienteData.nome || "Cliente sem nome";
+            data.cliente.telefone = clienteData.telefone || "";
+            data.cliente.email = clienteData.email || "";
+            
+            // Carregar os motores do cliente
+            const motoresRef = collection(db, `clientes/${data.cliente.id}/motores`);
+            const motoresSnapshot = await getDocs(motoresRef);
+            data.cliente.motores = motoresSnapshot.docs.map(motorDoc => ({
+              id: motorDoc.id,
+              ...motorDoc.data()
+            }));
+          }
+        } catch (clientError) {
+          console.error("Erro ao buscar dados do cliente:", clientError);
         }
       }
       
-      // Converter Timestamp para Date
+      // Converter Timestamp para Date - Correção aqui usando toDate()
       const dataAbertura = data.dataAbertura instanceof Timestamp 
         ? data.dataAbertura.toDate() 
         : new Date();
@@ -227,3 +234,4 @@ export const useOrdens = () => {
     deleteMultipleOrdens
   };
 };
+

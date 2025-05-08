@@ -27,7 +27,7 @@ export interface OrdemFormProps extends ComponentPropsWithoutRef<"form"> {
   defaultFotosEntrada?: string[] | any[];
   defaultFotosSaida?: string[] | any[];
   onCancel?: () => void;
-  onSubatividadeToggle: (servicoTipo: string, subatividadeId: string, checked: boolean) => void;
+  onSubatividadeToggle?: (servicoTipo: string, subatividadeId: string, checked: boolean) => void;
   isSubatividadeEditingEnabled?: boolean;
   clientes?: Cliente[];
   isLoadingClientes?: boolean;
