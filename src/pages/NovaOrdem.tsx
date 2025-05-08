@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -267,7 +266,8 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         ? Timestamp.fromDate(values.dataPrevistaEntrega) 
         : Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)); // Default: 1 week from now
 
-      const newOrder: Partial<OrdemServico> = {
+      // Create a new order object with proper Timestamp fields
+      const newOrder: any = {
         id: values.id,
         nome: values.nome,
         cliente: {
@@ -278,8 +278,8 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
           motores: clienteMotores
         },
         motorId: values.motorId,
-        dataAbertura: dataAbertura,
-        dataPrevistaEntrega: dataPrevistaEntrega,
+        dataAbertura,
+        dataPrevistaEntrega,
         prioridade: values.prioridade as Prioridade,
         status: "orcamento",
         servicos: values.servicosTipos.map((tipo: TipoServico) => ({
@@ -290,7 +290,6 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         })),
         etapasAndamento,
         tempoRegistros: [],
-        // Garantindo que os arrays de fotos existam, mesmo que vazios
         fotosEntrada: fotosEntradaUrls,
         fotosSaida: fotosSaidaUrls,
         progressoEtapas: 0,

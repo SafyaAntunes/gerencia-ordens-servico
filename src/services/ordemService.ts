@@ -7,9 +7,6 @@ export const loadOrderFormData = async (): Promise<{
   clientes: Cliente[];
   isLoadingClientes: boolean;
 }> => {
-  let clientes: Cliente[] = [];
-  let isLoadingClientes = true;
-  
   try {
     const clientesData = await getClientes();
     return { 

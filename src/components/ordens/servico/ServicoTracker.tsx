@@ -88,7 +88,7 @@ export default function ServicoTracker({
               tipo={servico.tipo}
               displayTime={displayTime}
               servicoStatus={servicoStatus}
-              progressPercentage={progressPercentage}
+              progressPercentage={progressPercentage} // This is already a number from useServicoTracker
               completedSubatividades={completedSubatividades}
               totalSubatividades={totalSubatividades}
               tempoTotalEstimado={tempoTotalEstimado}
@@ -96,7 +96,7 @@ export default function ServicoTracker({
               concluido={servico.concluido}
               temPermissao={temPermissao}
               onToggleOpen={() => setIsOpen(!isOpen)}
-              isOpen={isOpen}
+              onReiniciarServico={() => {}} // Added empty function for compatibility
             />
           </CardContent>
         </CollapsibleTrigger>

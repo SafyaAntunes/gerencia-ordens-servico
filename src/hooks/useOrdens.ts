@@ -128,17 +128,20 @@ export const useOrdens = () => {
     try {
       const { id, ...ordemData } = ordem;
       
+      // Clone the object to avoid modifying the original
+      const ordemToSave = { ...ordemData };
+      
       // Converter Date para Timestamp
-      if (ordemData.dataAbertura instanceof Date) {
-        ordemData.dataAbertura = Timestamp.fromDate(ordemData.dataAbertura);
+      if (ordemToSave.dataAbertura instanceof Date) {
+        ordemToSave.dataAbertura = Timestamp.fromDate(ordemToSave.dataAbertura);
       }
       
-      if (ordemData.dataPrevistaEntrega instanceof Date) {
-        ordemData.dataPrevistaEntrega = Timestamp.fromDate(ordemData.dataPrevistaEntrega);
+      if (ordemToSave.dataPrevistaEntrega instanceof Date) {
+        ordemToSave.dataPrevistaEntrega = Timestamp.fromDate(ordemToSave.dataPrevistaEntrega);
       }
       
       const ordemRef = id ? doc(db, 'ordens_servico', id) : doc(collection(db, 'ordens_servico'));
-      await setDoc(ordemRef, ordemData, { merge: true });
+      await setDoc(ordemRef, ordemToSave, { merge: true });
       toast.success('Ordem salva com sucesso!');
       return true;
     } catch (error) {
@@ -153,17 +156,27 @@ export const useOrdens = () => {
       // Clone do objeto para não modificar o original
       const ordemUpdate = { ...ordem };
       
-      // Converter Date para Timestamp
+      // Create a new object for Firestore update
+      const updateData: Record<string, any> = {};
+      
+      // Convert Date fields to Timestamp for Firestore
       if (ordemUpdate.dataAbertura instanceof Date) {
-        ordemUpdate.dataAbertura = Timestamp.fromDate(ordemUpdate.dataAbertura);
+        updateData.dataAbertura = Timestamp.fromDate(ordemUpdate.dataAbertura);
       }
       
       if (ordemUpdate.dataPrevistaEntrega instanceof Date) {
-        ordemUpdate.dataPrevistaEntrega = Timestamp.fromDate(ordemUpdate.dataPrevistaEntrega);
+        updateData.dataPrevistaEntrega = Timestamp.fromDate(ordemUpdate.dataPrevistaEntrega);
       }
       
+      // Copy all other fields
+      Object.keys(ordemUpdate).forEach(key => {
+        if (key !== 'id' && key !== 'dataAbertura' && key !== 'dataPrevistaEntrega') {
+          updateData[key] = ordemUpdate[key as keyof typeof ordemUpdate];
+        }
+      });
+      
       const ordemRef = doc(db, 'ordens_servico', ordem.id);
-      await updateDoc(ordemRef, ordemUpdate);
+      await updateDoc(ordemRef, updateData);
       toast.success('Ordem atualizada com sucesso!');
       return true;
     } catch (error) {
