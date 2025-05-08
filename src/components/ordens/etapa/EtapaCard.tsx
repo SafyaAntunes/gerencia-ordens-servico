@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
-import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
+import { EtapaOS, Servico, TipoServico } from "@/types/ordens";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { useEtapaCard } from "./useEtapaCard";
@@ -109,12 +109,7 @@ export default function EtapaCard({
       setIsAtivo(false);
     }
   }, [etapaInfo, setIsAtivo]);
-  
-  // MODIFICADO: Remover o efeito de conclusão automática para cabeçote em retífica
-  // O código anterior marcava automaticamente a etapa como concluída quando todos os serviços estavam concluídos
-  // O que causava o problema de marcar cabeçote como concluído ao concluir o bloco
-  // Agora cada serviço deve ser concluído individualmente pelo usuário
-  
+
   const handleEtapaConcluida = (tempoTotal: number) => {
     // Verificar se todas as subatividades estão concluídas
     if (!todasSubatividadesConcluidas(servicos)) {
@@ -138,9 +133,9 @@ export default function EtapaCard({
   };
 
   // MODIFICADO: Adicionar uma verificação se deve mostrar o cronômetro
-  // Apenas mostrar para inspeção inicial e inspeção final
-  // NÃO mostrar para lavagem (agora usaremos apenas o cronômetro do serviço)
-  const etapaComCronometro = ['inspecao_inicial', 'inspecao_final'].includes(etapa);
+  // Apenas mostrar para inspeção final
+  // NÃO mostrar para lavagem e inspeção inicial (agora usaremos apenas o cronômetro do serviço)
+  const etapaComCronometro = ['inspecao_final'].includes(etapa);
   
   // Verificar se este card específico precisa de cronômetro
   // Se for um serviço específico dentro de uma etapa, verificar as configurações do serviço
@@ -149,21 +144,21 @@ export default function EtapaCard({
     if (!etapaComCronometro) return false;
     
     // Se for serviço específico (retifica-bloco, retifica-cabecote, etc), não mostrar cronômetro
-    if (servicoTipo && etapa !== 'inspecao_inicial' && etapa !== 'inspecao_final') {
+    if (servicoTipo && etapa !== 'inspecao_final') {
       return false;
     }
     
-    // Se for um serviço específico de inspeção, mostrar cronômetro
-    if ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final') && servicoTipo) {
+    // Se for um serviço específico de inspeção final, mostrar cronômetro
+    if (etapa === 'inspecao_final' && servicoTipo) {
       return true;
     }
     
-    // Para a etapa de lavagem, nunca mostrar o cronômetro da etapa (apenas do serviço)
-    if (etapa === 'lavagem') {
+    // Para a etapa de lavagem e inspeção inicial, nunca mostrar o cronômetro da etapa (apenas do serviço)
+    if (etapa === 'lavagem' || etapa === 'inspecao_inicial') {
       return false;
     }
     
-    // Por padrão, mostrar cronômetro para as etapas gerais de inspeção inicial e inspeção final
+    // Por padrão, mostrar cronômetro para a etapa geral de inspeção final
     return etapaComCronometro;
   };
   
