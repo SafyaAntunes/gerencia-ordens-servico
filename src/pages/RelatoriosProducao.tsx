@@ -9,9 +9,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LogoutProps } from "@/types/props";
 
 // Component for displaying production reports
-export default function RelatoriosProducao() {
+export default function RelatoriosProducao({ onLogout }: LogoutProps) {
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: new Date(),
     to: undefined
@@ -25,7 +26,7 @@ export default function RelatoriosProducao() {
   };
 
   return (
-    <Layout>
+    <Layout onLogout={onLogout}>
       <div className="container mx-auto py-6 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Relatórios de Produção</h1>

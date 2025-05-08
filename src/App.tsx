@@ -150,7 +150,7 @@ const AppRoutes = () => {
       {/* Relatórios de Produção - gerentes ou superior */}
       <Route path="/relatorios/producao" element={
         <PrivateRoute requiredPermission="gerente">
-          <RelatoriosProducao onLogout={handleLogout} />
+          <RelatoriosProducao />
         </PrivateRoute>
       } />
       
