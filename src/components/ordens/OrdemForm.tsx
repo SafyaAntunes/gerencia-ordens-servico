@@ -161,6 +161,8 @@ type OrdemFormProps = {
   defaultFotosEntrada?: any[];
   defaultFotosSaida?: any[];
   onCancel?: () => void;
+  onSubatividadeToggle?: (servicoTipo: string, subatividadeId: string, checked: boolean) => void;
+  isSubatividadeEditingEnabled?: boolean;
   clientes?: Cliente[];
   isLoadingClientes?: boolean;
 };
@@ -185,6 +187,8 @@ export default function OrdemForm({
   onCancel,
   clientes = [],
   isLoadingClientes = false,
+  onSubatividadeToggle,
+  isSubatividadeEditingEnabled = false,
 }: OrdemFormProps) {
   const [servicosDescricoes, setServicosDescricoes] = useState<Record<string, string>>({});
   const [servicosSubatividades, setServicosSubatividades] = useState<Record<string, SubAtividade[]>>({});
@@ -561,7 +565,7 @@ export default function OrdemForm({
                         <SelectValue placeholder={isLoadingClientes ? "Carregando clientes..." : "Selecione um cliente"} />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="bg-white">
                       {isLoadingClientes ? (
                         <div className="p-2 text-center">
                           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary mx-auto"></div>
@@ -615,7 +619,7 @@ export default function OrdemForm({
                         } />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="bg-white">
                       {isLoadingMotores ? (
                         <div className="p-2 text-center">
                           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary mx-auto"></div>
@@ -659,7 +663,7 @@ export default function OrdemForm({
                             )}
                           >
                             {field.value ? (
-                              format(field.value, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                              format(new Date(field.value), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
                             ) : (
                               <span>Selecione uma data</span>
                             )}
@@ -667,10 +671,10 @@ export default function OrdemForm({
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 bg-white" align="start">
                         <Calendar
                           mode="single"
-                          selected={field.value}
+                          selected={field.value instanceof Date ? field.value : new Date(field.value || Date.now())}
                           onSelect={field.onChange}
                           initialFocus
                           locale={ptBR}
@@ -700,7 +704,7 @@ export default function OrdemForm({
                             )}
                           >
                             {field.value ? (
-                              format(field.value, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                              format(new Date(field.value), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
                             ) : (
                               <span>Selecione uma data</span>
                             )}
@@ -708,12 +712,11 @@ export default function OrdemForm({
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 bg-white" align="start">
                         <Calendar
                           mode="single"
-                          selected={field.value}
+                          selected={field.value instanceof Date ? field.value : new Date(field.value || Date.now())}
                           onSelect={field.onChange}
-                          disabled={(date) => date < new Date()}
                           initialFocus
                           locale={ptBR}
                           className="pointer-events-auto"
@@ -740,7 +743,7 @@ export default function OrdemForm({
                           <SelectValue placeholder="Selecione a prioridade" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent className="bg-white">
                         <SelectItem value="baixa">Baixa</SelectItem>
                         <SelectItem value="media">Média</SelectItem>
                         <SelectItem value="alta">Alta</SelectItem>

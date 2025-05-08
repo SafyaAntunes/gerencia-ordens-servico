@@ -55,49 +55,6 @@ export default function FuncionarioSelector({
   // Destaque visual se o funcionário foi alterado mas não salvo
   const selectBorderClass = isChanged ? "border-amber-400" : "";
   
-  return (
-    <div className="mb-4">
-      <div className="flex items-center text-sm font-medium mb-1">
-        <User className="h-4 w-4 mr-1" />
-        Responsável
-        {lastSavedFuncionarioNome && (
-          <span className="ml-2 text-xs text-green-700">
-            • Salvo: {lastSavedFuncionarioNome}
-          </span>
-        )}
-      </div>
-      
-      <div className="flex space-x-2">
-        <div className="flex-1">
-          <Select 
-            value={funcionarioSelecionadoId || ""} 
-            onValueChange={onFuncionarioChange}
-            disabled={isEtapaConcluida || isSaving}
-          >
-            <SelectTrigger className={`w-full bg-white ${selectBorderClass}`}>
-              <SelectValue placeholder="Selecione o responsável" />
-            </SelectTrigger>
-            <SelectContent className="bg-white max-h-60 overflow-y-auto">
-              {funcionariosOptions.map((func) => (
-                <SelectItem key={func.id} value={func.id}>
-                  {func.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <Button
-          variant="outline"
-          size="sm"
-          className={`${botaoSalvarDesabilitado ? 'bg-gray-100 text-gray-400' : 'bg-green-50 hover:bg-green-100 border-green-200 text-green-700'}`}
-          onClick={handleSaveClick}
-          disabled={botaoSalvarDesabilitado}
-        >
-          <Save className={`h-4 w-4 mr-1 ${isSaving ? 'animate-spin' : ''}`} />
-          {isSaving ? 'Salvando...' : 'Salvar'}
-        </Button>
-      </div>
-    </div>
-  );
+  // Como estamos removendo o responsável, retornamos null
+  return null;
 }

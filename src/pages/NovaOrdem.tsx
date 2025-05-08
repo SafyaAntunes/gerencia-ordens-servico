@@ -331,7 +331,6 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         onCancel={() => navigate("/ordens")}
         clientes={clientes}
         isLoadingClientes={loading}
-        onSubatividadeToggle={handleSubatividadeToggle}
       />
     </Layout>
   );

@@ -55,7 +55,10 @@ export const useOrdemUpdate = (
               tipo,
               descricao: values.servicosDescricoes?.[tipo] || "",
               concluido: existingServico.concluido || false,
-              subatividades: subatividadesPreservadas
+              subatividades: subatividadesPreservadas,
+              // Remove funcionário responsável
+              funcionarioId: undefined,
+              funcionarioNome: undefined
             };
           }
           
@@ -63,7 +66,10 @@ export const useOrdemUpdate = (
             tipo,
             descricao: values.servicosDescricoes?.[tipo] || "",
             concluido: false,
-            subatividades: novasSubatividades
+            subatividades: novasSubatividades,
+            // Remove funcionário responsável
+            funcionarioId: undefined,
+            funcionarioNome: undefined
           };
         });
       };
@@ -107,6 +113,23 @@ export const useOrdemUpdate = (
         motorId: values.motorId,
         servicos: preserveExistingSubactivities(ordem.servicos, values.servicosTipos),
       };
+      
+      // Remover os funcionários das etapas
+      if (ordem.etapasAndamento) {
+        const etapasAtualizadas = { ...ordem.etapasAndamento };
+        
+        Object.keys(etapasAtualizadas).forEach(etapa => {
+          if (etapasAtualizadas[etapa]) {
+            etapasAtualizadas[etapa] = {
+              ...etapasAtualizadas[etapa],
+              funcionarioId: undefined,
+              funcionarioNome: undefined
+            };
+          }
+        });
+        
+        updateData.etapasAndamento = etapasAtualizadas;
+      }
       
       // Initialize fotosEntrada and fotosSaida arrays if they don't exist
       updateData.fotosEntrada = [];
