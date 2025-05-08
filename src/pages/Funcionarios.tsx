@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from "react";
-import { PlusCircle, Filter, Search, Users, CheckCircle2, FilterX, Clock, ListFilter } from "lucide-react";
+import { PlusCircle, Filter, Search, Users, CheckCircle2, FilterX } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,9 +33,7 @@ import { TipoServico } from "@/types/ordens";
 import FuncionarioCard from "@/components/funcionarios/FuncionarioCard";
 import FuncionarioForm from "@/components/funcionarios/FuncionarioForm";
 import FuncionarioDetalhes from "@/components/funcionarios/FuncionarioDetalhes";
-import FuncionarioStatusTab from "@/components/funcionarios/FuncionarioStatusTab";
-import FuncionarioProdutividadeTab from "@/components/funcionarios/FuncionarioProdutividadeTab";
-import { useFuncionariosDisponibilidade } from "@/hooks/useFuncionariosDisponibilidade";
+import { FuncionariosDisponibilidadeTable } from "@/components/funcionarios/FuncionariosDisponibilidadeTable";
 import { toast } from "sonner";
 import { getFuncionarios, saveFuncionario, deleteFuncionario, getFuncionario } from "@/services/funcionarioService";
 import { useAuth } from "@/hooks/useAuth";
@@ -60,16 +57,12 @@ export default function Funcionarios({ onLogout, meuPerfil = false }: Funcionari
   const [isDetalhesOpen, setIsDetalhesOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [funcionarioToDelete, setFuncionarioToDelete] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"cadastro" | "status" | "produtividade">("cadastro");
   
   const { funcionario: currentUser } = useAuth();
   const params = useParams();
   const funcionarioId = params.id;
   const isMeuPerfil = meuPerfil || (funcionarioId && currentUser && funcionarioId === currentUser.id);
   const canManageFuncionarios = !isMeuPerfil && currentUser?.nivelPermissao !== 'tecnico';
-  
-  // Usar o hook de disponibilidade para os dados de status
-  const { funcionariosStatus, loading: loadingStatus } = useFuncionariosDisponibilidade();
   
   useEffect(() => {
     if (isMeuPerfil && currentUser) {
@@ -285,7 +278,7 @@ export default function Funcionarios({ onLogout, meuPerfil = false }: Funcionari
           </div>
           
           <div className="flex gap-2 flex-wrap">
-            {canManageFuncionarios && !isMeuPerfil && (
+            {canManageFuncionarios && (
               <>
                 <ExportImportButtons
                   data={funcionarios}
@@ -294,56 +287,148 @@ export default function Funcionarios({ onLogout, meuPerfil = false }: Funcionari
                   validateData={validateFuncionarioData}
                   disabled={isSubmitting}
                 />
-                {activeTab === "cadastro" && (
-                  <Button onClick={handleOpenAddDialog} className="bg-blue-600 hover:bg-blue-700">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Novo Funcionário
-                  </Button>
-                )}
+                <Button onClick={handleOpenAddDialog} className="bg-blue-600 hover:bg-blue-700">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Novo Funcionário
+                </Button>
               </>
             )}
           </div>
         </div>
         
-        {/* Abas: apenas em modo não-meu perfil */}
-        {!isMeuPerfil ? (
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-            <TabsList>
-              <TabsTrigger value="cadastro" className="gap-2">
-                <Users className="h-4 w-4" /> 
-                Cadastro
+        {/* Adicionar a tabela de disponibilidade se não estiver no modo "meu perfil" */}
+        {!isMeuPerfil && (
+          <div className="mb-6">
+            <FuncionariosDisponibilidadeTable />
+          </div>
+        )}
+        
+        {!isMeuPerfil && (
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome ou email..."
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            
+            <div className="flex gap-3 flex-wrap">
+              <Select
+                value={especialidadeFilter}
+                onValueChange={(value) => setEspecialidadeFilter(value as TipoServico | "todas")}
+              >
+                <SelectTrigger className="w-[160px] truncate">
+                  <Filter className="h-4 w-4 mr-2" />
+                  {especialidadeFilter === "todas" 
+                    ? "Especialidade" 
+                    : tipoServicoLabels[especialidadeFilter as TipoServico]}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas as Especialidades</SelectItem>
+                  {Object.entries(tipoServicoLabels).map(([id, label]) => (
+                    <SelectItem key={id} value={id}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => setStatusFilter(value as "ativos" | "inativos" | "todos")}
+              >
+                <SelectTrigger className="w-[120px]">
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Status
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="ativos">Ativos</SelectItem>
+                  <SelectItem value="inativos">Inativos</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {(searchTerm || especialidadeFilter !== "todas" || statusFilter !== "todos") && (
+                <Button variant="outline" size="icon" onClick={resetFilters}>
+                  <FilterX className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : isMeuPerfil ? (
+          // Modo "Meu Perfil" - exibe apenas o card do funcionário atual
+          <div className="mt-6">
+            {filteredFuncionarios.length > 0 ? (
+              <div className="max-w-md mx-auto">
+                <FuncionarioCard
+                  key={filteredFuncionarios[0].id}
+                  funcionario={filteredFuncionarios[0]}
+                  onView={handleOpenDetailsDialog}
+                  onEdit={handleOpenEditDialog}
+                  onDelete={handleOpenDeleteDialog}
+                  hideDeleteButton={true}
+                />
+                
+                <div className="mt-4 flex justify-center">
+                  <Button 
+                    className="w-full max-w-xs"
+                    onClick={() => handleOpenEditDialog(filteredFuncionarios[0])}
+                  >
+                    Editar Meu Perfil
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <p className="text-sm text-muted-foreground mt-1">
+                  Perfil não encontrado.
+                </p>
+              </div>
+            )}
+          </div>
+        ) : (
+          // Modo "Funcionários" - exibe a lista de todos os funcionários
+          <Tabs defaultValue="todos" className="mt-4">
+            <TabsList className="mb-6">
+              <TabsTrigger value="todos" className="relative">
+                Todos
+                <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+                  {filteredFuncionarios.length}
+                </span>
               </TabsTrigger>
-              <TabsTrigger value="status" className="gap-2">
-                <CheckCircle2 className="h-4 w-4" />
-                Status
+              <TabsTrigger value="ativos" className="relative">
+                Ativos
+                <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+                  {funcionariosAtivos.length}
+                </span>
               </TabsTrigger>
-              <TabsTrigger value="produtividade" className="gap-2">
-                <Clock className="h-4 w-4" />
-                Produtividade
+              <TabsTrigger value="inativos" className="relative">
+                Inativos
+                <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+                  {funcionariosInativos.length}
+                </span>
               </TabsTrigger>
             </TabsList>
             
-            {/* Conteúdo das abas */}
-            <TabsContent value="cadastro">
-              {renderCadastroContent()}
+            <TabsContent value="todos">
+              {renderFuncionariosList(filteredFuncionarios)}
             </TabsContent>
             
-            <TabsContent value="status">
-              <FuncionarioStatusTab 
-                funcionariosStatus={funcionariosStatus}
-                loading={loadingStatus}
-              />
+            <TabsContent value="ativos">
+              {renderFuncionariosList(funcionariosAtivos)}
             </TabsContent>
             
-            <TabsContent value="produtividade">
-              <FuncionarioProdutividadeTab />
+            <TabsContent value="inativos">
+              {renderFuncionariosList(funcionariosInativos)}
             </TabsContent>
           </Tabs>
-        ) : (
-          // Modo "Meu Perfil" - renderiza diretamente o cadastro
-          <div className="mt-6">
-            {renderMeuPerfilContent()}
-          </div>
         )}
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -405,148 +490,6 @@ export default function Funcionarios({ onLogout, meuPerfil = false }: Funcionari
       </div>
     </Layout>
   );
-  
-  function renderCadastroContent() {
-    return (
-      <>
-        <div className="flex flex-col sm:flex-row gap-4 mt-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nome ou email..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          
-          <div className="flex gap-3 flex-wrap">
-            <Select
-              value={especialidadeFilter}
-              onValueChange={(value) => setEspecialidadeFilter(value as TipoServico | "todas")}
-            >
-              <SelectTrigger className="w-[160px] truncate">
-                <Filter className="h-4 w-4 mr-2" />
-                {especialidadeFilter === "todas" 
-                  ? "Especialidade" 
-                  : tipoServicoLabels[especialidadeFilter as TipoServico]}
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todas">Todas as Especialidades</SelectItem>
-                {Object.entries(tipoServicoLabels).map(([id, label]) => (
-                  <SelectItem key={id} value={id}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Select
-              value={statusFilter}
-              onValueChange={(value) => setStatusFilter(value as "ativos" | "inativos" | "todos")}
-            >
-              <SelectTrigger className="w-[120px]">
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                Status
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="ativos">Ativos</SelectItem>
-                <SelectItem value="inativos">Inativos</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            {(searchTerm || especialidadeFilter !== "todas" || statusFilter !== "todos") && (
-              <Button variant="outline" size="icon" onClick={resetFilters}>
-                <FilterX className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        </div>
-        
-        {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        ) : (
-          <Tabs defaultValue="todos" className="mt-4">
-            <TabsList className="mb-6">
-              <TabsTrigger value="todos" className="relative">
-                Todos
-                <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
-                  {filteredFuncionarios.length}
-                </span>
-              </TabsTrigger>
-              <TabsTrigger value="ativos" className="relative">
-                Ativos
-                <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
-                  {funcionariosAtivos.length}
-                </span>
-              </TabsTrigger>
-              <TabsTrigger value="inativos" className="relative">
-                Inativos
-                <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
-                  {funcionariosInativos.length}
-                </span>
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="todos">
-              {renderFuncionariosList(filteredFuncionarios)}
-            </TabsContent>
-            
-            <TabsContent value="ativos">
-              {renderFuncionariosList(funcionariosAtivos)}
-            </TabsContent>
-            
-            <TabsContent value="inativos">
-              {renderFuncionariosList(funcionariosInativos)}
-            </TabsContent>
-          </Tabs>
-        )}
-      </>
-    );
-  }
-  
-  function renderMeuPerfilContent() {
-    if (loading) {
-      return (
-        <div className="flex items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      );
-    }
-    
-    return (
-      <div className="mt-6">
-        {filteredFuncionarios.length > 0 ? (
-          <div className="max-w-md mx-auto">
-            <FuncionarioCard
-              key={filteredFuncionarios[0].id}
-              funcionario={filteredFuncionarios[0]}
-              onView={handleOpenDetailsDialog}
-              onEdit={handleOpenEditDialog}
-              onDelete={handleOpenDeleteDialog}
-              hideDeleteButton={true}
-            />
-            
-            <div className="mt-4 flex justify-center">
-              <Button 
-                className="w-full max-w-xs"
-                onClick={() => handleOpenEditDialog(filteredFuncionarios[0])}
-              >
-                Editar Meu Perfil
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <p className="text-sm text-muted-foreground mt-1">
-              Perfil não encontrado.
-            </p>
-          </div>
-        )}
-      </div>
-    );
-  }
   
   function renderFuncionariosList(list: Funcionario[]) {
     if (list.length === 0) {

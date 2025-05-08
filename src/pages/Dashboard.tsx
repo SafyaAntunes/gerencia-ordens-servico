@@ -1,3 +1,4 @@
+
 import {
   FileText,
   Clock,
@@ -6,7 +7,6 @@ import {
   TrendingUp,
   Calendar,
   Filter,
-  AlertTriangle,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
@@ -25,7 +25,7 @@ import { toast } from "sonner";
 import { Funcionario } from "@/types/funcionarios";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format, startOfMonth, endOfMonth, isWithinInterval, addMonths, subMonths, isAfter } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isWithinInterval, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useFuncionariosDisponibilidade } from "@/hooks/useFuncionariosDisponibilidade";
 
@@ -49,7 +49,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
   const [metricas, setMetricas] = useState({
     osTotal: 0,
     osPendentes: 0,
-    osAtrasadas: 0,
+    osFinalizadasMes: 0,
   });
   const [statusData, setStatusData] = useState<{ name: string; total: number }[]>([]);
   const [servicosData, setServicosData] = useState<{ name: string; total: number }[]>([]);
@@ -60,6 +60,12 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
     endDate: endOfMonth(new Date())
   });
   const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
+
+  // Filtros para cada card
+  const [osFinalizadasFilter, setOsFinalizadasFilter] = useState<DateFilter>({
+    startDate: startOfMonth(new Date()),
+    endDate: endOfMonth(new Date())
+  });
   
   // Funções para navegação de meses
   const handlePreviousMonth = () => {
@@ -129,43 +135,44 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
   useEffect(() => {
     if (ordens.length > 0) {
       calcularMetricas(ordens);
-      calcularDadosGraficos(ordens);
     }
-  }, [dateFilter, ordens]);
+  }, [dateFilter, osFinalizadasFilter, ordens]);
   
   const calcularMetricas = (ordensData: OrdemServico[]) => {
-    // Filtrar ordens para o período selecionado
-    const ordensFiltradas = ordensData.filter(ordem => {
-      if (!ordem.dataAbertura) return false;
-      
-      const dataAbertura = ordem.dataAbertura instanceof Date ? 
-        ordem.dataAbertura : new Date(ordem.dataAbertura);
-      
-      return isWithinInterval(dataAbertura, {
-        start: dateFilter.startDate,
-        end: dateFilter.endDate
-      });
-    });
+    const total = ordensData.length;
     
-    const total = ordensFiltradas.length;
-    
-    const pendentes = ordensFiltradas.filter(
+    const pendentes = ordensData.filter(
       ordem => !['finalizado', 'entregue'].includes(ordem.status)
     ).length;
     
-    // Calcular OSs atrasadas (data prevista de entrega menor que a data atual e status não finalizado/entregue)
-    const hoje = new Date();
-    const atrasadas = ordensFiltradas.filter(ordem => {
-      const dataPrevista = ordem.dataPrevistaEntrega instanceof Date ? 
-        ordem.dataPrevistaEntrega : new Date(ordem.dataPrevistaEntrega);
-        
-      return isAfter(hoje, dataPrevista) && !['finalizado', 'entregue'].includes(ordem.status);
+    // Calcular OSs finalizadas no período selecionado
+    const finalizadasNoPeriodo = ordensData.filter(ordem => {
+      if (ordem.status === 'finalizado' || ordem.status === 'entregue') {
+        // Verificar se a OS foi finalizada no período escolhido
+        if (ordem.etapasAndamento?.inspecao_final?.finalizado) {
+          let dataFinalizacao;
+          
+          if (ordem.etapasAndamento.inspecao_final.finalizado instanceof Date) {
+            dataFinalizacao = ordem.etapasAndamento.inspecao_final.finalizado;
+          } else if (ordem.etapasAndamento.inspecao_final.finalizado) {
+            dataFinalizacao = new Date(ordem.etapasAndamento.inspecao_final.finalizado);
+          }
+          
+          if (dataFinalizacao && isWithinInterval(dataFinalizacao, {
+            start: osFinalizadasFilter.startDate,
+            end: osFinalizadasFilter.endDate
+          })) {
+            return true;
+          }
+        }
+      }
+      return false;
     }).length;
     
     setMetricas({
       osTotal: total,
       osPendentes: pendentes,
-      osAtrasadas: atrasadas,
+      osFinalizadasMes: finalizadasNoPeriodo,
     });
   };
   
@@ -274,10 +281,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
     navigate('/funcionarios');
   };
   
-  const handleVerAtrasadas = () => {
-    navigate('/ordens?filter=atrasadas');
-  };
-  
   const osRecentes = ordens.slice(0, 5);
   
   return (
@@ -337,7 +340,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
               <MetricCard
                 title="Total de OSs"
                 value={metricas.osTotal}
-                description={`${format(dateFilter.startDate, 'MMM yyyy', { locale: ptBR })}`}
                 icon={<FileText />}
                 className="animate-slide-in"
               />
@@ -345,20 +347,52 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
               <MetricCard
                 title="OSs Pendentes"
                 value={metricas.osPendentes}
-                description={`${format(dateFilter.startDate, 'MMM yyyy', { locale: ptBR })}`}
                 icon={<Clock />}
                 className="animate-slide-in [animation-delay:100ms]"
               />
               
-              {/* Card de OS's Atrasadas com destaque visual */}
-              <MetricCard
-                title="OS's Atrasadas"
-                value={metricas.osAtrasadas}
-                description="Necessitam atenção imediata"
-                icon={<AlertTriangle />}
-                className={`animate-slide-in [animation-delay:200ms] ${metricas.osAtrasadas > 0 ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800" : ""}`}
-                onClick={handleVerAtrasadas}
-              />
+              {/* Card de OSs finalizadas com filtro de período */}
+              <div className="relative">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="absolute top-2 right-2 z-10 h-8 w-8"
+                    >
+                      <Filter className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="p-3 w-auto">
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Filtrar por período</h4>
+                      <CalendarComponent
+                        mode="single"
+                        selected={osFinalizadasFilter.startDate}
+                        onSelect={(date) => {
+                          if (date) {
+                            setOsFinalizadasFilter({
+                              startDate: startOfMonth(date),
+                              endDate: endOfMonth(date)
+                            });
+                          }
+                        }}
+                        initialFocus
+                      />
+                      <div className="text-xs text-center text-muted-foreground">
+                        {format(osFinalizadasFilter.startDate, 'MMMM yyyy', { locale: ptBR })}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <MetricCard
+                  title="Finalizadas no Período"
+                  value={metricas.osFinalizadasMes}
+                  description={`${format(osFinalizadasFilter.startDate, 'MMM yyyy', { locale: ptBR })}`}
+                  icon={<CheckCircle />}
+                  className="animate-slide-in [animation-delay:200ms]"
+                />
+              </div>
               
               <MetricCard
                 title="Funcionários"

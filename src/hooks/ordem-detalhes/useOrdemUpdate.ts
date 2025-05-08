@@ -7,90 +7,6 @@ import { toast } from "sonner";
 import { SetOrdemFunction } from "./types";
 import { useStorage } from "@/hooks/useStorage";
 
-// Função utilitária para remover campos undefined
-const removeUndefinedFields = (obj: any): any => {
-  if (obj === null || typeof obj !== 'object') {
-    return obj;
-  }
-  
-  // Se for um array, filtramos cada elemento
-  if (Array.isArray(obj)) {
-    return obj.map(item => removeUndefinedFields(item));
-  }
-  
-  // Para objetos, processamos cada propriedade
-  const filtered = Object.entries(obj).reduce((acc, [key, value]) => {
-    // Processamento recursivo para objetos aninhados
-    const processedValue = removeUndefinedFields(value);
-    
-    // Só incluímos a propriedade se o valor não for undefined
-    if (processedValue !== undefined) {
-      acc[key] = processedValue;
-    }
-    return acc;
-  }, {} as Record<string, any>);
-  
-  return filtered;
-};
-
-// Função para garantir que estamos trabalhando com objetos Date válidos
-const validarDatas = (obj: any): any => {
-  if (obj === null || typeof obj !== 'object') {
-    return obj;
-  }
-  
-  // Se for um Date, garantir que é válido
-  if (obj instanceof Date) {
-    if (isNaN(obj.getTime())) {
-      return new Date(); // Substitui datas inválidas
-    }
-    return obj;
-  }
-  
-  // Se for um array, validamos cada elemento
-  if (Array.isArray(obj)) {
-    return obj.map(item => validarDatas(item));
-  }
-  
-  // Para objetos, processamos cada propriedade
-  const resultado = { ...obj };
-  
-  Object.entries(obj).forEach(([key, value]) => {
-    // Para propriedades que sabemos que são datas
-    if (
-      key === 'dataAbertura' || 
-      key === 'dataPrevistaEntrega' || 
-      key === 'dataConclusao' || 
-      key === 'iniciado' || 
-      key === 'finalizado'
-    ) {
-      if (value instanceof Date) {
-        resultado[key] = isNaN((value as Date).getTime()) ? new Date() : value;
-      } else if (value) {
-        // Tentar converter para Date se não for undefined/null
-        // Verificar o tipo antes de converter para Date
-        if (typeof value === 'string' || typeof value === 'number' || value instanceof Date) {
-          try {
-            resultado[key] = new Date(value);
-          } catch (e) {
-            console.error(`Erro ao converter ${key}:`, e);
-            resultado[key] = new Date();
-          }
-        } else {
-          // Se não for um tipo convertível para Date, usar a data atual
-          console.warn(`Valor não conversível para Date (${key}):`, value);
-          resultado[key] = new Date();
-        }
-      }
-    } else if (typeof value === 'object' && value !== null) {
-      // Recursivamente validar objetos aninhados
-      resultado[key] = validarDatas(value);
-    }
-  });
-  
-  return resultado;
-};
-
 export const useOrdemUpdate = (
   id: string | undefined, 
   ordem: OrdemServico | null, 
@@ -105,11 +21,7 @@ export const useOrdemUpdate = (
     setIsSubmitting(true);
     
     try {
-      if (!id || !ordem) {
-        toast.error("ID da ordem ou dados não disponíveis");
-        setIsSubmitting(false);
-        return;
-      }
+      if (!id || !ordem) return;
       
       // Preserve existing subactivities and worker information
       const preserveExistingSubactivities = (currentServicos = [], newServicosTipos = []) => {
@@ -158,32 +70,24 @@ export const useOrdemUpdate = (
       // Preservar informações das etapas, incluindo responsáveis
       const etapasAtualizado = { ...ordem.etapasAndamento };
       
-      // Garantir que não perdemos informações de cliente
-      const clienteAtualizado = {
-        ...ordem.cliente,
-        id: values.clienteId || ordem.cliente?.id,
-      };
-      
-      // Garantir que as datas são válidas
-      const dataAbertura = values.dataAbertura instanceof Date ? values.dataAbertura : new Date();
-      const dataPrevistaEntrega = values.dataPrevistaEntrega instanceof Date ? values.dataPrevistaEntrega : new Date();
+      // Garantir que não perdemos informações de responsáveis ao atualizar a ordem
+      console.log("Preservando etapas e responsáveis:", etapasAtualizado);
       
       const updatedOrder: Partial<OrdemServico> = {
         nome: values.nome,
-        cliente: clienteAtualizado,
-        dataAbertura,
-        dataPrevistaEntrega,
+        cliente: {
+          ...ordem.cliente,
+          id: values.clienteId,
+        },
+        dataAbertura: values.dataAbertura,
+        dataPrevistaEntrega: values.dataPrevistaEntrega,
         prioridade: values.prioridade,
         motorId: values.motorId,
         servicos: preserveExistingSubactivities(ordem.servicos, values.servicosTipos),
         etapasAndamento: etapasAtualizado // Preservar informações das etapas
       };
       
-      // Garantir que fotosEntrada e fotosSaida sejam sempre arrays
-      const fotosEntradaAtual = Array.isArray(ordem.fotosEntrada) ? ordem.fotosEntrada : [];
-      const fotosSaidaAtual = Array.isArray(ordem.fotosSaida) ? ordem.fotosSaida : [];
-
-      // Processamento de fotos de entrada
+      // CORRIGIDO: Processamento de fotos de entrada
       if (values.fotosEntrada && Array.isArray(values.fotosEntrada)) {
         // Filtrar apenas arquivos válidos (File ou string URL)
         const validFotosEntrada = values.fotosEntrada.filter((f: any) => {
@@ -220,12 +124,9 @@ export const useOrdemUpdate = (
         
         updatedOrder.fotosEntrada = [...existingEntradaUrls, ...newEntradaUrls];
         console.log("Total de fotos de entrada após update:", updatedOrder.fotosEntrada.length);
-      } else {
-        // Garantir que fotosEntrada seja sempre um array, mesmo que vazio
-        updatedOrder.fotosEntrada = fotosEntradaAtual;
       }
       
-      // Processamento de fotos de saída
+      // CORRIGIDO: Processamento de fotos de saída
       if (values.fotosSaida && Array.isArray(values.fotosSaida)) {
         // Filtrar apenas arquivos válidos (File ou string URL)
         const validFotosSaida = values.fotosSaida.filter((f: any) => {
@@ -262,46 +163,24 @@ export const useOrdemUpdate = (
         
         updatedOrder.fotosSaida = [...existingSaidaUrls, ...newSaidaUrls];
         console.log("Total de fotos de saída após update:", updatedOrder.fotosSaida.length);
-      } else {
-        // Garantir que fotosSaida seja sempre um array, mesmo que vazio
-        updatedOrder.fotosSaida = fotosSaidaAtual;
       }
       
       console.log("Atualizando ordem com dados:", updatedOrder);
       
-      // Validar objetos Date antes de limpar campos undefined
-      const orderWithValidDates = validarDatas(updatedOrder);
-      
-      // IMPORTANTE: Remover campos undefined antes de chamar updateDoc
-      const cleanedOrder = removeUndefinedFields(orderWithValidDates);
-      console.log("Dados limpos para update:", cleanedOrder);
-      
       const orderRef = doc(db, "ordens_servico", id);
+      await updateDoc(orderRef, updatedOrder);
       
-      try {
-        await updateDoc(orderRef, cleanedOrder);
-        
-        // Atualiza o estado da ordem no componente
-        setOrdem((prev) => {
-          if (!prev) return null;
-          return { ...prev, ...updatedOrder } as OrdemServico;
-        });
-        
-        // Buscar detalhes de motor se houver mudança
-        if (values.motorId && values.motorId !== ordem.motorId) {
-          await fetchMotorDetails(values.clienteId, values.motorId);
-        }
-        
-        toast.success("Ordem atualizada com sucesso!");
-      } catch (updateError) {
-        console.error("Erro na operação de atualização:", updateError);
-        toast.error("Erro ao atualizar ordem de serviço no banco de dados");
-        throw updateError; // Re-throw para que seja capturado pelo catch externo
+      setOrdem((prev) => {
+        if (!prev) return null;
+        return { ...prev, ...updatedOrder } as OrdemServico;
+      });
+      
+      if (values.motorId && values.motorId !== ordem.motorId) {
+        await fetchMotorDetails(values.clienteId, values.motorId);
       }
       
-      // Sai do modo de edição independentemente de mudanças
+      toast.success("Ordem atualizada com sucesso!");
       setIsEditando(false);
-      
     } catch (error) {
       console.error("Error updating order:", error);
       toast.error("Erro ao atualizar ordem de serviço");
@@ -312,19 +191,7 @@ export const useOrdemUpdate = (
 
   const handleOrdemUpdate = (ordemAtualizada: OrdemServico) => {
     console.log("Recebendo atualização de ordem:", ordemAtualizada);
-    
-    // Garantir que os arrays de fotos existam
-    if (!ordemAtualizada.fotosEntrada) {
-      ordemAtualizada.fotosEntrada = [];
-    }
-    
-    if (!ordemAtualizada.fotosSaida) {
-      ordemAtualizada.fotosSaida = [];
-    }
-    
-    // Validar datas antes de atualizar o estado
-    const ordenComDatasValidas = validarDatas(ordemAtualizada);
-    setOrdem(ordenComDatasValidas);
+    setOrdem(ordemAtualizada);
   };
 
   return {

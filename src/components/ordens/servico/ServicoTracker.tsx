@@ -10,8 +10,6 @@ import ServicoHeader from "./ServicoHeader";
 import ServicoDetails from "./ServicoDetails";
 import ServicoControls from "./ServicoControls";
 import TimerPausas from "../etapa/TimerPausas";
-import FuncionarioSelector from "../etapa/components/FuncionarioSelector";
-import { PausaRegistro } from "./hooks/types/servicoTrackerTypes";
 
 interface ServicoTrackerProps {
   servico: Servico;
@@ -56,13 +54,7 @@ export default function ServicoTracker({
     handleFinish,
     handleMarcarConcluido,
     handleReiniciarServico,
-    pausas,
-    responsavelSelecionadoId,
-    setResponsavelSelecionadoId,
-    handleSaveResponsavel,
-    isSavingResponsavel,
-    lastSavedResponsavelId,
-    lastSavedResponsavelNome
+    pausas
   } = useServicoTracker({
     servico,
     ordemId,
@@ -82,20 +74,6 @@ export default function ServicoTracker({
   const todasSubatividadesConcluidas = subatividadesFiltradas.length === 0 || 
     (subatividadesFiltradas.length > 0 && subatividadesFiltradas.every(sub => sub.concluida));
 
-  const handleFuncionarioChange = (id: string) => {
-    setResponsavelSelecionadoId(id);
-  };
-
-  // Convert progressPercentage to number explicitly to fix the type error
-  const progressPercentageNumber = Number(progressPercentage);
-
-  // Convert pausas for TimerPausas component format if needed
-  const formattedPausas = pausas.map(p => ({
-    inicio: p.iniciado,
-    fim: p.finalizado,
-    motivo: p.motivo
-  }));
-
   return (
     <Card className={cn("w-full", className)}>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -105,7 +83,7 @@ export default function ServicoTracker({
               tipo={servico.tipo}
               displayTime={displayTime}
               servicoStatus={servicoStatus}
-              progressPercentage={progressPercentageNumber}
+              progressPercentage={progressPercentage}
               completedSubatividades={completedSubatividades}
               totalSubatividades={totalSubatividades}
               tempoTotalEstimado={tempoTotalEstimado}
@@ -121,20 +99,6 @@ export default function ServicoTracker({
 
         <CollapsibleContent>
           <CardContent className="pt-0">
-            {/* Adicionar seletor de responsável para cada serviço */}
-            {temPermissao && (
-              <FuncionarioSelector 
-                funcionarioSelecionadoId={responsavelSelecionadoId || ""}
-                funcionariosOptions={funcionariosOptions}
-                isEtapaConcluida={servico.concluido}
-                onFuncionarioChange={handleFuncionarioChange}
-                onSaveResponsavel={handleSaveResponsavel}
-                lastSavedFuncionarioId={lastSavedResponsavelId || servico.funcionarioId}
-                lastSavedFuncionarioNome={lastSavedResponsavelNome || servico.funcionarioNome}
-                isSaving={isSavingResponsavel}
-              />
-            )}
-            
             <ServicoDetails 
               descricao={servico.descricao}
               subatividades={subatividadesFiltradas}
@@ -145,7 +109,7 @@ export default function ServicoTracker({
             {/* Mostrar pausas mesmo quando o serviço está concluído */}
             {pausas && pausas.length > 0 && (
               <div className="py-2">
-                <TimerPausas pausas={formattedPausas} />
+                <TimerPausas pausas={pausas} />
               </div>
             )}
             

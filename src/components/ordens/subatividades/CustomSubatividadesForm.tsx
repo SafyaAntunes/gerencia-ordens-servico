@@ -10,9 +10,6 @@ interface CustomSubatividadesFormProps {
   setCustomSubatividade: (value: string) => void;
   setIsAddingCustom: (value: boolean) => void;
   onAddCustom: () => void;
-  onAdd: () => void;
-  onCancel: () => void;
-  disabled: boolean;
 }
 
 export function CustomSubatividadesForm({
@@ -21,9 +18,6 @@ export function CustomSubatividadesForm({
   setCustomSubatividade,
   setIsAddingCustom,
   onAddCustom,
-  onAdd,
-  onCancel,
-  disabled,
 }: CustomSubatividadesFormProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && customSubatividade.trim()) {
@@ -43,24 +37,22 @@ export function CustomSubatividadesForm({
             className="flex-1"
             onKeyDown={handleKeyDown}
             autoFocus
-            disabled={disabled}
           />
           <Button
             variant="outline"
             size="sm"
-            onClick={onAdd || onAddCustom}
-            disabled={!customSubatividade.trim() || disabled}
+            onClick={onAddCustom}
+            disabled={!customSubatividade.trim()}
           >
             Adicionar
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            onClick={onCancel || (() => {
+            onClick={() => {
               setCustomSubatividade("");
               setIsAddingCustom(false);
-            })}
-            disabled={disabled}
+            }}
           >
             Cancelar
           </Button>
@@ -72,7 +64,6 @@ export function CustomSubatividadesForm({
           size="sm"
           className="w-full"
           onClick={() => setIsAddingCustom(true)}
-          disabled={disabled}
         >
           <Plus className="h-4 w-4 mr-2" />
           Adicionar Subatividade Personalizada

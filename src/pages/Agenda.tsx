@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -206,22 +205,48 @@ const Agenda = ({ onLogout }: AgendaProps) => {
     const dayEvents = getEventsByDate(day);
     
     return (
-      <div className="relative flex flex-col h-full w-full">
+      <div className="relative flex flex-col items-center justify-center h-full w-full">
         <span className="absolute top-0.5 left-0.5">{day.getDate()}</span>
         
-        <div className="mt-5 overflow-y-auto max-h-[60px] p-0.5">
-          {dayEvents.map((event, index) => (
-            <div
-              key={event.id}
-              className={`text-[9px] mb-0.5 px-1 py-0.5 rounded truncate ${
-                getEventColor(event.type, event.status)
-              }`}
-              title={event.title}
-            >
-              {event.title}
-            </div>
-          ))}
-        </div>
+        {dayEvents.length > 0 && (
+          <div className="absolute bottom-0 left-0 right-0 flex justify-center">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex space-x-0.5 mt-1">
+                    {dayEvents.map((event, index) => (
+                      <div
+                        key={event.id}
+                        className={`h-1.5 w-1.5 rounded-full ${
+                          event.type === "entrega"
+                            ? "bg-green-500"
+                            : event.type === "recebimento"
+                            ? "bg-blue-500"
+                            : "bg-yellow-500"
+                        }`}
+                      />
+                    )).slice(0, 3)}
+                    {dayEvents.length > 3 && (
+                      <span className="text-[0.6rem] text-muted-foreground">+{dayEvents.length - 3}</span>
+                    )}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" align="center" className="p-1">
+                  <div className="text-xs p-1">
+                    {dayEvents.map(event => (
+                      <div 
+                        key={event.id} 
+                        className={`py-0.5 px-1 mb-1 rounded ${getEventColor(event.type, event.status)}`}
+                      >
+                        {event.title}
+                      </div>
+                    ))}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
       </div>
     );
   };
@@ -326,12 +351,12 @@ const Agenda = ({ onLogout }: AgendaProps) => {
                         mode="single"
                         selected={date}
                         onSelect={setDate}
-                        className="border rounded-md w-full mx-auto"
+                        className="border rounded-md w-full max-h-[600px] mx-auto"
                         components={{
                           Day: (props) => {
                             const { date: dayDate, ...rest } = props;
                             if (!dayDate) return null;
-                            return <div {...rest} className="h-20">{renderDayContents(dayDate)}</div>;
+                            return <div {...rest}>{renderDayContents(dayDate)}</div>;
                           }
                         }}
                         modifiers={{
@@ -348,8 +373,8 @@ const Agenda = ({ onLogout }: AgendaProps) => {
                         styles={{
                           months: { fontSize: '1rem' },
                           caption: { fontSize: '1.25rem' },
-                          cell: { width: '100%', height: '100%' },
-                          day: { width: '100%', height: '100%', fontSize: '1rem' }
+                          cell: { width: '3.5rem', height: '3.5rem' },
+                          day: { width: '3.5rem', height: '3.5rem', fontSize: '1rem' }
                         }}
                       />
                     </div>

@@ -26,9 +26,6 @@ export default function Ordens({ onLogout }: OrdensProps) {
     return (savedViewType as "grid" | "list") || "grid";
   });
 
-  // Define prazo filter state
-  const [prazoFilter, setPrazoFilter] = useState<string>("all");
-
   // Save view preference to localStorage when it changes
   useEffect(() => {
     localStorage.setItem("ordens-view-type", viewType);
@@ -52,16 +49,6 @@ export default function Ordens({ onLogout }: OrdensProps) {
     isTecnico,
     funcionarioId: funcionario?.id,
     especialidades: funcionario?.especialidades
-  });
-
-  // Aplicar filtro de prazo às ordens já filtradas
-  const ordensFiltradas = filteredOrdens.filter(ordem => {
-    if (prazoFilter === "all") return true;
-    
-    const hoje = new Date();
-    const isAtrasada = ordem.dataPrevistaEntrega < hoje && !['finalizado', 'entregue'].includes(ordem.status);
-    
-    return prazoFilter === "atrasada" ? isAtrasada : !isAtrasada;
   });
 
   const handleNovaOrdem = () => {
@@ -121,13 +108,11 @@ export default function Ordens({ onLogout }: OrdensProps) {
         setPrioridadeFilter={setPrioridadeFilter}
         progressoFilter={progressoFilter}
         setProgressoFilter={setProgressoFilter}
-        prazoFilter={prazoFilter}
-        setPrazoFilter={setPrazoFilter}
       />
 
       <OrdensContent
         loading={loading}
-        filteredOrdens={ordensFiltradas}
+        filteredOrdens={filteredOrdens}
         isTecnico={isTecnico}
         viewType={viewType}
         onReorder={handleReorder}

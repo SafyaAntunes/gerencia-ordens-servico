@@ -1,70 +1,170 @@
 
-import { useState } from "react";
-import { Checkbox } from "@/components/ui/checkbox";
-import { SubAtividade, TipoServico } from "@/types/ordens";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { SubAtividade } from "@/types/ordens";
+import { getSubatividadesByTipo } from "@/services/subatividadeService";
+import { PresetSubatividades } from "./PresetSubatividades";
+import { CustomSubatividadesForm } from "./CustomSubatividadesForm";
+import { CustomSubatividadesList } from "./CustomSubatividadesList";
+import { Skeleton } from "@/components/ui/skeleton";
+import { v4 as uuidv4 } from "uuid";
 
 interface ServicoSubatividadesProps {
-  tipoServico: TipoServico;
+  tipoServico: string;
   subatividades: SubAtividade[];
   onChange: (subatividades: SubAtividade[]) => void;
-  disabled?: boolean;
+  editable?: boolean;
 }
 
-export const ServicoSubatividades = ({
+export function ServicoSubatividades({
   tipoServico,
-  subatividades,
+  subatividades = [],
   onChange,
-  disabled = false
-}: ServicoSubatividadesProps) => {
-  const [expanded, setExpanded] = useState(true);
-  
-  const handleToggle = (id: string, checked: boolean) => {
-    const updatedSubatividades = subatividades.map(sub => {
+  editable = true,
+}: ServicoSubatividadesProps) {
+  const [customSubatividade, setCustomSubatividade] = useState("");
+  const [isAddingCustom, setIsAddingCustom] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [presetSubatividades, setPresetSubatividades] = useState<SubAtividade[]>([]);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (tipoServico) {
+      carregarSubatividades();
+    }
+  }, [tipoServico]);
+
+  const carregarSubatividades = async () => {
+    try {
+      setIsLoading(true);
+      const tipoServicoFormatado = tipoServico.toLowerCase().replace(/\s+/g, '_');
+      const resultado = await getSubatividadesByTipo(tipoServicoFormatado as any);
+      
+      // Combina subatividades já selecionadas com as pré-cadastradas
+      const subsSelecionadas = new Set(subatividades.map(s => s.id));
+      
+      const combinadas = resultado.map(sub => {
+        const existente = subatividades.find(s => s.id === sub.id);
+        if (existente) {
+          return {
+            ...sub,
+            selecionada: true,
+            tempoEstimado: existente.tempoEstimado || sub.tempoEstimado || 0
+          };
+        }
+        return sub;
+      });
+      
+      setPresetSubatividades(combinadas);
+    } catch (error) {
+      console.error("Erro ao carregar subatividades:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as subatividades.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleToggleSubatividade = (id: string, checked: boolean) => {
+    if (!editable) return;
+    
+    const updatedSubs = [...subatividades];
+    const existingIndex = updatedSubs.findIndex(sub => sub.id === id);
+    
+    if (existingIndex >= 0) {
+      // Atualiza subatividade existente
+      updatedSubs[existingIndex] = {
+        ...updatedSubs[existingIndex],
+        selecionada: checked
+      };
+    } else if (checked) {
+      // Adiciona nova subatividade da lista de presets
+      const subToAdd = presetSubatividades.find(sub => sub.id === id);
+      if (subToAdd) {
+        updatedSubs.push({
+          ...subToAdd,
+          selecionada: true,
+          tempoEstimado: subToAdd.tempoEstimado || 0
+        });
+      }
+    }
+    
+    onChange(updatedSubs.filter(sub => sub.selecionada));
+  };
+
+  const handleAddCustom = () => {
+    if (!customSubatividade.trim() || !editable) return;
+
+    const newSub: SubAtividade = {
+      id: `custom-${uuidv4()}`,
+      nome: customSubatividade.trim(),
+      selecionada: true,
+      tempoEstimado: 0,
+    };
+
+    onChange([...subatividades, newSub]);
+    setCustomSubatividade("");
+    setIsAddingCustom(false);
+    
+    toast({
+      title: "Subatividade adicionada",
+      description: `A subatividade "${newSub.nome}" foi adicionada com sucesso.`,
+    });
+  };
+
+  const handleTempoEstimadoChange = (id: string, horas: number) => {
+    if (!editable) return;
+    
+    const updatedSubs = subatividades.map((sub) => {
       if (sub.id === id) {
-        return { ...sub, selecionada: checked };
+        return { ...sub, tempoEstimado: horas };
       }
       return sub;
     });
     
-    onChange(updatedSubatividades);
+    onChange(updatedSubs);
   };
-  
-  const completedCount = subatividades.filter(sub => sub.selecionada).length;
-  const totalCount = subatividades.length;
-  
-  return (
-    <div className="ml-6 mt-2 bg-slate-50 rounded-md p-3">
-      <div 
-        className="flex justify-between items-center cursor-pointer"
-        onClick={() => setExpanded(!expanded)}
-      >
-        <h4 className="text-sm font-medium">Subatividades</h4>
-        <div className="text-xs text-muted-foreground">
-          {completedCount} / {totalCount} selecionadas
-        </div>
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-8 w-full" />
       </div>
-      
-      {expanded && (
-        <div className="mt-2 space-y-2">
-          {subatividades.map((sub) => (
-            <div key={sub.id} className="flex items-center space-x-2">
-              <Checkbox
-                id={`subatividade-${sub.id}`}
-                checked={sub.selecionada}
-                onCheckedChange={(checked) => handleToggle(sub.id, !!checked)}
-                disabled={disabled}
-                className="data-[state=checked]:bg-green-600"
-              />
-              <label
-                htmlFor={`subatividade-${sub.id}`}
-                className="text-xs cursor-pointer select-none"
-              >
-                {sub.nome}
-              </label>
-            </div>
-          ))}
-        </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <PresetSubatividades 
+        presetSubatividades={presetSubatividades} 
+        subatividades={subatividades}
+        editable={editable}
+        onToggleSubatividade={handleToggleSubatividade}
+        onTempoEstimadoChange={handleTempoEstimadoChange}
+      />
+
+      {editable && (
+        <CustomSubatividadesForm
+          customSubatividade={customSubatividade}
+          isAddingCustom={isAddingCustom}
+          setCustomSubatividade={setCustomSubatividade}
+          setIsAddingCustom={setIsAddingCustom}
+          onAddCustom={handleAddCustom}
+        />
       )}
+
+      <CustomSubatividadesList 
+        subatividades={subatividades}
+        presetSubatividades={presetSubatividades}
+        editable={editable}
+        onToggleSubatividade={handleToggleSubatividade}
+        onTempoEstimadoChange={handleTempoEstimadoChange}
+      />
     </div>
   );
 }
