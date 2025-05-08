@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, Servico, TipoServico } from "@/types/ordens";
@@ -132,34 +131,18 @@ export default function EtapaCard({
     }
   };
 
-  // MODIFICADO: Adicionar uma verificação se deve mostrar o cronômetro
-  // Apenas mostrar para inspeção final
-  // NÃO mostrar para lavagem e inspeção inicial (agora usaremos apenas o cronômetro do serviço)
-  const etapaComCronometro = ['inspecao_final'].includes(etapa);
+  // MODIFICADO: Não mostrar cronômetro para nenhuma etapa (lavagem, inspeção inicial e inspeção final)
+  // Agora usaremos apenas o cronômetro do serviço para todas essas etapas
+  const etapaComCronometro = [].includes(etapa);
   
   // Verificar se este card específico precisa de cronômetro
-  // Se for um serviço específico dentro de uma etapa, verificar as configurações do serviço
   const mostrarCronometro = () => {
     // Se não for uma etapa que pode ter cronômetro, não mostrar
     if (!etapaComCronometro) return false;
     
-    // Se for serviço específico (retifica-bloco, retifica-cabecote, etc), não mostrar cronômetro
-    if (servicoTipo && etapa !== 'inspecao_final') {
-      return false;
-    }
-    
-    // Se for um serviço específico de inspeção final, mostrar cronômetro
-    if (etapa === 'inspecao_final' && servicoTipo) {
-      return true;
-    }
-    
-    // Para a etapa de lavagem e inspeção inicial, nunca mostrar o cronômetro da etapa (apenas do serviço)
-    if (etapa === 'lavagem' || etapa === 'inspecao_inicial') {
-      return false;
-    }
-    
-    // Por padrão, mostrar cronômetro para a etapa geral de inspeção final
-    return etapaComCronometro;
+    // Como todas as etapas foram removidas da lista etapaComCronometro,
+    // esta função sempre retornará false
+    return false;
   };
   
   // Função para exibir o nome do responsável atual (selecionado, etapaInfo ou último salvo)
