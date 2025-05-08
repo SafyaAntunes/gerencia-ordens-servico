@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -33,8 +32,7 @@ export type TipoServico =
   | 'virabrequim' 
   | 'eixo_comando'
   | 'montagem'
-  | 'dinamometro'
-  | 'lavagem';
+  | 'dinamometro';
 
 export type TipoAtividade =
   | 'lavagem'

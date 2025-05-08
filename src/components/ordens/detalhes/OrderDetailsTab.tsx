@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -28,7 +27,7 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
     const tempos: Record<string, number> = {};
     let total = 0;
     
-    // 1. Verificar tempos nas etapas
+    // 1. Verificar tempos nas etapas gerais e específicas
     Object.entries(ordem.etapasAndamento || {}).forEach(([etapa, dadosEtapa]) => {
       if (dadosEtapa.tempoEstimado) {
         // Extrair a etapa base (lavagem, inspecao_inicial, etc.) de chaves como "inspecao_inicial_bloco"
@@ -58,21 +57,7 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
       }
     });
     
-    // 3. Verificar tempos nas etapas de inspeção específicas (inspecao_inicial_bloco, etc)
-    Object.entries(ordem.etapasAndamento || {}).forEach(([etapa, dadosEtapa]) => {
-      // Se a chave contém "inspecao_inicial_" ou "inspecao_final_"
-      if ((etapa.startsWith("inspecao_inicial_") || etapa.startsWith("inspecao_final_")) && dadosEtapa.tempoEstimado) {
-        // Extrair a etapa base (inspecao_inicial ou inspecao_final)
-        const etapaBase = etapa.startsWith("inspecao_inicial_") ? "inspecao_inicial" : "inspecao_final";
-        
-        const tempoEstimadoMs = dadosEtapa.tempoEstimado * 60 * 60 * 1000; // horas para ms
-        
-        tempos[etapaBase] = (tempos[etapaBase] || 0) + tempoEstimadoMs;
-        total += tempoEstimadoMs;
-      }
-    });
-    
-    // 4. Usar o tempo total estimado armazenado se disponível
+    // 3. Usar o tempo total estimado armazenado se disponível
     if (ordem.tempoTotalEstimado && ordem.tempoTotalEstimado > 0) {
       total = ordem.tempoTotalEstimado;
     }

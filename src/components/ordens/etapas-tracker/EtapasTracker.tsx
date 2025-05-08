@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -354,8 +353,7 @@ export const formatServicoTipo = (tipo: TipoServico): string => {
     virabrequim: "Virabrequim",
     eixo_comando: "Eixo de Comando",
     montagem: "Montagem",
-    dinamometro: "Dinamômetro",
-    lavagem: "Lavagem"
+    dinamometro: "Dinamômetro"
   };
   return labels[tipo] || tipo;
 };

@@ -36,8 +36,7 @@ export const formatTipoServico = (tipo: TipoServico): string => {
     virabrequim: "Virabrequim",
     eixo_comando: "Eixo de Comando",
     montagem: "Montagem",
-    dinamometro: "Dinamômetro",
-    lavagem: "Lavagem"
+    dinamometro: "Dinamômetro"
   };
   
   return labels[tipo] || tipo;

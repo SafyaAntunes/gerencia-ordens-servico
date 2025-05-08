@@ -1,7 +1,7 @@
 
 import { TipoServico, TipoAtividade } from "@/types/ordens";
 
-// This hook provides default subactivities for all service types, including 'lavagem'
+// This hook provides default subactivities for all service types
 export const useServicoSubatividades = () => {
   const defaultSubatividades: Record<TipoServico, string[]> = {
     bloco: [
@@ -50,13 +50,6 @@ export const useServicoSubatividades = () => {
       "Teste de potência", 
       "Teste de torque", 
       "Análise"
-    ],
-    lavagem: [
-      "Preparação", 
-      "Lavagem externa", 
-      "Lavagem interna", 
-      "Secagem", 
-      "Inspeção final"
     ]
   };
 
@@ -69,8 +62,7 @@ export const useServicoSubatividades = () => {
       virabrequim: ["Preparação", "Lavagem química", "Secagem"],
       eixo_comando: ["Preparação", "Lavagem química", "Secagem"],
       montagem: ["Preparação", "Limpeza de componentes", "Secagem"],
-      dinamometro: ["Limpeza antes do teste", "Limpeza após o teste"],
-      lavagem: ["Preparação", "Lavagem externa", "Lavagem interna", "Secagem"]
+      dinamometro: ["Limpeza antes do teste", "Limpeza após o teste"]
     },
     inspecao_inicial: {
       bloco: ["Verificação de trincas", "Medição de cilindros", "Verificação de mancais"],
@@ -79,8 +71,7 @@ export const useServicoSubatividades = () => {
       virabrequim: ["Verificação de trincas", "Medição de mancais", "Verificação visual"],
       eixo_comando: ["Verificação de desgaste", "Medição de pontos", "Verificação visual"],
       montagem: ["Verificação de componentes", "Conferência de peças"],
-      dinamometro: ["Verificação de sensores", "Verificação de conexões"],
-      lavagem: ["Verificação de componentes"]
+      dinamometro: ["Verificação de sensores", "Verificação de conexões"]
     },
     inspecao_final: {
       bloco: ["Verificação de medidas", "Teste de pressão", "Conformidade com especificações"],
@@ -89,8 +80,7 @@ export const useServicoSubatividades = () => {
       virabrequim: ["Verificação de polimento", "Verificação de balanceamento", "Conformidade com especificações"],
       eixo_comando: ["Verificação de acabamento", "Conformidade com especificações"],
       montagem: ["Verificação de torque", "Teste de movimentação", "Conformidade com especificações"],
-      dinamometro: ["Análise de resultados", "Conformidade com especificações"],
-      lavagem: ["Verificação de limpeza final"]
+      dinamometro: ["Análise de resultados", "Conformidade com especificações"]
     }
   };
 
