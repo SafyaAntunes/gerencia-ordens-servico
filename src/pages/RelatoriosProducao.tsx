@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import Layout from "@/components/layout/Layout";
-import OrdemForm from "@/components/ordens/OrdemForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -47,7 +46,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
                 <CardTitle>Produtividade por Etapas</CardTitle>
               </CardHeader>
               <CardContent>
-                <p>Relatórios de produtividade por etapas serão exibidos aqui.</p>
+                <p className="text-left">Relatórios de produtividade por etapas serão exibidos aqui.</p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -58,7 +57,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
                 <CardTitle>Produtividade por Serviços</CardTitle>
               </CardHeader>
               <CardContent>
-                <p>Relatórios de produtividade por tipos de serviços serão exibidos aqui.</p>
+                <p className="text-left">Relatórios de produtividade por tipos de serviços serão exibidos aqui.</p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -69,7 +68,7 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
                 <CardTitle>Produtividade por Funcionários</CardTitle>
               </CardHeader>
               <CardContent>
-                <p>Relatórios de produtividade por funcionários serão exibidos aqui.</p>
+                <p className="text-left">Relatórios de produtividade por funcionários serão exibidos aqui.</p>
               </CardContent>
             </Card>
           </TabsContent>
