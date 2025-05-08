@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -63,7 +64,10 @@ export default function SubatividadesConfig({
     { value: "virabrequim", label: "Virabrequim" },
     { value: "eixo_comando", label: "Eixo de Comando" },
     { value: "montagem", label: "Montagem" },
-    { value: "dinamometro", label: "Dinamômetro" }
+    { value: "dinamometro", label: "Dinamômetro" },
+    { value: "lavagem", label: "Lavagem" },
+    { value: "inspecao_inicial", label: "Inspeção Inicial" },
+    { value: "inspecao_final", label: "Inspeção Final" }
   ];
 
   const tiposAtividade: { value: string; label: string }[] = [
