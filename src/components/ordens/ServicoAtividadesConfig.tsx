@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { TipoServico, SubAtividade, TipoAtividade } from "@/types/ordens";
 import { Button } from "@/components/ui/button";
@@ -101,7 +100,6 @@ export default function ServicoAtividadesConfig({
       case 'eixo_comando': return 'Eixo de Comando';
       case 'montagem': return 'Montagem';
       case 'dinamometro': return 'Dinamômetro';
-      case 'lavagem': return 'Lavagem';
       default: return tipo;
     }
   };

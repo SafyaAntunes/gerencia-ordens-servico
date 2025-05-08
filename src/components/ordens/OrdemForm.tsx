@@ -110,12 +110,6 @@ const SUBATIVIDADES: Record<TipoServico, string[]> = {
     'POTÊNCIA',
     'TORQUE',
     'CONSUMO'
-  ],
-  lavagem: [
-    'PREPARAÇÃO',
-    'LAVAGEM QUÍMICA',
-    'SECAGEM',
-    'INSPEÇÃO'
   ]
 };
 
@@ -174,8 +168,7 @@ const tiposServico: { value: TipoServico; label: string }[] = [
   { value: "virabrequim", label: "Virabrequim" },
   { value: "eixo_comando", label: "Eixo de Comando" },
   { value: "montagem", label: "Montagem" },
-  { value: "dinamometro", label: "Dinamômetro" },
-  { value: "lavagem", label: "Lavagem" },
+  { value: "dinamometro", label: "Dinamômetro" }
 ];
 
 export default function OrdemForm({ 
