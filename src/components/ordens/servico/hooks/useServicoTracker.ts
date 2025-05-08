@@ -8,6 +8,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { UseServicoTrackerProps, UseServicoTrackerResult, ServicoStatus } from "./types/servicoTrackerTypes";
 import { useOrdemTimer } from "@/hooks/useOrdemTimer";
 import { getServicoStatus } from "./utils/servicoTrackerUtils";
+import { doc, updateDoc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export function useServicoTracker({
   servico,
@@ -21,7 +23,10 @@ export function useServicoTracker({
   const { funcionario, canEditOrder } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
-  const [responsavelSelecionadoId, setResponsavelSelecionadoId] = useState<string>(funcionario?.id || "");
+  const [responsavelSelecionadoId, setResponsavelSelecionadoId] = useState<string>(servico.funcionarioId || funcionario?.id || "");
+  const [isSavingResponsavel, setIsSavingResponsavel] = useState(false);
+  const [lastSavedResponsavelId, setLastSavedResponsavelId] = useState<string>(servico.funcionarioId || "");
+  const [lastSavedResponsavelNome, setLastSavedResponsavelNome] = useState<string>(servico.funcionarioNome || "");
   
   const timerRef = useRef<any>(null);
   
@@ -51,6 +56,83 @@ export function useServicoTracker({
     },
     isEtapaConcluida: servico.concluido
   });
+  
+  // Inicializar o responsável selecionado com o valor do serviço
+  useEffect(() => {
+    if (servico.funcionarioId) {
+      setResponsavelSelecionadoId(servico.funcionarioId);
+      setLastSavedResponsavelId(servico.funcionarioId);
+      setLastSavedResponsavelNome(servico.funcionarioNome || "");
+    }
+  }, [servico.funcionarioId, servico.funcionarioNome]);
+  
+  // Função para salvar o responsável do serviço
+  const handleSaveResponsavel = async () => {
+    if (!responsavelSelecionadoId) {
+      toast.error("É necessário selecionar um responsável para salvar");
+      return;
+    }
+    
+    if (!ordemId) {
+      toast.error("ID da ordem não encontrado");
+      return;
+    }
+    
+    setIsSavingResponsavel(true);
+    
+    try {
+      // Buscar o funcionário selecionado para obter o nome
+      const funcionarioSelecionado = funcionariosOptions.find(f => f.id === responsavelSelecionadoId);
+      const funcionarioSelecionadoNome = funcionarioSelecionado?.nome || "";
+      
+      // Obter documento atual da ordem
+      const ordemRef = doc(db, "ordens_servico", ordemId);
+      const ordemDoc = await getDoc(ordemRef);
+      
+      if (!ordemDoc.exists()) {
+        toast.error("Ordem de serviço não encontrada");
+        setIsSavingResponsavel(false);
+        return;
+      }
+      
+      const dadosAtuais = ordemDoc.data();
+      const servicosAtuais = dadosAtuais.servicos || [];
+      
+      // Criar array atualizado de serviços
+      const servicosAtualizados = servicosAtuais.map((s: any) => {
+        if (s.tipo === servico.tipo) {
+          return {
+            ...s,
+            funcionarioId: responsavelSelecionadoId,
+            funcionarioNome: funcionarioSelecionadoNome
+          };
+        }
+        return s;
+      });
+      
+      // Atualizar a ordem
+      await updateDoc(ordemRef, {
+        servicos: servicosAtualizados
+      });
+      
+      // Atualizar estados locais
+      setLastSavedResponsavelId(responsavelSelecionadoId);
+      setLastSavedResponsavelNome(funcionarioSelecionadoNome);
+      
+      // Atualizar também no callback se existir
+      if (onServicoStatusChange) {
+        // Manter o status de conclusão atual, apenas atualizar o responsável
+        onServicoStatusChange(servico.concluido, responsavelSelecionadoId, funcionarioSelecionadoNome);
+      }
+      
+      toast.success(`Responsável ${funcionarioSelecionadoNome} salvo com sucesso!`);
+    } catch (error) {
+      console.error("Erro ao salvar responsável:", error);
+      toast.error("Não foi possível salvar o responsável");
+    } finally {
+      setIsSavingResponsavel(false);
+    }
+  };
   
   const handlePause = (motivo?: string) => {
     pauseTimer(motivo);
@@ -94,11 +176,18 @@ export function useServicoTracker({
   };
   
   const handleStartClick = () => {
-    // Usar o ID do funcionário selecionado do dropdown
-    if (!responsavelSelecionadoId) {
-      toast.error("Selecione um responsável antes de iniciar o serviço");
+    // Verificar se há um responsável antes de iniciar
+    if (!responsavelSelecionadoId && !lastSavedResponsavelId) {
+      toast.error("Selecione e salve um responsável antes de iniciar o serviço");
       return;
     }
+    
+    // Se tiver um responsável selecionado mas não salvo, perguntar se quer salvar
+    if (responsavelSelecionadoId !== lastSavedResponsavelId) {
+      toast.error("Salve o responsável antes de iniciar o serviço");
+      return;
+    }
+    
     handleStart();
   };
   
@@ -107,18 +196,20 @@ export function useServicoTracker({
   };
   
   const handleMarcarConcluido = () => {
+    // Verificar se há um responsável salvo
+    if (!lastSavedResponsavelId) {
+      toast.error("É necessário selecionar e salvar um responsável antes de concluir o serviço");
+      return;
+    }
+    
     // Se o timer ainda estiver rodando, finalizar primeiro
     if (isRunning || isPaused) {
       finishTimer();
     }
     
     if (onServicoStatusChange) {
-      // Usar o responsável selecionado (ou o funcionario atual como fallback)
-      const selectedFuncionarioId = responsavelSelecionadoId || funcionario?.id;
-      const selectedFuncionario = funcionariosOptions.find(f => f.id === selectedFuncionarioId);
-      const selectedFuncionarioNome = selectedFuncionario?.nome || funcionario?.nome;
-      
-      onServicoStatusChange(true, selectedFuncionarioId, selectedFuncionarioNome);
+      // Usar o responsável salvo
+      onServicoStatusChange(true, lastSavedResponsavelId, lastSavedResponsavelNome);
     }
   };
   
@@ -149,6 +240,12 @@ export function useServicoTracker({
     handleResume,
     handleFinish,
     handleMarcarConcluido,
-    handleReiniciarServico
+    handleReiniciarServico,
+    responsavelSelecionadoId,
+    setResponsavelSelecionadoId,
+    handleSaveResponsavel,
+    isSavingResponsavel,
+    lastSavedResponsavelId,
+    lastSavedResponsavelNome
   };
 }

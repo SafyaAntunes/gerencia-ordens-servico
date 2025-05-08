@@ -10,6 +10,7 @@ import ServicoHeader from "./ServicoHeader";
 import ServicoDetails from "./ServicoDetails";
 import ServicoControls from "./ServicoControls";
 import TimerPausas from "../etapa/TimerPausas";
+import FuncionarioSelector from "../etapa/components/FuncionarioSelector";
 
 interface ServicoTrackerProps {
   servico: Servico;
@@ -54,7 +55,13 @@ export default function ServicoTracker({
     handleFinish,
     handleMarcarConcluido,
     handleReiniciarServico,
-    pausas
+    pausas,
+    responsavelSelecionadoId,
+    setResponsavelSelecionadoId,
+    handleSaveResponsavel,
+    isSavingResponsavel,
+    lastSavedResponsavelId,
+    lastSavedResponsavelNome
   } = useServicoTracker({
     servico,
     ordemId,
@@ -73,6 +80,10 @@ export default function ServicoTracker({
   // Verifica se todas subatividades selecionadas estão concluídas
   const todasSubatividadesConcluidas = subatividadesFiltradas.length === 0 || 
     (subatividadesFiltradas.length > 0 && subatividadesFiltradas.every(sub => sub.concluida));
+
+  const handleFuncionarioChange = (id: string) => {
+    setResponsavelSelecionadoId(id);
+  };
 
   return (
     <Card className={cn("w-full", className)}>
@@ -99,6 +110,20 @@ export default function ServicoTracker({
 
         <CollapsibleContent>
           <CardContent className="pt-0">
+            {/* Adicionar seletor de responsável para cada serviço */}
+            {temPermissao && (
+              <FuncionarioSelector 
+                funcionarioSelecionadoId={responsavelSelecionadoId || ""}
+                funcionariosOptions={funcionariosOptions}
+                isEtapaConcluida={servico.concluido}
+                onFuncionarioChange={handleFuncionarioChange}
+                onSaveResponsavel={handleSaveResponsavel}
+                lastSavedFuncionarioId={lastSavedResponsavelId || servico.funcionarioId}
+                lastSavedFuncionarioNome={lastSavedResponsavelNome || servico.funcionarioNome}
+                isSaving={isSavingResponsavel}
+              />
+            )}
+            
             <ServicoDetails 
               descricao={servico.descricao}
               subatividades={subatividadesFiltradas}

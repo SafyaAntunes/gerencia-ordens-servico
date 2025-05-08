@@ -1,46 +1,34 @@
 
-import { Servico, SubAtividade } from "@/types/ordens";
+import { Servico, SubAtividade, TipoServico } from "@/types/ordens";
 import { Funcionario } from "@/types/funcionarios";
 
 export type ServicoStatus = "nao_iniciado" | "em_andamento" | "pausado" | "concluido";
 
 export interface UseServicoTrackerProps {
   servico: Servico;
-  ordemId: string;
-  funcionarioId: string;
+  ordemId?: string;
+  funcionarioId?: string;
   funcionarioNome?: string;
   etapa?: string;
-  onServicoStatusChange: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
-  onSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
-}
-
-export interface ServicoState {
-  isOpen: boolean;
-  isRunning: boolean;
-  isPaused: boolean;
-  displayTime: number;
-  elapsedSeconds: number;
-  startTime: number | null;
-  pauseTime: number | null;
-  pausas: {inicio: number; fim?: number; motivo?: string}[];
-  funcionariosOptions: Funcionario[];
+  onServicoStatusChange?: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
+  onSubatividadeToggle?: (subatividadeId: string, checked: boolean) => void;
 }
 
 export interface UseServicoTrackerResult {
   isOpen: boolean;
-  setIsOpen: (value: boolean) => void;
+  setIsOpen: (isOpen: boolean) => void;
   funcionariosOptions: Funcionario[];
   temPermissao: boolean;
   isRunning: boolean;
   isPaused: boolean;
-  displayTime: number;
+  displayTime: string;
   servicoStatus: ServicoStatus;
   progressPercentage: number;
   completedSubatividades: number;
   totalSubatividades: number;
   tempoTotalEstimado: number;
   subatividadesFiltradas: SubAtividade[];
-  pausas: {inicio: number; fim?: number; motivo?: string}[];
+  pausas?: Array<{ inicio: number; fim?: number; motivo?: string }>;
   handleLoadFuncionarios: () => Promise<void>;
   handleSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
   handleStartClick: () => void;
@@ -49,4 +37,11 @@ export interface UseServicoTrackerResult {
   handleFinish: () => void;
   handleMarcarConcluido: () => void;
   handleReiniciarServico: () => void;
+  // Novos campos para gerenciamento de responsável
+  responsavelSelecionadoId: string;
+  setResponsavelSelecionadoId: (id: string) => void;
+  handleSaveResponsavel: () => Promise<void>;
+  isSavingResponsavel: boolean;
+  lastSavedResponsavelId?: string;
+  lastSavedResponsavelNome?: string;
 }
