@@ -19,6 +19,7 @@ export async function getSubatividades(): Promise<Record<TipoServico | TipoAtivi
       lavagem: [],
       inspecao_inicial: [],
       inspecao_final: [],
+      retifica: [], // Added for the expanded TipoAtividade
     };
     
     snapshot.forEach((doc) => {
@@ -86,6 +87,7 @@ export async function saveSubatividades(subatividadesMap: Partial<Record<TipoSer
       lavagem: [],
       inspecao_inicial: [],
       inspecao_final: [],
+      retifica: [], // Added for the expanded TipoAtividade
     };
     
     // Combinar o mapa parcial com o mapa completo
