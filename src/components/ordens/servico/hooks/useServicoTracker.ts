@@ -1,10 +1,11 @@
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import { getFuncionarios } from "@/services/funcionarioService";
 import { Servico, SubAtividade, TipoServico, EtapaOS } from "@/types/ordens";
 import { Funcionario } from "@/types/funcionarios";
 import { useAuth } from "@/hooks/useAuth";
-import { UseServicoTrackerProps, UseServicoTrackerResult, ServicoStatus, PausaRegistro } from "./types/servicoTrackerTypes";
+import { UseServicoTrackerProps, UseServicoTrackerResult, ServicoStatus } from "./types/servicoTrackerTypes";
 import { useOrdemTimer } from "@/hooks/useOrdemTimer";
 import { getServicoStatus } from "./utils/servicoTrackerUtils";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
@@ -148,19 +149,11 @@ export function useServicoTracker({
   // Determine service status based on running, paused and completed states
   const servicoStatus: ServicoStatus = getServicoStatus(isRunning, isPaused, servico.concluido);
   
-  const calculateProgress = (): number => {
-    if (!servico.subatividades || servico.subatividades.length === 0) {
-      return servico.concluido ? 100 : 0;
-    }
-
-    const total = servico.subatividades.filter(sub => sub.selecionada).length;
-    if (total === 0) return 0;
-    
-    const completed = servico.subatividades.filter(sub => sub.selecionada && sub.concluida).length;
-    return Math.round((completed / total) * 100);
-  };
+  const completedSubatividades = servico.subatividades?.filter(sub => sub.concluida).length || 0;
+  const totalSubatividades = servico.subatividades?.filter(sub => sub.selecionada).length || 0;
   
-  const progressPercentage = calculateProgress();
+  // Ensure progressPercentage is a number
+  const progressPercentage = totalSubatividades > 0 ? Math.round((completedSubatividades / totalSubatividades) * 100) : 0;
   
   const tempoTotalEstimado = servico.subatividades?.reduce((total, sub) => {
     return sub.selecionada && sub.tempoEstimado ? total + sub.tempoEstimado : total;

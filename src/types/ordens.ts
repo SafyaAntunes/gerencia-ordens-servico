@@ -49,7 +49,6 @@ export type SubAtividade = {
   tempoEstimado?: number; // Tempo estimado em horas
   servicoTipo?: TipoServico | null; // A qual tipo de serviço esta subatividade se relaciona
   descricao?: string; // Descrição opcional da subatividade
-  custom?: boolean; // Indica se é uma subatividade personalizada ou padrão
 };
 
 export type Servico = {

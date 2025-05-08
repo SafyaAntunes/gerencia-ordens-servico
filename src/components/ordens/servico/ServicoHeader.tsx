@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 
 interface ServicoHeaderProps {
   tipo: TipoServico;
-  displayTime: string;
+  displayTime: number;
   servicoStatus: ServicoStatus;
   progressPercentage: number;
   completedSubatividades: number;
@@ -61,7 +61,7 @@ export default function ServicoHeader({
           
           <div className="flex items-center text-sm text-muted-foreground mt-1">
             <Clock className="h-4 w-4 mr-1" />
-            <span>Tempo: {displayTime}</span>
+            <span>Tempo: {formatTime(displayTime)}</span>
             {tempoTotalEstimado > 0 && (
               <span className="ml-2">/ Estimado: {formatTime(tempoTotalEstimado * 3600 * 1000)}</span>
             )}
@@ -69,25 +69,25 @@ export default function ServicoHeader({
         </div>
         
         <div className="flex items-center space-x-2">
-          {servicoStatus === "completed" && (
+          {servicoStatus === "concluido" && (
             <Badge variant="success">
               Concluído
             </Badge>
           )}
           
-          {servicoStatus === "running" && (
+          {servicoStatus === "em_andamento" && (
             <Badge variant="default">
               Em andamento
             </Badge>
           )}
           
-          {servicoStatus === "paused" && (
+          {servicoStatus === "pausado" && (
             <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
               Pausado
             </Badge>
           )}
           
-          {servicoStatus === "idle" && (
+          {servicoStatus === "nao_iniciado" && (
             <Badge variant="outline" className="bg-gray-100">
               Não iniciado
             </Badge>

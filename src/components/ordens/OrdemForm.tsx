@@ -51,7 +51,6 @@ import { saveCliente, getMotores } from "@/services/clienteService";
 import { getSubatividades, getSubatividadesByTipo } from "@/services/subatividadeService";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { OrdemFormProps, OrdemFormValues } from "./OrdemForm.d";
 
 const SUBATIVIDADES: Record<TipoServico, string[]> = {
   bloco: [
@@ -156,32 +155,15 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 type OrdemFormProps = {
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (values: FormValues & { fotosEntrada: File[], fotosSaida: File[] }) => void;
   isLoading?: boolean;
-  defaultValues?: Partial<OrdemFormValues>;
+  defaultValues?: Partial<FormValues>;
   defaultFotosEntrada?: any[];
   defaultFotosSaida?: any[];
   onCancel?: () => void;
   clientes?: Cliente[];
   isLoadingClientes?: boolean;
-  onSubatividadeToggle?: (servicoTipo: string, subatividadeId: string, checked: boolean) => void;
-  isSubatividadeEditingEnabled?: boolean;
 };
-
-// Interfaces para os valores do formulário
-export interface OrdemFormValues {
-  id?: string;
-  nome: string;
-  clienteId: string;
-  motorId?: string;
-  dataAbertura?: Date;
-  dataPrevistaEntrega?: Date;
-  prioridade: string;
-  servicosTipos: string[];
-  servicosDescricoes: Record<string, string>;
-  servicosSubatividades: Record<string, SubAtividade[]>;
-  etapasTempoPreco?: Record<string, { precoHora?: number; tempoEstimado?: number }>;
-}
 
 const tiposServico: { value: TipoServico; label: string }[] = [
   { value: "bloco", label: "Bloco" },
@@ -203,8 +185,6 @@ export default function OrdemForm({
   onCancel,
   clientes = [],
   isLoadingClientes = false,
-  onSubatividadeToggle,
-  isSubatividadeEditingEnabled = false,
 }: OrdemFormProps) {
   const [servicosDescricoes, setServicosDescricoes] = useState<Record<string, string>>({});
   const [servicosSubatividades, setServicosSubatividades] = useState<Record<string, SubAtividade[]>>({});
@@ -802,8 +782,6 @@ export default function OrdemForm({
                                           onChange={(subatividades) => 
                                             handleSubatividadesChange(tipo.value, subatividades)
                                           }
-                                          onSubatividadeToggle={onSubatividadeToggle}
-                                          isSubatividadeEditingEnabled={isSubatividadeEditingEnabled}
                                         />
                                       )}
                                     </>
