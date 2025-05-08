@@ -4,8 +4,8 @@ import { TipoServico } from "@/types/ordens";
 export type ServicoStatus = "concluido" | "em_andamento" | "pausado" | "nao_iniciado";
 
 export interface PausaRegistro {
-  iniciado: Date;
-  finalizado?: Date;
+  iniciado: number;
+  finalizado?: number; 
   duracao?: number; // em segundos
   motivo?: string;
 }

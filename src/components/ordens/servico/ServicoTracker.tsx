@@ -11,6 +11,7 @@ import ServicoDetails from "./ServicoDetails";
 import ServicoControls from "./ServicoControls";
 import TimerPausas from "../etapa/TimerPausas";
 import FuncionarioSelector from "../etapa/components/FuncionarioSelector";
+import { PausaRegistro } from "./hooks/types/servicoTrackerTypes";
 
 interface ServicoTrackerProps {
   servico: Servico;
@@ -85,6 +86,16 @@ export default function ServicoTracker({
     setResponsavelSelecionadoId(id);
   };
 
+  // Convert progressPercentage to number explicitly to fix the type error
+  const progressPercentageNumber = Number(progressPercentage);
+
+  // Convert pausas for TimerPausas component format if needed
+  const formattedPausas = pausas.map(p => ({
+    inicio: p.iniciado,
+    fim: p.finalizado,
+    motivo: p.motivo
+  }));
+
   return (
     <Card className={cn("w-full", className)}>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -94,7 +105,7 @@ export default function ServicoTracker({
               tipo={servico.tipo}
               displayTime={displayTime}
               servicoStatus={servicoStatus}
-              progressPercentage={Number(progressPercentage)}
+              progressPercentage={progressPercentageNumber}
               completedSubatividades={completedSubatividades}
               totalSubatividades={totalSubatividades}
               tempoTotalEstimado={tempoTotalEstimado}
@@ -134,7 +145,7 @@ export default function ServicoTracker({
             {/* Mostrar pausas mesmo quando o serviço está concluído */}
             {pausas && pausas.length > 0 && (
               <div className="py-2">
-                <TimerPausas pausas={pausas} />
+                <TimerPausas pausas={formattedPausas} />
               </div>
             )}
             

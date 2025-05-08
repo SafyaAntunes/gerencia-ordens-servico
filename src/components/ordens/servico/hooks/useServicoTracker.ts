@@ -5,7 +5,7 @@ import { getFuncionarios } from "@/services/funcionarioService";
 import { Servico, SubAtividade, TipoServico, EtapaOS } from "@/types/ordens";
 import { Funcionario } from "@/types/funcionarios";
 import { useAuth } from "@/hooks/useAuth";
-import { UseServicoTrackerProps, UseServicoTrackerResult, ServicoStatus } from "./types/servicoTrackerTypes";
+import { UseServicoTrackerProps, UseServicoTrackerResult, ServicoStatus, PausaRegistro } from "./types/servicoTrackerTypes";
 import { useOrdemTimer } from "@/hooks/useOrdemTimer";
 import { getServicoStatus } from "./utils/servicoTrackerUtils";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
@@ -40,7 +40,7 @@ export function useServicoTracker({
     handlePause: pauseTimer,
     handleResume: resumeTimer,
     handleFinish: finishTimer,
-    pausas
+    pausas: timerPausas
   } = useOrdemTimer({
     ordemId,
     etapa: etapa as EtapaOS,
@@ -56,6 +56,13 @@ export function useServicoTracker({
     },
     isEtapaConcluida: servico.concluido
   });
+
+  // Convert timer pausas to PausaRegistro format
+  const pausas: PausaRegistro[] = timerPausas.map(p => ({
+    iniciado: p.inicio,
+    finalizado: p.fim,
+    motivo: p.motivo
+  }));
   
   // Inicializar o responsável selecionado com o valor do serviço
   useEffect(() => {
