@@ -1,5 +1,4 @@
 
-import React, { useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { OrdemServico } from "@/types/ordens";
@@ -7,55 +6,20 @@ import ServicoTag from "./ServicoTag";
 
 interface OrdemListRowDetailsProps {
   ordem: OrdemServico;
+  isAtrasada?: boolean;
 }
 
-export default function OrdemListRowDetails({ ordem }: OrdemListRowDetailsProps) {
-  // Log para verificar os dados da ordem
-  useEffect(() => {
-    if (ordem?.servicos) {
-      console.log("OrdemListRowDetails - Serviços:", ordem.servicos);
-    }
-  }, [ordem]);
-
-  // Verificar se um serviço está em andamento (iniciado mas não concluído)
+export default function OrdemListRowDetails({ ordem, isAtrasada = false }: OrdemListRowDetailsProps) {
+  // Verificar se um serviço está em andamento
   const isServicoEmAndamento = (servico: any) => {
     // Se o serviço estiver concluído, não está em andamento
     if (servico.concluido) return false;
     
-    // Verificações para determinar se está em andamento
-    
-    // 1. Verificar se tem funcionário atribuído
+    // Se tem funcionário atribuído, está em andamento
     if (servico.funcionarioId) return true;
     
-    // 2. Verificar se tem data de início
+    // Se tem data de início, está em andamento
     if (servico.dataInicio) return true;
-    
-    // 3. Verificação nas etapasAndamento
-    if (typeof servico.tipo === 'string' && ordem.etapasAndamento) {
-      // 3.1 Verificar etapa direta correspondente ao tipo
-      const etapaDireta = ordem.etapasAndamento[servico.tipo as any];
-      if (etapaDireta?.iniciado && !etapaDireta?.concluido) return true;
-      
-      // 3.2 Verificar etapa de retífica para serviços específicos
-      if (['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo) && 
-          ordem.etapasAndamento['retifica']?.iniciado && 
-          !ordem.etapasAndamento['retifica']?.concluido) {
-        return true;
-      }
-      
-      // 3.3 Verificar etapas específicas que possam estar associadas a este serviço
-      for (const [etapaKey, etapaValue] of Object.entries(ordem.etapasAndamento)) {
-        const etapaObj = etapaValue as any;
-        if (etapaObj?.servicoTipo === servico.tipo && etapaObj.iniciado && !etapaObj.concluido) {
-          return true;
-        }
-      }
-    }
-    
-    // 4. Verificar timer ativo (caso o serviço tenha um timer associado)
-    if (ordem.timers && ordem.timers[servico.tipo] && ordem.timers[servico.tipo].isRunning) {
-      return true;
-    }
     
     return false;
   };
@@ -65,44 +29,19 @@ export default function OrdemListRowDetails({ ordem }: OrdemListRowDetailsProps)
     // Se estiver explicitamente marcado como pausado
     if (!servico.concluido && servico.pausado === true) return true;
     
-    // Verificação nas etapasAndamento
-    if (typeof servico.tipo === 'string' && ordem.etapasAndamento) {
-      // Verificar etapa direta
-      const etapaDireta = ordem.etapasAndamento[servico.tipo as any];
-      if (etapaDireta?.pausas?.length > 0 && etapaDireta.pausas.some(p => !p.fim)) return true;
-      
-      // Verificar etapa de retífica para serviços específicos
-      if (['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo) && 
-          ordem.etapasAndamento['retifica']?.pausas?.length > 0 && 
-          ordem.etapasAndamento['retifica']?.pausas?.some(p => !p.fim)) {
-        return true;
-      }
-      
-      // Verificar outras etapas relacionadas
-      for (const [etapaKey, etapaValue] of Object.entries(ordem.etapasAndamento)) {
-        const etapaObj = etapaValue as any;
-        if (etapaObj?.servicoTipo === servico.tipo && 
-            etapaObj.pausas?.length > 0 && 
-            etapaObj.pausas.some((p: any) => !p.fim)) {
-          return true;
-        }
-      }
-    }
-    
-    // Verificar timer pausado
-    if (ordem.timers && ordem.timers[servico.tipo] && ordem.timers[servico.tipo].isPaused) {
-      return true;
-    }
-    
     return false;
   };
 
   return (
-    <div className="grid grid-cols-12 gap-2 px-4 py-2 items-center">
+    <div className={`grid grid-cols-12 gap-2 px-4 py-2 items-center ${
+      isAtrasada ? 'bg-red-50' : ''
+    }`}>
       {/* Descrição */}
       <div className="col-span-8">
-        <div className="text-sm font-medium text-gray-900 mb-1">Descrição</div>
-        <div className="text-sm text-gray-700">
+        <div className={`text-sm font-medium mb-1 ${isAtrasada ? 'text-red-700' : 'text-gray-900'}`}>
+          Descrição
+        </div>
+        <div className={`text-sm ${isAtrasada ? 'text-red-700' : 'text-gray-700'}`}>
           {ordem.nome || "Sem título"}
         </div>
         
@@ -111,22 +50,14 @@ export default function OrdemListRowDetails({ ordem }: OrdemListRowDetailsProps)
           <div className="mt-2">
             <div className="text-xs text-gray-500 mb-1">Serviços:</div>
             <div className="flex flex-wrap gap-1">
-              {ordem.servicos.map((servico, idx) => {
-                const emAndamento = isServicoEmAndamento(servico);
-                const pausado = isServicoPausado(servico);
-                
-                // Log para debug
-                console.log(`Renderizando serviço ${servico.tipo}: concluído=${servico.concluido}, emAndamento=${emAndamento}, pausado=${pausado}`);
-                
-                return (
-                  <ServicoTag
-                    key={`${servico.tipo}-${idx}`}
-                    servico={servico}
-                    emAndamento={emAndamento}
-                    pausado={pausado}
-                  />
-                );
-              })}
+              {ordem.servicos.map((servico, idx) => (
+                <ServicoTag
+                  key={`${servico.tipo}-${idx}`}
+                  servico={servico}
+                  emAndamento={isServicoEmAndamento(servico)}
+                  pausado={isServicoPausado(servico)}
+                />
+              ))}
             </div>
           </div>
         )}
@@ -134,8 +65,10 @@ export default function OrdemListRowDetails({ ordem }: OrdemListRowDetailsProps)
 
       {/* Data de Término */}
       <div className="col-span-4 text-right">
-        <div className="text-sm font-medium text-gray-900 mb-1">Data de Término</div>
-        <div className="text-sm text-gray-700">
+        <div className={`text-sm font-medium mb-1 ${isAtrasada ? 'text-red-700' : 'text-gray-900'}`}>
+          Data de Término
+        </div>
+        <div className={`text-sm ${isAtrasada ? 'text-red-700 font-medium' : 'text-gray-700'}`}>
           {ordem.dataPrevistaEntrega ? 
             format(new Date(ordem.dataPrevistaEntrega), "dd/MM/yy", { locale: ptBR }) :
             "N/D"}

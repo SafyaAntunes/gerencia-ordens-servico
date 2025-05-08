@@ -46,6 +46,10 @@ export default function OrdemListRow({
     }
   };
 
+  // Verificar se a ordem está atrasada
+  const hoje = new Date();
+  const isAtrasada = ordem.dataPrevistaEntrega < hoje && !['finalizado', 'entregue'].includes(ordem.status);
+
   return (
     <div 
       draggable
@@ -53,7 +57,11 @@ export default function OrdemListRow({
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onClick={onClick}
-      className={`group hover:shadow-md border rounded-lg mb-3 shadow-sm transition-all duration-200 cursor-pointer overflow-hidden bg-white relative ${isSelected ? 'ring-2 ring-primary' : ''}`}
+      className={`group hover:shadow-md border rounded-lg mb-3 shadow-sm transition-all duration-200 cursor-pointer overflow-hidden bg-white relative ${
+        isSelected ? 'ring-2 ring-primary' : ''
+      } ${
+        isAtrasada ? 'bg-red-50 border-red-300' : ''
+      }`}
     >
       {isSelectable && (
         <div 
@@ -68,14 +76,17 @@ export default function OrdemListRow({
         <OrdemListRowHeader 
           ordem={ordem} 
           index={index} 
+          isAtrasada={isAtrasada}
         />
         
         <OrdemListRowDetails 
           ordem={ordem} 
+          isAtrasada={isAtrasada}
         />
         
         <OrdemListRowProgress 
           progresso={ordem.progressoEtapas !== undefined ? Math.round(ordem.progressoEtapas * 100) : 0}
+          isAtrasada={isAtrasada}
         />
       </div>
     </div>

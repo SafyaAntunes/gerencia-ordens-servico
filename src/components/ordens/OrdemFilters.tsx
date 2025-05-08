@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, Calendar } from "lucide-react";
 import { 
   Select, 
   SelectContent, 
@@ -19,6 +19,8 @@ interface OrdemFiltersProps {
   setPrioridadeFilter: (value: string) => void;
   progressoFilter: string;
   setProgressoFilter: (value: string) => void;
+  prazoFilter?: string;
+  setPrazoFilter?: (value: string) => void;
 }
 
 export default function OrdemFilters({
@@ -29,10 +31,12 @@ export default function OrdemFilters({
   prioridadeFilter,
   setPrioridadeFilter,
   progressoFilter,
-  setProgressoFilter
+  setProgressoFilter,
+  prazoFilter = "all",
+  setPrazoFilter = () => {}
 }: OrdemFiltersProps) {
   return (
-    <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-6">
+    <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 mb-6">
       <div className="flex items-center space-x-2">
         <Input
           type="search"
@@ -62,21 +66,23 @@ export default function OrdemFilters({
         </Select>
       </div>
       
-      <div className="flex items-center space-x-2 col-span-1 md:col-span-2 lg:col-span-1">
-        <div className="flex items-center space-x-2 w-full">
-          <Select value={prioridadeFilter} onValueChange={setPrioridadeFilter}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Filtrar por prioridade" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as prioridades</SelectItem>
-              <SelectItem value="alta">Alta</SelectItem>
-              <SelectItem value="media">Média</SelectItem>
-              <SelectItem value="baixa">Baixa</SelectItem>
-              <SelectItem value="urgente">Urgente</SelectItem>
-            </SelectContent>
-          </Select>
-          
+      <div className="flex items-center space-x-2">
+        <Select value={prioridadeFilter} onValueChange={setPrioridadeFilter}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Filtrar por prioridade" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as prioridades</SelectItem>
+            <SelectItem value="alta">Alta</SelectItem>
+            <SelectItem value="media">Média</SelectItem>
+            <SelectItem value="baixa">Baixa</SelectItem>
+            <SelectItem value="urgente">Urgente</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <div className="grid grid-cols-2 gap-2 w-full">
           <Select value={progressoFilter} onValueChange={setProgressoFilter}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Filtrar por progresso" />
@@ -87,6 +93,23 @@ export default function OrdemFilters({
               <SelectItem value="em_andamento">Em andamento</SelectItem>
               <SelectItem value="quase_concluido">Quase concluído (≥75%)</SelectItem>
               <SelectItem value="concluido">Concluído (100%)</SelectItem>
+              <SelectItem value="atrasadas">Atrasadas</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Select value={prazoFilter} onValueChange={setPrazoFilter}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Filtrar por prazo">
+                <div className="flex items-center">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  <span>Prazo</span>
+                </div>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os prazos</SelectItem>
+              <SelectItem value="no_prazo">Dentro do prazo</SelectItem>
+              <SelectItem value="atrasada">Atrasadas</SelectItem>
             </SelectContent>
           </Select>
         </div>
