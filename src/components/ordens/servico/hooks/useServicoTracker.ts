@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import { getFuncionarios } from "@/services/funcionarioService";
@@ -149,11 +148,19 @@ export function useServicoTracker({
   // Determine service status based on running, paused and completed states
   const servicoStatus: ServicoStatus = getServicoStatus(isRunning, isPaused, servico.concluido);
   
-  const completedSubatividades = servico.subatividades?.filter(sub => sub.concluida).length || 0;
-  const totalSubatividades = servico.subatividades?.filter(sub => sub.selecionada).length || 0;
+  const calculateProgress = (): number => {
+    if (!servico.subatividades || servico.subatividades.length === 0) {
+      return servico.concluido ? 100 : 0;
+    }
+
+    const total = servico.subatividades.filter(sub => sub.selecionada).length;
+    if (total === 0) return 0;
+    
+    const completed = servico.subatividades.filter(sub => sub.selecionada && sub.concluida).length;
+    return Math.round((completed / total) * 100);
+  };
   
-  // Ensure progressPercentage is a number
-  const progressPercentage = totalSubatividades > 0 ? Math.round((completedSubatividades / totalSubatividades) * 100) : 0;
+  const progressPercentage = calculateProgress();
   
   const tempoTotalEstimado = servico.subatividades?.reduce((total, sub) => {
     return sub.selecionada && sub.tempoEstimado ? total + sub.tempoEstimado : total;

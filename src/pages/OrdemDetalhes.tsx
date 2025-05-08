@@ -24,6 +24,8 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
     activeTab,
     isEditando,
     deleteDialogOpen,
+    clientes,
+    isLoadingClientes,
     setActiveTab,
     setIsEditando,
     setDeleteDialogOpen,
@@ -117,13 +119,16 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
                 acc[s.tipo] = s.subatividades;
               }
               return acc;
-            }, {} as Record<string, SubAtividade[]>) || {}
+            }, {} as Record<string, SubAtividade[]>) || {},
+            etapasTempoPreco: {}
           }}
           defaultFotosEntrada={ordem?.fotosEntrada || []}
           defaultFotosSaida={ordem?.fotosSaida || []}
           onCancel={() => setIsEditando(false)}
           onSubatividadeToggle={handleSubatividadeToggleInEditMode}
           isSubatividadeEditingEnabled={true}
+          clientes={clientes}
+          isLoadingClientes={isLoadingClientes}
         />
       ) : (
         <OrdemTabs

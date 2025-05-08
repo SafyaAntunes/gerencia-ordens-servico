@@ -156,7 +156,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 type OrdemFormProps = {
-  onSubmit: (values: any) => Promise<void>;
+  onSubmit: (data: any) => Promise<void>;
   isLoading?: boolean;
   defaultValues?: Partial<OrdemFormValues>;
   defaultFotosEntrada?: any[];
