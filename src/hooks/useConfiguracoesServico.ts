@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { TipoServico, TipoAtividade } from "@/types/ordens";
 import { toast } from "sonner";
@@ -23,8 +22,7 @@ export function useConfiguracoesServico(tipoAtividade: TipoAtividade) {
     virabrequim: "VIRABREQUIM",
     eixo_comando: "EIXO DE COMANDO",
     montagem: "MONTAGEM",
-    dinamometro: "DINAMÔMETRO",
-    lavagem: "LAVAGEM"
+    dinamometro: "DINAMÔMETRO"
   };
   
   // Tipos de serviço disponíveis
@@ -35,8 +33,7 @@ export function useConfiguracoesServico(tipoAtividade: TipoAtividade) {
     "virabrequim", 
     "eixo_comando", 
     "montagem", 
-    "dinamometro", 
-    "lavagem"
+    "dinamometro"
   ];
   
   // Carregar configurações do localStorage ou inicializar com valores padrão

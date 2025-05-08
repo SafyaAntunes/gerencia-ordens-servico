@@ -45,10 +45,9 @@ export const useServicoSubatividades = () => {
       "Testes"
     ],
     dinamometro: [
-      "Preparação", 
-      "Aquecimento", 
-      "Teste de potência", 
-      "Teste de torque", 
+      "Potência", 
+      "Torque", 
+      "Consumo", 
       "Análise"
     ]
   };
