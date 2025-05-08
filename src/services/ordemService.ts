@@ -11,9 +11,9 @@ export const loadOrderFormData = async (): Promise<{
   let isLoadingClientes = true;
   
   try {
-    const clientes = await getClientes();
+    const clientesData = await getClientes();
     return { 
-      clientes, 
+      clientes: clientesData, 
       isLoadingClientes: false 
     };
   } catch (error) {

@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { db } from "@/lib/firebase";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, Timestamp } from "firebase/firestore";
 import { OrdemServico } from "@/types/ordens";
 import { toast } from "sonner";
 import { SetOrdemFunction } from "./types";
@@ -68,12 +68,17 @@ export const useOrdemUpdate = (
         });
       };
       
-      // Garantir que as datas são válidas
-      const dataAbertura = values.dataAbertura instanceof Date ? values.dataAbertura : new Date();
-      const dataPrevistaEntrega = values.dataPrevistaEntrega instanceof Date ? values.dataPrevistaEntrega : new Date();
+      // Convert JavaScript Date objects to Firestore Timestamp objects
+      const dataAbertura = values.dataAbertura instanceof Date 
+        ? Timestamp.fromDate(values.dataAbertura) 
+        : Timestamp.now();
       
-      // Simplificado - propriedades essenciais apenas
-      const updatedOrder = {
+      const dataPrevistaEntrega = values.dataPrevistaEntrega instanceof Date 
+        ? Timestamp.fromDate(values.dataPrevistaEntrega) 
+        : Timestamp.now();
+      
+      // Prepare update object
+      const updatedOrder: any = {
         nome: values.nome,
         cliente: {
           ...ordem.cliente,
@@ -85,6 +90,10 @@ export const useOrdemUpdate = (
         motorId: values.motorId,
         servicos: preserveExistingSubactivities(ordem.servicos, values.servicosTipos),
       };
+      
+      // Initialize fotosEntrada and fotosSaida arrays if they don't exist
+      updatedOrder.fotosEntrada = [];
+      updatedOrder.fotosSaida = [];
       
       // Atualizar fotos se necessário
       if (values.fotosEntrada && Array.isArray(values.fotosEntrada)) {

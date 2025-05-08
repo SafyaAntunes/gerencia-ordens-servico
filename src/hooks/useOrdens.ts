@@ -11,7 +11,8 @@ import {
   updateDoc, 
   deleteDoc,
   query,
-  orderBy
+  orderBy,
+  Timestamp
 } from 'firebase/firestore';
 import { OrdemServico } from '@/types/ordens';
 
@@ -48,11 +49,20 @@ export const useOrdens = () => {
           }
         }
         
+        // Converter Timestamp para Date
+        const dataAbertura = data.dataAbertura instanceof Timestamp 
+          ? data.dataAbertura.toDate() 
+          : new Date();
+        
+        const dataPrevistaEntrega = data.dataPrevistaEntrega instanceof Timestamp 
+          ? data.dataPrevistaEntrega.toDate() 
+          : new Date();
+        
         return {
           id: doc.id,
           ...data,
-          dataAbertura: data.dataAbertura?.toDate() || new Date(),
-          dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date()
+          dataAbertura,
+          dataPrevistaEntrega
         } as OrdemServico;
       }));
       
@@ -92,11 +102,23 @@ export const useOrdens = () => {
         }
       }
       
+      // Converter Timestamp para Date
+      const dataAbertura = data.dataAbertura instanceof Timestamp 
+        ? data.dataAbertura.toDate() 
+        : new Date();
+      
+      const dataPrevistaEntrega = data.dataPrevistaEntrega instanceof Timestamp 
+        ? data.dataPrevistaEntrega.toDate() 
+        : new Date();
+      
       return {
         id: ordemDoc.id,
-        ...data
+        ...data,
+        dataAbertura,
+        dataPrevistaEntrega
       } as OrdemServico;
     } catch (error) {
+      console.error("Erro ao carregar ordem:", error);
       toast.error('Erro ao carregar ordem de serviço.');
       return null;
     }
@@ -105,11 +127,22 @@ export const useOrdens = () => {
   const saveOrdem = async (ordem: OrdemServico) => {
     try {
       const { id, ...ordemData } = ordem;
+      
+      // Converter Date para Timestamp
+      if (ordemData.dataAbertura instanceof Date) {
+        ordemData.dataAbertura = Timestamp.fromDate(ordemData.dataAbertura);
+      }
+      
+      if (ordemData.dataPrevistaEntrega instanceof Date) {
+        ordemData.dataPrevistaEntrega = Timestamp.fromDate(ordemData.dataPrevistaEntrega);
+      }
+      
       const ordemRef = id ? doc(db, 'ordens_servico', id) : doc(collection(db, 'ordens_servico'));
       await setDoc(ordemRef, ordemData, { merge: true });
       toast.success('Ordem salva com sucesso!');
       return true;
     } catch (error) {
+      console.error("Erro ao salvar ordem:", error);
       toast.error('Erro ao salvar ordem de serviço.');
       return false;
     }
@@ -117,11 +150,24 @@ export const useOrdens = () => {
 
   const updateOrdem = async (ordem: OrdemServico) => {
     try {
+      // Clone do objeto para não modificar o original
+      const ordemUpdate = { ...ordem };
+      
+      // Converter Date para Timestamp
+      if (ordemUpdate.dataAbertura instanceof Date) {
+        ordemUpdate.dataAbertura = Timestamp.fromDate(ordemUpdate.dataAbertura);
+      }
+      
+      if (ordemUpdate.dataPrevistaEntrega instanceof Date) {
+        ordemUpdate.dataPrevistaEntrega = Timestamp.fromDate(ordemUpdate.dataPrevistaEntrega);
+      }
+      
       const ordemRef = doc(db, 'ordens_servico', ordem.id);
-      await updateDoc(ordemRef, { ...ordem });
+      await updateDoc(ordemRef, ordemUpdate);
       toast.success('Ordem atualizada com sucesso!');
       return true;
     } catch (error) {
+      console.error("Erro ao atualizar ordem:", error);
       toast.error('Erro ao atualizar ordem de serviço.');
       return false;
     }
@@ -134,6 +180,7 @@ export const useOrdens = () => {
       toast.success('Ordem excluída com sucesso!');
       return true;
     } catch (error) {
+      console.error("Erro ao excluir ordem:", error);
       toast.error('Erro ao excluir ordem de serviço.');
       return false;
     }

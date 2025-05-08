@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import Layout from "@/components/layout/Layout";
 import OrdemForm from "@/components/ordens/OrdemForm";
 import { Prioridade, TipoServico, OrdemServico, SubAtividade, EtapaOS, TipoAtividade } from "@/types/ordens";
-import { collection, addDoc, doc, setDoc, getDoc, getDocs, query, where } from "firebase/firestore";
+import { collection, addDoc, doc, setDoc, getDoc, getDocs, query, where, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getClientes } from "@/services/clienteService";
 import { getSubatividadesByTipo } from "@/services/subatividadeService";
@@ -258,6 +258,15 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         };
       });
 
+      // Convert JavaScript Date objects to Firestore Timestamp objects
+      const dataAbertura = values.dataAbertura instanceof Date 
+        ? Timestamp.fromDate(values.dataAbertura)
+        : Timestamp.now();
+      
+      const dataPrevistaEntrega = values.dataPrevistaEntrega instanceof Date 
+        ? Timestamp.fromDate(values.dataPrevistaEntrega) 
+        : Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)); // Default: 1 week from now
+
       const newOrder: Partial<OrdemServico> = {
         id: values.id,
         nome: values.nome,
@@ -269,8 +278,8 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
           motores: clienteMotores
         },
         motorId: values.motorId,
-        dataAbertura: values.dataAbertura,
-        dataPrevistaEntrega: values.dataPrevistaEntrega,
+        dataAbertura: dataAbertura,
+        dataPrevistaEntrega: dataPrevistaEntrega,
         prioridade: values.prioridade as Prioridade,
         status: "orcamento",
         servicos: values.servicosTipos.map((tipo: TipoServico) => ({

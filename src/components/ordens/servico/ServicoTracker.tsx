@@ -72,9 +72,6 @@ export default function ServicoTracker({
   const todasSubatividadesConcluidas = subatividadesFiltradas.length === 0 || 
     (subatividadesFiltradas.length > 0 && subatividadesFiltradas.every(sub => sub.concluida));
 
-  // Convert progressPercentage to number explicitly to fix the type error
-  const progressPercentageNumber = Number(progressPercentage);
-
   // Convert pausas for TimerPausas component format if needed
   const formattedPausas = pausas.map(p => ({
     inicio: p.iniciado,
@@ -91,7 +88,7 @@ export default function ServicoTracker({
               tipo={servico.tipo}
               displayTime={displayTime}
               servicoStatus={servicoStatus}
-              progressPercentage={progressPercentageNumber}
+              progressPercentage={progressPercentage}
               completedSubatividades={completedSubatividades}
               totalSubatividades={totalSubatividades}
               tempoTotalEstimado={tempoTotalEstimado}
