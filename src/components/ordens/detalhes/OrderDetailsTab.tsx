@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -30,10 +31,18 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
     // 1. Verificar tempos nas etapas gerais e específicas
     Object.entries(ordem.etapasAndamento || {}).forEach(([etapa, dadosEtapa]) => {
       if (dadosEtapa.tempoEstimado) {
-        // Extrair a etapa base (lavagem, inspecao_inicial, etc.) de chaves como "inspecao_inicial_bloco"
-        const etapaKey = etapa.split('_')[0] === 'inspecao' ? 
-          `inspecao_${etapa.split('_')[1]}` : // Para casos como inspecao_inicial ou inspecao_final
-          etapa.split('_')[0]; // Para outros casos
+        // Corrigido: Extrair corretamente a etapa base de todas as chaves de etapa
+        let etapaKey: string;
+        
+        if (etapa.startsWith('inspecao_inicial_')) {
+          etapaKey = 'inspecao_inicial';
+        } else if (etapa.startsWith('inspecao_final_')) {
+          etapaKey = 'inspecao_final';
+        } else if (etapa.startsWith('lavagem_')) {
+          etapaKey = 'lavagem';
+        } else {
+          etapaKey = etapa.split('_')[0]; // Para outros casos
+        }
         
         const tempoEstimadoMs = dadosEtapa.tempoEstimado * 60 * 60 * 1000; // horas para ms
         
@@ -50,7 +59,16 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
           .forEach(sub => {
             if (sub.tempoEstimado) {
               const tempoEstimadoMs = sub.tempoEstimado * 60 * 60 * 1000; // horas para ms
-              tempos['retifica'] = (tempos['retifica'] || 0) + tempoEstimadoMs;
+              
+              // Corrigido: Atribuir o tempo da subatividade ao tipo de serviço correto
+              if (['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo)) {
+                tempos['retifica'] = (tempos['retifica'] || 0) + tempoEstimadoMs;
+              } else if (servico.tipo === 'montagem') {
+                tempos['montagem'] = (tempos['montagem'] || 0) + tempoEstimadoMs;
+              } else if (servico.tipo === 'dinamometro') {
+                tempos['dinamometro'] = (tempos['dinamometro'] || 0) + tempoEstimadoMs;
+              }
+              
               total += tempoEstimadoMs;
             }
           });

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { TipoServico, SubAtividade, TipoAtividade } from "@/types/ordens";
 import { Button } from "@/components/ui/button";
@@ -38,48 +39,38 @@ export default function ServicoAtividadesConfig({
   }, [subatividades]);
   
   const handleToggleSubatividade = (id: string, checked: boolean) => {
-    setLocalSubatividades(prev =>
-      prev.map(sub => {
+    const atualizarSubatividades = (subs: SubAtividade[]) => 
+      subs.map(sub => {
         if (sub.id === id) {
           return { ...sub, selecionada: checked };
         }
         return sub;
-      })
-    );
+      });
     
-    onChange(
-      localSubatividades.map(sub => {
-        if (sub.id === id) {
-          return { ...sub, selecionada: checked };
-        }
-        return sub;
-      })
-    );
+    const novasSubatividades = atualizarSubatividades(localSubatividades);
+    setLocalSubatividades(novasSubatividades);
+    onChange(novasSubatividades);
   };
   
   const handleTempoEstimadoChange = (id: string, value: number) => {
+    // Atualizar o estado local de tempos estimados
     setTempoEstimado(prev => ({
       ...prev,
       [id]: value
     }));
     
-    setLocalSubatividades(prev =>
-      prev.map(sub => {
+    // Atualizar as subatividades com o novo tempo estimado
+    const atualizarSubatividades = (subs: SubAtividade[]) =>
+      subs.map(sub => {
         if (sub.id === id) {
           return { ...sub, tempoEstimado: value };
         }
         return sub;
-      })
-    );
+      });
     
-    onChange(
-      localSubatividades.map(sub => {
-        if (sub.id === id) {
-          return { ...sub, tempoEstimado: value };
-        }
-        return sub;
-      })
-    );
+    const novasSubatividades = atualizarSubatividades(localSubatividades);
+    setLocalSubatividades(novasSubatividades);
+    onChange(novasSubatividades);
   };
   
   const formatActivityType = (tipo: TipoAtividade): string => {

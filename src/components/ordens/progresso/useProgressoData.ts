@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { OrdemServico, EtapaOS } from "@/types/ordens";
 
@@ -30,27 +29,20 @@ export function useProgressoData(ordem: OrdemServico) {
     calcularTempoEstimado();
     calcularDiasEmAndamento();
     
-    // NOVO: Verificar automaticamente se retífica deve ser marcada como concluída
     verificarEtapaRetifica();
   }, [ordem]);
   
-  // NOVO: Função para verificar se a etapa de retífica deve ser marcada como concluída
   const verificarEtapaRetifica = () => {
-    // Se a etapa já está marcada como concluída, não fazer nada
     if (ordem.etapasAndamento?.retifica?.concluido) return;
     
-    // Obter todos os serviços principais que não sejam lavagem, montagem ou dinamômetro
     const servicosPrincipais = ordem.servicos.filter(servico => 
       ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo)
     );
     
-    // Se não há serviços principais, a retífica não é relevante
     if (servicosPrincipais.length === 0) return;
     
-    // Verificar se todos os serviços principais estão concluídos
     const todosServicosConcluidos = servicosPrincipais.every(servico => servico.concluido);
     
-    // Se todos os serviços estão concluídos, a etapa de retífica deveria estar concluída
     if (todosServicosConcluidos) {
       console.log("Todos os serviços de retífica estão concluídos, mas a etapa não está marcada como concluída");
     }
@@ -76,7 +68,6 @@ export function useProgressoData(ordem: OrdemServico) {
           }
         });
 
-        // Verifica se a etapa geral também está concluída
         const etapaConcluida = pecasConcluidas === totalPecas || !!ordem.etapasAndamento[etapa]?.concluido;
         
         return {
@@ -86,11 +77,9 @@ export function useProgressoData(ordem: OrdemServico) {
           concluida: etapaConcluida
         };
       } else if (etapa === 'retifica') {
-        // MODIFICADO: Melhorar a lógica de progresso para retífica
         const etapaInfo = ordem.etapasAndamento[etapa];
         const concluida = etapaInfo?.concluido || false;
         
-        // Se já está marcada como concluída, retornar 100%
         if (concluida) {
           return {
             etapa,
@@ -100,21 +89,17 @@ export function useProgressoData(ordem: OrdemServico) {
           };
         }
         
-        // Caso contrário, calcular baseado nos serviços de retífica
         const servicosPrincipais = ordem.servicos.filter(servico => 
           ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo)
         );
         
-        // Se não há serviços principais, a retífica não é relevante
         if (servicosPrincipais.length === 0) {
           return { etapa, nome: etapasNomes[etapa], progresso: 0, concluida: false };
         }
         
-        // Contar serviços concluídos
         const servicosConcluidos = servicosPrincipais.filter(servico => servico.concluido).length;
         const progresso = Math.round((servicosConcluidos / servicosPrincipais.length) * 100);
         
-        // A etapa está concluída se todos os serviços estão concluídos
         const etapaConcluida = servicosConcluidos === servicosPrincipais.length;
         
         return {
@@ -124,7 +109,6 @@ export function useProgressoData(ordem: OrdemServico) {
           concluida: etapaConcluida
         };
       } else {
-        // Para outras etapas (montagem, dinamômetro)
         const etapaInfo = ordem.etapasAndamento[etapa];
         const concluida = etapaInfo?.concluido || false;
         
@@ -198,8 +182,7 @@ export function useProgressoData(ordem: OrdemServico) {
         }
       });
     });
-
-    // Verificar também os timers gerais de cada etapa
+    
     ['lavagem', 'inspecao_inicial', 'retifica', 'montagem', 'dinamometro', 'inspecao_final'].forEach(etapa => {
       const storageKey = `timer_${ordem.id}_${etapa}`;
       const data = localStorage.getItem(storageKey);
@@ -222,16 +205,13 @@ export function useProgressoData(ordem: OrdemServico) {
   };
   
   const calcularTempoEstimado = () => {
-    // Obter o tempo total estimado da ordem, se disponível
     if (ordem.tempoTotalEstimado) {
       setTempoEstimado(ordem.tempoTotalEstimado);
       return;
     }
     
-    // Se não houver valor estimado armazenado, calcular baseado nas subatividades e etapas
     let total = 0;
     
-    // Calcular tempo estimado com base nas subatividades de serviços
     ordem.servicos.forEach(servico => {
       if (servico.subatividades) {
         servico.subatividades
@@ -244,18 +224,9 @@ export function useProgressoData(ordem: OrdemServico) {
       }
     });
     
-    // Adicionar tempo estimado das etapas de lavagem, inspeção inicial e inspeção final
-    // Considerando todas as etapas, incluindo as específicas de cada tipo de serviço
-    Object.entries(ordem.etapasAndamento || {}).forEach(([etapa, dadosEtapa]) => {
-      // Verificar etapas gerais e específicas
+    Object.entries(ordem.etapasAndamento || {}).forEach(([etapaKey, dadosEtapa]) => {
       if (dadosEtapa.tempoEstimado) {
-        if (etapa.startsWith('lavagem') || 
-            etapa.startsWith('inspecao_inicial') || 
-            etapa.startsWith('inspecao_final') || 
-            etapa === 'montagem' ||
-            etapa === 'dinamometro') {
-          total += dadosEtapa.tempoEstimado * 60 * 60 * 1000; // Converter horas para ms
-        }
+        total += dadosEtapa.tempoEstimado * 60 * 60 * 1000; // Converter horas para ms
       }
     });
     
@@ -271,10 +242,7 @@ export function useProgressoData(ordem: OrdemServico) {
   };
   
   const calcularProgressoTotal = () => {
-    // Nova lógica unificada para cálculo de progresso
-    // Contamos as etapas relevantes e os serviços selecionados
     const etapasRelevantes = progressoEtapas.filter(etapa => {
-      // Filtramos etapas irrelevantes para esta ordem
       if (etapa.etapa === "montagem") {
         return ordem.servicos.some(s => s.tipo === "montagem");
       } else if (etapa.etapa === "dinamometro") {
@@ -282,13 +250,11 @@ export function useProgressoData(ordem: OrdemServico) {
       }
       return true;
     });
-
-    // Cada etapa concluída tem peso 2
+    
     const etapasPontosPossiveis = etapasRelevantes.length * 2;
     const etapasPontosObtidos = etapasRelevantes.reduce((total, etapa) => 
       total + (etapa.concluida ? 2 : (etapa.progresso > 0 ? 1 : 0)), 0);
     
-    // Cada serviço concluído tem peso 1
     const servicosAtivos = progressoServicos.filter(s => {
       const servico = ordem.servicos.find(serv => serv.tipo === s.tipo);
       return servico && servico.subatividades && 
@@ -297,7 +263,6 @@ export function useProgressoData(ordem: OrdemServico) {
     const servicosPontosPossiveis = servicosAtivos.length;
     const servicosPontosObtidos = servicosAtivos.filter(s => s.concluido).length;
     
-    // Calcular progresso total
     const pontosTotaisPossiveis = etapasPontosPossiveis + servicosPontosPossiveis;
     const pontosTotaisObtidos = etapasPontosObtidos + servicosPontosObtidos;
     
