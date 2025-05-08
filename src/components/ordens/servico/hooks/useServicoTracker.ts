@@ -126,7 +126,7 @@ export function useServicoTracker({
   // Dummy implementations to match interface
   const [responsavelSelecionadoId, setResponsavelSelecionadoId] = useState(funcionarioId || '');
   const [isSavingResponsavel, setIsSavingResponsavel] = useState(false);
-  const lastSavedResponsavelId = funcionarioId || '';
+  const lastSavedResponsavelId = funcionarioId ? String(funcionarioId) : '';
   const lastSavedResponsavelNome = funcionarioNome || '';
 
   const handleSaveResponsavel = async () => {
