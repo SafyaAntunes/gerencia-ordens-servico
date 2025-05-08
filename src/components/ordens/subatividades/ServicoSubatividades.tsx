@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { SubAtividade } from "@/types/ordens";
@@ -169,9 +168,9 @@ export function ServicoSubatividades({
           setCustomSubatividade={setCustomSubatividade}
           setIsAddingCustom={setIsAddingCustom}
           onAddCustom={handleAddCustom}
-          onAdd={handleAddCustom} // Compatibilidade com a interface atualizada
-          onCancel={() => setIsAddingCustom(false)} // Compatibilidade com a interface atualizada
-          disabled={false} // Compatibilidade com a interface atualizada
+          onAdd={handleAddCustom}
+          onCancel={() => setIsAddingCustom(false)}
+          disabled={false}
         />
       )}
 
@@ -181,9 +180,9 @@ export function ServicoSubatividades({
         editable={editable}
         onToggleSubatividade={handleToggleSubatividade}
         onTempoEstimadoChange={handleTempoEstimadoChange}
-        onToggle={handleToggleSubatividade} // Compatibilidade com a interface atualizada
-        onRemove={handleRemoveSubatividade} // Compatibilidade com a interface atualizada
-        disabled={!editable} // Compatibilidade com a interface atualizada
+        onToggle={handleToggleSubatividade}
+        onRemove={handleRemoveSubatividade}
+        disabled={!editable}
       />
     </div>
   );

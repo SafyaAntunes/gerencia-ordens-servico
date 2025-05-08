@@ -10,6 +10,9 @@ interface CustomSubatividadesFormProps {
   setCustomSubatividade: (value: string) => void;
   setIsAddingCustom: (value: boolean) => void;
   onAddCustom: () => void;
+  onAdd: () => void;
+  onCancel: () => void;
+  disabled: boolean;
 }
 
 export function CustomSubatividadesForm({

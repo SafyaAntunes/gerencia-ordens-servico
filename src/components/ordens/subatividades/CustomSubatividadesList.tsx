@@ -11,6 +11,9 @@ interface CustomSubatividadesListProps {
   editable: boolean;
   onToggleSubatividade: (id: string, checked: boolean) => void;
   onTempoEstimadoChange: (id: string, horas: number) => void;
+  onToggle: (id: string, checked: boolean) => void;
+  onRemove?: (id: string) => void;
+  disabled?: boolean;
 }
 
 export function CustomSubatividadesList({
