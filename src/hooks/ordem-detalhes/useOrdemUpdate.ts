@@ -33,6 +33,57 @@ const removeUndefinedFields = (obj: any): any => {
   return filtered;
 };
 
+// Função para garantir que estamos trabalhando com objetos Date válidos
+const validarDatas = (obj: any): any => {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  
+  // Se for um Date, garantir que é válido
+  if (obj instanceof Date) {
+    if (isNaN(obj.getTime())) {
+      return new Date(); // Substitui datas inválidas
+    }
+    return obj;
+  }
+  
+  // Se for um array, validamos cada elemento
+  if (Array.isArray(obj)) {
+    return obj.map(item => validarDatas(item));
+  }
+  
+  // Para objetos, processamos cada propriedade
+  const resultado = { ...obj };
+  
+  Object.entries(obj).forEach(([key, value]) => {
+    // Para propriedades que sabemos que são datas
+    if (
+      key === 'dataAbertura' || 
+      key === 'dataPrevistaEntrega' || 
+      key === 'dataConclusao' || 
+      key === 'iniciado' || 
+      key === 'finalizado'
+    ) {
+      if (value instanceof Date) {
+        resultado[key] = isNaN((value as Date).getTime()) ? new Date() : value;
+      } else if (value) {
+        // Tentar converter para Date se não for undefined/null
+        try {
+          resultado[key] = new Date(value);
+        } catch (e) {
+          console.error(`Erro ao converter ${key}:`, e);
+          resultado[key] = new Date();
+        }
+      }
+    } else if (typeof value === 'object' && value !== null) {
+      // Recursivamente validar objetos aninhados
+      resultado[key] = validarDatas(value);
+    }
+  });
+  
+  return resultado;
+};
+
 export const useOrdemUpdate = (
   id: string | undefined, 
   ordem: OrdemServico | null, 
@@ -106,11 +157,15 @@ export const useOrdemUpdate = (
         id: values.clienteId || ordem.cliente?.id,
       };
       
+      // Garantir que as datas são válidas
+      const dataAbertura = values.dataAbertura instanceof Date ? values.dataAbertura : new Date();
+      const dataPrevistaEntrega = values.dataPrevistaEntrega instanceof Date ? values.dataPrevistaEntrega : new Date();
+      
       const updatedOrder: Partial<OrdemServico> = {
         nome: values.nome,
         cliente: clienteAtualizado,
-        dataAbertura: values.dataAbertura,
-        dataPrevistaEntrega: values.dataPrevistaEntrega,
+        dataAbertura,
+        dataPrevistaEntrega,
         prioridade: values.prioridade,
         motorId: values.motorId,
         servicos: preserveExistingSubactivities(ordem.servicos, values.servicosTipos),
@@ -207,8 +262,11 @@ export const useOrdemUpdate = (
       
       console.log("Atualizando ordem com dados:", updatedOrder);
       
+      // Validar objetos Date antes de limpar campos undefined
+      const orderWithValidDates = validarDatas(updatedOrder);
+      
       // IMPORTANTE: Remover campos undefined antes de chamar updateDoc
-      const cleanedOrder = removeUndefinedFields(updatedOrder);
+      const cleanedOrder = removeUndefinedFields(orderWithValidDates);
       console.log("Dados limpos para update:", cleanedOrder);
       
       const orderRef = doc(db, "ordens_servico", id);
@@ -257,7 +315,9 @@ export const useOrdemUpdate = (
       ordemAtualizada.fotosSaida = [];
     }
     
-    setOrdem(ordemAtualizada);
+    // Validar datas antes de atualizar o estado
+    const ordenComDatasValidas = validarDatas(ordemAtualizada);
+    setOrdem(ordenComDatasValidas);
   };
 
   return {
