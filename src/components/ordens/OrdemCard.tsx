@@ -72,10 +72,6 @@ export default function OrdemCard({
       )
     : 'Data não definida';
 
-  // Check if the order is overdue
-  const isOverdue = ordem.dataPrevistaEntrega < new Date() && 
-                    !['finalizado', 'entregue'].includes(ordem.status);
-
   // Get status badge styling
   const getStatusBadgeVariant = () => {
     switch (ordem.status) {
@@ -132,10 +128,7 @@ export default function OrdemCard({
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onClick={handleCardClick}
-      className={`group hover:shadow-md transition-all duration-200 cursor-pointer ${
-        isSelected ? 'ring-2 ring-primary' : ''} ${
-        isOverdue ? 'bg-red-50 border-red-300 shadow-red-100' : ''
-      }`}
+      className={`group hover:shadow-md transition-all duration-200 cursor-pointer ${isSelected ? 'ring-2 ring-primary' : ''}`}
     >
       <CardHeader className="pb-2 relative">
         {isSelectable && (
@@ -156,7 +149,7 @@ export default function OrdemCard({
       </CardHeader>
 
       <CardContent className="pb-2">
-        <div className={`text-sm mb-2 ${isOverdue ? 'text-red-600 font-medium' : ''}`}>
+        <div className="text-sm mb-2">
           <span className="font-medium">Entrega:</span> {timeUntilDeadline}
         </div>
 
@@ -165,7 +158,7 @@ export default function OrdemCard({
           <span className="text-xs">{progressPercentage}%</span>
         </div>
         
-        <Progress value={progressPercentage} className={`h-2 ${isOverdue ? 'bg-red-200' : ''}`} />
+        <Progress value={progressPercentage} className="h-2" />
       </CardContent>
       
       <CardFooter className="pt-2 flex justify-between">

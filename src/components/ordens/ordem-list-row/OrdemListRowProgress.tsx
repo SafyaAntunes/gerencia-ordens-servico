@@ -1,22 +1,29 @@
 
+import React from "react";
 import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 
 interface OrdemListRowProgressProps {
   progresso: number;
-  isOverdue?: boolean;
 }
 
-export default function OrdemListRowProgress({ 
-  progresso,
-  isOverdue = false
-}: OrdemListRowProgressProps) {
+export default function OrdemListRowProgress({ progresso }: OrdemListRowProgressProps) {
+  // Define a cor do indicador de progresso baseado no valor
+  const getProgressColor = () => {
+    return "bg-blue-500"; // Mantém a parte concluída da barra de progresso azul
+  };
+
   return (
-    <div className="p-3 pt-0">
-      <div className="flex justify-between items-center mb-1">
-        <span className="text-xs font-medium">Progresso</span>
-        <span className="text-xs">{progresso}%</span>
+    <div className="px-4 py-3 bg-gray-50">
+      <div className="flex items-center justify-between text-sm text-gray-500 mb-1">
+        <span>Progresso</span>
+        <span>{progresso}%</span>
       </div>
-      <Progress value={progresso} className={`h-2 ${isOverdue ? 'bg-red-200' : ''}`} />
+      <Progress 
+        value={progresso} 
+        className="h-2 bg-gray-200"
+        indicatorClassName={cn(getProgressColor())}
+      />
     </div>
   );
 }

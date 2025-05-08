@@ -1,62 +1,65 @@
 
+import React from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { OrdemServico } from "@/types/ordens";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { MoveVertical } from "lucide-react";
 
 interface OrdemListRowHeaderProps {
   ordem: OrdemServico;
   index: number;
-  isOverdue?: boolean;
 }
 
-export default function OrdemListRowHeader({ 
-  ordem,
-  index,
-  isOverdue = false
-}: OrdemListRowHeaderProps) {
-  // Get status badge styling
-  const getStatusBadgeVariant = () => {
-    switch (ordem.status) {
-      case 'aguardando_aprovacao': return 'warning';
-      case 'fabricacao': return 'default';
-      case 'finalizado': return 'success';
-      case 'entregue': return 'success';
-      case 'aguardando_peca_cliente':
-      case 'aguardando_peca_interno': return 'warning';
-      default: return 'secondary';
-    }
-  };
-  
-  // Get status text
-  const getStatusText = () => {
-    switch (ordem.status) {
-      case 'orcamento': return 'Orçamento';
-      case 'aguardando_aprovacao': return 'Aguardando Aprovação';
-      case 'fabricacao': return 'Em Fabricação';
-      case 'aguardando_peca_cliente': return 'Aguardando Peça (Cliente)';
-      case 'aguardando_peca_interno': return 'Aguardando Peça (Interno)';
-      case 'finalizado': return 'Finalizado';
-      case 'entregue': return 'Entregue';
-      default: return ordem.status;
-    }
-  };
+export default function OrdemListRowHeader({ ordem, index }: OrdemListRowHeaderProps) {
+  const clienteNome = ordem.cliente?.nome || "Cliente não especificado";
   
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-3 border-b">
-      <div className="md:col-span-2">
-        <div className="flex flex-col">
-          <div className="text-lg font-medium">{ordem.nome}</div>
-          <div className="text-sm text-muted-foreground">{ordem.cliente?.nome}</div>
+    <div className="grid grid-cols-12 gap-2 p-4 pb-2 items-center border-b border-gray-100">
+      {/* Número de ordenação */}
+      <div className="col-span-1 flex items-center">
+        <div className="bg-gray-100 text-gray-600 rounded-full w-7 h-7 flex items-center justify-center mr-2 text-sm font-semibold">
+          {index + 1}
+        </div>
+        <MoveVertical size={16} className="text-gray-400" />
+      </div>
+
+      {/* OS Número */}
+      <div className="col-span-1">
+        <div className="text-xs text-gray-500 mb-0.5">OS</div>
+        <div className="font-semibold text-gray-900">
+          {ordem.id}
         </div>
       </div>
-      <div className="flex justify-end items-start space-x-2">
-        <Badge variant={getStatusBadgeVariant()}>
-          {getStatusText()}
-        </Badge>
-        {isOverdue && (
-          <Badge variant="destructive">
-            Atrasada
-          </Badge>
-        )}
+
+      {/* Cliente */}
+      <div className="col-span-3">
+        <div className="text-xs text-gray-500 mb-0.5">Cliente</div>
+        <div className="font-medium text-gray-900">
+          {clienteNome}
+        </div>
+      </div>
+
+      {/* Status */}
+      <div className="col-span-3">
+        <div className="text-xs text-gray-500 mb-0.5">Status</div>
+        <StatusBadge status={ordem.status} size="md" />
+      </div>
+      
+      {/* Prioridade */}
+      <div className="col-span-2">
+        <div className="text-xs text-gray-500 mb-0.5">Prioridade</div>
+        <StatusBadge status={ordem.prioridade || "media"} size="md" />
+      </div>
+
+      {/* Data de Entrada */}
+      <div className="col-span-2 text-right">
+        <div className="text-xs text-gray-500 mb-0.5">Data de Entrada</div>
+        <div className="text-gray-600">
+          {ordem.dataAbertura ? 
+            format(new Date(ordem.dataAbertura), "dd/MM/yy", { locale: ptBR }) :
+            "N/D"}
+        </div>
       </div>
     </div>
   );

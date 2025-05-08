@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, Calendar } from "lucide-react";
+import { Search, Filter } from "lucide-react";
 import { 
   Select, 
   SelectContent, 
@@ -19,8 +19,6 @@ interface OrdemFiltersProps {
   setPrioridadeFilter: (value: string) => void;
   progressoFilter: string;
   setProgressoFilter: (value: string) => void;
-  prazoFilter?: string;
-  setPrazoFilter?: (value: string) => void;
 }
 
 export default function OrdemFilters({
@@ -31,9 +29,7 @@ export default function OrdemFilters({
   prioridadeFilter,
   setPrioridadeFilter,
   progressoFilter,
-  setProgressoFilter,
-  prazoFilter = "all",
-  setPrazoFilter = () => {}
+  setProgressoFilter
 }: OrdemFiltersProps) {
   return (
     <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-6">
@@ -94,20 +90,6 @@ export default function OrdemFilters({
             </SelectContent>
           </Select>
         </div>
-      </div>
-
-      <div className="flex items-center space-x-2 col-span-1 md:col-span-3 lg:col-span-3">
-        <Calendar className="h-5 w-5 text-muted-foreground mr-2" />
-        <Select value={prazoFilter} onValueChange={setPrazoFilter}>
-          <SelectTrigger className="w-full md:w-[300px]">
-            <SelectValue placeholder="Filtrar por prazo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os prazos</SelectItem>
-            <SelectItem value="no_prazo">Dentro do prazo</SelectItem>
-            <SelectItem value="atrasadas">Ordens atrasadas</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
     </div>
   );
