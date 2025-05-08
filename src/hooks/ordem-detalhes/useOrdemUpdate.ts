@@ -56,9 +56,6 @@ export const useOrdemUpdate = (
               descricao: values.servicosDescricoes?.[tipo] || "",
               concluido: existingServico.concluido || false,
               subatividades: subatividadesPreservadas,
-              // Remove funcionário responsável
-              funcionarioId: undefined,
-              funcionarioNome: undefined
             };
           }
           
@@ -67,9 +64,6 @@ export const useOrdemUpdate = (
             descricao: values.servicosDescricoes?.[tipo] || "",
             concluido: false,
             subatividades: novasSubatividades,
-            // Remove funcionário responsável
-            funcionarioId: undefined,
-            funcionarioNome: undefined
           };
         });
       };
@@ -120,22 +114,60 @@ export const useOrdemUpdate = (
         
         Object.keys(etapasAtualizadas).forEach(etapa => {
           if (etapasAtualizadas[etapa]) {
-            etapasAtualizadas[etapa] = {
-              ...etapasAtualizadas[etapa],
-              funcionarioId: undefined,
-              funcionarioNome: undefined
-            };
+            // Remover as referências ao funcionário responsável
+            const etapaAtualizada = { ...etapasAtualizadas[etapa] };
+            delete etapaAtualizada.funcionarioId;
+            delete etapaAtualizada.funcionarioNome;
+            
+            etapasAtualizadas[etapa] = etapaAtualizada;
           }
         });
         
         updateData.etapasAndamento = etapasAtualizadas;
       }
       
-      // Initialize fotosEntrada and fotosSaida arrays if they don't exist
-      updateData.fotosEntrada = [];
-      updateData.fotosSaida = [];
+      // Limpar dados indefinidos antes de enviar para o Firestore
+      // Firestore não aceita valores undefined
+      const cleanObject = (obj: Record<string, any>): Record<string, any> => {
+        const cleanedObj: Record<string, any> = {};
+        
+        Object.keys(obj).forEach(key => {
+          // Pular campos indefinidos
+          if (obj[key] === undefined) return;
+          
+          // Limpar objetos aninhados
+          if (obj[key] !== null && typeof obj[key] === 'object' && !(obj[key] instanceof Date) && !(obj[key] instanceof Timestamp)) {
+            if (Array.isArray(obj[key])) {
+              cleanedObj[key] = obj[key].map((item: any) => {
+                if (item !== null && typeof item === 'object') {
+                  return cleanObject(item);
+                }
+                return item;
+              }).filter((item: any) => item !== undefined);
+            } else {
+              cleanedObj[key] = cleanObject(obj[key]);
+            }
+          } else {
+            cleanedObj[key] = obj[key];
+          }
+        });
+        
+        return cleanedObj;
+      };
       
-      // Atualizar fotos se necessário
+      // Limpar todos os valores undefined antes de enviar para o Firestore
+      const cleanedUpdateData = cleanObject(updateData);
+      
+      // Inicializar arrays de fotos se não existirem
+      if (!cleanedUpdateData.fotosEntrada) {
+        cleanedUpdateData.fotosEntrada = [];
+      }
+      
+      if (!cleanedUpdateData.fotosSaida) {
+        cleanedUpdateData.fotosSaida = [];
+      }
+      
+      // Processar fotos se existirem
       if (values.fotosEntrada && Array.isArray(values.fotosEntrada)) {
         // Processar fotos de entrada
         const existingPhotos = values.fotosEntrada.filter(f => typeof f === 'string' || (f && typeof f === 'object' && f.data));
@@ -151,7 +183,7 @@ export const useOrdemUpdate = (
           }
         }
         
-        updateData.fotosEntrada = [...existingPhotos, ...uploadedUrls];
+        cleanedUpdateData.fotosEntrada = [...existingPhotos, ...uploadedUrls];
       }
       
       if (values.fotosSaida && Array.isArray(values.fotosSaida)) {
@@ -169,16 +201,18 @@ export const useOrdemUpdate = (
           }
         }
         
-        updateData.fotosSaida = [...existingPhotos, ...uploadedUrls];
+        cleanedUpdateData.fotosSaida = [...existingPhotos, ...uploadedUrls];
       }
+      
+      console.log("Dados para atualização:", cleanedUpdateData);
       
       // Atualizar no Firestore
       const orderRef = doc(db, "ordens_servico", id);
-      await updateDoc(orderRef, updateData);
+      await updateDoc(orderRef, cleanedUpdateData);
       
       // Preparar objeto para atualização local com conversão de Timestamp para Date
       const localUpdateData = {
-        ...updateData,
+        ...cleanedUpdateData,
         dataAbertura: values.dataAbertura instanceof Date ? values.dataAbertura : new Date(),
         dataPrevistaEntrega: values.dataPrevistaEntrega instanceof Date ? values.dataPrevistaEntrega : new Date(),
       };

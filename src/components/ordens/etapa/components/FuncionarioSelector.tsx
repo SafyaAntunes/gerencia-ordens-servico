@@ -27,34 +27,8 @@ export default function FuncionarioSelector({
   lastSavedFuncionarioNome,
   isSaving = false
 }: FuncionarioSelectorProps) {
-  // Estado local para rastrear mudanças no funcionário selecionado
-  const [isChanged, setIsChanged] = useState(false);
-  
-  // Efeito para detectar mudanças na seleção
-  useEffect(() => {
-    if (funcionarioSelecionadoId !== lastSavedFuncionarioId) {
-      setIsChanged(true);
-    } else {
-      setIsChanged(false);
-    }
-  }, [funcionarioSelecionadoId, lastSavedFuncionarioId]);
-  
-  // Desabilitar o botão de salvar apenas se não houver funcionário selecionado ou se etapa está concluída ou não houve mudança
-  const botaoSalvarDesabilitado = isEtapaConcluida || !funcionarioSelecionadoId || (!isChanged && funcionarioSelecionadoId === lastSavedFuncionarioId) || isSaving;
-  
-  // Função para lidar com o clique no botão salvar
-  const handleSaveClick = () => {
-    if (!funcionarioSelecionadoId) {
-      toast.error("É necessário selecionar um responsável para salvar");
-      return;
-    }
-    onSaveResponsavel();
-    setIsChanged(false); // Resetar o estado após salvar
-  };
-  
-  // Destaque visual se o funcionário foi alterado mas não salvo
-  const selectBorderClass = isChanged ? "border-amber-400" : "";
-  
-  // Como estamos removendo o responsável, retornamos null
+  // Este componente foi configurado para não renderizar nada, já que
+  // a funcionalidade de selecionar um funcionário responsável foi removida.
+  // Mantemos o componente para evitar quebrar referências em outros lugares.
   return null;
 }
