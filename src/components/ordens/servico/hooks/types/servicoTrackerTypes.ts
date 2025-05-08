@@ -1,18 +1,19 @@
 
-import { Servico, SubAtividade, TipoServico } from "@/types/ordens";
 import { Funcionario } from "@/types/funcionarios";
-
-export type ServicoStatus = "nao_iniciado" | "em_andamento" | "pausado" | "concluido";
+import { Servico, SubAtividade, TipoServico, EtapaOS } from "@/types/ordens";
+import { PausaRegistro } from "@/types/timer";
 
 export interface UseServicoTrackerProps {
   servico: Servico;
-  ordemId?: string;
+  ordemId: string;
   funcionarioId?: string;
   funcionarioNome?: string;
   etapa?: string;
-  onServicoStatusChange?: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
-  onSubatividadeToggle?: (subatividadeId: string, checked: boolean) => void;
+  onServicoStatusChange: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
+  onSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
 }
+
+export type ServicoStatus = 'idle' | 'running' | 'paused' | 'completed';
 
 export interface UseServicoTrackerResult {
   isOpen: boolean;
@@ -23,12 +24,12 @@ export interface UseServicoTrackerResult {
   isPaused: boolean;
   displayTime: string;
   servicoStatus: ServicoStatus;
-  progressPercentage: number; // Ensuring this is a number type
+  progressPercentage: number; // Definido explicitamente como number
   completedSubatividades: number;
   totalSubatividades: number;
   tempoTotalEstimado: number;
   subatividadesFiltradas: SubAtividade[];
-  pausas?: Array<{ inicio: number; fim?: number; motivo?: string }>;
+  pausas?: PausaRegistro[];
   handleLoadFuncionarios: () => Promise<void>;
   handleSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
   handleStartClick: () => void;
@@ -37,11 +38,10 @@ export interface UseServicoTrackerResult {
   handleFinish: () => void;
   handleMarcarConcluido: () => void;
   handleReiniciarServico: () => void;
-  // Novos campos para gerenciamento de responsável
   responsavelSelecionadoId: string;
   setResponsavelSelecionadoId: (id: string) => void;
   handleSaveResponsavel: () => Promise<void>;
   isSavingResponsavel: boolean;
-  lastSavedResponsavelId?: string;
-  lastSavedResponsavelNome?: string;
+  lastSavedResponsavelId: string;
+  lastSavedResponsavelNome: string;
 }
