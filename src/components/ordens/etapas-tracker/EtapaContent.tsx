@@ -56,7 +56,7 @@ export function EtapaContent({
   };
 
   const getEtapaInfo = (etapa: EtapaOS, servicoTipo?: TipoServico) => {
-    if ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final') && servicoTipo) {
+    if ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo) {
       const etapaKey = `${etapa}_${servicoTipo}` as any;
       return ordem.etapasAndamento[etapaKey] || { 
         concluido: false,
@@ -68,7 +68,7 @@ export function EtapaContent({
 
   const getEtapaTitulo = (etapa: EtapaOS, servicoTipo?: TipoServico) => {
     if (
-      (etapa === "inspecao_inicial" || etapa === "inspecao_final") 
+      (etapa === "inspecao_inicial" || etapa === "inspecao_final" || etapa === "lavagem") 
       && servicoTipo
     ) {
       return `${etapaNomesBR[etapa]} - ${formatServicoTipo(servicoTipo)}`;

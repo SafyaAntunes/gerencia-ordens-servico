@@ -53,7 +53,8 @@ export function useEtapaResponsavel({
           const dados = ordemDoc.data();
           
           // Determinar a chave da etapa com base no tipo de serviço
-          const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final') && servicoTipo) 
+          // Agora cada etapa tem seu próprio responsável por tipo de serviço
+          const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo) 
             ? `${etapa}_${servicoTipo}` 
             : etapa;
             
@@ -89,7 +90,8 @@ export function useEtapaResponsavel({
     
     try {
       // Determinar a chave da etapa com base no tipo de serviço
-      const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final') && servicoTipo) 
+      // Atualizamos para incluir LAVAGEM como etapa que tem responsável por tipo
+      const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo) 
         ? `${etapa}_${servicoTipo}` 
         : etapa;
       
@@ -121,7 +123,7 @@ export function useEtapaResponsavel({
           concluido: etapaConcluida,
           // Se for primeira atribuição, definir data de início
           iniciado: etapaAtual.iniciado || new Date(),
-          // Garantir que o tipo de serviço seja preservado para inspeções
+          // Garantir que o tipo de serviço seja preservado para inspeções e lavagens
           ...(servicoTipo ? { servicoTipo } : {})
         }
       };
@@ -142,7 +144,8 @@ export function useEtapaResponsavel({
           etapaConcluida,
           funcionarioSelecionadoId,
           funcionarioSelecionadoNome,
-          (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+          // Passar o tipo de serviço para poder salvar o responsável individualmente
+          (etapa === "inspecao_inicial" || etapa === "inspecao_final" || etapa === "lavagem") ? servicoTipo : undefined
         );
       }
       
@@ -180,7 +183,8 @@ export function useEtapaResponsavel({
         true, 
         responsavelId, 
         responsavelNome,
-        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+        // Atualizar para também passar o tipo de serviço quando for lavagem
+        (etapa === "inspecao_inicial" || etapa === "inspecao_final" || etapa === "lavagem") ? servicoTipo : undefined
       );
     }
   };
