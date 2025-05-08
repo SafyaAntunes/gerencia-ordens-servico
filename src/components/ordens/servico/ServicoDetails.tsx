@@ -22,7 +22,7 @@ export default function ServicoDetails({
   
   // Função para manipular o clique de forma segura
   const handleSubatividadeClick = (subatividade: SubAtividade) => {
-    // Verificações de segurança antes de chamar a função
+    // Verificação apenas se tem permissão
     if (!temPermissao || !subatividade || !onSubatividadeToggle) return;
     
     // Verificar se o objeto é válido antes de chamar a função
@@ -64,7 +64,7 @@ export default function ServicoDetails({
                     "flex items-center justify-between",
                     temPermissao ? "cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors" : ""
                   )}
-                  onClick={() => handleSubatividadeClick(subatividade)}
+                  onClick={() => temPermissao && handleSubatividadeClick(subatividade)}
                   tabIndex={temPermissao ? 0 : undefined}
                   role={temPermissao ? "button" : undefined}
                   aria-pressed={subatividade.concluida}
@@ -90,7 +90,10 @@ export default function ServicoDetails({
                     </div>
                     <Badge 
                       variant="outline"
-                      className={subatividade.concluida ? "text-green-600 border-green-600" : "text-muted-foreground"}
+                      className={cn(
+                        subatividade.concluida ? "text-green-600 border-green-600" : "text-muted-foreground",
+                        "select-none" // Evita seleção de texto ao clicar
+                      )}
                     >
                       {subatividade.nome}
                     </Badge>

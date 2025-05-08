@@ -1,4 +1,3 @@
-
 import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, setDoc, deleteDoc, query, where, writeBatch } from 'firebase/firestore';
 import { SubAtividade, TipoServico, TipoAtividade } from '@/types/ordens';
@@ -75,7 +74,7 @@ export async function saveSubatividades(subatividadesMap: Partial<Record<TipoSer
       batch.delete(doc.ref);
     });
     
-    // Inicialize um objeto com todas as chaves possíveis como arrays vazios
+    // Inicializar um objeto com todas as chaves possíveis como arrays vazios
     const completeMap: Record<TipoServico | TipoAtividade, SubAtividade[]> = {
       bloco: [],
       biela: [],
@@ -89,14 +88,14 @@ export async function saveSubatividades(subatividadesMap: Partial<Record<TipoSer
       inspecao_final: [],
     };
     
-    // Combine o mapa parcial com o mapa completo
+    // Combinar o mapa parcial com o mapa completo
     Object.entries(subatividadesMap).forEach(([key, value]) => {
       if (key in completeMap && value) {
         completeMap[key as TipoServico | TipoAtividade] = value;
       }
     });
     
-    // Depois, adiciona as novas subatividades
+    // Adicionar as novas subatividades
     Object.entries(completeMap).forEach(([tipoServico, subatividades]) => {
       subatividades.forEach((subatividade) => {
         const subatividadeRef = doc(db, 'subatividades', subatividade.id);
@@ -104,7 +103,6 @@ export async function saveSubatividades(subatividadesMap: Partial<Record<TipoSer
         const dataToSave = {
           ...subatividade,
           tipoServico,
-          // Converter undefined para null (o Firestore aceita null)
           servicoTipo: subatividade.servicoTipo || null
         };
         batch.set(subatividadeRef, dataToSave);
@@ -112,6 +110,7 @@ export async function saveSubatividades(subatividadesMap: Partial<Record<TipoSer
     });
     
     await batch.commit();
+    console.log("Subatividades atualizadas com sucesso!");
   } catch (error) {
     console.error('Erro ao salvar subatividades:', error);
     throw error;
@@ -153,6 +152,29 @@ export async function deleteSubatividade(id: string): Promise<void> {
     await deleteDoc(subatividadeRef);
   } catch (error) {
     console.error('Erro ao excluir subatividade:', error);
+    throw error;
+  }
+}
+
+// Adicionar função para deletar completamente todas as subatividades
+export async function deleteAllSubatividades(): Promise<void> {
+  try {
+    const batch = writeBatch(db);
+    
+    // Buscar todas as subatividades
+    const subatividadesRef = collection(db, 'subatividades');
+    const snapshot = await getDocs(subatividadesRef);
+    
+    // Deletar cada uma delas
+    snapshot.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+    
+    // Commitar as alterações
+    await batch.commit();
+    console.log("Todas as subatividades foram removidas com sucesso!");
+  } catch (error) {
+    console.error('Erro ao deletar todas as subatividades:', error);
     throw error;
   }
 }

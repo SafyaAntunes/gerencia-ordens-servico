@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PlusCircle, Search, Building, Phone, Mail, FilterX, Car } from "lucide-react";
@@ -21,6 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Cliente } from "@/types/clientes";
 import { getClientes, saveCliente, deleteCliente } from "@/services/clienteService";
 import ClienteForm from "@/components/clientes/ClienteForm";
@@ -29,9 +31,21 @@ import ClienteDetalhes from "@/components/clientes/ClienteDetalhes";
 import { toast } from "sonner";
 import ExportButton from "@/components/common/ExportButton";
 import ImportButton from "@/components/common/ImportButton";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { OrdemServico } from "@/types/ordens";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface ClientesProps {
   onLogout?: () => void;
+}
+
+interface ClienteRanking {
+  clienteId: string;
+  nome: string;
+  email: string;
+  telefone?: string;
+  totalOrdens: number;
 }
 
 export default function Clientes({ onLogout }: ClientesProps) {
@@ -44,6 +58,9 @@ export default function Clientes({ onLogout }: ClientesProps) {
   const [isDetalhesOpen, setIsDetalhesOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clienteToDelete, setClienteToDelete] = useState<string | null>(null);
+  const [clientesRanking, setClientesRanking] = useState<ClienteRanking[]>([]);
+  const [loadingRanking, setLoadingRanking] = useState(true);
+  const [activeTab, setActiveTab] = useState("cadastro");
   
   const navigate = useNavigate();
 
@@ -51,6 +68,13 @@ export default function Clientes({ onLogout }: ClientesProps) {
   useEffect(() => {
     fetchClientes();
   }, []);
+  
+  // Fetch cliente ranking when active tab changes to ranking
+  useEffect(() => {
+    if (activeTab === "ranking" && clientesRanking.length === 0) {
+      fetchClientesRanking();
+    }
+  }, [activeTab]);
   
   const fetchClientes = async () => {
     setLoading(true);
@@ -62,6 +86,58 @@ export default function Clientes({ onLogout }: ClientesProps) {
       toast.error('Erro ao carregar clientes');
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const fetchClientesRanking = async () => {
+    setLoadingRanking(true);
+    try {
+      // 1. Buscar todas as ordens de serviço
+      const ordensRef = collection(db, 'ordens_servico');
+      const ordensSnapshot = await getDocs(ordensRef);
+      
+      // 2. Contar ordens por cliente
+      const clientesCountMap = new Map<string, number>();
+      const clientesInfoMap = new Map<string, { nome: string; email: string; telefone?: string }>();
+      
+      ordensSnapshot.forEach((doc) => {
+        const ordem = doc.data() as Partial<OrdemServico>;
+        
+        if (ordem.cliente && ordem.cliente.id) {
+          const clienteId = ordem.cliente.id;
+          clientesCountMap.set(clienteId, (clientesCountMap.get(clienteId) || 0) + 1);
+          
+          if (!clientesInfoMap.has(clienteId) && ordem.cliente) {
+            clientesInfoMap.set(clienteId, {
+              nome: ordem.cliente.nome || '',
+              email: ordem.cliente.email || '',
+              telefone: ordem.cliente.telefone
+            });
+          }
+        }
+      });
+      
+      // 3. Criar ranking
+      const ranking: ClienteRanking[] = Array.from(clientesCountMap.entries())
+        .map(([clienteId, totalOrdens]) => {
+          const info = clientesInfoMap.get(clienteId) || { nome: 'Cliente Desconhecido', email: '' };
+          
+          return {
+            clienteId,
+            nome: info.nome,
+            email: info.email,
+            telefone: info.telefone,
+            totalOrdens
+          };
+        })
+        .sort((a, b) => b.totalOrdens - a.totalOrdens);
+      
+      setClientesRanking(ranking);
+    } catch (error) {
+      console.error('Erro ao carregar ranking de clientes:', error);
+      toast.error('Erro ao carregar ranking de clientes');
+    } finally {
+      setLoadingRanking(false);
     }
   };
   
@@ -185,6 +261,118 @@ export default function Clientes({ onLogout }: ClientesProps) {
     return Array.isArray(data) && data.some(item => !!item.nome);
   };
   
+  const renderClientesList = () => {
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center py-16">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      );
+    }
+    
+    if (filteredClientes.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Building className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-medium">Nenhum cliente encontrado</h3>
+          <p className="text-sm text-muted-foreground mt-1 max-w-md">
+            {searchTerm ? (
+              <>
+                Não encontramos nenhum cliente com o termo <strong>"{searchTerm}"</strong>. Tente ajustar a busca ou cadastre um novo cliente.
+              </>
+            ) : (
+              "Comece adicionando seu primeiro cliente para poder criar ordens de serviço."
+            )}
+          </p>
+          <Button className="mt-4" onClick={handleOpenAddDialog}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Novo Cliente
+          </Button>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        {filteredClientes.map((cliente) => (
+          <ClienteCard
+            key={cliente.id}
+            cliente={cliente}
+            onView={handleOpenDetailsDialog}
+            onEdit={handleOpenEditDialog}
+            onDelete={handleOpenDeleteDialog}
+          />
+        ))}
+      </div>
+    );
+  };
+  
+  const renderRanking = () => {
+    if (loadingRanking) {
+      return (
+        <div className="flex items-center justify-center py-16">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      );
+    }
+    
+    if (clientesRanking.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Car className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-medium">Nenhuma OS registrada</h3>
+          <p className="text-sm text-muted-foreground mt-1 max-w-md">
+            Não encontramos ordens de serviço para gerar o ranking de clientes.
+          </p>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="space-y-4">
+        {clientesRanking.map((cliente, index) => (
+          <Card key={cliente.clienteId} className={index < 3 ? "border-primary" : ""}>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-start gap-4">
+                  <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
+                    index === 0 ? "bg-yellow-100 text-yellow-700" : 
+                    index === 1 ? "bg-gray-200 text-gray-700" : 
+                    index === 2 ? "bg-amber-100 text-amber-700" : 
+                    "bg-muted text-muted-foreground"
+                  } font-bold`}>
+                    {index + 1}
+                  </div>
+                  <div>
+                    <h3 className="font-medium">{cliente.nome}</h3>
+                    <div className="text-sm text-muted-foreground flex flex-col gap-1">
+                      <div className="flex items-center">
+                        <Mail className="h-3.5 w-3.5 mr-1" />
+                        {cliente.email}
+                      </div>
+                      {cliente.telefone && (
+                        <div className="flex items-center">
+                          <Phone className="h-3.5 w-3.5 mr-1" />
+                          {cliente.telefone}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold">{cliente.totalOrdens}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {cliente.totalOrdens === 1 ? "ordem" : "ordens"}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  };
+  
   return (
     <Layout onLogout={onLogout}>
       <div className="animate-fade-in space-y-6">
@@ -214,59 +402,43 @@ export default function Clientes({ onLogout }: ClientesProps) {
           </div>
         </div>
         
-        <div className="flex gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nome, email ou telefone..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+        <Tabs 
+          defaultValue="cadastro" 
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="w-full"
+        >
+          <TabsList className="grid grid-cols-2 mb-6">
+            <TabsTrigger value="cadastro">Clientes Cadastrados</TabsTrigger>
+            <TabsTrigger value="ranking">Ranking de Clientes</TabsTrigger>
+          </TabsList>
           
-          {searchTerm && (
-            <Button variant="outline" size="icon" onClick={() => setSearchTerm("")}>
-              <FilterX className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-        
-        {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        ) : filteredClientes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Building className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium">Nenhum cliente encontrado</h3>
-            <p className="text-sm text-muted-foreground mt-1 max-w-md">
-              {searchTerm ? (
-                <>
-                  Não encontramos nenhum cliente com o termo <strong>"{searchTerm}"</strong>. Tente ajustar a busca ou cadastre um novo cliente.
-                </>
-              ) : (
-                "Comece adicionando seu primeiro cliente para poder criar ordens de serviço."
+          <TabsContent value="cadastro" className="space-y-4">
+            <div className="flex gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nome, email ou telefone..."
+                  className="pl-10"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              
+              {searchTerm && (
+                <Button variant="outline" size="icon" onClick={() => setSearchTerm("")}>
+                  <FilterX className="h-4 w-4" />
+                </Button>
               )}
-            </p>
-            <Button className="mt-4" onClick={handleOpenAddDialog}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Novo Cliente
-            </Button>
-          </div>
-        ) : (
-          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredClientes.map((cliente) => (
-              <ClienteCard
-                key={cliente.id}
-                cliente={cliente}
-                onView={handleOpenDetailsDialog}
-                onEdit={handleOpenEditDialog}
-                onDelete={handleOpenDeleteDialog}
-              />
-            ))}
-          </div>
-        )}
+            </div>
+            
+            {renderClientesList()}
+          </TabsContent>
+          
+          <TabsContent value="ranking">
+            {renderRanking()}
+          </TabsContent>
+        </Tabs>
         
         {/* Add/Edit Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

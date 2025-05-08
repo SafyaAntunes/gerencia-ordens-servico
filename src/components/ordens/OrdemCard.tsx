@@ -72,6 +72,11 @@ export default function OrdemCard({
       )
     : 'Data não definida';
 
+  // Verificar se a ordem está atrasada
+  const hoje = new Date();
+  const isAtrasada = ordem.dataPrevistaEntrega < hoje && 
+                     !['finalizado', 'entregue'].includes(ordem.status);
+
   // Get status badge styling
   const getStatusBadgeVariant = () => {
     switch (ordem.status) {
@@ -128,9 +133,11 @@ export default function OrdemCard({
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onClick={handleCardClick}
-      className={`group hover:shadow-md transition-all duration-200 cursor-pointer ${isSelected ? 'ring-2 ring-primary' : ''}`}
+      className={`group hover:shadow-md transition-all duration-200 cursor-pointer ${isSelected ? 'ring-2 ring-primary' : ''} ${
+        isAtrasada ? 'bg-red-50 border-red-300' : ''
+      }`}
     >
-      <CardHeader className="pb-2 relative">
+      <CardHeader className={`pb-2 relative ${isAtrasada ? 'border-b border-red-200' : ''}`}>
         {isSelectable && (
           <div 
             className="absolute left-2 top-2 z-10"
@@ -140,7 +147,7 @@ export default function OrdemCard({
           </div>
         )}
         <div className="flex justify-between items-start">
-          <div className={`font-semibold text-lg ${isSelectable ? 'ml-8' : ''}`}>
+          <div className={`font-semibold text-lg ${isSelectable ? 'ml-8' : ''} ${isAtrasada ? 'text-red-700' : ''}`}>
             {ordem.nome}
           </div>
           <Badge variant={getStatusBadgeVariant()}>{getStatusText()}</Badge>
@@ -149,7 +156,7 @@ export default function OrdemCard({
       </CardHeader>
 
       <CardContent className="pb-2">
-        <div className="text-sm mb-2">
+        <div className={`text-sm mb-2 ${isAtrasada ? 'text-red-700 font-medium' : ''}`}>
           <span className="font-medium">Entrega:</span> {timeUntilDeadline}
         </div>
 
@@ -158,10 +165,10 @@ export default function OrdemCard({
           <span className="text-xs">{progressPercentage}%</span>
         </div>
         
-        <Progress value={progressPercentage} className="h-2" />
+        <Progress value={progressPercentage} className={`h-2 ${isAtrasada ? 'bg-red-200' : ''}`} />
       </CardContent>
       
-      <CardFooter className="pt-2 flex justify-between">
+      <CardFooter className={`pt-2 flex justify-between ${isAtrasada ? 'border-t border-red-200' : ''}`}>
         <Badge variant={getPrioridadeBadgeVariant()} className="capitalize">
           {getPrioridadeText()}
         </Badge>

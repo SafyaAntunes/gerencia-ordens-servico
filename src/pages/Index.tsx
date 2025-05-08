@@ -3,9 +3,54 @@ import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { FuncionariosDisponibilidade } from "@/components/funcionarios/FuncionariosDisponibilidade";
+import { AlertTriangle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { OrdemServico } from "@/types/ordens";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import MetricCard from "@/components/dashboard/MetricCard";
 
 const Index = () => {
   const navigate = useNavigate();
+  const [osAtrasadas, setOsAtrasadas] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    const fetchOsAtrasadas = async () => {
+      try {
+        const ordensRef = collection(db, 'ordens_servico');
+        const querySnapshot = await getDocs(ordensRef);
+        
+        const ordens: OrdemServico[] = [];
+        querySnapshot.forEach(doc => {
+          const data = doc.data();
+          ordens.push({
+            ...data,
+            id: doc.id,
+            dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
+          } as OrdemServico);
+        });
+        
+        const hoje = new Date();
+        const atrasadas = ordens.filter(ordem => {
+          return ordem.dataPrevistaEntrega < hoje && 
+                 !['finalizado', 'entregue'].includes(ordem.status);
+        });
+        
+        setOsAtrasadas(atrasadas.length);
+      } catch (error) {
+        console.error("Erro ao buscar ordens atrasadas:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchOsAtrasadas();
+  }, []);
+
+  const handleNavigateToAtrasadas = () => {
+    navigate("/ordens?filter=atrasadas");
+  };
 
   return (
     <Layout>
@@ -41,7 +86,20 @@ const Index = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <FuncionariosDisponibilidade />
           
-          {/* Aqui podem ser adicionados outros cards de monitoramento */}
+          {/* Card para OS's atrasadas usando o componente MetricCard */}
+          {!loading && (
+            <MetricCard
+              title="OS's Atrasadas"
+              value={osAtrasadas}
+              description={osAtrasadas > 0 
+                ? `Existem ${osAtrasadas} ${osAtrasadas === 1 ? 'ordem atrasada' : 'ordens atrasadas'} que necessitam de atenção imediata.` 
+                : "Não há ordens atrasadas no momento."}
+              icon={<AlertTriangle className="h-5 w-5" />}
+              variant={osAtrasadas > 0 ? "danger" : "success"}
+              onClick={handleNavigateToAtrasadas}
+              className={osAtrasadas > 0 ? "cursor-pointer" : ""}
+            />
+          )}
         </div>
       </div>
     </Layout>

@@ -1,47 +1,72 @@
 
-import { Servico, SubAtividade } from "@/types/ordens";
-import { Funcionario } from "@/types/funcionarios";
+import { TipoServico } from "@/types/ordens";
 
-export type ServicoStatus = "nao_iniciado" | "em_andamento" | "pausado" | "concluido";
+export type ServicoStatus = "concluido" | "em_andamento" | "pausado" | "nao_iniciado";
 
-export interface UseServicoTrackerProps {
-  servico: Servico;
-  ordemId: string;
-  funcionarioId: string;
-  funcionarioNome?: string;
-  etapa?: string;
-  onServicoStatusChange: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
-  onSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
+export interface PausaRegistro {
+  iniciado: number;
+  finalizado?: number; 
+  duracao?: number; // em segundos
+  motivo?: string;
 }
 
-export interface ServicoState {
-  isOpen: boolean;
+export interface ServicoTrackerState {
   isRunning: boolean;
   isPaused: boolean;
-  displayTime: number;
-  elapsedSeconds: number;
-  startTime: number | null;
-  pauseTime: number | null;
-  pausas: {inicio: number; fim?: number; motivo?: string}[];
-  funcionariosOptions: Funcionario[];
+  time: number;
+  concluido: boolean;
+  status: ServicoStatus;
+  pausas: PausaRegistro[];
+  progressPercentage: number;
+  tipoServico: TipoServico;
+  completedSubatividades: number;
+  totalSubatividades: number;
+}
+
+export interface TimerOperations {
+  start: () => void;
+  pause: () => void;
+  resume: () => void;
+  stop: () => void;
+  complete: () => void;
+  reset: () => void;
+}
+
+export interface ServicoTrackerProps {
+  servicoId: string;
+  tipoServico: TipoServico;
+  ordemId: string;
+  defaultTime?: number;
+  isConcluido?: boolean;
+  funcionarioId?: string;
+  pausas?: PausaRegistro[];
+  iniciado?: Date | null;
+  finalizado?: Date | null;
+  onStatusChange?: (status: ServicoStatus) => void;
 }
 
 export interface UseServicoTrackerResult {
+  state: ServicoTrackerState;
+  operations: TimerOperations;
+  registerPausa: (motivo?: string) => void;
+  finalizarPausa: () => void;
+  handleAssign: (funcionarioId: string) => void;
+  
+  // Additional properties used in ServicoTracker component
   isOpen: boolean;
-  setIsOpen: (value: boolean) => void;
-  funcionariosOptions: Funcionario[];
+  setIsOpen: (isOpen: boolean) => void;
+  funcionariosOptions: any[];
   temPermissao: boolean;
   isRunning: boolean;
   isPaused: boolean;
-  displayTime: number;
+  displayTime: string;
   servicoStatus: ServicoStatus;
   progressPercentage: number;
   completedSubatividades: number;
   totalSubatividades: number;
   tempoTotalEstimado: number;
-  subatividadesFiltradas: SubAtividade[];
-  pausas: {inicio: number; fim?: number; motivo?: string}[];
-  handleLoadFuncionarios: () => Promise<void>;
+  subatividadesFiltradas: any[];
+  handleLoadFuncionarios: () => void;
   handleSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
   handleStartClick: () => void;
   handlePause: (motivo?: string) => void;
@@ -49,4 +74,21 @@ export interface UseServicoTrackerResult {
   handleFinish: () => void;
   handleMarcarConcluido: () => void;
   handleReiniciarServico: () => void;
+  pausas: PausaRegistro[];
+  responsavelSelecionadoId: string;
+  setResponsavelSelecionadoId: (id: string) => void;
+  handleSaveResponsavel: () => Promise<void>;
+  isSavingResponsavel: boolean;
+  lastSavedResponsavelId: string;
+  lastSavedResponsavelNome: string;
+}
+
+export interface UseServicoTrackerProps {
+  servico: any;
+  ordemId: string;
+  funcionarioId?: string;
+  funcionarioNome?: string;
+  etapa?: string;
+  onServicoStatusChange: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
+  onSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
 }

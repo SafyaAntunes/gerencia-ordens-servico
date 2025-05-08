@@ -338,10 +338,38 @@ export default function OrdemForm({
   useEffect(() => {
     const tiposList = form.watch("servicosTipos") || [];
     
-    tiposList.forEach((tipo) => {
-      if (!servicosSubatividades[tipo]) {
-        const subatividadesList = SUBATIVIDADES[tipo as TipoServico] || [];
-        const initialSubatividades = subatividadesList.map(nome => ({
+    const loadSubatividades = async (tipo: TipoServico) => {
+      try {
+        // Carregar subatividades do banco de dados
+        const subatividadesList = await getSubatividadesByTipo(tipo);
+        if (subatividadesList && subatividadesList.length > 0) {
+          // Use as subatividades do banco de dados
+          setServicosSubatividades(prev => ({
+            ...prev,
+            [tipo]: subatividadesList.map(sub => ({
+              ...sub,
+              selecionada: false
+            }))
+          }));
+        } else {
+          // Se não houver subatividades no banco, use os padrões como fallback
+          const defaultSubs = SUBATIVIDADES[tipo] || [];
+          const defaultSubatividades = defaultSubs.map(nome => ({
+            id: uuidv4(),
+            nome,
+            selecionada: false
+          }));
+          
+          setServicosSubatividades(prev => ({
+            ...prev,
+            [tipo]: defaultSubatividades
+          }));
+        }
+      } catch (error) {
+        console.error(`Erro ao carregar subatividades para ${tipo}:`, error);
+        // Em caso de erro, ainda use os padrões
+        const defaultSubs = SUBATIVIDADES[tipo] || [];
+        const defaultSubatividades = defaultSubs.map(nome => ({
           id: uuidv4(),
           nome,
           selecionada: false
@@ -349,11 +377,19 @@ export default function OrdemForm({
         
         setServicosSubatividades(prev => ({
           ...prev,
-          [tipo]: initialSubatividades
+          [tipo]: defaultSubatividades
         }));
+      }
+    };
+    
+    // Para cada tipo de serviço selecionado
+    tiposList.forEach((tipo) => {
+      if (!servicosSubatividades[tipo]) {
+        loadSubatividades(tipo as TipoServico);
       }
     });
     
+    // Remover tipos não selecionados
     Object.keys(servicosSubatividades).forEach((tipo) => {
       if (!tiposList.includes(tipo)) {
         setServicosSubatividades(prev => {
