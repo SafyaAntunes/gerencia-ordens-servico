@@ -68,10 +68,17 @@ const validarDatas = (obj: any): any => {
         resultado[key] = isNaN((value as Date).getTime()) ? new Date() : value;
       } else if (value) {
         // Tentar converter para Date se não for undefined/null
-        try {
-          resultado[key] = new Date(value);
-        } catch (e) {
-          console.error(`Erro ao converter ${key}:`, e);
+        // Verificar o tipo antes de converter para Date
+        if (typeof value === 'string' || typeof value === 'number' || value instanceof Date) {
+          try {
+            resultado[key] = new Date(value);
+          } catch (e) {
+            console.error(`Erro ao converter ${key}:`, e);
+            resultado[key] = new Date();
+          }
+        } else {
+          // Se não for um tipo convertível para Date, usar a data atual
+          console.warn(`Valor não conversível para Date (${key}):`, value);
           resultado[key] = new Date();
         }
       }

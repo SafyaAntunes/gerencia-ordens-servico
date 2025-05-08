@@ -141,6 +141,9 @@ export const useOrdemFetch = (id: string | undefined) => {
         const ordemFormatada: OrdemServico = {
           ...data,
           id: docSnap.id,
+          nome: data.nome || "", // Garantir que nome existe
+          prioridade: data.prioridade || "media", // Valor padrão para prioridade
+          status: data.status || "fabricacao", // Valor padrão para status
           cliente: clienteData,
           dataAbertura,
           dataPrevistaEntrega,
