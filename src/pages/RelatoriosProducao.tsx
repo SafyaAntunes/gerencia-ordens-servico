@@ -1,241 +1,118 @@
 
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import React, { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Layout from "@/components/layout/Layout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Search, FileBarChart, Wrench, BarChart, ActivitySquare } from "lucide-react";
+import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
-import ptBR from "date-fns/locale/pt-BR";
-import { cn } from "@/lib/utils";
+import { ptBR } from "date-fns/locale";
+import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Import types from the file
-import type {
-  Cliente,
-  Motor,
-  TipoServico,
-  TipoAtividade,
-  SubAtividade,
-  Servico,
-  StatusOS,
-  EtapaOS,
-  Prioridade,
-  TempoRegistro,
-  FotoBase64,
-  PausaRegistro,
-  OrdemServico,
-} from "@/types/ordens";
+// Component for displaying production reports
+export default function RelatoriosProducao() {
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: new Date(),
+    to: undefined
+  });
+  
+  const [activeTab, setActiveTab] = useState("funcionarios");
 
-interface RelatoriosProducaoProps {
-  onLogout: () => void;
-}
-
-const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
-  const [selectedPeriod, setSelectedPeriod] = useState<Date | undefined>(undefined);
-  const [activeTab, setActiveTab] = useState("ordens_por_status");
+  const handleGenerateReport = () => {
+    console.log("Generating report for date range:", dateRange);
+    // Here you'd implement the logic to generate and display the report
+  };
 
   return (
-    <Layout onLogout={onLogout}>
-      <div className="p-6">
-        <h1 className="text-2xl font-bold mb-6">Relatórios de Produção</h1>
+    <Layout>
+      <div className="container mx-auto py-6 space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Relatórios de Produção</h1>
+        </div>
         
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold">Filtros e Pesquisa</h2>
-              <p className="text-sm text-muted-foreground">Refine os dados do relatório usando os filtros abaixo</p>
-              
-              <div className="flex flex-col sm:flex-row gap-4 items-end">
-                <div className="w-full sm:max-w-[200px]">
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Número da OS" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="numero_os">Número da OS</SelectItem>
-                      <SelectItem value="nome_cliente">Nome do Cliente</SelectItem>
-                      <SelectItem value="tipo_servico">Tipo de Serviço</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="flex flex-1 items-center gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="search"
-                      placeholder="Pesquisar por número da OS..."
-                      className="pl-8"
-                    />
-                  </div>
-                  <Button>Buscar</Button>
+        <Card>
+          <CardHeader>
+            <CardTitle>Filtros</CardTitle>
+            <CardDescription>Defina o período para gerar relatórios de produção.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6">
+              <div>
+                <Label htmlFor="date-range">Período</Label>
+                <div className="mt-2 border rounded-md p-4">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={2}
+                    locale={ptBR}
+                  />
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="flex justify-between items-center">
                 <div>
-                  <label className="text-sm font-medium mb-1 block">Tipo de Serviço</label>
-                  <Select>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Todos os tipos" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todos">Todos os tipos</SelectItem>
-                      <SelectItem value="bloco">Bloco</SelectItem>
-                      <SelectItem value="biela">Biela</SelectItem>
-                      <SelectItem value="cabecote">Cabeçote</SelectItem>
-                      <SelectItem value="virabrequim">Virabrequim</SelectItem>
-                      <SelectItem value="eixo_comando">Eixo de Comando</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {dateRange?.from && (
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-medium">Período selecionado:</span>{" "}
+                      {format(dateRange.from, "dd/MM/yyyy")}
+                      {dateRange.to && ` - ${format(dateRange.to, "dd/MM/yyyy")}`}
+                    </p>
+                  )}
                 </div>
-                
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Responsável</label>
-                  <Select>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Todos os funcionários" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todos">Todos os funcionários</SelectItem>
-                      <SelectItem value="joao">João Silva</SelectItem>
-                      <SelectItem value="maria">Maria Oliveira</SelectItem>
-                      <SelectItem value="carlos">Carlos Santos</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Período</label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full justify-start text-left",
-                          !selectedPeriod && "text-muted-foreground"
-                        )}
-                      >
-                        {selectedPeriod ? (
-                          format(selectedPeriod, "dd 'de' MMMM 'de' yyyy", {
-                            locale: ptBR,
-                          })
-                        ) : (
-                          "Selecione um período"
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={selectedPeriod}
-                        onSelect={setSelectedPeriod}
-                        initialFocus
-                        locale={ptBR}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                <Button onClick={handleGenerateReport}>Gerar Relatório</Button>
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center space-x-2">
-                <Wrench className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Total de Serviços</p>
-                  <h3 className="text-2xl font-bold">0</h3>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center space-x-2">
-                <FileBarChart className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Total de Ordens</p>
-                  <h3 className="text-2xl font-bold">0</h3>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center space-x-2">
-                <ActivitySquare className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Ordens Finalizadas</p>
-                  <h3 className="text-2xl font-bold">0</h3>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center space-x-2">
-                <BarChart className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Taxa de Finalização</p>
-                  <h3 className="text-2xl font-bold">0.00%</h3>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        
-        <Tabs defaultValue="ordens_por_status" value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="mb-4">
-            <TabsTrigger value="ordens_por_status">Ordens por Status</TabsTrigger>
-            <TabsTrigger value="servicos_por_tipo">Serviços por Tipo</TabsTrigger>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="w-full">
+            <TabsTrigger value="funcionarios" className="flex-1">Funcionários</TabsTrigger>
+            <TabsTrigger value="servicos" className="flex-1">Serviços</TabsTrigger>
+            <TabsTrigger value="clientes" className="flex-1">Clientes</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="ordens_por_status">
+          <TabsContent value="funcionarios" className="space-y-4 mt-6">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Ordens por Status</CardTitle>
-                  <p className="text-sm text-muted-foreground">Distribuição das ordens de serviço por status</p>
-                </div>
-                <Button variant="outline" size="sm">
-                  Filtrar por Período
-                </Button>
+              <CardHeader>
+                <CardTitle>Produtividade por Funcionário</CardTitle>
+                <CardDescription>Análise de produtividade por funcionário no período selecionado.</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[400px] flex items-center justify-center text-muted-foreground">
-                  <p>Os dados do gráfico serão exibidos aqui</p>
+                <div className="h-96 flex items-center justify-center border border-dashed rounded-md">
+                  <p className="text-muted-foreground">Selecione um período para visualizar os dados.</p>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
           
-          <TabsContent value="servicos_por_tipo">
+          <TabsContent value="servicos" className="space-y-4 mt-6">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Serviços por Tipo</CardTitle>
-                  <p className="text-sm text-muted-foreground">Distribuição dos serviços por tipo</p>
-                </div>
-                <Button variant="outline" size="sm">
-                  Filtrar por Período
-                </Button>
+              <CardHeader>
+                <CardTitle>Análise de Serviços</CardTitle>
+                <CardDescription>Distribuição de serviços e tempos médios de execução.</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[400px] flex items-center justify-center text-muted-foreground">
-                  <p>Os dados do gráfico serão exibidos aqui</p>
+                <div className="h-96 flex items-center justify-center border border-dashed rounded-md">
+                  <p className="text-muted-foreground">Selecione um período para visualizar os dados.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="clientes" className="space-y-4 mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Visão por Cliente</CardTitle>
+                <CardDescription>Ordens de serviço e faturamento por cliente.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-96 flex items-center justify-center border border-dashed rounded-md">
+                  <p className="text-muted-foreground">Selecione um período para visualizar os dados.</p>
                 </div>
               </CardContent>
             </Card>
@@ -244,6 +121,4 @@ const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
       </div>
     </Layout>
   );
-};
-
-export default RelatoriosProducao;
+}

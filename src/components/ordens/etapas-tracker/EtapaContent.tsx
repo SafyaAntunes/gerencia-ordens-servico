@@ -135,11 +135,11 @@ export function EtapaContent({
     );
   }
 
-  // Verificar se estamos na etapa de lavagem, inspeção inicial ou final e mostrar os serviços correspondentes
+  // For lavagem, inspecao_inicial, inspecao_final - show only the service directly, no extra cards
   else if (selectedEtapa === "lavagem" || selectedEtapa === "inspecao_inicial" || selectedEtapa === "inspecao_final") {
     const servicos = getServicosParaEtapa(selectedEtapa);
     
-    // Se existem serviços específicos para essa etapa, mostrar eles diretamente
+    // Se existem serviços específicos para essa etapa, mostrar eles diretamente sem o card duplicado
     if (servicos && servicos.length > 0) {
       return (
         <div>
@@ -160,7 +160,7 @@ export function EtapaContent({
       );
     }
     
-    // Se não, mostrar por tipo de serviço como antes
+    // Fallback to old behavior if no specific services (shouldn't happen)
     const tiposParaEtapa = getTiposParaEtapa(selectedEtapa);
     
     return (
@@ -173,7 +173,7 @@ export function EtapaContent({
             etapaNome={getEtapaTitulo(selectedEtapa, tipo)}
             funcionarioId={funcionario?.id || ""}
             funcionarioNome={funcionario?.nome}
-            servicos={[]} // No services for inspections and washing
+            servicos={[]} 
             etapaInfo={getEtapaInfo(selectedEtapa, tipo)}
             servicoTipo={tipo}
             onEtapaStatusChange={onEtapaStatusChange}

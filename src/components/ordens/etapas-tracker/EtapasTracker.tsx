@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -23,7 +22,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
   const [selectedEtapa, setSelectedEtapa] = useState<EtapaOS | null>(null);
   const [selectedServicoTipo, setSelectedServicoTipo] = useState<TipoServico | null>(null);
   const { funcionario } = useAuth();
-  const { progressoTotal, calcularProgressoTotal, atualizarProgressoNoDB } = useEtapasProgress();
+  const { progressoTotal, calcularProgressoTotal } = useEtapasProgress();
 
   const verificarEtapasDisponiveis = () => {
     const temMontagem = ordem.servicos.some(s => s.tipo === 'montagem');
@@ -62,7 +61,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     }
     setSelectedServicoTipo(null);
     calcularProgressoTotal(ordem);
-  }, [ordem, funcionario, calcularProgressoTotal]);
+  }, [ordem, funcionario, calcularProgressoTotal, selectedEtapa]);
 
   const handleServicoStatusChange = async (
     servicoTipo: TipoServico, 
@@ -80,6 +79,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     }
     
     try {
+      // Important: Only update the status of the specific service, not others
       const servicosAtualizados = ordem.servicos.map(servico => {
         if (servico.tipo === servicoTipo) {
           let subatividades = servico.subatividades;
@@ -101,10 +101,10 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
             dataConclusao: concluido ? new Date() : undefined
           };
         }
+        // Important: Return other services unchanged
         return servico;
       });
       
-      // Corrigir o caminho do documento para "ordens_servico" ao invés de "ordens"
       const ordemRef = doc(db, "ordens_servico", ordem.id);
       await updateDoc(ordemRef, { servicos: servicosAtualizados });
       
