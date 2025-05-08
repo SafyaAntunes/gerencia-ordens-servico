@@ -16,7 +16,7 @@ export const ServicoSubatividades = ({
   onChange,
   disabled = false
 }: ServicoSubatividadesProps) => {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   
   const handleToggle = (id: string, checked: boolean) => {
     const updatedSubatividades = subatividades.map(sub => {

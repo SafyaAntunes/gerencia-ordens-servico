@@ -51,4 +51,44 @@ export interface UseServicoTrackerResult {
   registerPausa: (motivo?: string) => void;
   finalizarPausa: () => void;
   handleAssign: (funcionarioId: string) => void;
+  
+  // Additional properties used in ServicoTracker component
+  isOpen: boolean;
+  setIsOpen: (isOpen: boolean) => void;
+  funcionariosOptions: any[];
+  temPermissao: boolean;
+  isRunning: boolean;
+  isPaused: boolean;
+  displayTime: string;
+  servicoStatus: ServicoStatus;
+  progressPercentage: number;
+  completedSubatividades: number;
+  totalSubatividades: number;
+  tempoTotalEstimado: number;
+  subatividadesFiltradas: any[];
+  handleLoadFuncionarios: () => void;
+  handleSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
+  handleStartClick: () => void;
+  handlePause: (motivo?: string) => void;
+  handleResume: () => void;
+  handleFinish: () => void;
+  handleMarcarConcluido: () => void;
+  handleReiniciarServico: () => void;
+  pausas: PausaRegistro[];
+  responsavelSelecionadoId: string;
+  setResponsavelSelecionadoId: (id: string) => void;
+  handleSaveResponsavel: () => Promise<void>;
+  isSavingResponsavel: boolean;
+  lastSavedResponsavelId: string;
+  lastSavedResponsavelNome: string;
+}
+
+export interface UseServicoTrackerProps {
+  servico: any;
+  ordemId: string;
+  funcionarioId?: string;
+  funcionarioNome?: string;
+  etapa?: string;
+  onServicoStatusChange: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
+  onSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
 }
