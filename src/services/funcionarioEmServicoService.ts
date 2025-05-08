@@ -102,15 +102,24 @@ export async function marcarFuncionarioDisponivel(
     
     // Encontrar o registro correspondente para esta atividade
     const registrosRef = collection(db, 'registros_servico');
-    const q = query(
+    
+    // Construir a query base
+    let q = query(
       registrosRef, 
       where('funcionarioId', '==', funcionarioId),
       where('ordemId', '==', ordemId),
       where('etapa', '==', etapa)
     );
     
+    // Se tivermos um servicoTipo, criar uma nova query incluindo esse filtro
     if (servicoTipo) {
-      q.where('servicoTipo', '==', servicoTipo);
+      q = query(
+        registrosRef,
+        where('funcionarioId', '==', funcionarioId),
+        where('ordemId', '==', ordemId),
+        where('etapa', '==', etapa),
+        where('servicoTipo', '==', servicoTipo)
+      );
     }
     
     const registrosSnapshot = await getDocs(q);
@@ -217,3 +226,4 @@ export async function forcarLiberacaoFuncionario(funcionarioId: string): Promise
     return false;
   }
 }
+
