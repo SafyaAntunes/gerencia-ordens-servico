@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { db } from "@/lib/firebase";
-import { doc, updateDoc, Timestamp } from "firebase/firestore";
+import { doc, updateDoc, Timestamp, getDoc } from "firebase/firestore";
 import { OrdemServico } from "@/types/ordens";
 import { toast } from "sonner";
 import { SetOrdemFunction } from "./types";
@@ -68,6 +68,26 @@ export const useOrdemUpdate = (
         });
       };
       
+      // Buscar informações atualizadas do cliente, se o cliente foi alterado
+      let clienteData = { ...ordem.cliente };
+      if (values.clienteId !== ordem.cliente?.id) {
+        try {
+          const clienteDoc = await getDoc(doc(db, "clientes", values.clienteId));
+          if (clienteDoc.exists()) {
+            const clienteInfo = clienteDoc.data();
+            clienteData = {
+              id: values.clienteId,
+              nome: clienteInfo.nome || "Cliente sem nome",
+              telefone: clienteInfo.telefone || "",
+              email: clienteInfo.email || "",
+              ...clienteInfo
+            };
+          }
+        } catch (error) {
+          console.error("Erro ao buscar informações do cliente:", error);
+        }
+      }
+      
       // Convert JavaScript Date objects to Firestore Timestamp objects
       const dataAbertura = values.dataAbertura instanceof Date 
         ? Timestamp.fromDate(values.dataAbertura) 
@@ -77,23 +97,20 @@ export const useOrdemUpdate = (
         ? Timestamp.fromDate(values.dataPrevistaEntrega) 
         : Timestamp.now();
       
-      // Prepare update object
-      const updatedOrder: any = {
+      // Prepare update object - Use Record<string, any> to avoid type constraints
+      const updateData: Record<string, any> = {
         nome: values.nome,
-        cliente: {
-          ...ordem.cliente,
-          id: values.clienteId || ordem.cliente?.id,
-        },
-        dataAbertura,
-        dataPrevistaEntrega,
+        cliente: clienteData,
+        dataAbertura: dataAbertura,
+        dataPrevistaEntrega: dataPrevistaEntrega,
         prioridade: values.prioridade,
         motorId: values.motorId,
         servicos: preserveExistingSubactivities(ordem.servicos, values.servicosTipos),
       };
       
       // Initialize fotosEntrada and fotosSaida arrays if they don't exist
-      updatedOrder.fotosEntrada = [];
-      updatedOrder.fotosSaida = [];
+      updateData.fotosEntrada = [];
+      updateData.fotosSaida = [];
       
       // Atualizar fotos se necessário
       if (values.fotosEntrada && Array.isArray(values.fotosEntrada)) {
@@ -111,7 +128,7 @@ export const useOrdemUpdate = (
           }
         }
         
-        updatedOrder.fotosEntrada = [...existingPhotos, ...uploadedUrls];
+        updateData.fotosEntrada = [...existingPhotos, ...uploadedUrls];
       }
       
       if (values.fotosSaida && Array.isArray(values.fotosSaida)) {
@@ -129,17 +146,24 @@ export const useOrdemUpdate = (
           }
         }
         
-        updatedOrder.fotosSaida = [...existingPhotos, ...uploadedUrls];
+        updateData.fotosSaida = [...existingPhotos, ...uploadedUrls];
       }
       
       // Atualizar no Firestore
       const orderRef = doc(db, "ordens_servico", id);
-      await updateDoc(orderRef, updatedOrder);
+      await updateDoc(orderRef, updateData);
+      
+      // Preparar objeto para atualização local com conversão de Timestamp para Date
+      const localUpdateData = {
+        ...updateData,
+        dataAbertura: values.dataAbertura instanceof Date ? values.dataAbertura : new Date(),
+        dataPrevistaEntrega: values.dataPrevistaEntrega instanceof Date ? values.dataPrevistaEntrega : new Date(),
+      };
       
       // Atualiza o estado local
       setOrdem((prev) => {
         if (!prev) return null;
-        return { ...prev, ...updatedOrder } as OrdemServico;
+        return { ...prev, ...localUpdateData } as OrdemServico;
       });
       
       // Buscar detalhes de motor se houver mudança
