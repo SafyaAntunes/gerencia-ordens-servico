@@ -29,6 +29,5 @@ export default function FuncionarioSelector({
 }: FuncionarioSelectorProps) {
   // Este componente foi configurado para não renderizar nada, já que
   // a funcionalidade de selecionar um funcionário responsável foi removida.
-  // Mantemos o componente para evitar quebrar referências em outros lugares.
   return null;
 }

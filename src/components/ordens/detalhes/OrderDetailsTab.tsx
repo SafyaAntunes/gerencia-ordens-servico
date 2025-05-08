@@ -31,7 +31,11 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
     // 1. Verificar tempos nas etapas
     Object.entries(ordem.etapasAndamento || {}).forEach(([etapa, dadosEtapa]) => {
       if (dadosEtapa.tempoEstimado) {
-        const etapaKey = etapa.split('_')[0]; // Remover sufixo específico do serviço
+        // Extrair a etapa base (lavagem, inspecao_inicial, etc.) de chaves como "inspecao_inicial_bloco"
+        const etapaKey = etapa.split('_')[0] === 'inspecao' ? 
+          `inspecao_${etapa.split('_')[1]}` : // Para casos como inspecao_inicial ou inspecao_final
+          etapa.split('_')[0]; // Para outros casos
+        
         const tempoEstimadoMs = dadosEtapa.tempoEstimado * 60 * 60 * 1000; // horas para ms
         
         tempos[etapaKey] = (tempos[etapaKey] || 0) + tempoEstimadoMs;
@@ -54,7 +58,21 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
       }
     });
     
-    // 3. Usar o tempo total estimado armazenado se disponível
+    // 3. Verificar tempos nas etapas de inspeção específicas (inspecao_inicial_bloco, etc)
+    Object.entries(ordem.etapasAndamento || {}).forEach(([etapa, dadosEtapa]) => {
+      // Se a chave contém "inspecao_inicial_" ou "inspecao_final_"
+      if ((etapa.startsWith("inspecao_inicial_") || etapa.startsWith("inspecao_final_")) && dadosEtapa.tempoEstimado) {
+        // Extrair a etapa base (inspecao_inicial ou inspecao_final)
+        const etapaBase = etapa.startsWith("inspecao_inicial_") ? "inspecao_inicial" : "inspecao_final";
+        
+        const tempoEstimadoMs = dadosEtapa.tempoEstimado * 60 * 60 * 1000; // horas para ms
+        
+        tempos[etapaBase] = (tempos[etapaBase] || 0) + tempoEstimadoMs;
+        total += tempoEstimadoMs;
+      }
+    });
+    
+    // 4. Usar o tempo total estimado armazenado se disponível
     if (ordem.tempoTotalEstimado && ordem.tempoTotalEstimado > 0) {
       total = ordem.tempoTotalEstimado;
     }

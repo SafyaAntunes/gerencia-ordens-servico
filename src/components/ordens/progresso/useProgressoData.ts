@@ -245,9 +245,17 @@ export function useProgressoData(ordem: OrdemServico) {
     });
     
     // Adicionar tempo estimado das etapas de lavagem, inspeção inicial e inspeção final
-    Object.entries(ordem.etapasAndamento).forEach(([etapa, dadosEtapa]) => {
-      if (['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa) && dadosEtapa.tempoEstimado) {
-        total += dadosEtapa.tempoEstimado * 60 * 60 * 1000; // Converter horas para ms
+    // Considerando todas as etapas, incluindo as específicas de cada tipo de serviço
+    Object.entries(ordem.etapasAndamento || {}).forEach(([etapa, dadosEtapa]) => {
+      // Verificar etapas gerais e específicas
+      if (dadosEtapa.tempoEstimado) {
+        if (etapa.startsWith('lavagem') || 
+            etapa.startsWith('inspecao_inicial') || 
+            etapa.startsWith('inspecao_final') || 
+            etapa === 'montagem' ||
+            etapa === 'dinamometro') {
+          total += dadosEtapa.tempoEstimado * 60 * 60 * 1000; // Converter horas para ms
+        }
       }
     });
     

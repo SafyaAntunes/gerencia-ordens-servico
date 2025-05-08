@@ -56,6 +56,10 @@ export const useOrdemUpdate = (
               descricao: values.servicosDescricoes?.[tipo] || "",
               concluido: existingServico.concluido || false,
               subatividades: subatividadesPreservadas,
+              // Removemos as referências ao funcionário responsável
+              funcionarioId: undefined,
+              funcionarioNome: undefined,
+              dataConclusao: existingServico.dataConclusao
             };
           }
           
@@ -108,7 +112,7 @@ export const useOrdemUpdate = (
         servicos: preserveExistingSubactivities(ordem.servicos, values.servicosTipos),
       };
       
-      // Remover os funcionários das etapas
+      // Remover os funcionários responsáveis de todas as etapas
       if (ordem.etapasAndamento) {
         const etapasAtualizadas = { ...ordem.etapasAndamento };
         
