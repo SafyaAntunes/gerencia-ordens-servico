@@ -42,7 +42,7 @@ function App() {
         <Route path="/configuracoes/subatividades" element={<SubatividadesConfig />} />
         <Route path="/configuracoes/servicos" element={<ServiceTypesConfig />} />
         <Route path="/configuracoes/subatividades/reset" element={<SubatividadesReset />} />
-        <Route path="/configuracoes/atividades" element={<ConfiguracoesAtividades tipoAtividade="retifica" titulo="Configuração de Tempos de Atividade" descricao="Configure os tempos padrão para cada tipo de atividade" />} />
+        <Route path="/configuracoes/atividades" element={<ConfiguracoesAtividades tipoAtividade="lavagem" titulo="Configuração de Tempos de Atividade" descricao="Configure os tempos padrão para cada tipo de atividade" />} />
         <Route path="/funcionarios" element={<Funcionarios />} />
         <Route path="/agenda" element={<Agenda />} />
         <Route path="/relatorios" element={<Relatorios />} />

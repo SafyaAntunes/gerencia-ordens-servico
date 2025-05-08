@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -41,7 +40,10 @@ export type TipoServico =
 export type TipoAtividade =
   | 'lavagem'
   | 'inspecao_inicial'
-  | 'inspecao_final';
+  | 'inspecao_final'
+  | 'retifica'        // Adicionando este tipo para corresponder ao uso em App.tsx
+  | 'montagem'        // Adicionando outros tipos necessários
+  | 'dinamometro';    // Adicionando outros tipos necessários
 
 export type SubAtividade = {
   id: string;

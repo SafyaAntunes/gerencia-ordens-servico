@@ -198,23 +198,28 @@ export default function ServiceTypesConfig({ onLogout }: ServiceTypeConfigProps)
       
       // Save to Firestore
       if (editingServiceType) {
-        await updateDoc(doc(db, "tipos_servico", serviceTypeData.id), serviceTypeData);
+        await updateDoc(doc(db, "tipos_servico", serviceTypeData.id), {
+          nome: serviceTypeData.nome,
+          etapa: serviceTypeData.etapa,
+          codigo: serviceTypeData.codigo,
+          descricao: serviceTypeData.descricao,
+          ativo: serviceTypeData.ativo
+        });
+        
         setServiceTypes(prev => prev.map(st => 
           st.id === serviceTypeData.id ? serviceTypeData : st
         ));
         toast.success("Tipo de serviço atualizado com sucesso");
       } else {
-        // Fixed: Convert object to simple key/value pairs before sending to Firestore
-        const plainObject = {
+        await setDoc(doc(db, "tipos_servico", serviceTypeData.id), {
           id: serviceTypeData.id,
           nome: serviceTypeData.nome,
           etapa: serviceTypeData.etapa,
           codigo: serviceTypeData.codigo,
           descricao: serviceTypeData.descricao,
           ativo: serviceTypeData.ativo
-        };
+        });
         
-        await setDoc(doc(db, "tipos_servico", serviceTypeData.id), plainObject);
         setServiceTypes(prev => [...prev, serviceTypeData]);
         toast.success("Tipo de serviço criado com sucesso");
       }
