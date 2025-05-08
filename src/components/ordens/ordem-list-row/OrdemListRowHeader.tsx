@@ -44,10 +44,7 @@ export default function OrdemListRowHeader({
     <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-3 border-b">
       <div className="md:col-span-2">
         <div className="flex flex-col">
-          <div className="text-lg font-medium">
-            {ordem.id && <span className="mr-2 text-sm font-bold bg-primary/10 px-2 py-0.5 rounded-md">{ordem.id}</span>}
-            {ordem.nome}
-          </div>
+          <div className="text-lg font-medium">{ordem.nome}</div>
           <div className="text-sm text-muted-foreground">{ordem.cliente?.nome}</div>
         </div>
       </div>
