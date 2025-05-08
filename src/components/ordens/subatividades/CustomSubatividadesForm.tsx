@@ -8,15 +8,23 @@ interface CustomSubatividadesFormProps {
   onAdd: (nome: string) => void;
   onCancel: () => void;
   disabled: boolean;
+  customSubatividade: string;
+  isAddingCustom: boolean;
+  setCustomSubatividade: React.Dispatch<React.SetStateAction<string>>;
+  setIsAddingCustom: React.Dispatch<React.SetStateAction<boolean>>;
+  onAddCustom: () => void;
 }
 
 export function CustomSubatividadesForm({
   onAdd,
   onCancel,
-  disabled
+  disabled,
+  customSubatividade,
+  isAddingCustom,
+  setCustomSubatividade,
+  setIsAddingCustom,
+  onAddCustom
 }: CustomSubatividadesFormProps) {
-  const [customSubatividade, setCustomSubatividade] = useState("");
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && customSubatividade.trim()) {
       e.preventDefault();

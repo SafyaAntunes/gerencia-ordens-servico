@@ -8,16 +8,22 @@ import { Button } from "@/components/ui/button";
 
 interface CustomSubatividadesListProps {
   subatividades: SubAtividade[];
-  onRemove: (id: string) => void;
+  presetSubatividades: SubAtividade[];
+  onRemove?: (id: string) => void;
   onToggle: (id: any, checked: any) => void;
-  disabled: boolean;
+  onTempoEstimadoChange: (id: string, horas: number) => void;
+  disabled?: boolean;
+  editable: boolean;
 }
 
 export function CustomSubatividadesList({
   subatividades,
+  presetSubatividades,
   onRemove,
   onToggle,
-  disabled
+  onTempoEstimadoChange,
+  disabled = false,
+  editable = true
 }: CustomSubatividadesListProps) {
   const customSubatividades = subatividades.filter(sub => sub.id.startsWith('custom-'));
 
@@ -37,7 +43,7 @@ export function CustomSubatividadesList({
               onCheckedChange={(checked) =>
                 onToggle(sub.id, checked === true)
               }
-              disabled={disabled}
+              disabled={disabled || !editable}
               className="cursor-pointer"
             />
             <Label
@@ -48,14 +54,16 @@ export function CustomSubatividadesList({
             </Label>
           </div>
           
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onRemove(sub.id)}
-            disabled={disabled}
-          >
-            <Trash className="h-4 w-4 text-destructive" />
-          </Button>
+          {onRemove && editable && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onRemove(sub.id)}
+              disabled={disabled || !editable}
+            >
+              <Trash className="h-4 w-4 text-destructive" />
+            </Button>
+          )}
         </div>
       ))}
     </div>
