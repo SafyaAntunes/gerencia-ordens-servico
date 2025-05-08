@@ -67,6 +67,13 @@ export const useOrdemFetch = (id: string | undefined) => {
           cliente: clienteData,
           dataAbertura: data.dataAbertura?.toDate() || new Date(),
           dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
+          // Garantir que os serviços tenham as subatividades carregadas corretamente
+          servicos: data.servicos?.map((servico: any) => ({
+            ...servico,
+            subatividades: Array.isArray(servico.subatividades) 
+              ? servico.subatividades 
+              : []
+          })) || [],
         } as OrdemServico;
         
         setOrdem(ordemFormatada);

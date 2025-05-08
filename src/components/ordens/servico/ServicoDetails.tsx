@@ -90,7 +90,10 @@ export default function ServicoDetails({
                     </div>
                     <Badge 
                       variant="outline"
-                      className={subatividade.concluida ? "text-green-600 border-green-600" : "text-muted-foreground"}
+                      className={cn(
+                        subatividade.concluida ? "text-green-600 border-green-600" : "text-muted-foreground",
+                        "select-none" // Evita seleção de texto ao clicar
+                      )}
                     >
                       {subatividade.nome}
                     </Badge>
