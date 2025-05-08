@@ -50,7 +50,7 @@ export function useServicoTracker({
     isEtapaConcluida: servico.concluido
   });
 
-  // Convert timer display time to string to match the expected type
+  // Use the timer display time directly as number
   const displayTime = timerDisplayTime;
 
   // Convert timer pausas to PausaRegistro format

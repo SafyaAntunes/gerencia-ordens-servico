@@ -18,9 +18,9 @@ interface ServicoHeaderProps {
   funcionarioNome?: string;
   concluido: boolean;
   temPermissao: boolean;
-  isOpen: boolean;
+  isOpen?: boolean;
   onToggleOpen: () => void;
-  onReiniciarServico: (e: React.MouseEvent) => void; // Mantido para compatibilidade
+  onReiniciarServico?: (e: React.MouseEvent) => void;
 }
 
 export default function ServicoHeader({
@@ -102,7 +102,6 @@ export default function ServicoHeader({
       {concluido && funcionarioNome && (
         <div className="text-sm text-muted-foreground">
           Concluído por: {funcionarioNome}
-          {/* Botão de reiniciar removido */}
         </div>
       )}
       
