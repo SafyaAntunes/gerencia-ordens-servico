@@ -149,6 +149,8 @@ export function useServicoTracker({
   
   const completedSubatividades = servico.subatividades?.filter(sub => sub.concluida).length || 0;
   const totalSubatividades = servico.subatividades?.filter(sub => sub.selecionada).length || 0;
+  
+  // Ensure progressPercentage is a number
   const progressPercentage = totalSubatividades > 0 ? Math.round((completedSubatividades / totalSubatividades) * 100) : 0;
   
   const tempoTotalEstimado = servico.subatividades?.reduce((total, sub) => {
