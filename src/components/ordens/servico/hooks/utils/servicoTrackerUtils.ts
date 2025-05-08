@@ -1,6 +1,6 @@
 
 import { ServicoStatus } from "../types/servicoTrackerTypes";
-import { TipoServico } from "@/types/ordens";
+import { TipoServico, EtapaOS } from "@/types/ordens";
 
 export const formatTimeDisplay = (seconds: number): string => {
   const h = Math.floor(seconds / 3600);
@@ -43,4 +43,30 @@ export const formatTipoServico = (tipo: TipoServico): string => {
   };
   
   return labels[tipo] || tipo;
+};
+
+// Mapping between service types and their corresponding etapas
+export const servicoToEtapaMapping: Record<TipoServico, EtapaOS> = {
+  bloco: "retifica",
+  biela: "retifica",
+  cabecote: "retifica",
+  virabrequim: "retifica",
+  eixo_comando: "retifica",
+  montagem: "montagem",
+  dinamometro: "dinamometro",
+  lavagem: "lavagem",
+  inspecao_inicial: "inspecao_inicial",
+  inspecao_final: "inspecao_final"
+};
+
+// Get etapa for a specific service type
+export const getEtapaForServico = (tipo: TipoServico): EtapaOS => {
+  return servicoToEtapaMapping[tipo] || "retifica";
+};
+
+// Get all service types for a specific etapa
+export const getServicosForEtapa = (etapa: EtapaOS): TipoServico[] => {
+  return Object.entries(servicoToEtapaMapping)
+    .filter(([_, etapaValue]) => etapaValue === etapa)
+    .map(([tipoServico, _]) => tipoServico as TipoServico);
 };
