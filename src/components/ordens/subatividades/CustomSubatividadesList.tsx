@@ -3,26 +3,23 @@ import { SubAtividade } from "@/types/ordens";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Clock } from "lucide-react";
+import { Clock, Trash } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface CustomSubatividadesListProps {
   subatividades: SubAtividade[];
-  presetSubatividades: SubAtividade[];
-  editable: boolean;
-  onToggleSubatividade: (id: string, checked: boolean) => void;
-  onTempoEstimadoChange: (id: string, horas: number) => void;
+  onRemove: (id: string) => void;
+  onToggle: (id: any, checked: any) => void;
+  disabled: boolean;
 }
 
 export function CustomSubatividadesList({
   subatividades,
-  presetSubatividades,
-  editable,
-  onToggleSubatividade,
-  onTempoEstimadoChange,
+  onRemove,
+  onToggle,
+  disabled
 }: CustomSubatividadesListProps) {
-  const customSubatividades = subatividades.filter(
-    sub => !presetSubatividades.some(p => p.id === sub.id) && sub.selecionada
-  );
+  const customSubatividades = subatividades.filter(sub => sub.id.startsWith('custom-'));
 
   if (customSubatividades.length === 0) {
     return null;
@@ -38,9 +35,9 @@ export function CustomSubatividadesList({
               id={`sub-${sub.id}`}
               checked={sub.selecionada}
               onCheckedChange={(checked) =>
-                onToggleSubatividade(sub.id, checked === true)
+                onToggle(sub.id, checked === true)
               }
-              disabled={!editable}
+              disabled={disabled}
               className="cursor-pointer"
             />
             <Label
@@ -51,20 +48,14 @@ export function CustomSubatividadesList({
             </Label>
           </div>
           
-          <div className="flex items-center space-x-2">
-            <Clock className="h-4 w-4 text-muted-foreground" />
-            <Input
-              type="number"
-              min="0"
-              step="0.5"
-              className="w-16 h-8 text-sm"
-              value={sub.tempoEstimado || 0}
-              onChange={(e) => onTempoEstimadoChange(sub.id, parseFloat(e.target.value) || 0)}
-              disabled={!editable}
-              placeholder="0h"
-            />
-            <span className="text-xs text-muted-foreground">h</span>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onRemove(sub.id)}
+            disabled={disabled}
+          >
+            <Trash className="h-4 w-4 text-destructive" />
+          </Button>
         </div>
       ))}
     </div>
