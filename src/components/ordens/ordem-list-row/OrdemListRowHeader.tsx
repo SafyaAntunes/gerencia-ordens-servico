@@ -12,9 +12,23 @@ interface OrdemListRowHeaderProps {
 }
 
 export default function OrdemListRowHeader({ ordem, index, isAtrasada = false }: OrdemListRowHeaderProps) {
+  // Formatar data com segurança
+  const formatDateSafely = (date: any) => {
+    if (!date) return "N/D";
+    
+    try {
+      // Ensure date is a Date object
+      const dateObj = date instanceof Date ? date : new Date(date);
+      return format(dateObj, "dd/MM/yy", { locale: ptBR });
+    } catch (error) {
+      console.error("Error formatting date:", error, date);
+      return "Data inválida";
+    }
+  };
+
   return (
     <div className={`grid grid-cols-12 gap-2 p-4 pb-2 items-center border-b ${
-      isAtrasada ? 'border-red-200' : 'border-gray-100'
+      isAtrasada ? 'border-red-200 bg-red-50' : 'border-gray-100'
     }`}>
       {/* Número de ordenação */}
       <div className="col-span-1 flex items-center">
@@ -28,7 +42,7 @@ export default function OrdemListRowHeader({ ordem, index, isAtrasada = false }:
       <div className="col-span-1">
         <div className="text-xs text-gray-500 mb-0.5">OS</div>
         <div className={`font-semibold ${isAtrasada ? 'text-red-700' : 'text-gray-900'}`}>
-          {ordem.id.substring(0, 8)}
+          {ordem.id ? ordem.id.substring(0, 8) : "N/A"}
         </div>
       </div>
 
@@ -55,10 +69,8 @@ export default function OrdemListRowHeader({ ordem, index, isAtrasada = false }:
       {/* Data de Entrada */}
       <div className="col-span-2 text-right">
         <div className="text-xs text-gray-500 mb-0.5">Data de Entrada</div>
-        <div className="text-gray-600">
-          {ordem.dataAbertura ? 
-            format(new Date(ordem.dataAbertura), "dd/MM/yy", { locale: ptBR }) :
-            "N/D"}
+        <div className={`text-gray-600 ${isAtrasada ? 'text-red-600' : ''}`}>
+          {formatDateSafely(ordem.dataAbertura)}
         </div>
       </div>
     </div>

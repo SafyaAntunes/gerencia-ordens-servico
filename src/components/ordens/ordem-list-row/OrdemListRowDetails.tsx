@@ -32,6 +32,20 @@ export default function OrdemListRowDetails({ ordem, isAtrasada = false }: Ordem
     return false;
   };
 
+  // Formatar data com segurança
+  const formatDateSafely = (date: any) => {
+    if (!date) return "N/D";
+    
+    try {
+      // Ensure date is a Date object
+      const dateObj = date instanceof Date ? date : new Date(date);
+      return format(dateObj, "dd/MM/yy", { locale: ptBR });
+    } catch (error) {
+      console.error("Error formatting date:", error, date);
+      return "Data inválida";
+    }
+  };
+
   return (
     <div className={`grid grid-cols-12 gap-2 px-4 py-2 items-center ${
       isAtrasada ? 'bg-red-50' : ''
@@ -69,9 +83,7 @@ export default function OrdemListRowDetails({ ordem, isAtrasada = false }: Ordem
           Data de Término
         </div>
         <div className={`text-sm ${isAtrasada ? 'text-red-700 font-medium' : 'text-gray-700'}`}>
-          {ordem.dataPrevistaEntrega ? 
-            format(new Date(ordem.dataPrevistaEntrega), "dd/MM/yy", { locale: ptBR }) :
-            "N/D"}
+          {formatDateSafely(ordem.dataPrevistaEntrega)}
         </div>
         
         {/* Etapas concluídas */}

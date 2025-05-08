@@ -46,9 +46,33 @@ export default function OrdemListRow({
     }
   };
 
-  // Verificar se a ordem está atrasada
+  // Verificar se a ordem está atrasada - com validação de datas
   const hoje = new Date();
-  const isAtrasada = ordem.dataPrevistaEntrega < hoje && !['finalizado', 'entregue'].includes(ordem.status);
+  let dataPrevista = ordem.dataPrevistaEntrega;
+  
+  // Ensure dataPrevistaEntrega is a valid Date object
+  if (!(dataPrevista instanceof Date) && dataPrevista) {
+    try {
+      dataPrevista = new Date(dataPrevista);
+    } catch (err) {
+      console.error("Invalid date:", dataPrevista);
+      dataPrevista = new Date(); // Fallback to current date
+    }
+  }
+  
+  const isAtrasada = dataPrevista < hoje && !['finalizado', 'entregue'].includes(ordem.status);
+
+  // Calculate progress with validation
+  let progresso = 0;
+  if (typeof ordem.progressoEtapas === 'number') {
+    progresso = Math.round(ordem.progressoEtapas * 100);
+  } else if (ordem.progressoEtapas !== undefined) {
+    try {
+      progresso = Math.round(Number(ordem.progressoEtapas) * 100);
+    } catch (err) {
+      console.error("Invalid progress:", ordem.progressoEtapas);
+    }
+  }
 
   return (
     <div 
@@ -85,7 +109,7 @@ export default function OrdemListRow({
         />
         
         <OrdemListRowProgress 
-          progresso={ordem.progressoEtapas !== undefined ? Math.round(ordem.progressoEtapas * 100) : 0}
+          progresso={progresso}
           isAtrasada={isAtrasada}
         />
       </div>
