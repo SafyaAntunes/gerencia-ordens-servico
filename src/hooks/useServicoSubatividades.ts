@@ -49,6 +49,22 @@ export const useServicoSubatividades = () => {
       "Torque", 
       "Consumo", 
       "Análise"
+    ],
+    lavagem: [
+      "Preparação", 
+      "Lavagem química", 
+      "Lavagem externa", 
+      "Secagem"
+    ],
+    inspecao_inicial: [
+      "Verificação de trincas", 
+      "Medição de componentes", 
+      "Verificação dimensional"
+    ],
+    inspecao_final: [
+      "Verificação visual", 
+      "Teste de qualidade", 
+      "Conformidade com especificações"
     ]
   };
 
@@ -61,7 +77,10 @@ export const useServicoSubatividades = () => {
       virabrequim: ["Preparação", "Lavagem química", "Secagem"],
       eixo_comando: ["Preparação", "Lavagem química", "Secagem"],
       montagem: ["Preparação", "Limpeza de componentes", "Secagem"],
-      dinamometro: ["Limpeza antes do teste", "Limpeza após o teste"]
+      dinamometro: ["Limpeza antes do teste", "Limpeza após o teste"],
+      lavagem: ["Preparação", "Limpeza geral", "Secagem"],
+      inspecao_inicial: ["Limpeza para inspeção"],
+      inspecao_final: ["Limpeza final"]
     },
     inspecao_inicial: {
       bloco: ["Verificação de trincas", "Medição de cilindros", "Verificação de mancais"],
@@ -70,7 +89,10 @@ export const useServicoSubatividades = () => {
       virabrequim: ["Verificação de trincas", "Medição de mancais", "Verificação visual"],
       eixo_comando: ["Verificação de desgaste", "Medição de pontos", "Verificação visual"],
       montagem: ["Verificação de componentes", "Conferência de peças"],
-      dinamometro: ["Verificação de sensores", "Verificação de conexões"]
+      dinamometro: ["Verificação de sensores", "Verificação de conexões"],
+      lavagem: ["Inspeção de limpeza", "Verificação de produtos químicos"],
+      inspecao_inicial: ["Verificação inicial completa", "Documentação"],
+      inspecao_final: ["Verificação prévia"]
     },
     inspecao_final: {
       bloco: ["Verificação de medidas", "Teste de pressão", "Conformidade com especificações"],
@@ -79,7 +101,10 @@ export const useServicoSubatividades = () => {
       virabrequim: ["Verificação de polimento", "Verificação de balanceamento", "Conformidade com especificações"],
       eixo_comando: ["Verificação de acabamento", "Conformidade com especificações"],
       montagem: ["Verificação de torque", "Teste de movimentação", "Conformidade com especificações"],
-      dinamometro: ["Análise de resultados", "Conformidade com especificações"]
+      dinamometro: ["Análise de resultados", "Conformidade com especificações"],
+      lavagem: ["Verificação final de limpeza"],
+      inspecao_inicial: ["Revisão da inspeção inicial"],
+      inspecao_final: ["Inspeção final completa", "Liberação para entrega"]
     }
   };
 

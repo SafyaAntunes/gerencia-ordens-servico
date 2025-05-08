@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 import { EtapaOS, TipoServico } from "@/types/ordens";
 import { formatTime } from "./timerUtils";
@@ -19,7 +20,10 @@ const servicoNomes: Record<TipoServico, string> = {
   virabrequim: "Virabrequim",
   eixo_comando: "Eixo de Comando",
   montagem: "Montagem",
-  dinamometro: "Dinamômetro"
+  dinamometro: "Dinamômetro",
+  lavagem: "Lavagem",
+  inspecao_inicial: "Inspeção Inicial",
+  inspecao_final: "Inspeção Final"
 };
 
 export const notifyTimerStarted = (etapa: EtapaOS, tipoServico?: TipoServico) => {

@@ -110,6 +110,24 @@ const SUBATIVIDADES: Record<TipoServico, string[]> = {
     'POTÊNCIA',
     'TORQUE',
     'CONSUMO'
+  ],
+  lavagem: [
+    'PREPARAÇÃO',
+    'LAVAGEM QUÍMICA',
+    'LAVAGEM MANUAL',
+    'SECAGEM'
+  ],
+  inspecao_inicial: [
+    'VERIFICAÇÃO VISUAL',
+    'MEDIÇÃO DE COMPONENTES',
+    'IDENTIFICAÇÃO DE DEFEITOS',
+    'REGISTRO FOTOGRÁFICO'
+  ],
+  inspecao_final: [
+    'VERIFICAÇÃO DE MONTAGEM',
+    'TESTES DE QUALIDADE',
+    'VALIDAÇÃO FINAL',
+    'RELATÓRIO DE ENTREGA'
   ]
 };
 
@@ -168,7 +186,10 @@ const tiposServico: { value: TipoServico; label: string }[] = [
   { value: "virabrequim", label: "Virabrequim" },
   { value: "eixo_comando", label: "Eixo de Comando" },
   { value: "montagem", label: "Montagem" },
-  { value: "dinamometro", label: "Dinamômetro" }
+  { value: "dinamometro", label: "Dinamômetro" },
+  { value: "lavagem", label: "Lavagem" },
+  { value: "inspecao_inicial", label: "Inspeção Inicial" },
+  { value: "inspecao_final", label: "Inspeção Final" }
 ];
 
 export default function OrdemForm({ 

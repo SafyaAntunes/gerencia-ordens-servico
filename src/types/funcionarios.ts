@@ -37,7 +37,7 @@ export const permissoesLabels: Record<string, string> = {
 import { TipoServico } from './ordens';
 
 // Labels for service types
-export const tipoServicoLabels: Record<TipoServico | 'lavagem', string> = {
+export const tipoServicoLabels: Record<TipoServico, string> = {
   bloco: 'Bloco',
   biela: 'Biela',
   cabecote: 'Cabeçote',
@@ -45,7 +45,9 @@ export const tipoServicoLabels: Record<TipoServico | 'lavagem', string> = {
   eixo_comando: 'Eixo de Comando',
   montagem: 'Montagem',
   dinamometro: 'Dinamômetro',
-  lavagem: 'Lavagem/Limpeza'
+  lavagem: 'Lavagem/Limpeza',
+  inspecao_inicial: 'Inspeção Inicial',
+  inspecao_final: 'Inspeção Final'
 };
 
 // Descrição detalhada de permissões por nível

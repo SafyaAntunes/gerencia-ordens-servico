@@ -1,3 +1,4 @@
+
 import { TipoServico } from "@/types/ordens";
 import { formatTime } from "@/utils/timerUtils";
 import { Progress } from "@/components/ui/progress";
@@ -45,7 +46,10 @@ export default function ServicoHeader({
       virabrequim: "Virabrequim",
       eixo_comando: "Eixo de Comando",
       montagem: "Montagem",
-      dinamometro: "Dinamômetro"
+      dinamometro: "Dinamômetro",
+      lavagem: "Lavagem",
+      inspecao_inicial: "Inspeção Inicial",
+      inspecao_final: "Inspeção Final"
     };
     
     return titles[tipo] || tipo;
