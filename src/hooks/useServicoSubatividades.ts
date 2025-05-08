@@ -105,42 +105,6 @@ export const useServicoSubatividades = () => {
       lavagem: ["Verificação final de limpeza"],
       inspecao_inicial: ["Revisão da inspeção inicial"],
       inspecao_final: ["Inspeção final completa", "Liberação para entrega"]
-    },
-    retifica: {     // Added entry for retifica
-      bloco: ["Verificação de medidas", "Controle de qualidade"],
-      biela: ["Verificação de medidas", "Controle de qualidade"],
-      cabecote: ["Verificação de medidas", "Controle de qualidade"],
-      virabrequim: ["Verificação de medidas", "Controle de qualidade"],
-      eixo_comando: ["Verificação de medidas", "Controle de qualidade"],
-      montagem: ["Verificação de ajustes", "Controle de qualidade"],
-      dinamometro: ["Calibração", "Verificação"],
-      lavagem: ["Qualidade da limpeza"],
-      inspecao_inicial: ["Verificação de medidas"],
-      inspecao_final: ["Verificação final"]
-    },
-    montagem: {     // Added entry for montagem
-      bloco: ["Preparação de componentes", "Montagem precisa"],
-      biela: ["Preparação de componentes", "Montagem precisa"],
-      cabecote: ["Preparação de componentes", "Montagem precisa"],
-      virabrequim: ["Preparação de componentes", "Montagem precisa"],
-      eixo_comando: ["Preparação de componentes", "Montagem precisa"],
-      montagem: ["Sequência de montagem", "Verificação"],
-      dinamometro: ["Preparação para teste"],
-      lavagem: ["Preparação para montagem"],
-      inspecao_inicial: ["Verificação pré-montagem"],
-      inspecao_final: ["Verificação pós-montagem"]
-    },
-    dinamometro: {  // Added entry for dinamometro
-      bloco: ["Preparação para teste", "Análise de desempenho"],
-      biela: ["Preparação para teste", "Análise de desempenho"],
-      cabecote: ["Preparação para teste", "Análise de desempenho"],
-      virabrequim: ["Preparação para teste", "Análise de desempenho"],
-      eixo_comando: ["Preparação para teste", "Análise de desempenho"],
-      montagem: ["Preparação para teste", "Análise de desempenho"],
-      dinamometro: ["Calibração", "Execução de teste"],
-      lavagem: ["Limpeza pós-teste"],
-      inspecao_inicial: ["Verificação de sensores"],
-      inspecao_final: ["Análise de resultados"]
     }
   };
 

@@ -21,21 +21,6 @@ export function EtapasSelector({
   isRetificaHabilitada,
   isInspecaoFinalHabilitada
 }: EtapasSelectorProps) {
-  // Define a ordem correta das etapas
-  const etapasOrdenadas: EtapaOS[] = [
-    "lavagem",
-    "inspecao_inicial",
-    "retifica",
-    "montagem",
-    "dinamometro",
-    "inspecao_final"
-  ];
-  
-  // Filtra as etapas na ordem correta
-  const etapasOrdem = etapasOrdenadas.filter(etapa => 
-    etapasAtivas.includes(etapa)
-  );
-
   const etapasConfig = {
     retifica: {
       label: "Retífica",
@@ -89,7 +74,7 @@ export function EtapasSelector({
 
   return (
     <div className="flex flex-wrap gap-2 mb-4">
-      {etapasOrdem.map((etapa) => {
+      {etapasAtivas.map((etapa) => {
         const config = etapasConfig[etapa];
         const active = selectedEtapa === etapa;
         const disabled = !etapasDisponiveis[etapa] || !config.isHabilitada();

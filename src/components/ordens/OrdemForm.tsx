@@ -217,10 +217,7 @@ export default function OrdemForm({
   const [etapasConfig, setEtapasConfig] = useState<Record<TipoAtividade, SubAtividade[]>>({
     lavagem: [],
     inspecao_inicial: [],
-    inspecao_final: [],
-    retifica: [],      // Added to match expanded TipoAtividade
-    montagem: [],      // Added to match expanded TipoAtividade
-    dinamometro: []    // Added to match expanded TipoAtividade
+    inspecao_final: []
   });
   const [isLoadingEtapas, setIsLoadingEtapas] = useState(false);
   const [etapasTempoPreco, setEtapasTempoPreco] = useState<Record<EtapaOS, {precoHora?: number, tempoEstimado?: number}>>({

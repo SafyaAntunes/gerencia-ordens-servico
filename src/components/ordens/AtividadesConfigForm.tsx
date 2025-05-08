@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { TipoServico, SubAtividade, TipoAtividade, Servico } from "@/types/ordens";
 import { Button } from "@/components/ui/button";
@@ -30,10 +31,7 @@ export default function AtividadesConfigForm({
   const [subatividadesMap, setSubatividadesMap] = useState<Record<TipoAtividade, SubAtividade[]>>({
     lavagem: [],
     inspecao_inicial: [],
-    inspecao_final: [],
-    retifica: [],      // Added to match expanded TipoAtividade
-    montagem: [],      // Added to match expanded TipoAtividade
-    dinamometro: []    // Added to match expanded TipoAtividade
+    inspecao_final: []
   });
   const [isLoading, setIsLoading] = useState(false);
   
@@ -48,9 +46,6 @@ export default function AtividadesConfigForm({
           lavagem: data.lavagem || [],
           inspecao_inicial: data.inspecao_inicial || [],
           inspecao_final: data.inspecao_final || [],
-          retifica: data.retifica || [],      // Added to match expanded TipoAtividade
-          montagem: data.montagem || [],      // Added to match expanded TipoAtividade
-          dinamometro: data.dinamometro || [] // Added to match expanded TipoAtividade
         };
         
         setSubatividadesMap(atividadesMap);

@@ -358,4 +358,20 @@ export const etapaNomesBR: Record<EtapaOS, string> = {
   inspecao_final: "Inspeção Final"
 };
 
+export const formatTipoServico = (tipo: TipoServico): string => {
+  const labels: Record<TipoServico, string> = {
+    bloco: "Bloco",
+    biela: "Biela",
+    cabecote: "Cabeçote",
+    virabrequim: "Virabrequim",
+    eixo_comando: "Eixo de Comando",
+    montagem: "Montagem",
+    dinamometro: "Dinamômetro",
+    lavagem: "Lavagem",
+    inspecao_inicial: "Inspeção Inicial",
+    inspecao_final: "Inspeção Final"
+  };
+  return labels[tipo] || tipo;
+};
+
 export default EtapasTracker;

@@ -17,7 +17,7 @@ import Funcionarios from './pages/Funcionarios';
 import Agenda from './pages/Agenda';
 import Relatorios from './pages/Relatorios';
 import SubatividadesConfig from './pages/SubatividadesConfig';
-import ServiceTypesConfig from './pages/ServiceTypesConfig';
+import ServiceTypesConfig from './pages/ServiceTypesConfig';  // Add the import
 import SubatividadesReset from './pages/SubatividadesReset';
 import ConfiguracoesAtividades from './pages/ConfiguracoesAtividades';
 import RelatoriosProducao from './pages/RelatoriosProducao';
@@ -40,13 +40,13 @@ function App() {
         <Route path="/ordens/nova" element={<NovaOrdem />} />
         <Route path="/configuracoes" element={<Configuracoes />} />
         <Route path="/configuracoes/subatividades" element={<SubatividadesConfig />} />
-        <Route path="/configuracoes/servicos" element={<ServiceTypesConfig />} />
+        <Route path="/configuracoes/servicos" element={<ServiceTypesConfig />} /> {/* Add new route */}
         <Route path="/configuracoes/subatividades/reset" element={<SubatividadesReset />} />
-        <Route path="/configuracoes/atividades" element={<ConfiguracoesAtividades tipoAtividade="lavagem" titulo="Configuração de Tempos de Atividade" descricao="Configure os tempos padrão para cada tipo de atividade" />} />
+        <Route path="/configuracoes/atividades" element={<ConfiguracoesAtividades />} />
         <Route path="/funcionarios" element={<Funcionarios />} />
         <Route path="/agenda" element={<Agenda />} />
         <Route path="/relatorios" element={<Relatorios />} />
-        <Route path="/relatorios/producao" element={<RelatoriosProducao onLogout={() => {}} />} />
+        <Route path="/relatorios/producao" element={<RelatoriosProducao />} />
         <Route path="/relatorios/financeiro" element={<RelatoriosFinanceiro />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

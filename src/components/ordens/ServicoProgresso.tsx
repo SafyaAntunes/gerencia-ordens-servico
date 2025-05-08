@@ -110,7 +110,7 @@ export default function ServicoProgresso({
     <Card className={cn("w-full", className)}>
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
-          <h3 className="font-medium text-lg text-left">Progresso da Atividade</h3>
+          <h3 className="font-medium text-lg">Progresso da Atividade</h3>
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-muted-foreground" />
             <span className="font-mono text-sm">
@@ -130,7 +130,7 @@ export default function ServicoProgresso({
                 {completedSubatividades.length} de {selectedSubatividades.length} concluídas
               </span>
             </div>
-            <div className="space-y-3 text-left">
+            <div className="space-y-3">
               {subatividades.map((subatividade, index) => (
                 <div 
                   key={index}
