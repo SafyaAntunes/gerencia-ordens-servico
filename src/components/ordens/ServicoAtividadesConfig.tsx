@@ -91,6 +91,9 @@ export default function ServicoAtividadesConfig({
       case 'eixo_comando': return 'Eixo de Comando';
       case 'montagem': return 'Montagem';
       case 'dinamometro': return 'Dinamômetro';
+      case 'lavagem': return 'Lavagem';
+      case 'inspecao_inicial': return 'Inspeção Inicial';
+      case 'inspecao_final': return 'Inspeção Final';
       default: return tipo;
     }
   };

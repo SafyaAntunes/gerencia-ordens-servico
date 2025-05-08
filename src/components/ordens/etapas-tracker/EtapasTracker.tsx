@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -17,6 +18,7 @@ interface EtapasTrackerProps {
 }
 
 const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
+  // Removemos lavagem, inspeção inicial e final da lista de etapas
   const [etapasAtivas, setEtapasAtivas] = useState<EtapaOS[]>([]);
   const [selectedEtapa, setSelectedEtapa] = useState<EtapaOS | null>(null);
   const [selectedServicoTipo, setSelectedServicoTipo] = useState<TipoServico | null>(null);
@@ -41,14 +43,12 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     }
 
     const etapasDisponiveis = verificarEtapasDisponiveis();
+    // Removemos lavagem, inspeção inicial e final da lista de etapas
     const allEtapas: EtapaOS[] = [
-      'lavagem',
-      'inspecao_inicial',
       'retifica'
     ];
     if (etapasDisponiveis.montagem) allEtapas.push('montagem');
     if (etapasDisponiveis.dinamometro) allEtapas.push('dinamometro');
-    allEtapas.push('inspecao_final');
 
     setEtapasAtivas(allEtapas);
     if (!selectedEtapa && allEtapas.length > 0) {
@@ -301,13 +301,11 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
             isInspecaoFinalHabilitada={() => {
               const { etapasAndamento } = ordem;
               
-              // Melhorar a lógica de verificação para a etapa de inspeção final
-              // Verificar se pelo menos uma das etapas principais está concluída
+              // Modificar a lógica já que inspeção final agora é serviço
               const retificaConcluida = etapasAndamento?.['retifica']?.concluido === true;
               const montagemConcluida = etapasAndamento?.['montagem']?.concluido === true;
               const dinamometroConcluida = etapasAndamento?.['dinamometro']?.concluido === true;
               
-              // Log para depuração
               console.log("Estado de conclusão das etapas:", {
                 retifica: retificaConcluida,
                 montagem: montagemConcluida,
@@ -353,7 +351,10 @@ export const formatServicoTipo = (tipo: TipoServico): string => {
     virabrequim: "Virabrequim",
     eixo_comando: "Eixo de Comando",
     montagem: "Montagem",
-    dinamometro: "Dinamômetro"
+    dinamometro: "Dinamômetro",
+    lavagem: "Lavagem",
+    inspecao_inicial: "Inspeção Inicial",
+    inspecao_final: "Inspeção Final"
   };
   return labels[tipo] || tipo;
 };

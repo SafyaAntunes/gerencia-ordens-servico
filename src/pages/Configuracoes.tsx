@@ -9,10 +9,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ClipboardList, Droplet, FileSearch, HardDrive, Search } from "lucide-react";
+import { ClipboardList, HardDrive } from "lucide-react";
 import SubatividadesConfig from "./SubatividadesConfig";
-import ConfiguracoesAtividades from "./ConfiguracoesAtividades";
-import { TipoAtividade } from "@/types/ordens";
 import { StorageInfo } from "@/components/common/StorageInfo";
 
 interface ConfiguracoesProps {
@@ -45,18 +43,6 @@ export default function Configuracoes({ onLogout }: ConfiguracoesProps) {
                   <ClipboardList className="h-4 w-4" />
                   Subatividades
                 </TabsTrigger>
-                <TabsTrigger value="lavagem" className="flex items-center gap-2">
-                  <Droplet className="h-4 w-4" />
-                  Lavagem
-                </TabsTrigger>
-                <TabsTrigger value="inspecao_inicial" className="flex items-center gap-2">
-                  <Search className="h-4 w-4" />
-                  Inspeção Inicial
-                </TabsTrigger>
-                <TabsTrigger value="inspecao_final" className="flex items-center gap-2">
-                  <FileSearch className="h-4 w-4" />
-                  Inspeção Final
-                </TabsTrigger>
                 <TabsTrigger value="armazenamento" className="flex items-center gap-2">
                   <HardDrive className="h-4 w-4" />
                   Armazenamento
@@ -64,45 +50,15 @@ export default function Configuracoes({ onLogout }: ConfiguracoesProps) {
               </TabsList>
               
               <TabsContent value="subatividades">
-                <SubatividadesConfig onLogout={onLogout} isEmbedded={true} />
-              </TabsContent>
-              
-              <TabsContent value="lavagem">
-                <ConfiguracoesAtividades 
-                  onLogout={onLogout} 
-                  isEmbedded={true} 
-                  tipoAtividade="lavagem" 
-                  titulo="Configuração de Atividades de Lavagem"
-                  descricao="Configure os tempos padrão para cada tipo de serviço de lavagem"
-                />
-              </TabsContent>
-              
-              <TabsContent value="inspecao_inicial">
-                <ConfiguracoesAtividades 
-                  onLogout={onLogout} 
-                  isEmbedded={true} 
-                  tipoAtividade="inspecao_inicial" 
-                  titulo="Configuração de Atividades de Inspeção Inicial"
-                  descricao="Configure os tempos padrão para cada tipo de serviço de inspeção inicial"
-                />
-              </TabsContent>
-              
-              <TabsContent value="inspecao_final">
-                <ConfiguracoesAtividades 
-                  onLogout={onLogout} 
-                  isEmbedded={true} 
-                  tipoAtividade="inspecao_final" 
-                  titulo="Configuração de Atividades de Inspeção Final"
-                  descricao="Configure os tempos padrão para cada tipo de serviço de inspeção final"
-                />
+                <SubatividadesConfig isEmbedded={true} />
               </TabsContent>
               
               <TabsContent value="armazenamento">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Gerenciamento de Armazenamento</CardTitle>
+                    <CardTitle>Armazenamento</CardTitle>
                     <CardDescription>
-                      Visualize e gerencie o uso do seu armazenamento
+                      Gerencie o armazenamento da aplicação
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -113,11 +69,26 @@ export default function Configuracoes({ onLogout }: ConfiguracoesProps) {
             </Tabs>
           </div>
           
-          {activeTab !== "armazenamento" && (
-            <div className="md:col-span-1">
-              <StorageInfo />
-            </div>
-          )}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Ajuda</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  As configurações permitem personalizar o sistema para atender às suas necessidades específicas.
+                </p>
+                <ul className="list-disc pl-5 text-sm space-y-2">
+                  <li>
+                    <strong>Subatividades</strong>: Configure as subatividades para os diferentes serviços.
+                  </li>
+                  <li>
+                    <strong>Armazenamento</strong>: Visualize e gerencie o uso de armazenamento do sistema.
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </Layout>

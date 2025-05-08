@@ -33,7 +33,10 @@ export type TipoServico =
   | 'virabrequim' 
   | 'eixo_comando'
   | 'montagem'
-  | 'dinamometro';
+  | 'dinamometro'
+  | 'lavagem'         // Adicionado como serviço 
+  | 'inspecao_inicial' // Adicionado como serviço
+  | 'inspecao_final';  // Adicionado como serviço
 
 export type TipoAtividade =
   | 'lavagem'

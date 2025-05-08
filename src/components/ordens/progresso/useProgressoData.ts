@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { OrdemServico, EtapaOS } from "@/types/ordens";
 
@@ -49,34 +50,11 @@ export function useProgressoData(ordem: OrdemServico) {
   };
   
   const calcularProgressoEtapas = () => {
-    const etapas: EtapaOS[] = ["lavagem", "inspecao_inicial", "retifica", "montagem", "dinamometro", "inspecao_final"];
+    // Consideramos apenas as etapas: retifica, montagem, dinamometro
+    const etapas: EtapaOS[] = ["retifica", "montagem", "dinamometro"];
     
     const progressos = etapas.map(etapa => {
-      if (etapa === 'lavagem' || etapa === 'inspecao_inicial' || etapa === 'inspecao_final') {
-        const tiposServico = ordem.servicos
-          .filter(s => ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(s.tipo))
-          .map(s => s.tipo);
-        
-        const totalPecas = tiposServico.length;
-        if (totalPecas === 0) return { etapa, nome: etapasNomes[etapa], progresso: 0, concluida: false };
-        
-        let pecasConcluidas = 0;
-        tiposServico.forEach(tipo => {
-          const etapaKey = `${etapa}_${tipo}` as any;
-          if (ordem.etapasAndamento[etapaKey]?.concluido) {
-            pecasConcluidas++;
-          }
-        });
-
-        const etapaConcluida = pecasConcluidas === totalPecas || !!ordem.etapasAndamento[etapa]?.concluido;
-        
-        return {
-          etapa,
-          nome: etapasNomes[etapa],
-          progresso: etapaConcluida ? 100 : Math.round((pecasConcluidas / totalPecas) * 100),
-          concluida: etapaConcluida
-        };
-      } else if (etapa === 'retifica') {
+      if (etapa === 'retifica') {
         const etapaInfo = ordem.etapasAndamento[etapa];
         const concluida = etapaInfo?.concluido || false;
         
@@ -163,28 +141,10 @@ export function useProgressoData(ordem: OrdemServico) {
       }
     });
     
+    // Considerar todos os serviços, incluindo lavagem e inspeção como serviços normais
     ordem.servicos.forEach(servico => {
-      ['lavagem', 'inspecao_inicial', 'inspecao_final'].forEach(etapa => {
-        const storageKey = `timer_${ordem.id}_${etapa}_${servico.tipo}`;
-        const data = localStorage.getItem(storageKey);
-        
-        if (data) {
-          try {
-            const parsed = JSON.parse(data);
-            if (parsed.totalTime) {
-              total += parsed.totalTime;
-              const etapaKey = etapa as EtapaOS;
-              temposPorEtapa[etapaKey] = (temposPorEtapa[etapaKey] || 0) + parsed.totalTime;
-            }
-          } catch {
-            // Ignore parsing errors
-          }
-        }
-      });
-    });
-    
-    ['lavagem', 'inspecao_inicial', 'retifica', 'montagem', 'dinamometro', 'inspecao_final'].forEach(etapa => {
-      const storageKey = `timer_${ordem.id}_${etapa}`;
+      const servicoTipo = servico.tipo;
+      const storageKey = `timer_${ordem.id}_${servicoTipo}`;
       const data = localStorage.getItem(storageKey);
       
       if (data) {
@@ -192,8 +152,7 @@ export function useProgressoData(ordem: OrdemServico) {
           const parsed = JSON.parse(data);
           if (parsed.totalTime) {
             total += parsed.totalTime;
-            const etapaKey = etapa as EtapaOS;
-            temposPorEtapa[etapaKey] = (temposPorEtapa[etapaKey] || 0) + parsed.totalTime;
+            temposPorEtapa[servicoTipo] = (temposPorEtapa[servicoTipo] || 0) + parsed.totalTime;
           }
         } catch {
           // Ignore parsing errors
@@ -212,6 +171,7 @@ export function useProgressoData(ordem: OrdemServico) {
     
     let total = 0;
     
+    // Agora consideramos o tempo estimado de todos os serviços
     ordem.servicos.forEach(servico => {
       if (servico.subatividades) {
         servico.subatividades
@@ -221,12 +181,6 @@ export function useProgressoData(ordem: OrdemServico) {
               total += sub.tempoEstimado * 60 * 60 * 1000; // Converter de horas para ms
             }
           });
-      }
-    });
-    
-    Object.entries(ordem.etapasAndamento || {}).forEach(([etapaKey, dadosEtapa]) => {
-      if (dadosEtapa.tempoEstimado) {
-        total += dadosEtapa.tempoEstimado * 60 * 60 * 1000; // Converter horas para ms
       }
     });
     
@@ -242,13 +196,18 @@ export function useProgressoData(ordem: OrdemServico) {
   };
   
   const calcularProgressoTotal = () => {
+    // Apenas as etapas de retífica, montagem e dinamômetro são consideradas como etapas
     const etapasRelevantes = progressoEtapas.filter(etapa => {
       if (etapa.etapa === "montagem") {
         return ordem.servicos.some(s => s.tipo === "montagem");
       } else if (etapa.etapa === "dinamometro") {
         return ordem.servicos.some(s => s.tipo === "dinamometro");
+      } else if (etapa.etapa === "retifica") {
+        return ordem.servicos.some(s => 
+          ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo)
+        );
       }
-      return true;
+      return false;
     });
     
     const etapasPontosPossiveis = etapasRelevantes.length * 2;
@@ -272,7 +231,20 @@ export function useProgressoData(ordem: OrdemServico) {
   };
   
   const formatarTipoServico = (tipo: string): string => {
-    return tipo.charAt(0).toUpperCase() + tipo.slice(1).replace('_', ' ');
+    const tiposServico: Record<string, string> = {
+      bloco: "Bloco", 
+      biela: "Biela",
+      cabecote: "Cabeçote", 
+      virabrequim: "Virabrequim", 
+      eixo_comando: "Eixo de Comando",
+      montagem: "Montagem",
+      dinamometro: "Dinamômetro",
+      lavagem: "Lavagem",
+      inspecao_inicial: "Inspeção Inicial",
+      inspecao_final: "Inspeção Final"
+    };
+    
+    return tiposServico[tipo] || tipo.charAt(0).toUpperCase() + tipo.slice(1).replace('_', ' ');
   };
   
   const formatarTempo = (ms: number) => {

@@ -120,7 +120,7 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
       // RECALCULAR TEMPO TOTAL ESTIMADO - VERSÃO CORRIGIDA
       let tempoTotalEstimadoHoras = 0;
       
-      // 1. Calcular tempo estimado para as subatividades dos serviços de retífica
+      // 1. Calcular tempo estimado para as subatividades dos serviços
       if (values.servicosSubatividades) {
         Object.entries(values.servicosSubatividades).forEach(([tipo, subs]: [string, any]) => {
           (subs as SubAtividade[]).forEach(sub => {
@@ -134,48 +134,9 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
       // 2. Array com os tipos de serviços selecionados
       const servicosSelecionados = values.servicosTipos || [];
       
-      // 3. Obter configurações de tempo para cada etapa (lavagem, inspeção inicial, inspeção final)
-      const etapasTipos: TipoAtividade[] = ['lavagem', 'inspecao_inicial', 'inspecao_final'];
-      const temposEstimadosPorEtapa: Record<TipoAtividade, number> = {
-        lavagem: 0,
-        inspecao_inicial: 0,
-        inspecao_final: 0
-      };
+      // Não precisamos mais disso, já que lavagem, inspeção inicial e final são agora serviços
+      // e seus tempos estimados já estarão incluídos nas subatividades
       
-      // Obter as configurações de tempo para cada etapa e serviço
-      for (const etapaTipo of etapasTipos) {
-        const configKey = `configuracao_${etapaTipo}`;
-        const configSalva = localStorage.getItem(configKey);
-        
-        if (configSalva) {
-          try {
-            const config = JSON.parse(configSalva);
-            
-            // Para cada serviço selecionado, somar o tempo estimado da etapa
-            for (const servicoTipo of servicosSelecionados) {
-              const servicoConfig = config.find((item: any) => item.tipo === servicoTipo);
-              
-              if (servicoConfig) {
-                // Converter "HH:MM" para horas
-                const [horas, minutos] = servicoConfig.horaPadrao.split(":").map(Number);
-                const tempoEmHoras = horas + (minutos / 60);
-                
-                // Somar ao tempo estimado para esta etapa
-                temposEstimadosPorEtapa[etapaTipo] += tempoEmHoras;
-                
-                // Somar ao tempo total estimado
-                tempoTotalEstimadoHoras += tempoEmHoras;
-                
-                console.log(`Adicionando ${tempoEmHoras}h para ${etapaTipo} de ${servicoTipo}`);
-              }
-            }
-          } catch (error) {
-            console.error(`Erro ao processar configuração de ${etapaTipo}:`, error);
-          }
-        }
-      }
-      
-      console.log("Tempos estimados por etapa:", temposEstimadosPorEtapa);
       console.log("Tempo total estimado (horas):", tempoTotalEstimadoHoras);
       
       // Calcular tempo total em milissegundos
@@ -225,8 +186,8 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         return servicoObj;
       });
 
-      // Determinar as etapas necessárias
-      let etapas: EtapaOS[] = ["lavagem", "inspecao_inicial"];
+      // Determinar as etapas necessárias - removidas lavagem, inspeção inicial e final
+      let etapas: EtapaOS[] = [];
       
       if (servicos.some(s => ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo))) {
         etapas.push("retifica");
@@ -239,27 +200,16 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
       if (servicos.some(s => s.tipo === "dinamometro")) {
         etapas.push("dinamometro");
       }
-      
-      etapas.push("inspecao_final");
 
       const etapasAndamento: Record<string, any> = {};
       
-      // Configurar cada etapa com os tempos estimados
+      // Configurar apenas as etapas de retífica, montagem e dinamômetro
       etapas.forEach(etapa => {
-        // Converter etapa para o tipo de atividade correspondente
-        let tipoAtividade: TipoAtividade | undefined;
-        if (etapa === 'lavagem') tipoAtividade = 'lavagem';
-        else if (etapa === 'inspecao_inicial') tipoAtividade = 'inspecao_inicial';
-        else if (etapa === 'inspecao_final') tipoAtividade = 'inspecao_final';
-        
-        // Obter tempo estimado da etapa (se for uma das etapas com configuração)
-        const tempoEmHoras = tipoAtividade ? temposEstimadosPorEtapa[tipoAtividade] || 0 : 0;
-        
         etapasAndamento[etapa] = { 
           concluido: false,
           usarCronometro: true,
           pausas: [],
-          tempoEstimado: tempoEmHoras
+          tempoEstimado: 0 // Tempo estimado será baseado nas subatividades
         };
       });
 

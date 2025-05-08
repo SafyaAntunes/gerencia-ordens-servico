@@ -28,30 +28,7 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
     const tempos: Record<string, number> = {};
     let total = 0;
     
-    // 1. Verificar tempos nas etapas gerais e específicas
-    Object.entries(ordem.etapasAndamento || {}).forEach(([etapa, dadosEtapa]) => {
-      if (dadosEtapa.tempoEstimado) {
-        // Corrigido: Extrair corretamente a etapa base de todas as chaves de etapa
-        let etapaKey: string;
-        
-        if (etapa.startsWith('inspecao_inicial_')) {
-          etapaKey = 'inspecao_inicial';
-        } else if (etapa.startsWith('inspecao_final_')) {
-          etapaKey = 'inspecao_final';
-        } else if (etapa.startsWith('lavagem_')) {
-          etapaKey = 'lavagem';
-        } else {
-          etapaKey = etapa.split('_')[0]; // Para outros casos
-        }
-        
-        const tempoEstimadoMs = dadosEtapa.tempoEstimado * 60 * 60 * 1000; // horas para ms
-        
-        tempos[etapaKey] = (tempos[etapaKey] || 0) + tempoEstimadoMs;
-        total += tempoEstimadoMs;
-      }
-    });
-    
-    // 2. Verificar subatividades nos serviços
+    // Todos os serviços agora têm subatividades com tempos estimados
     ordem.servicos.forEach(servico => {
       if (servico.subatividades) {
         servico.subatividades
@@ -60,14 +37,8 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
             if (sub.tempoEstimado) {
               const tempoEstimadoMs = sub.tempoEstimado * 60 * 60 * 1000; // horas para ms
               
-              // Corrigido: Atribuir o tempo da subatividade ao tipo de serviço correto
-              if (['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo)) {
-                tempos['retifica'] = (tempos['retifica'] || 0) + tempoEstimadoMs;
-              } else if (servico.tipo === 'montagem') {
-                tempos['montagem'] = (tempos['montagem'] || 0) + tempoEstimadoMs;
-              } else if (servico.tipo === 'dinamometro') {
-                tempos['dinamometro'] = (tempos['dinamometro'] || 0) + tempoEstimadoMs;
-              }
+              // Atribuir ao tipo de serviço correto
+              tempos[servico.tipo] = (tempos[servico.tipo] || 0) + tempoEstimadoMs;
               
               total += tempoEstimadoMs;
             }
@@ -75,7 +46,7 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
       }
     });
     
-    // 3. Usar o tempo total estimado armazenado se disponível
+    // Usar o tempo total estimado armazenado se disponível
     if (ordem.tempoTotalEstimado && ordem.tempoTotalEstimado > 0) {
       total = ordem.tempoTotalEstimado;
     }
@@ -100,7 +71,12 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
     retifica: "Retífica",
     montagem: "Montagem",
     dinamometro: "Dinamômetro",
-    inspecao_final: "Inspeção Final"
+    inspecao_final: "Inspeção Final",
+    bloco: "Bloco", 
+    biela: "Biela",
+    cabecote: "Cabeçote",
+    virabrequim: "Virabrequim",
+    eixo_comando: "Eixo de Comando"
   };
 
   const formatarTempo = (ms: number) => {
@@ -181,12 +157,12 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
             <p className="font-medium text-lg">{formatarTempo(tempoTotal)}</p>
             
             <div className="mt-2 space-y-1">
-              <p className="text-sm text-muted-foreground">Detalhamento por etapa:</p>
+              <p className="text-sm text-muted-foreground">Detalhamento por serviço:</p>
               <div className="ml-2 space-y-1">
-                {Object.entries(temposPorEtapa).map(([etapa, tempo]) => (
+                {Object.entries(temposPorEtapa).map(([tipo, tempo]) => (
                   tempo > 0 && (
-                    <div key={etapa} className="flex justify-between items-center">
-                      <span className="text-sm">{etapasNomes[etapa] || etapa}</span>
+                    <div key={tipo} className="flex justify-between items-center">
+                      <span className="text-sm">{etapasNomes[tipo] || tipo}</span>
                       <span className="text-sm font-medium">{formatarTempo(tempo)}</span>
                     </div>
                   )
