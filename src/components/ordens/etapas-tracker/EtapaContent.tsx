@@ -135,50 +135,26 @@ export function EtapaContent({
     );
   }
 
-  // For lavagem, inspecao_inicial, inspecao_final - show only the service directly, no extra cards
+  // MODIFICADO: Para lavagem, inspeção_inicial, inspeção_final usar sempre os serviços específicos
+  // E não mostrar o fallback para os cards duplicados
   else if (selectedEtapa === "lavagem" || selectedEtapa === "inspecao_inicial" || selectedEtapa === "inspecao_final") {
     const servicos = getServicosParaEtapa(selectedEtapa);
     
-    // Se existem serviços específicos para essa etapa, mostrar eles diretamente sem o card duplicado
-    if (servicos && servicos.length > 0) {
-      return (
-        <div>
-          <EtapaCard
-            key={selectedEtapa}
-            ordemId={ordem.id}
-            etapa={selectedEtapa}
-            etapaNome={getEtapaTitulo(selectedEtapa)}
-            funcionarioId={funcionario?.id || ""}
-            funcionarioNome={funcionario?.nome}
-            servicos={servicos}
-            etapaInfo={getEtapaInfo(selectedEtapa)}
-            onSubatividadeToggle={onSubatividadeToggle}
-            onServicoStatusChange={onServicoStatusChange}
-            onEtapaStatusChange={onEtapaStatusChange}
-          />
-        </div>
-      );
-    }
-    
-    // Fallback to old behavior if no specific services (shouldn't happen)
-    const tiposParaEtapa = getTiposParaEtapa(selectedEtapa);
-    
     return (
-      <div className="grid gap-4">
-        {tiposParaEtapa.map(tipo => (
-          <EtapaCard
-            key={`${selectedEtapa}-${tipo}`}
-            ordemId={ordem.id}
-            etapa={selectedEtapa}
-            etapaNome={getEtapaTitulo(selectedEtapa, tipo)}
-            funcionarioId={funcionario?.id || ""}
-            funcionarioNome={funcionario?.nome}
-            servicos={[]} 
-            etapaInfo={getEtapaInfo(selectedEtapa, tipo)}
-            servicoTipo={tipo}
-            onEtapaStatusChange={onEtapaStatusChange}
-          />
-        ))}
+      <div>
+        <EtapaCard
+          key={selectedEtapa}
+          ordemId={ordem.id}
+          etapa={selectedEtapa}
+          etapaNome={getEtapaTitulo(selectedEtapa)}
+          funcionarioId={funcionario?.id || ""}
+          funcionarioNome={funcionario?.nome}
+          servicos={servicos}
+          etapaInfo={getEtapaInfo(selectedEtapa)}
+          onSubatividadeToggle={onSubatividadeToggle}
+          onServicoStatusChange={onServicoStatusChange}
+          onEtapaStatusChange={onEtapaStatusChange}
+        />
       </div>
     );
   }

@@ -110,24 +110,10 @@ export default function EtapaCard({
     }
   }, [etapaInfo, setIsAtivo]);
   
-  // NOVO: Verificar se todos os serviços estão concluídos e concluir a etapa automaticamente
-  useEffect(() => {
-    // Verificar somente para a etapa de retífica
-    if (etapa === 'retifica' && !isEtapaConcluida(etapaInfo) && servicos.length > 0) {
-      const todosServicosConcluidos = servicos.every(servico => servico.concluido);
-      
-      if (todosServicosConcluidos && onEtapaStatusChange) {
-        console.log("Todos os serviços de retífica concluídos, concluindo a etapa automaticamente");
-        
-        // Usa o ID e nome do funcionário selecionado, último salvo ou funcionário atual
-        const useId = funcionarioSelecionadoId || lastSavedFuncionarioId || etapaInfo?.funcionarioId || funcionario?.id;
-        const useNome = funcionarioSelecionadoNome || lastSavedFuncionarioNome || etapaInfo?.funcionarioNome || funcionario?.nome;
-        
-        onEtapaStatusChange(etapa, true, useId, useNome);
-      }
-    }
-  }, [etapa, servicos, isEtapaConcluida, etapaInfo, onEtapaStatusChange, funcionarioSelecionadoId, 
-      lastSavedFuncionarioId, funcionarioSelecionadoNome, lastSavedFuncionarioNome, funcionario]);
+  // MODIFICADO: Remover o efeito de conclusão automática para cabeçote em retífica
+  // O código anterior marcava automaticamente a etapa como concluída quando todos os serviços estavam concluídos
+  // O que causava o problema de marcar cabeçote como concluído ao concluir o bloco
+  // Agora cada serviço deve ser concluído individualmente pelo usuário
   
   const handleEtapaConcluida = (tempoTotal: number) => {
     // Verificar se todas as subatividades estão concluídas
@@ -151,7 +137,30 @@ export default function EtapaCard({
     }
   };
 
+  // MODIFICADO: Adicionar uma verificação se deve mostrar o cronômetro
+  // Apenas mostrar para lavagem, inspeção inicial e inspeção final
+  // E apenas quando não tiver serviço específico associado ou se esse serviço precisar do cronômetro
   const etapaComCronometro = ['lavagem', 'inspecao_inicial', 'inspecao_final'].includes(etapa);
+  
+  // Verificar se este card específico precisa de cronômetro
+  // Se for um serviço específico dentro de uma etapa, verificar as configurações do serviço
+  const mostrarCronometro = () => {
+    // Se não for uma etapa que pode ter cronômetro, não mostrar
+    if (!etapaComCronometro) return false;
+    
+    // Se for serviço específico (retifica-bloco, retifica-cabecote, etc), não mostrar cronômetro
+    if (servicoTipo && etapa !== 'lavagem' && etapa !== 'inspecao_inicial' && etapa !== 'inspecao_final') {
+      return false;
+    }
+    
+    // Se for um serviço específico de inspeção/lavagem, mostrar cronômetro
+    if ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo) {
+      return true;
+    }
+    
+    // Por padrão, mostrar cronômetro para as etapas gerais de lavagem, inspeção inicial e inspeção final
+    return etapaComCronometro;
+  };
   
   // Função para exibir o nome do responsável atual (selecionado, etapaInfo ou último salvo)
   const getResponsavelDisplayName = () => {
@@ -176,7 +185,6 @@ export default function EtapaCard({
         servicos={servicos} 
         onAllServicosConcluidos={() => {
           // Não fazer nada automático, deixar usuário clicar em concluir
-          // ou usar o efeito automático para etapa de retífica
         }} 
       />
       
@@ -193,7 +201,8 @@ export default function EtapaCard({
         />
       )}
       
-      {etapaComCronometro && (
+      {/* MODIFICADO: Usar a função mostrarCronometro para decidir se exibe o cronômetro */}
+      {mostrarCronometro() && (
         <EtapaTimerSection 
           ordemId={ordemId}
           funcionarioId={lastSavedFuncionarioId || funcionarioSelecionadoId || funcionarioId}
