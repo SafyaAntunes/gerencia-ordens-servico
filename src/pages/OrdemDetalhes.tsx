@@ -11,12 +11,19 @@ import { DeleteOrdemDialog } from "@/components/ordens/detalhes/DeleteOrdemDialo
 import { LoadingOrdem } from "@/components/ordens/detalhes/LoadingOrdem";
 import { NotFoundOrdem } from "@/components/ordens/detalhes/NotFoundOrdem";
 import { OrdemHeaderCustom } from "@/components/ordens/detalhes/OrdemHeaderCustom";
+import { useState, useEffect } from "react";
+import { Cliente } from "@/types/clientes";
+import { getClientes } from "@/services/clienteService";
+import { toast } from "sonner";
 
 interface OrdemDetalhesProps extends LogoutProps {}
 
 export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
   const { id } = useParams();
   const { funcionario, canEditOrder } = useAuth();
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [isLoadingClientes, setIsLoadingClientes] = useState(false);
+  
   const {
     ordem,
     isLoading,
@@ -34,6 +41,26 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
   } = useOrdemDetalhes(id);
 
   const canEditThisOrder = ordem ? canEditOrder(ordem.id) : false;
+  
+  // Carregar clientes quando entrar no modo de edição
+  useEffect(() => {
+    if (isEditando) {
+      const fetchClientes = async () => {
+        setIsLoadingClientes(true);
+        try {
+          const clientesData = await getClientes();
+          setClientes(clientesData);
+        } catch (error) {
+          console.error("Erro ao buscar clientes:", error);
+          toast.error("Erro ao carregar lista de clientes");
+        } finally {
+          setIsLoadingClientes(false);
+        }
+      };
+      
+      fetchClientes();
+    }
+  }, [isEditando]);
 
   if (isLoading) {
     return (
@@ -124,6 +151,8 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
           onCancel={() => setIsEditando(false)}
           onSubatividadeToggle={handleSubatividadeToggleInEditMode}
           isSubatividadeEditingEnabled={true}
+          clientes={clientes}
+          isLoadingClientes={isLoadingClientes}
         />
       ) : (
         <OrdemTabs
