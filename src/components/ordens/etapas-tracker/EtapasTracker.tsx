@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -10,7 +11,6 @@ import { EmptyServices } from "./EmptyServices";
 import { EtapasSelector } from "./EtapasSelector";
 import { EtapaContent } from "./EtapaContent";
 import { useEtapasProgress } from "./useEtapasProgress";
-import { servicoToEtapaMapping, formatTipoServico } from "../servico/hooks/utils/servicoTrackerUtils";
 
 interface EtapasTrackerProps {
   ordem: OrdemServico;
@@ -18,7 +18,7 @@ interface EtapasTrackerProps {
 }
 
 const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
-  // Include all possible etapas
+  // Removemos lavagem, inspeção inicial e final da lista de etapas
   const [etapasAtivas, setEtapasAtivas] = useState<EtapaOS[]>([]);
   const [selectedEtapa, setSelectedEtapa] = useState<EtapaOS | null>(null);
   const [selectedServicoTipo, setSelectedServicoTipo] = useState<TipoServico | null>(null);
@@ -26,25 +26,12 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
   const { progressoTotal, calcularProgressoTotal, atualizarProgressoNoDB } = useEtapasProgress();
 
   const verificarEtapasDisponiveis = () => {
-    // Check which service types are present in the order
-    const etapasPresentes: Record<EtapaOS, boolean> = {
-      retifica: false,
-      montagem: false,
-      dinamometro: false,
-      lavagem: false,
-      inspecao_inicial: false,
-      inspecao_final: false
+    const temMontagem = ordem.servicos.some(s => s.tipo === 'montagem');
+    const temDinamometro = ordem.servicos.some(s => s.tipo === 'dinamometro');
+    return {
+      montagem: temMontagem,
+      dinamometro: temDinamometro
     };
-
-    // For each service in the order, mark its corresponding etapa as present
-    ordem.servicos.forEach(servico => {
-      const etapa = servicoToEtapaMapping[servico.tipo];
-      if (etapa) {
-        etapasPresentes[etapa] = true;
-      }
-    });
-
-    return etapasPresentes;
   };
 
   useEffect(() => {
@@ -56,19 +43,17 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     }
 
     const etapasDisponiveis = verificarEtapasDisponiveis();
-    
-    // Include all etapas that have services
-    const allEtapas: EtapaOS[] = Object.keys(etapasDisponiveis)
-      .filter(etapa => etapasDisponiveis[etapa as EtapaOS])
-      .map(etapa => etapa as EtapaOS);
+    // Removemos lavagem, inspeção inicial e final da lista de etapas
+    const allEtapas: EtapaOS[] = [
+      'retifica'
+    ];
+    if (etapasDisponiveis.montagem) allEtapas.push('montagem');
+    if (etapasDisponiveis.dinamometro) allEtapas.push('dinamometro');
 
     setEtapasAtivas(allEtapas);
     if (!selectedEtapa && allEtapas.length > 0) {
       setSelectedEtapa(allEtapas[0]);
-    } else if (selectedEtapa && !allEtapas.includes(selectedEtapa)) {
-      setSelectedEtapa(allEtapas[0] || null);
     }
-    
     setSelectedServicoTipo(null);
     calcularProgressoTotal(ordem);
   }, [ordem, funcionario, calcularProgressoTotal]);
@@ -259,7 +244,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         onOrdemUpdate(ordemAtualizada);
       }
       
-      const servicoMsg = servicoTipo ? ` - ${formatTipoServico(servicoTipo)}` : '';
+      const servicoMsg = servicoTipo ? ` - ${formatServicoTipo(servicoTipo)}` : '';
       let acao;
       
       if (concluida) {
@@ -358,7 +343,7 @@ export const etapaNomesBR: Record<EtapaOS, string> = {
   inspecao_final: "Inspeção Final"
 };
 
-export const formatTipoServico = (tipo: TipoServico): string => {
+export const formatServicoTipo = (tipo: TipoServico): string => {
   const labels: Record<TipoServico, string> = {
     bloco: "Bloco",
     biela: "Biela",

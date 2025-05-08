@@ -1,188 +1,94 @@
 
-import React from "react";
-import { Link } from "react-router-dom";
+import { useState } from "react";
 import Layout from "@/components/layout/Layout";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Settings, Users, Clock, ListTodo, Wrench, Database } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ClipboardList, HardDrive } from "lucide-react";
+import SubatividadesConfig from "./SubatividadesConfig";
+import { StorageInfo } from "@/components/common/StorageInfo";
 
-export default function Configuracoes() {
-  const { funcionario } = useAuth();
-  const isAdmin = funcionario?.nivelPermissao === 'admin';
-  const isGerente = funcionario?.nivelPermissao === 'gerente';
-  const canAccessConfig = isAdmin || isGerente;
+interface ConfiguracoesProps {
+  onLogout: () => void;
+}
 
+export default function Configuracoes({ onLogout }: ConfiguracoesProps) {
+  const [activeTab, setActiveTab] = useState("subatividades");
+  
   return (
-    <Layout>
-      <div className="container mx-auto py-6">
-        <h1 className="text-2xl font-bold mb-6">Configurações do Sistema</h1>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Configuração de Subatividades */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <ListTodo className="h-5 w-5 mr-2" />
-                Subatividades
-              </CardTitle>
-              <CardDescription>
-                Configure as subatividades para cada tipo de serviço
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Gerencie a lista de subatividades disponíveis para cada tipo de serviço no sistema.
-              </p>
-            </CardContent>
-            <CardFooter>
-              <Button asChild>
-                <Link to="/configuracoes/subatividades">Gerenciar Subatividades</Link>
-              </Button>
-            </CardFooter>
-          </Card>
-
-          {/* Configuração de Tipos de Serviço - NEW */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Wrench className="h-5 w-5 mr-2" />
-                Tipos de Serviço
-              </CardTitle>
-              <CardDescription>
-                Configure os tipos de serviço disponíveis no sistema
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Adicione, edite ou desative tipos de serviço que podem ser selecionados nas ordens de serviço.
-              </p>
-            </CardContent>
-            <CardFooter>
-              <Button asChild disabled={!canAccessConfig}>
-                <Link to="/configuracoes/servicos">Gerenciar Tipos de Serviço</Link>
-              </Button>
-            </CardFooter>
-          </Card>
-
-          {/* Configuração de Tempos de Atividades */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Clock className="h-5 w-5 mr-2" />
-                Tempos de Atividades
-              </CardTitle>
-              <CardDescription>
-                Defina os tempos padrão para cada tipo de atividade
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Configure os tempos estimados para cada tipo de serviço e atividade no sistema.
-              </p>
-            </CardContent>
-            <CardFooter>
-              <Button asChild>
-                <Link to="/configuracoes/atividades">Configurar Tempos</Link>
-              </Button>
-            </CardFooter>
-          </Card>
-
-          {/* Usuários e Permissões */}
-          {isAdmin && (
+    <Layout onLogout={onLogout}>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Configurações</h1>
+          <p className="text-muted-foreground">
+            Gerencie as configurações do sistema
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="md:col-span-2">
+            <Tabs 
+              defaultValue="subatividades" 
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="w-full"
+            >
+              <TabsList className="mb-6">
+                <TabsTrigger value="subatividades" className="flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4" />
+                  Subatividades
+                </TabsTrigger>
+                <TabsTrigger value="armazenamento" className="flex items-center gap-2">
+                  <HardDrive className="h-4 w-4" />
+                  Armazenamento
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="subatividades">
+                <SubatividadesConfig isEmbedded={true} />
+              </TabsContent>
+              
+              <TabsContent value="armazenamento">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Armazenamento</CardTitle>
+                    <CardDescription>
+                      Gerencie o armazenamento da aplicação
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <StorageInfo />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
+          
+          <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Users className="h-5 w-5 mr-2" />
-                  Usuários e Permissões
-                </CardTitle>
-                <CardDescription>
-                  Gerencie os usuários do sistema e suas permissões
-                </CardDescription>
+                <CardTitle>Ajuda</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Controle quem pode acessar cada funcionalidade do sistema.
+                <p className="text-sm text-muted-foreground mb-4">
+                  As configurações permitem personalizar o sistema para atender às suas necessidades específicas.
                 </p>
+                <ul className="list-disc pl-5 text-sm space-y-2">
+                  <li>
+                    <strong>Subatividades</strong>: Configure as subatividades para os diferentes serviços.
+                  </li>
+                  <li>
+                    <strong>Armazenamento</strong>: Visualize e gerencie o uso de armazenamento do sistema.
+                  </li>
+                </ul>
               </CardContent>
-              <CardFooter>
-                <Button asChild disabled={!isAdmin}>
-                  <Link to="/funcionarios">Gerenciar Usuários</Link>
-                </Button>
-              </CardFooter>
             </Card>
-          )}
-
-          {/* Configurações Gerais */}
-          {isAdmin && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Settings className="h-5 w-5 mr-2" />
-                  Configurações Gerais
-                </CardTitle>
-                <CardDescription>
-                  Defina as configurações gerais do sistema
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Configure aspectos gerais como nome da empresa, logo, cores e preferências.
-                </p>
-              </CardContent>
-              <CardFooter>
-                <Button disabled>Em desenvolvimento</Button>
-              </CardFooter>
-            </Card>
-          )}
-
-          {/* Backup do Banco de Dados */}
-          {isAdmin && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Database className="h-5 w-5 mr-2" />
-                  Backup do Sistema
-                </CardTitle>
-                <CardDescription>
-                  Gerencie backups do banco de dados
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Faça backup e restaure os dados do sistema quando necessário.
-                </p>
-              </CardContent>
-              <CardFooter>
-                <Button disabled>Em desenvolvimento</Button>
-              </CardFooter>
-            </Card>
-          )}
-
-          {/* Reset de Subatividades */}
-          {isAdmin && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Settings className="h-5 w-5 mr-2" />
-                  Reset de Subatividades
-                </CardTitle>
-                <CardDescription>
-                  Ferramenta de administração
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Cuidado! Esta função reinicia todas as subatividades para os valores padrão.
-                </p>
-              </CardContent>
-              <CardFooter>
-                <Button asChild variant="destructive">
-                  <Link to="/configuracoes/subatividades/reset">Reset Subatividades</Link>
-                </Button>
-              </CardFooter>
-            </Card>
-          )}
+          </div>
         </div>
       </div>
     </Layout>
