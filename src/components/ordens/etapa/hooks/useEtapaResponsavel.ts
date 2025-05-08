@@ -116,14 +116,15 @@ export function useEtapaResponsavel({
     }
   };
 
-  const handleCustomTimerStart = async () => {
+  // Changed to return boolean instead of Promise<boolean> to match expected type
+  const handleCustomTimerStart = () => {
     if (!funcionarioSelecionadoId) {
       toast.error("Selecione um funcionário antes de iniciar o timer");
       return false;
     }
     
-    // Salvar o responsável
-    await handleSaveResponsavel(
+    // Call the async function without awaiting it
+    handleSaveResponsavel(
       [funcionarioSelecionadoId], 
       [funcionarioSelecionadoNome || ""]
     );

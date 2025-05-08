@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AtribuirMultiplosFuncionariosDialog } from "@/components/funcionarios/AtribuirMultiplosFuncionariosDialog";
@@ -30,6 +29,7 @@ interface FuncionarioSelectorProps {
   isSaving?: boolean;
 }
 
+// Using named export instead of default export
 export function FuncionarioSelector({
   ordemId,
   etapa,
