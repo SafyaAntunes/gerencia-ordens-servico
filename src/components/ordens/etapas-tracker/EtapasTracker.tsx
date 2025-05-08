@@ -269,6 +269,13 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
   };
 
   const etapasDisponiveis = verificarEtapasDisponiveis();
+  
+  // Verificar se temos serviços do tipo específico (lavagem, inspeção inicial, inspeção final)
+  const temServicoLavagem = ordem.servicos.some(s => s.tipo === 'lavagem');
+  const temServicoInspecaoInicial = ordem.servicos.some(s => s.tipo === 'inspecao_inicial');
+  const temServicoInspecaoFinal = ordem.servicos.some(s => s.tipo === 'inspecao_final');
+  
+  // Verificar se há serviços ativos com subatividades selecionadas
   const servicosAtivos = ordem.servicos.filter(servico =>
     servico.subatividades && servico.subatividades.some(sub => sub.selecionada)
   );
@@ -311,12 +318,6 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
               const retificaConcluida = etapasAndamento?.['retifica']?.concluido === true;
               const montagemConcluida = etapasAndamento?.['montagem']?.concluido === true;
               const dinamometroConcluida = etapasAndamento?.['dinamometro']?.concluido === true;
-              
-              console.log("Estado de conclusão das etapas:", {
-                retifica: retificaConcluida,
-                montagem: montagemConcluida,
-                dinamometro: dinamometroConcluida
-              });
               
               return retificaConcluida || montagemConcluida || dinamometroConcluida;
             }}

@@ -70,9 +70,14 @@ export function EtapaContent({
       case 'dinamometro':
         return ordem.servicos.filter(servico => servico.tipo === 'dinamometro');
       case 'lavagem':
+        // Retornar serviço específico de lavagem para a etapa lavagem
+        return ordem.servicos.filter(servico => servico.tipo === 'lavagem');
       case 'inspecao_inicial':
+        // Retornar serviço específico de inspeção inicial para a etapa inspeção inicial
+        return ordem.servicos.filter(servico => servico.tipo === 'inspecao_inicial');
       case 'inspecao_final':
-        return [];
+        // Retornar serviço específico de inspeção final para a etapa inspeção final
+        return ordem.servicos.filter(servico => servico.tipo === 'inspecao_final');
       default:
         return [];
     }
@@ -130,8 +135,32 @@ export function EtapaContent({
     );
   }
 
-  // Render inspection or washing steps with service types
-  else if (selectedEtapa === "inspecao_inicial" || selectedEtapa === "inspecao_final" || selectedEtapa === "lavagem") {
+  // Verificar se estamos na etapa de lavagem, inspeção inicial ou final e mostrar os serviços correspondentes
+  else if (selectedEtapa === "lavagem" || selectedEtapa === "inspecao_inicial" || selectedEtapa === "inspecao_final") {
+    const servicos = getServicosParaEtapa(selectedEtapa);
+    
+    // Se existem serviços específicos para essa etapa, mostrar eles diretamente
+    if (servicos && servicos.length > 0) {
+      return (
+        <div>
+          <EtapaCard
+            key={selectedEtapa}
+            ordemId={ordem.id}
+            etapa={selectedEtapa}
+            etapaNome={getEtapaTitulo(selectedEtapa)}
+            funcionarioId={funcionario?.id || ""}
+            funcionarioNome={funcionario?.nome}
+            servicos={servicos}
+            etapaInfo={getEtapaInfo(selectedEtapa)}
+            onSubatividadeToggle={onSubatividadeToggle}
+            onServicoStatusChange={onServicoStatusChange}
+            onEtapaStatusChange={onEtapaStatusChange}
+          />
+        </div>
+      );
+    }
+    
+    // Se não, mostrar por tipo de serviço como antes
     const tiposParaEtapa = getTiposParaEtapa(selectedEtapa);
     
     return (
