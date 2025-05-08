@@ -137,34 +137,20 @@ export default function EtapaCard({
     }
   };
 
-  // MODIFICADO: Adicionar uma verificação se deve mostrar o cronômetro
-  // Apenas mostrar para inspeção inicial e inspeção final
-  // NÃO mostrar para lavagem (agora usaremos apenas o cronômetro do serviço)
-  const etapaComCronometro = ['inspecao_inicial', 'inspecao_final'].includes(etapa);
+  // MODIFICADO: Não mostrar cronômetro para nenhuma etapa principal
+  // Agora os cronômetros só serão mostrados em serviços específicos
+  const etapaComCronometro = false;
   
   // Verificar se este card específico precisa de cronômetro
   // Se for um serviço específico dentro de uma etapa, verificar as configurações do serviço
   const mostrarCronometro = () => {
-    // Se não for uma etapa que pode ter cronômetro, não mostrar
-    if (!etapaComCronometro) return false;
-    
-    // Se for serviço específico (retifica-bloco, retifica-cabecote, etc), não mostrar cronômetro
-    if (servicoTipo && etapa !== 'inspecao_inicial' && etapa !== 'inspecao_final') {
-      return false;
-    }
-    
-    // Se for um serviço específico de inspeção, mostrar cronômetro
-    if ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final') && servicoTipo) {
+    // Se for um serviço específico de inspeção ou lavagem, mostrar cronômetro
+    if ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo) {
       return true;
     }
     
-    // Para a etapa de lavagem, nunca mostrar o cronômetro da etapa (apenas do serviço)
-    if (etapa === 'lavagem') {
-      return false;
-    }
-    
-    // Por padrão, mostrar cronômetro para as etapas gerais de inspeção inicial e inspeção final
-    return etapaComCronometro;
+    // Para todas as outras combinações, não mostrar cronômetro da etapa
+    return false;
   };
   
   // Função para exibir o nome do responsável atual (selecionado, etapaInfo ou último salvo)
@@ -206,7 +192,6 @@ export default function EtapaCard({
         />
       )}
       
-      {/* MODIFICADO: Usar a função mostrarCronometro para decidir se exibe o cronômetro */}
       {mostrarCronometro() && (
         <EtapaTimerSection 
           ordemId={ordemId}

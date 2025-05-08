@@ -135,26 +135,34 @@ export function EtapaContent({
     );
   }
 
-  // MODIFICADO: Para lavagem, inspeção_inicial, inspeção_final usar sempre os serviços específicos
-  // E não mostrar o fallback para os cards duplicados
+  // Para lavagem, inspeção_inicial, inspeção_final renderizar componentes específicos por tipo
   else if (selectedEtapa === "lavagem" || selectedEtapa === "inspecao_inicial" || selectedEtapa === "inspecao_final") {
-    const servicos = getServicosParaEtapa(selectedEtapa);
+    const tiposDeServico = getTiposParaEtapa(selectedEtapa);
     
     return (
-      <div>
-        <EtapaCard
-          key={selectedEtapa}
-          ordemId={ordem.id}
-          etapa={selectedEtapa}
-          etapaNome={getEtapaTitulo(selectedEtapa)}
-          funcionarioId={funcionario?.id || ""}
-          funcionarioNome={funcionario?.nome}
-          servicos={servicos}
-          etapaInfo={getEtapaInfo(selectedEtapa)}
-          onSubatividadeToggle={onSubatividadeToggle}
-          onServicoStatusChange={onServicoStatusChange}
-          onEtapaStatusChange={onEtapaStatusChange}
-        />
+      <div className="grid gap-4">
+        {tiposDeServico.map(tipo => {
+          const servicosDesseTipo = getServicosParaEtapa(selectedEtapa).filter(
+            servico => servico.tipo === tipo || servico.tipo === selectedEtapa
+          );
+          
+          return (
+            <EtapaCard
+              key={`${selectedEtapa}-${tipo}`}
+              ordemId={ordem.id}
+              etapa={selectedEtapa}
+              etapaNome={`${getEtapaTitulo(selectedEtapa)} - ${formatServicoTipo(tipo)}`}
+              funcionarioId={funcionario?.id || ""}
+              funcionarioNome={funcionario?.nome}
+              servicos={servicosDesseTipo}
+              etapaInfo={getEtapaInfo(selectedEtapa, tipo)}
+              servicoTipo={tipo}
+              onSubatividadeToggle={onSubatividadeToggle}
+              onServicoStatusChange={onServicoStatusChange}
+              onEtapaStatusChange={onEtapaStatusChange}
+            />
+          );
+        })}
       </div>
     );
   }
