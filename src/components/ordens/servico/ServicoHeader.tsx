@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 
 interface ServicoHeaderProps {
   tipo: TipoServico;
-  displayTime: string;
+  displayTime: string | number;
   servicoStatus: ServicoStatus;
   progressPercentage: number;
   completedSubatividades: number;
@@ -53,6 +53,11 @@ export default function ServicoHeader({
     return titles[tipo] || tipo;
   };
   
+  // Convert displayTime to string if it's a number
+  const formattedTime = typeof displayTime === 'number' 
+    ? formatTime(displayTime) 
+    : displayTime;
+  
   return (
     <div className="flex flex-col space-y-2">
       <div className="flex justify-between">
@@ -61,7 +66,7 @@ export default function ServicoHeader({
           
           <div className="flex items-center text-sm text-muted-foreground mt-1">
             <Clock className="h-4 w-4 mr-1" />
-            <span>Tempo: {formatTime(displayTime)}</span>
+            <span>Tempo: {formattedTime}</span>
             {tempoTotalEstimado > 0 && (
               <span className="ml-2">/ Estimado: {formatTime(tempoTotalEstimado * 3600 * 1000)}</span>
             )}

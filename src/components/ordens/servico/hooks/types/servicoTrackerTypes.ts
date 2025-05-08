@@ -40,7 +40,7 @@ export interface UseServicoTrackerResult {
   temPermissao: boolean;
   isRunning: boolean;
   isPaused: boolean;
-  displayTime: number;  // Changed from string to number to match useOrdemTimer
+  displayTime: number | string;  // Accept either number or string
   servicoStatus: ServicoStatus;
   progressPercentage: number;
   completedSubatividades: number;
