@@ -5,7 +5,7 @@ import { getFuncionarios } from "@/services/funcionarioService";
 import { Servico, SubAtividade, TipoServico, EtapaOS } from "@/types/ordens";
 import { Funcionario } from "@/types/funcionarios";
 import { useAuth } from "@/hooks/useAuth";
-import { UseServicoTrackerProps, UseServicoTrackerResult, ServicoStatus } from "./types/servicoTrackerTypes";
+import { UseServicoTrackerProps, UseServicoTrackerResult, ServicoStatus, PausaRegistro } from "./types/servicoTrackerTypes";
 import { useOrdemTimer } from "@/hooks/useOrdemTimer";
 import { getServicoStatus } from "./utils/servicoTrackerUtils";
 import { doc, updateDoc, getDoc } from "firebase/firestore";

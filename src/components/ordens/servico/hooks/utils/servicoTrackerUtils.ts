@@ -18,13 +18,13 @@ export const getServicoStatus = (
   concluido: boolean
 ): ServicoStatus => {
   if (concluido) {
-    return "concluido";
+    return "completed";
   } else if (isRunning) {
-    return "em_andamento";
+    return "running";
   } else if (isPaused) {
-    return "pausado";
+    return "paused";
   } else {
-    return "nao_iniciado";
+    return "idle";
   }
 };
 

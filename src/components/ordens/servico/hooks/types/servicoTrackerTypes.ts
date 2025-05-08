@@ -1,7 +1,12 @@
 
 import { Funcionario } from "@/types/funcionarios";
 import { Servico, SubAtividade, TipoServico, EtapaOS } from "@/types/ordens";
-import { PausaRegistro } from "@/types/timer";
+
+export interface PausaRegistro {
+  inicio: number;
+  fim?: number;
+  motivo?: string;
+}
 
 export interface UseServicoTrackerProps {
   servico: Servico;
@@ -24,7 +29,7 @@ export interface UseServicoTrackerResult {
   isPaused: boolean;
   displayTime: string;
   servicoStatus: ServicoStatus;
-  progressPercentage: number; // Definido explicitamente como number
+  progressPercentage: number;
   completedSubatividades: number;
   totalSubatividades: number;
   tempoTotalEstimado: number;

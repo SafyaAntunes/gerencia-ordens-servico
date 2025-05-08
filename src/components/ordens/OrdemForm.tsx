@@ -51,7 +51,7 @@ import { saveCliente, getMotores } from "@/services/clienteService";
 import { getSubatividades, getSubatividadesByTipo } from "@/services/subatividadeService";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { OrdemFormValues } from "./ordens/OrdemForm.d";
+import { OrdemFormProps, OrdemFormValues } from "./OrdemForm.d";
 
 const SUBATIVIDADES: Record<TipoServico, string[]> = {
   bloco: [
