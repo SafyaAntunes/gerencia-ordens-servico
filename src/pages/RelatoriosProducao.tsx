@@ -30,7 +30,7 @@ interface RelatoriosProducaoProps {
 
 const RelatoriosProducao = ({ onLogout }: RelatoriosProducaoProps) => {
   return (
-    <Layout onLogout={onLogout} currentPage="relatorios">
+    <Layout onLogout={onLogout}>
       <div className="p-6">
         <h1 className="text-2xl font-bold mb-6">Relatórios de Produção</h1>
         
