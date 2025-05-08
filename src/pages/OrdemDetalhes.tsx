@@ -1,5 +1,5 @@
 
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { LogoutProps } from "@/types/props";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,6 +12,8 @@ import { LoadingOrdem } from "@/components/ordens/detalhes/LoadingOrdem";
 import { NotFoundOrdem } from "@/components/ordens/detalhes/NotFoundOrdem";
 import { OrdemHeaderCustom } from "@/components/ordens/detalhes/OrdemHeaderCustom";
 import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 import { Cliente } from "@/types/clientes";
 import { toast } from "sonner";
 import { loadOrderFormData } from "@/services/ordemService";
@@ -20,6 +22,7 @@ interface OrdemDetalhesProps extends LogoutProps {}
 
 export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { funcionario, canEditOrder } = useAuth();
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [isLoadingClientes, setIsLoadingClientes] = useState(false);
@@ -112,6 +115,18 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
   return (
     <Layout onLogout={onLogout}>
       <div className="mb-4">
+        <div className="flex items-center gap-4 mb-4">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => navigate("/ordens")}
+            className="flex items-center gap-1"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Voltar
+          </Button>
+        </div>
+        
         <OrdemHeaderCustom 
           id={ordem.id}
           nome={ordem.nome}

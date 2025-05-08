@@ -180,6 +180,8 @@ type OrdemFormProps = {
 };
 
 const tiposServico: { value: TipoServico; label: string }[] = [
+  { value: "lavagem", label: "Lavagem" },
+  { value: "inspecao_inicial", label: "Inspeção Inicial" },
   { value: "bloco", label: "Bloco" },
   { value: "biela", label: "Biela" },
   { value: "cabecote", label: "Cabeçote" },
@@ -187,8 +189,6 @@ const tiposServico: { value: TipoServico; label: string }[] = [
   { value: "eixo_comando", label: "Eixo de Comando" },
   { value: "montagem", label: "Montagem" },
   { value: "dinamometro", label: "Dinamômetro" },
-  { value: "lavagem", label: "Lavagem" },
-  { value: "inspecao_inicial", label: "Inspeção Inicial" },
   { value: "inspecao_final", label: "Inspeção Final" }
 ];
 
