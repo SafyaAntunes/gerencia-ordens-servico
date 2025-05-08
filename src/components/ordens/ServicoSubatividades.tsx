@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SubAtividade, TipoServico } from "@/types/ordens";
 import { Plus, Trash, X } from "lucide-react";
-import CustomSubatividadesList from "@/components/ordens/subatividades/CustomSubatividadesList";
-import CustomSubatividadesForm from "@/components/ordens/subatividades/CustomSubatividadesForm";
+import { CustomSubatividadesList } from "@/components/ordens/subatividades/CustomSubatividadesList";
+import { CustomSubatividadesForm } from "@/components/ordens/subatividades/CustomSubatividadesForm";
 
 interface ServicoSubatividadesProps {
   tipoServico: TipoServico;
