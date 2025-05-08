@@ -1,16 +1,17 @@
 
-import { toast } from "sonner";
+import { useState } from "react";
 import { EtapaOS, TipoServico } from "@/types/ordens";
-import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { marcarVariosFuncionariosEmServico } from "@/services/funcionarioEmServicoService";
 
 interface UseEtapaResponsavelProps {
   etapa: EtapaOS;
   servicoTipo?: TipoServico;
-  funcionarioSelecionadoId: string;
-  funcionarioSelecionadoNome: string;
-  isEtapaConcluida: (etapaInfo?: any) => boolean;
+  funcionarioSelecionadoId?: string;
+  funcionarioSelecionadoNome?: string;
+  isEtapaConcluida: boolean;
   onEtapaStatusChange?: (etapa: EtapaOS, concluida: boolean, funcionarioId?: string, funcionarioNome?: string, servicoTipo?: TipoServico) => void;
   etapaInfo?: any;
   ordemId: string;
@@ -26,76 +27,29 @@ export function useEtapaResponsavel({
   etapaInfo,
   ordemId
 }: UseEtapaResponsavelProps) {
-  // Estado para rastrear a última seleção de funcionário, garantindo persistência
-  const [lastSavedFuncionarioId, setLastSavedFuncionarioId] = useState<string>("");
-  const [lastSavedFuncionarioNome, setLastSavedFuncionarioNome] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
-  
-  // Inicializa os valores salvos com os valores atuais de etapaInfo
-  useEffect(() => {
-    if (etapaInfo?.funcionarioId) {
-      setLastSavedFuncionarioId(etapaInfo.funcionarioId);
-      setLastSavedFuncionarioNome(etapaInfo.funcionarioNome || "");
-      console.log(`useEtapaResponsavel: Inicializando com funcionário da etapaInfo - ID: ${etapaInfo.funcionarioId}, Nome: ${etapaInfo.funcionarioNome}`);
-    }
-  }, [etapaInfo]);
-  
-  // Carrega dados diretamente do Firestore ao montar o componente
-  useEffect(() => {
-    const carregarDadosDoFirestore = async () => {
-      if (!ordemId) return;
-      
-      try {
-        const ordemRef = doc(db, "ordens_servico", ordemId);
-        const ordemDoc = await getDoc(ordemRef);
-        
-        if (ordemDoc.exists()) {
-          const dados = ordemDoc.data();
-          
-          // Determinar a chave da etapa com base no tipo de serviço
-          // Agora cada etapa tem seu próprio responsável por tipo de serviço
-          const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo) 
-            ? `${etapa}_${servicoTipo}` 
-            : etapa;
-            
-          const etapaData = dados?.etapasAndamento?.[etapaKey];
-          
-          if (etapaData?.funcionarioId) {
-            setLastSavedFuncionarioId(etapaData.funcionarioId);
-            setLastSavedFuncionarioNome(etapaData.funcionarioNome || "");
-            console.log(`Dados carregados do Firestore para etapa ${etapaKey}: Funcionário ${etapaData.funcionarioNome} (${etapaData.funcionarioId})`);
-          }
-        }
-      } catch (error) {
-        console.error("Erro ao carregar dados do responsável:", error);
-      }
-    };
-    
-    carregarDadosDoFirestore();
-  }, [ordemId, etapa, servicoTipo]);
-  
-  // Função para salvar o responsável diretamente no Firebase
-  const handleSaveResponsavel = async () => {
-    if (!funcionarioSelecionadoId) {
-      toast.error("É necessário selecionar um responsável para salvar");
-      return;
-    }
+  const [lastSavedFuncionarioId, setLastSavedFuncionarioId] = useState<string | undefined>(
+    etapaInfo?.funcionarioId
+  );
+  const [lastSavedFuncionarioNome, setLastSavedFuncionarioNome] = useState<string | undefined>(
+    etapaInfo?.funcionarioNome
+  );
 
+  // Função para salvar o responsável
+  const handleSaveResponsavel = async (funcionariosIds: string[] = [], funcionariosNomes: string[] = []) => {
     if (!ordemId) {
       toast.error("ID da ordem não encontrado");
       return;
     }
     
     setIsSaving(true);
-    
     try {
       // Determinar a chave da etapa com base no tipo de serviço
-      // Atualizamos para incluir LAVAGEM como etapa que tem responsável por tipo
-      const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo) 
-        ? `${etapa}_${servicoTipo}` 
+      const etapaKey = (etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo
+        ? `${etapa}_${servicoTipo}`
         : etapa;
       
-      console.log(`Salvando responsável para etapa ${etapaKey}: ${funcionarioSelecionadoNome} (${funcionarioSelecionadoId})`);
+      console.log(`Atualizando responsáveis da etapa ${etapaKey}, funcionários IDs:`, funcionariosIds);
       
       // Obter documento atual para garantir dados atualizados
       const ordemRef = doc(db, "ordens_servico", ordemId);
@@ -103,92 +57,101 @@ export function useEtapaResponsavel({
       
       if (!ordemDoc.exists()) {
         toast.error("Ordem de serviço não encontrada");
-        setIsSaving(false);
         return;
       }
       
       const dadosAtuais = ordemDoc.data();
-      
-      // Obter etapa atual para preservar dados
       const etapasAndamento = dadosAtuais.etapasAndamento || {};
       const etapaAtual = etapasAndamento[etapaKey] || {};
-      const etapaConcluida = etapaAtual.concluido || false;
       
-      // Preparar objeto para atualização
-      const atualizacao = {
-        [`etapasAndamento.${etapaKey}`]: {
-          ...etapaAtual,  // Preserva todos os dados anteriores
-          funcionarioId: funcionarioSelecionadoId,
-          funcionarioNome: funcionarioSelecionadoNome,
-          concluido: etapaConcluida,
-          // Se for primeira atribuição, definir data de início
-          iniciado: etapaAtual.iniciado || new Date(),
-          // Garantir que o tipo de serviço seja preservado para inspeções e lavagens
-          ...(servicoTipo ? { servicoTipo } : {})
-        }
-      };
+      // Se for um array vazio, remover todos os funcionários
+      if (funcionariosIds.length === 0) {
+        await updateDoc(ordemRef, {
+          [`etapasAndamento.${etapaKey}.funcionarios`]: [],
+          [`etapasAndamento.${etapaKey}.funcionarioId`]: null,
+          [`etapasAndamento.${etapaKey}.funcionarioNome`]: null
+        });
+        
+        toast.success(`Todos funcionários removidos da etapa ${etapa}`);
+        setLastSavedFuncionarioId(undefined);
+        setLastSavedFuncionarioNome(undefined);
+        return;
+      }
       
-      console.log("Atualizando etapa com:", atualizacao);
+      // Registrar todos os funcionários selecionados como "em serviço" para esta etapa
+      await marcarVariosFuncionariosEmServico(funcionariosIds, ordemId, etapa, servicoTipo);
       
-      // Atualizar o documento
-      await updateDoc(ordemRef, atualizacao);
+      // Manter compatibilidade com versão anterior do sistema (único funcionário)
+      // Primeiro funcionário da lista é o "principal"
+      const principalId = funcionariosIds[0];
+      const principalNome = funcionariosNomes[0];
       
-      // Atualizar valores salvos localmente
-      setLastSavedFuncionarioId(funcionarioSelecionadoId);
-      setLastSavedFuncionarioNome(funcionarioSelecionadoNome);
+      // Registrar funcionário "principal" (para compatibilidade com versão anterior)
+      await updateDoc(ordemRef, {
+        [`etapasAndamento.${etapaKey}.funcionarioId`]: principalId,
+        [`etapasAndamento.${etapaKey}.funcionarioNome`]: principalNome
+      });
       
-      // Chamar callback se existir (para atualizar estado pai)
+      toast.success(`Responsáveis atualizados com sucesso!`);
+      
+      // Atualizar estado local
+      setLastSavedFuncionarioId(principalId);
+      setLastSavedFuncionarioNome(principalNome);
+      
+      // Chamar callback se existir
       if (onEtapaStatusChange) {
         onEtapaStatusChange(
           etapa,
-          etapaConcluida,
-          funcionarioSelecionadoId,
-          funcionarioSelecionadoNome,
-          // Passar o tipo de serviço para poder salvar o responsável individualmente
-          (etapa === "inspecao_inicial" || etapa === "inspecao_final" || etapa === "lavagem") ? servicoTipo : undefined
+          isEtapaConcluida, // Manter status de conclusão
+          principalId,
+          principalNome,
+          servicoTipo
         );
       }
-      
-      toast.success(`Responsável ${funcionarioSelecionadoNome} salvo com sucesso!`);
     } catch (error) {
       console.error("Erro ao salvar responsável:", error);
-      toast.error("Não foi possível salvar o responsável");
+      toast.error("Erro ao salvar responsável");
     } finally {
       setIsSaving(false);
     }
   };
-  
-  const handleCustomTimerStart = (): boolean => {
-    if (!funcionarioSelecionadoId && !lastSavedFuncionarioId) {
-      toast.error("É necessário selecionar e salvar um responsável antes de iniciar a etapa");
+
+  const handleCustomTimerStart = async () => {
+    if (!funcionarioSelecionadoId) {
+      toast.error("Selecione um funcionário antes de iniciar o timer");
       return false;
     }
     
+    // Salvar o responsável
+    await handleSaveResponsavel(
+      [funcionarioSelecionadoId], 
+      [funcionarioSelecionadoNome || ""]
+    );
+    
     return true;
   };
-  
-  const handleMarcarConcluidoClick = () => {
-    if (!funcionarioSelecionadoId && !lastSavedFuncionarioId) {
-      toast.error("É necessário selecionar e salvar um responsável antes de concluir a etapa");
+
+  const handleMarcarConcluidoClick = async () => {
+    if (!onEtapaStatusChange) return;
+    
+    // Usar o último funcionário salvo ou o selecionado
+    const useId = lastSavedFuncionarioId || funcionarioSelecionadoId;
+    const useNome = lastSavedFuncionarioNome || funcionarioSelecionadoNome;
+    
+    if (!useId) {
+      toast.error("É necessário selecionar um responsável antes de concluir a etapa");
       return;
     }
     
-    // Usar o último responsável salvo ou o atualmente selecionado
-    const responsavelId = lastSavedFuncionarioId || funcionarioSelecionadoId;
-    const responsavelNome = lastSavedFuncionarioNome || funcionarioSelecionadoNome;
-    
-    if (onEtapaStatusChange) {
-      onEtapaStatusChange(
-        etapa, 
-        true, 
-        responsavelId, 
-        responsavelNome,
-        // Atualizar para também passar o tipo de serviço quando for lavagem
-        (etapa === "inspecao_inicial" || etapa === "inspecao_final" || etapa === "lavagem") ? servicoTipo : undefined
-      );
-    }
+    onEtapaStatusChange(
+      etapa,
+      true, // Marcando como concluída
+      useId,
+      useNome,
+      servicoTipo
+    );
   };
-  
+
   return {
     handleSaveResponsavel,
     handleCustomTimerStart,

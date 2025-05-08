@@ -94,7 +94,7 @@ export default function EtapaCard({
     servicoTipo,
     funcionarioSelecionadoId,
     funcionarioSelecionadoNome,
-    isEtapaConcluida,
+    isEtapaConcluida: isEtapaConcluida(etapaInfo),
     onEtapaStatusChange,
     etapaInfo,
     ordemId
@@ -144,14 +144,6 @@ export default function EtapaCard({
     // esta função sempre retornará false
     return false;
   };
-  
-  // Função para exibir o nome do responsável atual (selecionado, etapaInfo ou último salvo)
-  const getResponsavelDisplayName = () => {
-    if (lastSavedFuncionarioNome) return lastSavedFuncionarioNome;
-    if (etapaInfo?.funcionarioNome) return etapaInfo.funcionarioNome;
-    if (funcionarioSelecionadoNome) return funcionarioSelecionadoNome;
-    return "Não definido";
-  };
 
   return (
     <Card className="p-6 mb-4">
@@ -159,7 +151,7 @@ export default function EtapaCard({
         etapaNome={etapaNome}
         status={getEtapaStatus(etapaInfo)}
         isEtapaConcluida={isEtapaConcluida(etapaInfo)}
-        funcionarioNome={getResponsavelDisplayName()}
+        funcionarioNome={etapaInfo?.funcionarioNome || "Não definido"}
         podeReiniciar={false}
         onReiniciar={() => {}}
       />
@@ -173,13 +165,14 @@ export default function EtapaCard({
       
       {!isEtapaConcluida(etapaInfo) && (
         <FuncionarioSelector
+          ordemId={ordemId}
+          etapa={etapa}
+          servicoTipo={servicoTipo}
           funcionarioSelecionadoId={funcionarioSelecionadoId}
           funcionariosOptions={funcionariosOptions}
           isEtapaConcluida={isEtapaConcluida(etapaInfo)}
           onFuncionarioChange={handleFuncionarioChange}
           onSaveResponsavel={handleSaveResponsavel}
-          lastSavedFuncionarioId={lastSavedFuncionarioId}
-          lastSavedFuncionarioNome={lastSavedFuncionarioNome}
           isSaving={isSaving}
         />
       )}

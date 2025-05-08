@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/firebase';
-import { doc, updateDoc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, setDoc, collection, query, where, getDocs, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { EtapaOS, TipoServico } from '@/types/ordens';
 
@@ -72,6 +72,43 @@ export async function marcarFuncionarioEmServico(
       inicio: new Date(),
       ordemNome: ordemDoc.data().nome || ordemId
     });
+
+    // Atualizar o documento da ordem para adicionar este funcionário à etapa
+    const etapaKey = servicoTipo ? `${etapa}_${servicoTipo}` : etapa;
+    
+    // Verificar se já existe informação sobre esta etapa
+    const etapaPath = `etapasAndamento.${etapaKey}`;
+    const etapaData = ordemDoc.data().etapasAndamento?.[etapaKey] || {};
+    
+    // Criar ou atualizar a lista de funcionários para esta etapa
+    const funcionariosData = {
+      id: funcionarioId,
+      nome: funcionarioData.nome,
+      inicio: new Date()
+    };
+    
+    // Se etapaData.funcionarios não existir, criar um array com este funcionário
+    if (!etapaData.funcionarios) {
+      await updateDoc(ordemRef, {
+        [`${etapaPath}.funcionarios`]: [funcionariosData]
+      });
+    } else {
+      // Verificar se o funcionário já está na lista
+      const funcionarioJaExiste = etapaData.funcionarios.some((f: any) => f.id === funcionarioId);
+      if (!funcionarioJaExiste) {
+        // Adicionar ao array de funcionários
+        await updateDoc(ordemRef, {
+          [`${etapaPath}.funcionarios`]: arrayUnion(funcionariosData)
+        });
+      }
+    }
+    
+    // Garantir que a etapa esteja marcada como iniciada
+    if (!etapaData.iniciado) {
+      await updateDoc(ordemRef, {
+        [`${etapaPath}.iniciado`]: new Date()
+      });
+    }
     
     return true;
   } catch (error) {
@@ -152,6 +189,36 @@ export async function marcarFuncionarioDisponivel(
       });
     }
     
+    // Atualizar o documento da ordem para remover este funcionário da etapa
+    const ordemRef = doc(db, 'ordens_servico', ordemId);
+    const ordemDoc = await getDoc(ordemRef);
+    
+    if (ordemDoc.exists()) {
+      const etapaKey = servicoTipo ? `${etapa}_${servicoTipo}` : etapa;
+      const etapaPath = `etapasAndamento.${etapaKey}`;
+      const etapaData = ordemDoc.data().etapasAndamento?.[etapaKey] || {};
+      
+      if (etapaData.funcionarios && Array.isArray(etapaData.funcionarios)) {
+        // Remover este funcionário do array de funcionários
+        const funcionariosAtualizados = etapaData.funcionarios.filter(
+          (f: any) => f.id !== funcionarioId
+        );
+        
+        // Atualizar a lista de funcionários
+        await updateDoc(ordemRef, {
+          [`${etapaPath}.funcionarios`]: funcionariosAtualizados
+        });
+        
+        // Se não houver mais funcionários trabalhando nesta etapa e não estiver marcada como concluída
+        if (funcionariosAtualizados.length === 0 && !etapaData.concluido) {
+          // Podemos opcionalmente marcar a etapa como "parada" ou manter um registro que não há funcionários
+          await updateDoc(ordemRef, {
+            [`${etapaPath}.semFuncionarios`]: true
+          });
+        }
+      }
+    }
+    
     return true;
   } catch (error) {
     console.error('Erro ao marcar funcionário como disponível:', error);
@@ -227,3 +294,87 @@ export async function forcarLiberacaoFuncionario(funcionarioId: string): Promise
   }
 }
 
+/**
+ * Marca vários funcionários como "em serviço" na mesma atividade
+ */
+export async function marcarVariosFuncionariosEmServico(
+  funcionariosIds: string[],
+  ordemId: string,
+  etapa: EtapaOS,
+  servicoTipo?: TipoServico
+): Promise<boolean> {
+  try {
+    if (funcionariosIds.length === 0) {
+      toast.error('Nenhum funcionário selecionado');
+      return false;
+    }
+
+    // Verificar se a ordem existe
+    const ordemRef = doc(db, 'ordens_servico', ordemId);
+    const ordemDoc = await getDoc(ordemRef);
+    
+    if (!ordemDoc.exists()) {
+      toast.error('Ordem de serviço não encontrada');
+      return false;
+    }
+
+    const ordemNome = ordemDoc.data().nome || ordemId;
+    
+    // Para cada funcionário, marcar como em serviço
+    const promises = funcionariosIds.map(async (funcionarioId) => {
+      return marcarFuncionarioEmServico(funcionarioId, ordemId, etapa, servicoTipo);
+    });
+    
+    const resultados = await Promise.all(promises);
+    
+    // Verificar se todos foram atribuídos com sucesso
+    const todosSucesso = resultados.every(resultado => resultado === true);
+    
+    if (todosSucesso) {
+      toast.success(`${funcionariosIds.length} funcionários atribuídos com sucesso`);
+      return true;
+    } else {
+      toast.warning('Alguns funcionários não puderam ser atribuídos');
+      return false;
+    }
+  } catch (error) {
+    console.error('Erro ao marcar vários funcionários em serviço:', error);
+    toast.error('Erro ao atribuir funcionários');
+    return false;
+  }
+}
+
+/**
+ * Obtém todos os funcionários atribuídos a uma etapa específica
+ */
+export async function obterFuncionariosAtribuidos(
+  ordemId: string,
+  etapa: EtapaOS,
+  servicoTipo?: TipoServico
+): Promise<Array<{id: string, nome: string, inicio: Date}>> {
+  try {
+    const ordemRef = doc(db, 'ordens_servico', ordemId);
+    const ordemDoc = await getDoc(ordemRef);
+    
+    if (!ordemDoc.exists()) {
+      console.error('Ordem não encontrada');
+      return [];
+    }
+    
+    const etapaKey = servicoTipo ? `${etapa}_${servicoTipo}` : etapa;
+    const etapaData = ordemDoc.data().etapasAndamento?.[etapaKey] || {};
+    
+    if (!etapaData.funcionarios || !Array.isArray(etapaData.funcionarios)) {
+      return [];
+    }
+    
+    return etapaData.funcionarios.map((f: any) => ({
+      id: f.id,
+      nome: f.nome,
+      inicio: f.inicio ? new Date(f.inicio) : new Date()
+    }));
+  } catch (error) {
+    console.error('Erro ao obter funcionários atribuídos:', error);
+    return [];
+  }
+}
