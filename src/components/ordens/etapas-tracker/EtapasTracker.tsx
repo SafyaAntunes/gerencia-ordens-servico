@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -217,17 +218,23 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
       const etapaAtual = etapasAndamento[etapaKey] || {};
       
       // Preparar objeto para atualização, garantindo que nenhum campo seja undefined
-      const atualizacao = {
+      const atualizacao: Record<string, any> = {
         [`etapasAndamento.${etapaKey}`]: {
-          concluido: concluida,
+          concluido: Boolean(concluida),
           funcionarioId: funcionarioId || null,
           funcionarioNome: funcionarioNome || "",
           finalizado: concluida ? new Date() : null,
           iniciado: etapaAtual.iniciado || new Date(),
           servicoTipo: servicoTipo || null,
-          funcionarios: etapaAtual.funcionarios || []
         }
       };
+      
+      // Se a etapa atual tem funcionários, mantê-los
+      if (Array.isArray(etapaAtual.funcionarios)) {
+        atualizacao[`etapasAndamento.${etapaKey}`].funcionarios = etapaAtual.funcionarios;
+      } else {
+        atualizacao[`etapasAndamento.${etapaKey}`].funcionarios = [];
+      }
       
       // Log para depuração
       console.log("Dados a serem salvos:", atualizacao);

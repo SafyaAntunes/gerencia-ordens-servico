@@ -23,10 +23,18 @@ export async function marcarFuncionarioEmServico(
   servicoTipo?: TipoServico
 ): Promise<boolean> {
   try {
+    // Verificação de parâmetros obrigatórios
+    if (!funcionarioId || !ordemId || !etapa) {
+      console.error('Parâmetros obrigatórios faltando em marcarFuncionarioEmServico');
+      return false;
+    }
+
     // Determinar a chave da etapa com base no tipo de serviço
     const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo)
       ? `${etapa}_${servicoTipo}`
       : etapa;
+    
+    console.log(`Marcando funcionário ${funcionarioId} em serviço para etapa ${etapaKey}`);
     
     // Obter dados do funcionário
     const funcionarioRef = doc(db, "funcionarios", funcionarioId);
@@ -42,8 +50,8 @@ export async function marcarFuncionarioEmServico(
     // Atualizar último serviço do funcionário
     await updateDoc(funcionarioRef, {
       ultima_atividade: {
-        ordemId: ordemId || null,
-        etapa: etapa || null,
+        ordemId: ordemId,
+        etapa: etapa,
         servicoTipo: servicoTipo || null,
         data: new Date()
       }
@@ -209,6 +217,14 @@ export async function marcarFuncionarioDisponivel(
   servicoTipo?: TipoServico
 ): Promise<boolean> {
   try {
+    // Verificação de parâmetros obrigatórios
+    if (!funcionarioId || !ordemId || !etapa) {
+      console.error('Parâmetros obrigatórios faltando em marcarFuncionarioDisponivel');
+      return false;
+    }
+
+    console.log(`Marcando funcionário ${funcionarioId} disponível para etapa ${etapa} (serviço: ${servicoTipo || 'nenhum'})`);
+
     // Verificar se o funcionário existe
     const funcionarioRef = doc(db, 'funcionarios', funcionarioId);
     const funcionarioDoc = await getDoc(funcionarioRef);
@@ -317,6 +333,14 @@ export async function obterFuncionariosAtribuidos(
   servicoTipo?: TipoServico
 ): Promise<any[]> {
   try {
+    // Verificação de parâmetros obrigatórios
+    if (!ordemId || !etapa) {
+      console.error('Parâmetros obrigatórios faltando em obterFuncionariosAtribuidos');
+      return [];
+    }
+
+    console.log(`Buscando funcionários atribuídos à etapa ${etapa} ${servicoTipo ? `(${servicoTipo})` : ''}`);
+
     // Obter dados da ordem
     const ordemRef = doc(db, 'ordens_servico', ordemId);
     const ordemDoc = await getDoc(ordemRef);

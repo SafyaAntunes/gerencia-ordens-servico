@@ -42,6 +42,12 @@ export function useEtapaResponsavel({
       return;
     }
     
+    // Validação adicional
+    if (funcionariosIds.length === 0) {
+      toast.error("Nenhum funcionário selecionado");
+      return;
+    }
+    
     setIsSaving(true);
     try {
       // Determinar a chave da etapa com base no tipo de serviço
@@ -89,7 +95,7 @@ export function useEtapaResponsavel({
       // Registrar funcionário "principal" (para compatibilidade com versão anterior)
       await updateDoc(ordemRef, {
         [`etapasAndamento.${etapaKey}.funcionarioId`]: principalId,
-        [`etapasAndamento.${etapaKey}.funcionarioNome`]: principalNome
+        [`etapasAndamento.${etapaKey}.funcionarioNome`]: principalNome || ""
       });
       
       toast.success(`Responsáveis atualizados com sucesso!`);
@@ -104,7 +110,7 @@ export function useEtapaResponsavel({
           etapa,
           isEtapaConcluida, // Manter status de conclusão
           principalId,
-          principalNome,
+          principalNome || "",
           servicoTipo
         );
       }
@@ -137,7 +143,7 @@ export function useEtapaResponsavel({
     
     // Usar o último funcionário salvo ou o selecionado
     const useId = lastSavedFuncionarioId || funcionarioSelecionadoId;
-    const useNome = lastSavedFuncionarioNome || funcionarioSelecionadoNome;
+    const useNome = lastSavedFuncionarioNome || funcionarioSelecionadoNome || "";
     
     if (!useId) {
       toast.error("É necessário selecionar um responsável antes de concluir a etapa");
