@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -36,19 +35,14 @@ export function AtribuirMultiplosFuncionariosDialog({
   // Efeito para atualizar o estado local quando os props mudarem
   useEffect(() => {
     if (open) {
-      console.log("Dialog aberto - atualizando selecionados:", funcionariosSelecionadosIds);
       setLocalSelecionados(funcionariosSelecionadosIds);
     }
   }, [open, funcionariosSelecionadosIds]);
-
-  console.log("Dialog render - funcionariosSelecionadosIds:", funcionariosSelecionadosIds);
-  console.log("Dialog render - localSelecionados:", localSelecionados);
 
   const {
     funcionariosFiltradosAtual,
     loading,
     funcionariosSelecionados,
-    forceUpdate,
     handleToggleFuncionario,
     isFuncionarioSelected,
     handleConfirm
@@ -59,12 +53,8 @@ export function AtribuirMultiplosFuncionariosDialog({
     onConfirm
   });
 
-  // Log funcionários selecionados no componente principal
-  console.log("Dialog component - funcionariosSelecionados:", funcionariosSelecionados);
-
   // Memoize a função de toggle para evitar recriações desnecessárias
   const memoizedHandleToggle = useCallback((id: string) => {
-    console.log("Dialog component - toggle funcionário:", id);
     handleToggleFuncionario(id);
     
     // Atualizar também o estado local
@@ -79,13 +69,11 @@ export function AtribuirMultiplosFuncionariosDialog({
 
   // Handler para confirmar a seleção
   const handleConfirmSelection = useCallback(() => {
-    console.log("Confirmando seleção no diálogo");
     if (handleConfirm(onConfirm)) {
       onOpenChange(false);
     }
   }, [handleConfirm, onConfirm, onOpenChange]);
 
-  // Usar key com forceUpdate para forçar rerenderização completa quando necessário
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
@@ -99,14 +87,14 @@ export function AtribuirMultiplosFuncionariosDialog({
         <div className="py-4">
           {loading ? (
             <div className="flex items-center justify-center py-6">
-              <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : funcionariosFiltradosAtual.length > 0 ? (
             <ScrollArea className="h-[300px] pr-4">
-              <div className="space-y-3" key={`funcionarios-list-${forceUpdate}`}>
-                {funcionariosFiltradosAtual.map(funcionario => (
+              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                {funcionariosFiltradosAtual.map((funcionario) => (
                   <FuncionarioCheckItem
-                    key={`${funcionario.id}-${isFuncionarioSelected(funcionario.id)}`}
+                    key={funcionario.id}
                     id={funcionario.id}
                     nome={funcionario.nome}
                     status={funcionario.status}
@@ -128,14 +116,12 @@ export function AtribuirMultiplosFuncionariosDialog({
         </div>
         
         <DialogFooter>
-          <div className="flex justify-between w-full">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleConfirmSelection}>
-              {confirmLabel}
-            </Button>
-          </div>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={handleConfirmSelection}>
+            {confirmLabel}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

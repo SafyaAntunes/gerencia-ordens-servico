@@ -1,5 +1,4 @@
-
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useFuncionariosDisponibilidade } from '@/hooks/useFuncionariosDisponibilidade';
 import { TipoServico } from '@/types/ordens';
 import { toast } from "sonner";
@@ -23,12 +22,8 @@ export function useAtribuirFuncionariosDialog({
 
   // Inicialização do estado com os IDs passados como props
   useEffect(() => {
-    console.log("Dialog hook - Recebendo funcionariosSelecionadosIds:", funcionariosSelecionadosIds);
     setFuncionariosSelecionados(funcionariosSelecionadosIds || []);
   }, [funcionariosSelecionadosIds]);
-
-  // Debug logs para acompanhar mudanças de estado
-  console.log("Dialog hook - funcionariosSelecionados atual:", funcionariosSelecionados);
 
   // Filtrar funcionários com base nas condições
   const funcionariosFiltradosAtual = funcionariosStatus.filter(funcionario => {
@@ -49,15 +44,11 @@ export function useAtribuirFuncionariosDialog({
 
   // Toggle de seleção de funcionário - otimizado para forçar atualização visual
   const handleToggleFuncionario = useCallback((id: string) => {
-    console.log("Toggle funcionário:", id);
-    
     setFuncionariosSelecionados(prev => {
       const isSelected = prev.includes(id);
       const novosSelecionados = isSelected 
         ? prev.filter(fid => fid !== id) 
         : [...prev, id];
-      
-      console.log("Nova seleção após toggle:", novosSelecionados);
       return novosSelecionados;
     });
     
@@ -67,9 +58,7 @@ export function useAtribuirFuncionariosDialog({
 
   // Verificar se um funcionário está selecionado
   const isFuncionarioSelected = useCallback((id: string) => {
-    const isSelected = funcionariosSelecionados.includes(id);
-    console.log(`Verificando seleção do funcionário ${id}: ${isSelected}`);
-    return isSelected;
+    return funcionariosSelecionados.includes(id);
   }, [funcionariosSelecionados]);
 
   // Confirmar seleção
@@ -91,8 +80,6 @@ export function useAtribuirFuncionariosDialog({
       return funcionario?.nome || id;
     });
 
-    console.log("Confirmando seleção:", funcionariosSelecionados, funcionariosSelecionadosNomes);
-    
     onConfirmFn(funcionariosSelecionados, funcionariosSelecionadosNomes);
     return true;
   }, [funcionariosSelecionados, funcionariosStatus, onConfirm]);
@@ -101,7 +88,7 @@ export function useAtribuirFuncionariosDialog({
     funcionariosFiltradosAtual,
     loading,
     funcionariosSelecionados,
-    forceUpdate, // Exportar forceUpdate para componentes que precisem reagir a mudanças
+    forceUpdate,
     handleToggleFuncionario,
     isFuncionarioSelected,
     handleConfirm

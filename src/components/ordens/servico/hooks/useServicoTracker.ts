@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { getFuncionarios } from "@/services/funcionarioService";
@@ -98,6 +97,7 @@ export function useServicoTracker({
   }, []);
   
   const handleSubatividadeToggle = (subatividadeId: string, checked: boolean) => {
+    console.log('Toggle subatividade:', { subatividadeId, checked });
     if (onSubatividadeToggle) {
       onSubatividadeToggle(subatividadeId, checked);
     }

@@ -1,8 +1,9 @@
-
 import { SubAtividade } from "@/types/ordens";
 import { CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 interface ServicoDetailsProps {
   descricao?: string;
@@ -15,88 +16,49 @@ export default function ServicoDetails({
   descricao,
   subatividades,
   temPermissao,
-  onSubatividadeToggle,
+  onSubatividadeToggle
 }: ServicoDetailsProps) {
-  // Verificação de segurança para garantir que subatividades é um array
-  const subatividadesSeguras = Array.isArray(subatividades) ? subatividades : [];
-  
-  // Função para manipular o clique de forma segura
-  const handleSubatividadeClick = (subatividade: SubAtividade) => {
-    // Verificação apenas se tem permissão
-    if (!temPermissao || !subatividade || !onSubatividadeToggle) return;
-    
-    // Verificar se o objeto é válido antes de chamar a função
-    try {
-      if (subatividade.id) {
-        // Chamamos a função com ID e o estado inverso do atual
-        onSubatividadeToggle(subatividade.id, !subatividade.concluida);
-        console.log("Subatividade clicada:", subatividade.id, "novo estado:", !subatividade.concluida);
-      } else {
-        console.error("Subatividade inválida (sem ID):", subatividade);
-      }
-    } catch (error) {
-      console.error("Erro ao alternar subatividade:", error, subatividade);
-    }
+  const handleToggle = (subatividadeId: string, checked: boolean) => {
+    console.log('ServicoDetails - Toggle:', { subatividadeId, checked });
+    onSubatividadeToggle(subatividadeId, checked);
   };
 
   return (
     <>
       {descricao && (
-        <div className="pt-0 pb-3">
+        <div className="mb-4">
+          <h4 className="text-sm font-medium mb-2">Descrição</h4>
           <p className="text-sm text-muted-foreground">{descricao}</p>
         </div>
       )}
-      
-      {subatividadesSeguras.length > 0 && (
-        <div className="border-t border-gray-200 pt-4">
-          <div className="space-y-3">
-            {subatividadesSeguras.map((subatividade) => {
-              // Verificar se a subatividade é válida antes de renderizar
-              if (!subatividade || !subatividade.id) {
-                console.warn("Subatividade inválida detectada:", subatividade);
-                return null;
-              }
-              
+
+      {subatividades.length > 0 && (
+        <div>
+          <h4 className="text-sm font-medium mb-2">Subatividades</h4>
+          <div className="space-y-2">
+            {subatividades.map((subatividade) => {
               return (
                 <div 
-                  key={subatividade.id}
-                  className={cn(
-                    "flex items-center justify-between",
-                    temPermissao ? "cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors" : ""
-                  )}
-                  onClick={() => temPermissao && handleSubatividadeClick(subatividade)}
-                  tabIndex={temPermissao ? 0 : undefined}
-                  role={temPermissao ? "button" : undefined}
-                  aria-pressed={subatividade.concluida}
-                  onKeyDown={(e) => {
-                    if (temPermissao && (e.key === "Enter" || e.key === " ")) {
-                      e.preventDefault();
-                      handleSubatividadeClick(subatividade);
-                    }
-                  }}
+                  key={subatividade.id} 
+                  className="flex items-center justify-between py-1"
                 >
                   <div className="flex items-center gap-2">
-                    <div 
+                    <Checkbox
+                      id={`subatividade-${subatividade.id}`}
+                      checked={subatividade.concluida}
+                      onCheckedChange={(checked) => handleToggle(subatividade.id, checked === true)}
+                      disabled={!temPermissao}
+                      className="data-[state=checked]:bg-green-600"
+                    />
+                    <Label
+                      htmlFor={`subatividade-${subatividade.id}`}
                       className={cn(
-                        "h-5 w-5 rounded-full border flex items-center justify-center",
-                        subatividade.concluida 
-                          ? "border-green-500 bg-green-500/10" 
-                          : "border-muted"
-                      )}
-                    >
-                      {subatividade.concluida && (
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      )}
-                    </div>
-                    <Badge 
-                      variant="outline"
-                      className={cn(
-                        subatividade.concluida ? "text-green-600 border-green-600" : "text-muted-foreground",
-                        "select-none" // Evita seleção de texto ao clicar
+                        "text-sm cursor-pointer select-none",
+                        subatividade.concluida ? "text-muted-foreground line-through" : ""
                       )}
                     >
                       {subatividade.nome}
-                    </Badge>
+                    </Label>
                   </div>
                   {subatividade.tempoEstimado && (
                     <span className="text-xs text-muted-foreground">

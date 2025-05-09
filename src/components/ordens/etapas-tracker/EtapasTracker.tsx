@@ -165,13 +165,14 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate }: EtapasTrackerProps) 
     }
     
     try {
-      console.log("Toggling subatividade in EtapasTracker:", subatividadeId, "to", checked);
+      console.log("Toggling subatividade in EtapasTracker:", { servicoTipo, subatividadeId, checked });
       
       // Create a deep clone of the services to avoid messing with React's state directly
       const servicosAtualizados = ordem.servicos.map(servico => {
         if (servico.tipo === servicoTipo && servico.subatividades) {
           const subatividades = servico.subatividades.map(sub => {
             if (sub.id === subatividadeId) {
+              console.log("Atualizando subatividade:", { id: sub.id, concluida: checked });
               return { ...sub, concluida: checked };
             }
             return sub;

@@ -1,4 +1,3 @@
-
 import { memo, useCallback } from "react";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -22,14 +21,10 @@ export const FuncionarioCheckItem = memo(function FuncionarioCheckItem({
   isChecked,
   onToggle
 }: FuncionarioCheckItemProps) {
-  // Log para verificar se o isChecked está sendo atualizado
-  console.log(`Rendering FuncionarioCheckItem ${id} (${nome}): isChecked=${isChecked}`);
-
   // Memoize o handler de clique para evitar recriações
   const handleToggle = useCallback(() => {
-    console.log(`Item toggle clicked for ${id} (${nome})`);
     onToggle(id);
-  }, [id, nome, onToggle]);
+  }, [id, onToggle]);
 
   return (
     <div 
