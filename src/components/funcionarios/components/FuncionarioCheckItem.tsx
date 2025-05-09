@@ -22,7 +22,7 @@ export const FuncionarioCheckItem = memo(function FuncionarioCheckItem({
   isChecked,
   onToggle
 }: FuncionarioCheckItemProps) {
-  // Log to verify isChecked prop
+  // Log para verificar se o isChecked está sendo atualizado
   console.log(`Rendering FuncionarioCheckItem ${id} (${nome}): isChecked=${isChecked}`);
 
   // Memoize o handler de clique para evitar recriações
@@ -43,7 +43,9 @@ export const FuncionarioCheckItem = memo(function FuncionarioCheckItem({
       <Checkbox 
         id={`funcionario-${id}`}
         checked={isChecked}
-        onCheckedChange={handleToggle}
+        // Usar onCheckedChange em vez de onClick para lidar com o evento do Radix UI corretamente
+        onCheckedChange={() => handleToggle()}
+        className="cursor-pointer"
       />
       <div className="flex-1">
         <Label 

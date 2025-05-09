@@ -20,6 +20,7 @@ export function useAtribuirFuncionariosDialog({
   const { funcionariosStatus, funcionariosDisponiveis, loading } = useFuncionariosDisponibilidade();
   const [funcionariosSelecionados, setFuncionariosSelecionados] = useState<string[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [lastToggleId, setLastToggleId] = useState<string | null>(null);
 
   // Inicialização do estado com os IDs passados como props
   useEffect(() => {
@@ -51,11 +52,14 @@ export function useAtribuirFuncionariosDialog({
     return true;
   });
 
-  // Toggle de seleção de funcionário - otimizado para evitar perda de estado
+  // Toggle de seleção de funcionário - otimizado para forçar atualização visual
   const handleToggleFuncionario = useCallback((id: string) => {
     console.log("Toggle funcionário:", id);
+    setLastToggleId(id); // Armazena o ID do último funcionário a ser toggled
+    
     setFuncionariosSelecionados(prev => {
-      if (prev.includes(id)) {
+      const isSelected = prev.includes(id);
+      if (isSelected) {
         const newSelection = prev.filter(fid => fid !== id);
         console.log("Nova seleção após remover:", newSelection);
         return newSelection;
@@ -103,6 +107,7 @@ export function useAtribuirFuncionariosDialog({
     funcionariosFiltradosAtual,
     loading,
     funcionariosSelecionados,
+    lastToggleId,
     handleToggleFuncionario,
     isFuncionarioSelected,
     handleConfirm
