@@ -39,11 +39,7 @@ export function SimpleFuncionarioSelector({
   // Quando o funcionário atual mudar externamente
   useEffect(() => {
     if (funcionarioAtualId) {
-      console.log("SimpleFuncionarioSelector - funcionarioAtualId mudou:", funcionarioAtualId);
       setFuncionarioId(funcionarioAtualId);
-    } else {
-      console.log("SimpleFuncionarioSelector - limpando funcionarioId");
-      setFuncionarioId("");
     }
   }, [funcionarioAtualId]);
 
@@ -60,13 +56,10 @@ export function SimpleFuncionarioSelector({
     : funcionariosElegiveis;
 
   const handleChange = (id: string) => {
-    console.log("SimpleFuncionarioSelector - handleChange:", id);
     setFuncionarioId(id);
     const funcionario = funcionariosStatus.find(f => f.id === id);
     if (funcionario) {
       onFuncionarioSelecionado(id, funcionario.nome);
-    } else {
-      console.warn("SimpleFuncionarioSelector - Funcionário não encontrado:", id);
     }
   };
 
@@ -138,7 +131,7 @@ export function SimpleFuncionarioSelector({
         </div>
         
         {mostrarCancelar && onCancelar && (
-          <Button variant="ghost" size="sm" onClick={onCancelar} type="button">
+          <Button variant="ghost" size="sm" onClick={onCancelar}>
             Cancelar
           </Button>
         )}

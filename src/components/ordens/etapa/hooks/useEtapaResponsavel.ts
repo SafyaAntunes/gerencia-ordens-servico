@@ -1,31 +1,37 @@
 
-import { useState, useCallback, useRef } from "react";
-import { toast } from "sonner";
+import { useState, useCallback } from "react";
 import { EtapaOS, TipoServico } from "@/types/ordens";
-import { useAuth } from "@/hooks/useAuth";
-import { doc, updateDoc } from "firebase/firestore";
+import { toast } from "sonner";
+import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { clearDocumentCache } from "@/services/funcionarioEmServicoService";
+import { marcarVariosFuncionariosEmServico } from "@/services/funcionarioEmServicoService";
 
 interface UseEtapaResponsavelProps {
   etapa: EtapaOS;
   servicoTipo?: TipoServico;
   funcionarioSelecionadoId?: string;
   funcionarioSelecionadoNome?: string;
-  isEtapaConcluida?: boolean;
+  isEtapaConcluida: boolean;
   onEtapaStatusChange?: (etapa: EtapaOS, concluida: boolean, funcionarioId?: string, funcionarioNome?: string, servicoTipo?: TipoServico) => void;
-  etapaInfo?: {
-    concluido?: boolean;
-    iniciado?: Date;
-    finalizado?: Date;
-    usarCronometro?: boolean;
-    pausas?: { inicio: number; fim?: number; motivo?: string }[];
-    funcionarioId?: string;
-    funcionarioNome?: string;
-    servicoTipo?: TipoServico;
-  };
+  etapaInfo?: any;
   ordemId: string;
 }
+
+// Objeto para armazenar timestamps de notificações para evitar duplicatas em um curto período
+const notificationTimestamps: Record<string, number> = {};
+
+// Função para verificar se uma notificação similar já foi mostrada recentemente
+const shouldShowNotification = (message: string, cooldownMs = 3000): boolean => {
+  const now = Date.now();
+  const lastShown = notificationTimestamps[message] || 0;
+  
+  if (now - lastShown > cooldownMs) {
+    notificationTimestamps[message] = now;
+    return true;
+  }
+  
+  return false;
+};
 
 export function useEtapaResponsavel({
   etapa,
@@ -37,102 +43,103 @@ export function useEtapaResponsavel({
   etapaInfo,
   ordemId
 }: UseEtapaResponsavelProps) {
-  const { funcionario } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
-  const [lastSavedFuncionarioId, setLastSavedFuncionarioId] = useState<string | undefined>(etapaInfo?.funcionarioId);
-  const [lastSavedFuncionarioNome, setLastSavedFuncionarioNome] = useState<string | undefined>(etapaInfo?.funcionarioNome);
-  
-  // Debounce para evitar salvamentos muito próximos
-  const lastUpdateTime = useRef<number>(0);
-  const updateDebounceMs = 2000; // 2 segundos entre atualizações
-  
-  // Notificações exibidas recentemente
-  const recentNotifications = useRef<Record<string, number>>({});
-  const notificationDebounceMs = 3000; // 3 segundos entre notificações iguais
-  
-  // Função para verificar se uma notificação pode ser mostrada
-  const canShowNotification = useCallback((message: string): boolean => {
-    const now = Date.now();
-    const lastShown = recentNotifications.current[message] || 0;
-    
-    if (now - lastShown > notificationDebounceMs) {
-      recentNotifications.current[message] = now;
-      return true;
-    }
-    
-    return false;
-  }, [notificationDebounceMs]);
-  
+  const [lastSavedFuncionarioId, setLastSavedFuncionarioId] = useState<string | undefined>(
+    etapaInfo?.funcionarioId
+  );
+  const [lastSavedFuncionarioNome, setLastSavedFuncionarioNome] = useState<string | undefined>(
+    etapaInfo?.funcionarioNome
+  );
+
   // Função para salvar o responsável
-  const handleSaveResponsavel = useCallback(async () => {
-    // Se não tiver funcionário selecionado ou já estiver salvando, não fazer nada
-    if (!funcionarioSelecionadoId || isSaving) {
-      console.log("Não foi possível salvar responsável:", {
-        funcionarioSelecionadoId,
-        isSaving
-      });
-      if (!funcionarioSelecionadoId) {
-        toast.error("Selecione um funcionário antes de salvar");
-      }
+  const handleSaveResponsavel = useCallback(async (funcionariosIds: string[] = [], funcionariosNomes: string[] = []) => {
+    if (!ordemId) {
+      toast.error("ID da ordem não encontrado");
       return;
     }
     
-    // Verificar se estamos atualizando para o mesmo funcionário
-    const isSameFuncionario = lastSavedFuncionarioId === funcionarioSelecionadoId;
+    // Validação adicional
+    if (funcionariosIds.length === 0) {
+      toast.error("Nenhum funcionário selecionado");
+      return;
+    }
     
-    // Verificar se passou tempo suficiente desde a última atualização
-    const now = Date.now();
-    const timeSinceLastUpdate = now - lastUpdateTime.current;
-    
-    if (isSameFuncionario && timeSinceLastUpdate < updateDebounceMs) {
-      console.log("Ignorando atualização recente para o mesmo funcionário");
+    // Evitar salvar novamente se os dados forem os mesmos
+    const principalId = funcionariosIds[0];
+    if (lastSavedFuncionarioId === principalId && !isSaving) {
+      console.log("Funcionário já está atribuído, ignorando requisição");
       return;
     }
     
     setIsSaving(true);
     try {
-      console.log("Salvando responsável:", {
-        funcionarioId: funcionarioSelecionadoId,
-        funcionarioNome: funcionarioSelecionadoNome,
-        etapa,
-        servicoTipo,
-        ordemId
-      });
+      // Determinar a chave da etapa com base no tipo de serviço
+      const etapaKey = (etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo
+        ? `${etapa}_${servicoTipo}`
+        : etapa;
       
-      // Limpar cache para garantir dados atualizados
-      const cacheKey = `ordens_servico/${ordemId}`;
-      clearDocumentCache(cacheKey);
+      console.log(`Atualizando responsáveis da etapa ${etapaKey}, funcionários IDs:`, funcionariosIds);
       
-      // Usar onEtapaStatusChange se disponível
-      if (onEtapaStatusChange) {
-        await onEtapaStatusChange(
-          etapa, 
-          !!isEtapaConcluida, // Manter o status atual
-          funcionarioSelecionadoId,
-          funcionarioSelecionadoNome,
-          servicoTipo
-        );
-      } else {
-        // Fallback: atualizar diretamente no Firestore se não tiver handler
-        const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo) 
-          ? `${etapa}_${servicoTipo}` 
-          : etapa;
-        
-        const ordemRef = doc(db, "ordens_servico", ordemId);
-        await updateDoc(ordemRef, {
-          [`etapasAndamento.${etapaKey}.funcionarioId`]: funcionarioSelecionadoId,
-          [`etapasAndamento.${etapaKey}.funcionarioNome`]: funcionarioSelecionadoNome || "",
-        });
+      // Obter documento atual para garantir dados atualizados
+      const ordemRef = doc(db, "ordens_servico", ordemId);
+      const ordemDoc = await getDoc(ordemRef);
+      
+      if (!ordemDoc.exists()) {
+        toast.error("Ordem de serviço não encontrada");
+        return;
       }
       
-      // Atualizar o estado local
-      setLastSavedFuncionarioId(funcionarioSelecionadoId);
-      setLastSavedFuncionarioNome(funcionarioSelecionadoNome);
-      lastUpdateTime.current = now;
+      const dadosAtuais = ordemDoc.data();
+      const etapasAndamento = dadosAtuais.etapasAndamento || {};
+      const etapaAtual = etapasAndamento[etapaKey] || {};
       
-      // Mostrar mensagem de sucesso (debounced)
-      if (canShowNotification("Responsável atualizado")) {
-        toast.success("Responsável atualizado com sucesso!");
+      // Se for um array vazio, remover todos os funcionários
+      if (funcionariosIds.length === 0) {
+        await updateDoc(ordemRef, {
+          [`etapasAndamento.${etapaKey}.funcionarios`]: [],
+          [`etapasAndamento.${etapaKey}.funcionarioId`]: null,
+          [`etapasAndamento.${etapaKey}.funcionarioNome`]: null
+        });
+        
+        if (shouldShowNotification(`Todos funcionários removidos da etapa ${etapa}`)) {
+          toast.success(`Todos funcionários removidos da etapa ${etapa}`);
+        }
+        setLastSavedFuncionarioId(undefined);
+        setLastSavedFuncionarioNome(undefined);
+        return;
+      }
+      
+      // Registrar todos os funcionários selecionados como "em serviço" para esta etapa
+      await marcarVariosFuncionariosEmServico(funcionariosIds, ordemId, etapa, servicoTipo);
+      
+      // Manter compatibilidade com versão anterior do sistema (único funcionário)
+      // Primeiro funcionário da lista é o "principal"
+      const principalId = funcionariosIds[0];
+      const principalNome = funcionariosNomes[0];
+      
+      // Registrar funcionário "principal" (para compatibilidade com versão anterior)
+      await updateDoc(ordemRef, {
+        [`etapasAndamento.${etapaKey}.funcionarioId`]: principalId,
+        [`etapasAndamento.${etapaKey}.funcionarioNome`]: principalNome || ""
+      });
+      
+      if (shouldShowNotification(`Responsáveis atualizados com sucesso!`)) {
+        toast.success(`Responsáveis atualizados com sucesso!`);
+      }
+      
+      // Atualizar estado local
+      setLastSavedFuncionarioId(principalId);
+      setLastSavedFuncionarioNome(principalNome);
+      
+      // Chamar callback se existir
+      if (onEtapaStatusChange) {
+        onEtapaStatusChange(
+          etapa,
+          isEtapaConcluida, // Manter status de conclusão
+          principalId,
+          principalNome || "",
+          servicoTipo
+        );
       }
     } catch (error) {
       console.error("Erro ao salvar responsável:", error);
@@ -140,66 +147,45 @@ export function useEtapaResponsavel({
     } finally {
       setIsSaving(false);
     }
-  }, [
-    funcionarioSelecionadoId, 
-    funcionarioSelecionadoNome, 
-    isSaving, 
-    etapa, 
-    servicoTipo, 
-    ordemId, 
-    lastSavedFuncionarioId, 
-    isEtapaConcluida, 
-    onEtapaStatusChange,
-    canShowNotification
-  ]);
-  
-  // Para iniciar o timer da etapa com o funcionário selecionado
+  }, [etapa, servicoTipo, ordemId, lastSavedFuncionarioId, isSaving, isEtapaConcluida, onEtapaStatusChange]);
+
+  // Otimizado com useCallback
   const handleCustomTimerStart = useCallback(() => {
-    if (!funcionarioSelecionadoId && !funcionario?.id) {
-      toast.error("É necessário selecionar um responsável primeiro");
+    if (!funcionarioSelecionadoId) {
+      toast.error("Selecione um funcionário antes de iniciar o timer");
       return false;
     }
+    
+    // Call the async function without awaiting it
+    handleSaveResponsavel(
+      [funcionarioSelecionadoId], 
+      [funcionarioSelecionadoNome || ""]
+    );
+    
     return true;
-  }, [funcionarioSelecionadoId, funcionario?.id]);
-  
-  // Para marcar a etapa como concluída
-  const handleMarcarConcluidoClick = useCallback(() => {
-    // Verificar se é possível marcar como concluída
-    if (isEtapaConcluida) {
-      toast.error("Esta etapa já está concluída");
+  }, [funcionarioSelecionadoId, funcionarioSelecionadoNome, handleSaveResponsavel]);
+
+  const handleMarcarConcluidoClick = useCallback(async () => {
+    if (!onEtapaStatusChange) return;
+    
+    // Usar o último funcionário salvo ou o selecionado
+    const useId = lastSavedFuncionarioId || funcionarioSelecionadoId;
+    const useNome = lastSavedFuncionarioNome || funcionarioSelecionadoNome || "";
+    
+    if (!useId) {
+      toast.error("É necessário selecionar um responsável antes de concluir a etapa");
       return;
     }
     
-    // Verificar se tem funcionário para atribuir
-    if (!funcionarioSelecionadoId && !funcionario?.id) {
-      toast.error("É necessário atribuir um responsável antes de concluir a etapa");
-      return;
-    }
-    
-    // Usar o funcionário selecionado ou o atual
-    const useId = funcionarioSelecionadoId || funcionario?.id || "";
-    const useNome = funcionarioSelecionadoNome || funcionario?.nome || "";
-    
-    // Marcar como concluído
-    if (onEtapaStatusChange) {
-      onEtapaStatusChange(
-        etapa, 
-        true, 
-        useId, 
-        useNome,
-        servicoTipo
-      );
-    }
-  }, [
-    isEtapaConcluida, 
-    funcionarioSelecionadoId, 
-    funcionarioSelecionadoNome, 
-    funcionario, 
-    onEtapaStatusChange, 
-    etapa, 
-    servicoTipo
-  ]);
-  
+    onEtapaStatusChange(
+      etapa,
+      true, // Marcando como concluída
+      useId,
+      useNome,
+      servicoTipo
+    );
+  }, [etapa, funcionarioSelecionadoId, funcionarioSelecionadoNome, lastSavedFuncionarioId, lastSavedFuncionarioNome, onEtapaStatusChange, servicoTipo]);
+
   return {
     handleSaveResponsavel,
     handleCustomTimerStart,
