@@ -95,6 +95,111 @@ export async function marcarFuncionarioEmServico(
 }
 
 /**
+ * Marca vários funcionários como "em serviço" para uma mesma etapa
+ */
+export async function marcarVariosFuncionariosEmServico(
+  funcionariosIds: string[],
+  ordemId: string,
+  etapa: EtapaOS,
+  servicoTipo?: TipoServico
+): Promise<boolean> {
+  try {
+    // Verificar se há funcionários para atribuir
+    if (!funcionariosIds.length) {
+      console.error('Nenhum funcionário para atribuir');
+      return false;
+    }
+
+    // Processar cada funcionário individualmente
+    const resultados = await Promise.all(
+      funcionariosIds.map(id => marcarFuncionarioEmServico(id, ordemId, etapa, servicoTipo))
+    );
+
+    // Verificar se todos foram bem-sucedidos
+    return resultados.every(result => result === true);
+  } catch (error) {
+    console.error('Erro ao marcar vários funcionários em serviço:', error);
+    toast.error('Erro ao atribuir múltiplos funcionários');
+    return false;
+  }
+}
+
+/**
+ * Força a liberação de um funcionário, encerrando todas as suas atividades em andamento
+ */
+export async function forcarLiberacaoFuncionario(funcionarioId: string): Promise<boolean> {
+  try {
+    // Verificar se o funcionário existe
+    const funcionarioRef = doc(db, 'funcionarios', funcionarioId);
+    const funcionarioDoc = await getDoc(funcionarioRef);
+    
+    if (!funcionarioDoc.exists()) {
+      toast.error('Funcionário não encontrado');
+      return false;
+    }
+    
+    const funcionarioData = funcionarioDoc.data();
+    
+    // Se o funcionário não tiver atividade atual, não há nada a fazer
+    if (!funcionarioData.ultima_atividade || !funcionarioData.ultima_atividade.ordemId) {
+      toast.info('Funcionário não possui atividades em andamento');
+      return true;
+    }
+    
+    // Obter a última atividade para liberar da ordem
+    const ultimaAtividade = funcionarioData.ultima_atividade;
+    
+    // Liberar o funcionário da atividade
+    const liberado = await marcarFuncionarioDisponivel(
+      funcionarioId,
+      ultimaAtividade.ordemId,
+      ultimaAtividade.etapa,
+      ultimaAtividade.servicoTipo
+    );
+    
+    if (liberado) {
+      toast.success('Funcionário liberado com sucesso');
+    }
+    
+    // Encerrar quaisquer registros de serviço abertos
+    const registrosRef = collection(db, 'registros_servico');
+    const q = query(
+      registrosRef,
+      where('funcionarioId', '==', funcionarioId),
+      where('fim', '==', null)
+    );
+    
+    const registrosSnapshot = await getDocs(q);
+    
+    // Marcar todos os registros como encerrados
+    const atualizacoes = registrosSnapshot.docs.map(doc => updateDoc(
+      doc.ref,
+      { fim: new Date() }
+    ));
+    
+    // Aguardar todas as atualizações
+    if (atualizacoes.length > 0) {
+      await Promise.all(atualizacoes);
+    }
+    
+    // Atualizar o status do funcionário para disponível
+    await updateDoc(funcionarioRef, {
+      em_servico: false,
+      ultima_atividade: {
+        ...funcionarioData.ultima_atividade,
+        fim: new Date()
+      }
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Erro ao forçar liberação do funcionário:', error);
+    toast.error('Não foi possível liberar o funcionário');
+    return false;
+  }
+}
+
+/**
  * Marca um funcionário como disponível após concluir um serviço
  */
 export async function marcarFuncionarioDisponivel(
