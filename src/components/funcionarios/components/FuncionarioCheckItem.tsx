@@ -1,9 +1,9 @@
 
 import { memo, useCallback } from "react";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { CircleCheck, Clock, CircleX } from "lucide-react";
+import { Toggle } from "@/components/ui/toggle";
 
 interface FuncionarioCheckItemProps {
   id: string;
@@ -27,32 +27,29 @@ export const FuncionarioCheckItem = memo(function FuncionarioCheckItem({
 
   // Memoize o handler de clique para evitar recriações
   const handleToggle = useCallback(() => {
-    console.log(`Checkbox toggle clicked for ${id} (${nome})`);
-    onToggle(id);
-  }, [id, nome, onToggle]);
-
-  // Memoize o handler do label para evitar recriações
-  const handleLabelClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault(); // Evitar cliques duplos
-    console.log(`Label clicked for ${id} (${nome})`);
+    console.log(`Item toggle clicked for ${id} (${nome})`);
     onToggle(id);
   }, [id, nome, onToggle]);
 
   return (
-    <div className="flex items-center space-x-2 border p-3 rounded-lg">
-      <Checkbox 
-        id={`funcionario-${id}`}
-        checked={isChecked}
-        // Usar onCheckedChange em vez de onClick para lidar com o evento do Radix UI corretamente
-        onCheckedChange={() => handleToggle()}
-        className="cursor-pointer"
-      />
+    <div 
+      className={`flex items-center space-x-2 border p-3 rounded-lg transition-colors ${
+        isChecked ? "border-primary bg-primary/5" : ""
+      }`}
+      onClick={handleToggle}
+    >
+      <Toggle
+        pressed={isChecked}
+        onPressedChange={() => handleToggle()}
+        size="sm"
+        variant={isChecked ? "outline" : "default"}
+        className={`h-8 w-8 p-0 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground rounded-md`}
+      >
+        {isChecked && <CircleCheck className="h-4 w-4" />}
+      </Toggle>
+
       <div className="flex-1">
-        <Label 
-          htmlFor={`funcionario-${id}`}
-          className="flex justify-between cursor-pointer"
-          onClick={handleLabelClick}
-        >
+        <div className="flex justify-between cursor-pointer">
           <span className="font-medium">{nome}</span>
           {status === 'disponivel' ? (
             <Badge variant="success" className="flex gap-1 items-center">
@@ -70,7 +67,7 @@ export const FuncionarioCheckItem = memo(function FuncionarioCheckItem({
               Inativo
             </Badge>
           )}
-        </Label>
+        </div>
         {especialidades && especialidades.length > 0 && (
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {especialidades.map(esp => (
