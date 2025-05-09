@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { useFuncionariosDisponibilidade } from '@/hooks/useFuncionariosDisponibilidade';
 import { TipoServico } from '@/types/ordens';
@@ -7,25 +8,31 @@ interface UseAtribuirFuncionariosDialogProps {
   funcionariosSelecionadosIds?: string[];
   especialidadeRequerida?: TipoServico;
   apenasDisponiveis?: boolean;
+  onConfirm?: (ids: string[], nomes: string[]) => void;
 }
 
 export function useAtribuirFuncionariosDialog({
   funcionariosSelecionadosIds = [],
   especialidadeRequerida,
-  apenasDisponiveis = true
+  apenasDisponiveis = true,
+  onConfirm
 }: UseAtribuirFuncionariosDialogProps) {
   const { funcionariosStatus, funcionariosDisponiveis, loading } = useFuncionariosDisponibilidade();
-  const [funcionariosSelecionados, setFuncionariosSelecionados] = useState<string[]>(funcionariosSelecionadosIds);
+  const [funcionariosSelecionados, setFuncionariosSelecionados] = useState<string[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Inicialização do estado com os IDs passados como props
+  useEffect(() => {
+    if (!isInitialized || JSON.stringify(funcionariosSelecionadosIds) !== JSON.stringify(funcionariosSelecionados)) {
+      console.log("Dialog hook - Inicializando selecionados:", funcionariosSelecionadosIds);
+      setFuncionariosSelecionados(funcionariosSelecionadosIds || []);
+      setIsInitialized(true);
+    }
+  }, [funcionariosSelecionadosIds, isInitialized, funcionariosSelecionados]);
 
   // Debug logs para acompanhar mudanças de estado
-  console.log("Dialog hook - funcionariosSelecionados:", funcionariosSelecionados);
+  console.log("Dialog hook - funcionariosSelecionados atual:", funcionariosSelecionados);
   console.log("Dialog hook - props.funcionariosSelecionadosIds:", funcionariosSelecionadosIds);
-
-  // Atualizar selecionados quando as props mudarem
-  useEffect(() => {
-    console.log("Dialog hook - syncing selected IDs:", funcionariosSelecionadosIds);
-    setFuncionariosSelecionados(funcionariosSelecionadosIds);
-  }, [funcionariosSelecionadosIds]);
 
   // Filtrar funcionários com base nas condições
   const funcionariosFiltradosAtual = funcionariosStatus.filter(funcionario => {
@@ -44,7 +51,7 @@ export function useAtribuirFuncionariosDialog({
     return true;
   });
 
-  // Toggle de seleção de funcionário
+  // Toggle de seleção de funcionário - otimizado para evitar perda de estado
   const handleToggleFuncionario = useCallback((id: string) => {
     console.log("Toggle funcionário:", id);
     setFuncionariosSelecionados(prev => {
@@ -62,11 +69,20 @@ export function useAtribuirFuncionariosDialog({
 
   // Verificar se um funcionário está selecionado
   const isFuncionarioSelected = useCallback((id: string) => {
-    return funcionariosSelecionados.includes(id);
+    const isSelected = funcionariosSelecionados.includes(id);
+    console.log(`Verificando seleção do funcionário ${id}: ${isSelected}`);
+    return isSelected;
   }, [funcionariosSelecionados]);
 
   // Confirmar seleção
-  const handleConfirm = useCallback((onConfirm: (ids: string[], nomes: string[]) => void) => {
+  const handleConfirm = useCallback((dialogOnConfirm?: (ids: string[], nomes: string[]) => void) => {
+    const onConfirmFn = dialogOnConfirm || onConfirm;
+
+    if (!onConfirmFn) {
+      console.error("Função onConfirm não fornecida");
+      return false;
+    }
+
     if (funcionariosSelecionados.length === 0) {
       toast.error("Selecione pelo menos um funcionário para continuar");
       return false;
@@ -79,9 +95,9 @@ export function useAtribuirFuncionariosDialog({
 
     console.log("Confirmando seleção:", funcionariosSelecionados, funcionariosSelecionadosNomes);
     
-    onConfirm(funcionariosSelecionados, funcionariosSelecionadosNomes);
+    onConfirmFn(funcionariosSelecionados, funcionariosSelecionadosNomes);
     return true;
-  }, [funcionariosSelecionados, funcionariosStatus]);
+  }, [funcionariosSelecionados, funcionariosStatus, onConfirm]);
 
   return {
     funcionariosFiltradosAtual,

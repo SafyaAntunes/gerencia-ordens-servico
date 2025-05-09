@@ -1,6 +1,6 @@
+
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TipoServico } from '@/types/ordens';
 import { useAtribuirFuncionariosDialog } from "./hooks/useAtribuirFuncionariosDialog";
@@ -30,11 +30,14 @@ export function AtribuirMultiplosFuncionariosDialog({
   apenasDisponiveis = true,
   confirmLabel = "Confirmar"
 }: AtribuirMultiplosFuncionariosDialogProps) {
+  console.log("Dialog render - funcionariosSelecionadosIds:", funcionariosSelecionadosIds);
+
   const {
     funcionariosFiltradosAtual,
     loading,
     funcionariosSelecionados,
     handleToggleFuncionario,
+    isFuncionarioSelected,
     handleConfirm
   } = useAtribuirFuncionariosDialog({
     funcionariosSelecionadosIds,
@@ -43,20 +46,43 @@ export function AtribuirMultiplosFuncionariosDialog({
     onConfirm
   });
 
+  // Log funcionários selecionados no componente principal
+  console.log("Dialog component - funcionariosSelecionados:", funcionariosSelecionados);
+
   // Memoize a função de toggle para evitar recriações desnecessárias
   const memoizedHandleToggle = useCallback((id: string) => {
+    console.log("Dialog component - toggle funcionário:", id);
     handleToggleFuncionario(id);
   }, [handleToggleFuncionario]);
 
-  // Memoize a função de verificação de seleção
-  const isFuncionarioSelected = useCallback((id: string) => {
-    return funcionariosSelecionados.includes(id);
-  }, [funcionariosSelecionados]);
+  // Renderização otimizada dos itens de funcionário
+  const funcionarioItems = useMemo(() => {
+    console.log("Rerenderizando lista de funcionários, total:", funcionariosFiltradosAtual.length);
+    return funcionariosFiltradosAtual.map(funcionario => {
+      const isSelected = isFuncionarioSelected(funcionario.id);
+      console.log(`Renderizando item ${funcionario.id} (${funcionario.nome}): selecionado=${isSelected}`);
+      
+      return (
+        <FuncionarioCheckItem
+          key={funcionario.id}
+          id={funcionario.id}
+          nome={funcionario.nome}
+          status={funcionario.status}
+          especialidades={funcionario.especialidades}
+          isChecked={isSelected}
+          onToggle={memoizedHandleToggle}
+        />
+      );
+    });
+  }, [funcionariosFiltradosAtual, isFuncionarioSelected, memoizedHandleToggle]);
 
-  // Memoize a lista de funcionários filtrados
-  const memoizedFuncionarios = useMemo(() => {
-    return funcionariosFiltradosAtual;
-  }, [funcionariosFiltradosAtual]);
+  // Handler para confirmar a seleção
+  const handleConfirmSelection = useCallback(() => {
+    console.log("Confirmando seleção no diálogo");
+    if (handleConfirm(onConfirm)) {
+      onOpenChange(false);
+    }
+  }, [handleConfirm, onConfirm, onOpenChange]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -73,20 +99,10 @@ export function AtribuirMultiplosFuncionariosDialog({
             <div className="flex items-center justify-center py-6">
               <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
             </div>
-          ) : memoizedFuncionarios.length > 0 ? (
+          ) : funcionariosFiltradosAtual.length > 0 ? (
             <ScrollArea className="h-[300px] pr-4">
               <div className="space-y-3">
-                {memoizedFuncionarios.map(funcionario => (
-                  <FuncionarioCheckItem
-                    key={funcionario.id}
-                    id={funcionario.id}
-                    nome={funcionario.nome}
-                    status={funcionario.status}
-                    especialidades={funcionario.especialidades}
-                    isChecked={isFuncionarioSelected(funcionario.id)}
-                    onToggle={memoizedHandleToggle}
-                  />
-                ))}
+                {funcionarioItems}
               </div>
             </ScrollArea>
           ) : (
@@ -104,13 +120,7 @@ export function AtribuirMultiplosFuncionariosDialog({
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button 
-              onClick={() => {
-                if (handleConfirm(onConfirm)) {
-                  onOpenChange(false);
-                }
-              }}
-            >
+            <Button onClick={handleConfirmSelection}>
               {confirmLabel}
             </Button>
           </div>

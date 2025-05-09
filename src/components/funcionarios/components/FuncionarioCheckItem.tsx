@@ -1,3 +1,4 @@
+
 import { memo, useCallback } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -21,16 +22,21 @@ export const FuncionarioCheckItem = memo(function FuncionarioCheckItem({
   isChecked,
   onToggle
 }: FuncionarioCheckItemProps) {
+  // Log to verify isChecked prop
+  console.log(`Rendering FuncionarioCheckItem ${id} (${nome}): isChecked=${isChecked}`);
+
   // Memoize o handler de clique para evitar recriações
   const handleToggle = useCallback(() => {
+    console.log(`Checkbox toggle clicked for ${id} (${nome})`);
     onToggle(id);
-  }, [id, onToggle]);
+  }, [id, nome, onToggle]);
 
   // Memoize o handler do label para evitar recriações
   const handleLabelClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault(); // Evitar cliques duplos
+    console.log(`Label clicked for ${id} (${nome})`);
     onToggle(id);
-  }, [id, onToggle]);
+  }, [id, nome, onToggle]);
 
   return (
     <div className="flex items-center space-x-2 border p-3 rounded-lg">
