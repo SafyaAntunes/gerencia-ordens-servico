@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AtribuirMultiplosFuncionariosDialog } from "@/components/funcionarios/AtribuirMultiplosFuncionariosDialog";
@@ -47,16 +46,14 @@ export function FuncionarioSelector({
   const [funcionariosAtribuidos, setFuncionariosAtribuidos] = useState<FuncionarioAtribuido[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Buscar funcionários atribuídos quando o componente for montado ou quando ordemId/etapa/servicoTipo mudar
+  // Buscar funcionários atribuídos quando o componente for montado
   useEffect(() => {
     const buscarFuncionariosAtribuidos = async () => {
       if (!ordemId) return;
       
       setIsLoading(true);
       try {
-        console.log(`Buscando funcionários atribuídos para ordem ${ordemId}, etapa ${etapa}, serviço ${servicoTipo || 'N/A'}`);
         const funcionarios = await obterFuncionariosAtribuidos(ordemId, etapa, servicoTipo);
-        console.log("Funcionários atribuídos obtidos:", funcionarios);
         setFuncionariosAtribuidos(funcionarios);
       } catch (error) {
         console.error("Erro ao buscar funcionários atribuídos:", error);
@@ -73,24 +70,16 @@ export function FuncionarioSelector({
   };
 
   const handleConfirmAtribuicao = async (ids: string[], nomes: string[]) => {
-    console.log("Confirmando atribuição:", ids, nomes);
+    await onSaveResponsavel(ids, nomes);
     
-    try {
-      // Salvar no backend
-      await onSaveResponsavel(ids, nomes);
-      
-      // Atualizar a lista local com os novos funcionários
-      const novosFuncionarios = ids.map((id, index) => ({
-        id,
-        nome: nomes[index] || id,
-        inicio: new Date()
-      }));
-      
-      console.log("Atualizando lista de funcionários atribuídos para:", novosFuncionarios);
-      setFuncionariosAtribuidos(novosFuncionarios);
-    } catch (error) {
-      console.error("Erro ao confirmar atribuição:", error);
-    }
+    // Atualizar a lista local com os novos funcionários
+    const novosFuncionarios = ids.map((id, index) => ({
+      id,
+      nome: nomes[index] || id,
+      inicio: new Date()
+    }));
+    
+    setFuncionariosAtribuidos(novosFuncionarios);
   };
 
   const handleRemoverFuncionario = async (funcionarioId: string) => {
@@ -99,14 +88,8 @@ export function FuncionarioSelector({
     const ids = funcionariosRestantes.map(f => f.id);
     const nomes = funcionariosRestantes.map(f => f.nome);
     
-    console.log("Removendo funcionário:", funcionarioId, "Restantes:", ids);
-    
-    try {
-      await onSaveResponsavel(ids, nomes);
-      setFuncionariosAtribuidos(funcionariosRestantes);
-    } catch (error) {
-      console.error("Erro ao remover funcionário:", error);
-    }
+    await onSaveResponsavel(ids, nomes);
+    setFuncionariosAtribuidos(funcionariosRestantes);
   };
 
   if (isEtapaConcluida) {
