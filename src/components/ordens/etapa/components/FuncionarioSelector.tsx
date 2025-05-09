@@ -38,15 +38,10 @@ export default function FuncionarioSelector({
   console.log("FuncionarioSelector - render com ID:", funcionarioSelecionadoId);
   console.log("FuncionarioSelector - options:", funcionariosOptions);
   
-  // Sync with parent component value
+  // Sync with parent component value - melhorado para garantir sincronização correta
   useEffect(() => {
-    if (funcionarioSelecionadoId) {
-      console.log("FuncionarioSelector - Atualizando ID para:", funcionarioSelecionadoId);
-      setSelectedValue(funcionarioSelecionadoId);
-    } else {
-      setSelectedValue("");
-      console.log("FuncionarioSelector - Clearing selected value");
-    }
+    console.log("FuncionarioSelector - funcionarioSelecionadoId mudou:", funcionarioSelecionadoId);
+    setSelectedValue(funcionarioSelecionadoId || "");
   }, [funcionarioSelecionadoId]);
   
   const handleChange = useCallback((value: string) => {

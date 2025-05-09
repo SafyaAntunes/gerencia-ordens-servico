@@ -34,18 +34,21 @@ export function AtribuirMultiplosFuncionariosDialog({
   apenasDisponiveis = true,
   confirmLabel = "Confirmar"
 }: AtribuirMultiplosFuncionariosDialogProps) {
-  const [funcionariosSelecionados, setFuncionariosSelecionados] = useState<string[]>(funcionariosSelecionadosIds);
+  // Usar uma referência estável para o estado inicial
+  const [funcionariosSelecionados, setFuncionariosSelecionados] = useState<string[]>([]);
   const { funcionariosStatus, funcionariosDisponiveis, loading } = useFuncionariosDisponibilidade();
 
-  // Log para depuração
+  // Debug logs para acompanhar mudanças de estado
   console.log("Dialog render - funcionariosSelecionados:", funcionariosSelecionados);
-  console.log("Dialog render - funcionariosSelecionadosIds:", funcionariosSelecionadosIds);
+  console.log("Dialog render - props.funcionariosSelecionadosIds:", funcionariosSelecionadosIds);
+  console.log("Dialog open state:", open);
 
   // Sincronizar com o estado do pai quando o diálogo é aberto ou os IDs mudam
   useEffect(() => {
     if (open) {
       console.log("Dialog opened - syncing selected IDs:", funcionariosSelecionadosIds);
-      setFuncionariosSelecionados(funcionariosSelecionadosIds);
+      // Importante: Crie uma nova referência do array para garantir que o React detecte a mudança
+      setFuncionariosSelecionados([...funcionariosSelecionadosIds]);
     }
   }, [funcionariosSelecionadosIds, open]);
 
@@ -66,13 +69,15 @@ export function AtribuirMultiplosFuncionariosDialog({
       : elegiveis;
   }, [especialidadeRequerida, funcionariosElegiveis]);
 
-  // Otimize o toggle de funcionário com useCallback
+  // Otimizar o toggle de funcionário com useCallback
   const handleToggleFuncionario = useCallback((id: string) => {
     console.log("Toggle funcionário:", id);
     setFuncionariosSelecionados(prev => {
+      // Verificar se o ID já está selecionado
       const isSelected = prev.includes(id);
       console.log(`Funcionário ${id} está ${isSelected ? 'selecionado' : 'não selecionado'}`);
       
+      // Criar uma nova referência do array para garantir que o React detecte a mudança
       if (isSelected) {
         const newSelection = prev.filter(funcionarioId => funcionarioId !== id);
         console.log("Nova seleção após remover:", newSelection);
@@ -85,11 +90,9 @@ export function AtribuirMultiplosFuncionariosDialog({
     });
   }, []);
 
-  // Verifica se um funcionário está selecionado
+  // Verificar se um funcionário está selecionado - melhorado para ser mais eficiente
   const isFuncionarioSelected = useCallback((id: string) => {
-    const isSelected = funcionariosSelecionados.includes(id);
-    console.log(`Verificando se funcionário ${id} está selecionado:`, isSelected);
-    return isSelected;
+    return funcionariosSelecionados.includes(id);
   }, [funcionariosSelecionados]);
 
   // Otimize o handleConfirm para ser mais eficiente
@@ -133,49 +136,61 @@ export function AtribuirMultiplosFuncionariosDialog({
           ) : funcionariosFiltradosAtual.length > 0 ? (
             <ScrollArea className="h-[300px] pr-4">
               <div className="space-y-3">
-                {funcionariosFiltradosAtual.map(funcionario => (
-                  <div key={funcionario.id} className="flex items-center space-x-2 border p-3 rounded-lg">
-                    <Checkbox 
-                      id={`funcionario-${funcionario.id}`}
-                      checked={isFuncionarioSelected(funcionario.id)}
-                      onCheckedChange={() => handleToggleFuncionario(funcionario.id)}
-                    />
-                    <div className="flex-1">
-                      <Label 
-                        htmlFor={`funcionario-${funcionario.id}`}
-                        className="flex justify-between cursor-pointer"
-                        onClick={() => handleToggleFuncionario(funcionario.id)}
-                      >
-                        <span className="font-medium">{funcionario.nome}</span>
-                        {funcionario.status === 'disponivel' ? (
-                          <Badge variant="success" className="flex gap-1 items-center">
-                            <CircleCheck className="h-3.5 w-3.5" />
-                            Disponível
-                          </Badge>
-                        ) : funcionario.status === 'ocupado' ? (
-                          <Badge variant="warning" className="flex gap-1 items-center">
-                            <Clock className="h-3.5 w-3.5" />
-                            Ocupado
-                          </Badge>
-                        ) : (
-                          <Badge variant="destructive" className="flex gap-1 items-center">
-                            <CircleX className="h-3.5 w-3.5" />
-                            Inativo
-                          </Badge>
-                        )}
-                      </Label>
-                      {funcionario.especialidades && funcionario.especialidades.length > 0 && (
-                        <div className="mt-1.5 flex flex-wrap gap-1.5">
-                          {funcionario.especialidades.map(esp => (
-                            <Badge key={esp} variant="secondary" className="text-xs">
-                              {esp}
+                {funcionariosFiltradosAtual.map(funcionario => {
+                  // Verificar de forma explícita para cada item
+                  const isChecked = isFuncionarioSelected(funcionario.id);
+                  console.log(`Renderizando checkbox para ${funcionario.nome}, checked=${isChecked}`);
+                  
+                  return (
+                    <div key={funcionario.id} className="flex items-center space-x-2 border p-3 rounded-lg">
+                      <Checkbox 
+                        id={`funcionario-${funcionario.id}`}
+                        checked={isChecked}
+                        onCheckedChange={() => {
+                          console.log(`Checkbox ${funcionario.id} clicado, atual=${isChecked}`);
+                          handleToggleFuncionario(funcionario.id);
+                        }}
+                      />
+                      <div className="flex-1">
+                        <Label 
+                          htmlFor={`funcionario-${funcionario.id}`}
+                          className="flex justify-between cursor-pointer"
+                          onClick={(e) => {
+                            e.preventDefault(); // Evitar cliques duplos
+                            handleToggleFuncionario(funcionario.id);
+                          }}
+                        >
+                          <span className="font-medium">{funcionario.nome}</span>
+                          {funcionario.status === 'disponivel' ? (
+                            <Badge variant="success" className="flex gap-1 items-center">
+                              <CircleCheck className="h-3.5 w-3.5" />
+                              Disponível
                             </Badge>
-                          ))}
-                        </div>
-                      )}
+                          ) : funcionario.status === 'ocupado' ? (
+                            <Badge variant="warning" className="flex gap-1 items-center">
+                              <Clock className="h-3.5 w-3.5" />
+                              Ocupado
+                            </Badge>
+                          ) : (
+                            <Badge variant="destructive" className="flex gap-1 items-center">
+                              <CircleX className="h-3.5 w-3.5" />
+                              Inativo
+                            </Badge>
+                          )}
+                        </Label>
+                        {funcionario.especialidades && funcionario.especialidades.length > 0 && (
+                          <div className="mt-1.5 flex flex-wrap gap-1.5">
+                            {funcionario.especialidades.map(esp => (
+                              <Badge key={esp} variant="secondary" className="text-xs">
+                                {esp}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </ScrollArea>
           ) : (

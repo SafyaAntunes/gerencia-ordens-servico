@@ -33,7 +33,8 @@ export function useFuncionarioSelection({
   console.log("useFuncionarioSelection - Render com:", { 
     etapaInfoId: etapaInfo?.funcionarioId,
     initialId: initialFuncionarioId,
-    selecionadoId: funcionarioSelecionadoId
+    selecionadoId: funcionarioSelecionadoId,
+    isInitialized
   });
   
   // Fetch funcionarios from database once on mount

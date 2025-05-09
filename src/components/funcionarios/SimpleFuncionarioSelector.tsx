@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -33,45 +33,52 @@ export function SimpleFuncionarioSelector({
   label = "Selecionar Funcionário",
   apenasDisponiveis = false
 }: SimpleFuncionarioSelectorProps) {
-  const [funcionarioId, setFuncionarioId] = useState<string>(funcionarioAtualId || "");
+  const [funcionarioId, setFuncionarioId] = useState<string>("");
   const { funcionariosStatus, funcionariosDisponiveis, loading } = useFuncionariosDisponibilidade();
 
   // Debug logs
   console.log("SimpleFuncionarioSelector - render com ID:", funcionarioAtualId);
+  console.log("SimpleFuncionarioSelector - estado interno:", funcionarioId);
   
   // Quando o funcionário atual mudar externamente
   useEffect(() => {
-    if (funcionarioAtualId) {
+    if (funcionarioAtualId !== undefined) {
       console.log("SimpleFuncionarioSelector - funcionarioAtualId mudou:", funcionarioAtualId);
       setFuncionarioId(funcionarioAtualId);
-    } else {
-      console.log("SimpleFuncionarioSelector - limpando funcionarioId");
-      setFuncionarioId("");
     }
   }, [funcionarioAtualId]);
 
-  // Filtrar funcionários elegíveis
-  const funcionariosElegiveis = apenasDisponiveis 
-    ? funcionariosDisponiveis 
-    : funcionariosStatus.filter(f => f.status !== 'inativo');
+  // Filtrar funcionários elegíveis - memoizado para performance
+  const funcionariosElegiveis = useCallback(() => {
+    return apenasDisponiveis 
+      ? funcionariosDisponiveis 
+      : funcionariosStatus.filter(f => f.status !== 'inativo');
+  }, [apenasDisponiveis, funcionariosDisponiveis, funcionariosStatus]);
 
-  // Se tiver especialidade requerida, filtrar mais
-  const funcionariosFiltrados = especialidadeRequerida
-    ? funcionariosElegiveis.filter(f => 
-        f.especialidades && f.especialidades.includes(especialidadeRequerida)
-      )
-    : funcionariosElegiveis;
+  // Se tiver especialidade requerida, filtrar mais - memoizado para performance
+  const funcionariosFiltrados = useCallback(() => {
+    const elegiveis = funcionariosElegiveis();
+    return especialidadeRequerida
+      ? elegiveis.filter(f => 
+          f.especialidades && f.especialidades.includes(especialidadeRequerida)
+        )
+      : elegiveis;
+  }, [especialidadeRequerida, funcionariosElegiveis]);
 
-  const handleChange = (id: string) => {
+  const handleChange = useCallback((id: string) => {
     console.log("SimpleFuncionarioSelector - handleChange:", id);
     setFuncionarioId(id);
+    
     const funcionario = funcionariosStatus.find(f => f.id === id);
     if (funcionario) {
       onFuncionarioSelecionado(id, funcionario.nome);
     } else {
       console.warn("SimpleFuncionarioSelector - Funcionário não encontrado:", id);
     }
-  };
+  }, [funcionariosStatus, onFuncionarioSelecionado]);
+
+  // Memoize a lista de funcionários filtrados atual
+  const funcionariosFiltradosAtual = funcionariosFiltrados();
 
   if (loading) {
     return (
@@ -87,12 +94,16 @@ export function SimpleFuncionarioSelector({
       <Label className="text-sm opacity-70">{label}</Label>
       <div className="flex gap-2 items-center">
         <div className="flex-1">
-          <Select disabled={disabled} value={funcionarioId} onValueChange={handleChange}>
+          <Select 
+            disabled={disabled} 
+            value={funcionarioId} 
+            onValueChange={handleChange}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Selecionar funcionário" />
             </SelectTrigger>
             <SelectContent>
-              {funcionariosFiltrados.map((funcionario) => (
+              {funcionariosFiltradosAtual.map((funcionario) => (
                 <SelectItem 
                   key={funcionario.id} 
                   value={funcionario.id}
@@ -129,7 +140,7 @@ export function SimpleFuncionarioSelector({
                 </SelectItem>
               ))}
 
-              {funcionariosFiltrados.length === 0 && (
+              {funcionariosFiltradosAtual.length === 0 && (
                 <div className="p-2 text-sm text-muted-foreground text-center">
                   {especialidadeRequerida 
                     ? `Nenhum funcionário com especialidade em ${especialidadeRequerida} disponível` 
