@@ -2,10 +2,7 @@ import { db } from '@/lib/firebase';
 import { doc, updateDoc, getDoc, setDoc, collection, query, where, getDocs, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { EtapaOS, TipoServico } from '@/types/ordens';
-
-// Cache para documentos do Firestore - com controle de expiração individual
-const documentCache: Record<string, {data: any, timestamp: number}> = {};
-const CACHE_TTL = 10000; // 10 segundos de TTL para o cache
+import { getDocumentWithCache, clearDocumentCache } from "./cacheService";
 
 // Objeto para armazenar timestamps de notificações para evitar duplicatas
 const notificationTimestamps: Record<string, number> = {};
@@ -31,51 +28,6 @@ const shouldShowNotification = (message: string, cooldownMs = NOTIFICATION_COOLD
   return false;
 };
 
-/**
- * Função otimizada para obter documentos com cache
- * @param collectionName Nome da coleção
- * @param docId ID do documento
- * @returns Objeto com dados do documento e flag indicando se veio do cache
- */
-async function getDocumentWithCache(collectionName: string, docId: string) {
-  const cacheKey = `${collectionName}/${docId}`;
-  const now = Date.now();
-  const cachedDoc = documentCache[cacheKey];
-  
-  // Se temos no cache e não expirou, usar o cache
-  if (cachedDoc && (now - cachedDoc.timestamp < CACHE_TTL)) {
-    return { data: cachedDoc.data, fromCache: true };
-  }
-  
-  // Se não temos no cache ou expirou, buscar do Firestore
-  try {
-    const docRef = doc(db, collectionName, docId);
-    const docSnap = await getDoc(docRef);
-    
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      documentCache[cacheKey] = { data, timestamp: now };
-      return { data, fromCache: false };
-    }
-  } catch (error) {
-    console.error(`Error fetching document ${collectionName}/${docId}:`, error);
-  }
-  
-  return { data: null, fromCache: false };
-}
-
-/**
- * Limpa entradas específicas ou todas do cache
- * @param key Chave específica para limpar ou undefined para limpar tudo
- */
-export function clearDocumentCache(key?: string) {
-  if (key) {
-    delete documentCache[key];
-  } else {
-    Object.keys(documentCache).forEach(k => delete documentCache[k]);
-  }
-}
-
 // Tipo de registro de serviço
 interface ServicoRegistro {
   ordemId: string;
@@ -83,6 +35,12 @@ interface ServicoRegistro {
   servicoTipo?: TipoServico;
   inicio: Date;
   fim?: Date;
+}
+
+interface FuncionarioAtribuido {
+  id: string;
+  nome: string;
+  inicio: Date;
 }
 
 /**
@@ -208,69 +166,79 @@ export async function marcarVariosFuncionariosEmServico(
     }
 
     // Usar batch para otimizar múltiplas escritas no Firestore
-    if (funcionariosIds.length > 1) {
-      const batch = writeBatch(db);
-      
-      // Determinar a chave da etapa
-      const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo)
-        ? `${etapa}_${servicoTipo}`
-        : etapa;
-      
-      // Obter dados da ordem
-      const { data: ordemData } = await getDocumentWithCache("ordens_servico", ordemId);
-      
-      if (!ordemData) {
-        toast.error("Ordem de serviço não encontrada");
-        return false;
-      }
-      
-      const funcionariosPromises = funcionariosIds.map(async (id) => {
-        const { data: funcionarioData } = await getDocumentWithCache("funcionarios", id);
-        if (funcionarioData) {
-          const funcionarioRef = doc(db, "funcionarios", id);
-          batch.update(funcionarioRef, {
-            ultima_atividade: {
-              ordemId,
-              etapa,
-              servicoTipo: servicoTipo || null,
-              data: new Date()
-            }
-          });
-          
-          return {
-            id,
-            nome: funcionarioData.nome || "",
-            inicio: new Date()
-          };
-        }
-        return null;
-      });
-      
-      const funcionariosData = (await Promise.all(funcionariosPromises)).filter(Boolean);
-      
-      if (funcionariosData.length > 0) {
-        const ordemRef = doc(db, "ordens_servico", ordemId);
-        
-        // Atualizar a lista de funcionários da etapa
-        batch.update(ordemRef, {
-          [`etapasAndamento.${etapaKey}.funcionarios`]: funcionariosData,
-          [`etapasAndamento.${etapaKey}.iniciado`]: new Date()
+    const batch = writeBatch(db);
+    
+    // Determinar a chave da etapa
+    const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo)
+      ? `${etapa}_${servicoTipo}`
+      : etapa;
+    
+    // Obter dados da ordem
+    const { data: ordemData } = await getDocumentWithCache("ordens_servico", ordemId);
+    
+    if (!ordemData) {
+      toast.error("Ordem de serviço não encontrada");
+      return false;
+    }
+    
+    // Buscar dados dos funcionários e atualizar seus status
+    const funcionariosPromises = funcionariosIds.map(async (id) => {
+      const { data: funcionarioData } = await getDocumentWithCache("funcionarios", id);
+      if (funcionarioData) {
+        const funcionarioRef = doc(db, "funcionarios", id);
+        batch.update(funcionarioRef, {
+          em_servico: true,
+          ultima_atividade: {
+            ordemId,
+            etapa,
+            servicoTipo: servicoTipo || null,
+            data: new Date()
+          }
         });
         
-        await batch.commit();
-        return true;
+        return {
+          id,
+          nome: funcionarioData.nome || "",
+          inicio: new Date()
+        };
       }
-      
-      return false;
-    } else {
-      // Se for apenas um funcionário, usar o método simples
-      return await marcarFuncionarioEmServico(funcionariosIds[0], ordemId, etapa, servicoTipo);
-    }
+      return null;
+    });
+    
+    const funcionariosData = (await Promise.all(funcionariosPromises)).filter(Boolean);
+    
+    // Atualizar a ordem com os novos funcionários
+    const ordemRef = doc(db, "ordens_servico", ordemId);
+    const etapasAndamento = ordemData.etapasAndamento || {};
+    const etapaAtual = etapasAndamento[etapaKey] || {};
+    
+    // Manter funcionários existentes que não estão na nova lista
+    const funcionariosExistentes = Array.isArray(etapaAtual.funcionarios) ? etapaAtual.funcionarios : [];
+    const funcionariosAtualizados = [
+      ...funcionariosExistentes.filter((f: any) => !funcionariosIds.includes(f.id)),
+      ...funcionariosData
+    ];
+    
+    batch.update(ordemRef, {
+      [`etapasAndamento.${etapaKey}`]: {
+        ...etapaAtual,
+        funcionarios: funcionariosAtualizados,
+        iniciado: etapaAtual.iniciado || new Date(),
+        servicoTipo: servicoTipo || null
+      }
+    });
+    
+    // Executar todas as atualizações
+    await batch.commit();
+    
+    // Limpar cache para garantir dados atualizados
+    clearDocumentCache(`ordens_servico/${ordemId}`);
+    funcionariosIds.forEach(id => clearDocumentCache(`funcionarios/${id}`));
+    
+    return true;
   } catch (error) {
-    console.error('Erro ao marcar vários funcionários em serviço:', error);
-    if (shouldShowNotification('Erro ao atribuir múltiplos funcionários')) {
-      toast.error('Erro ao atribuir múltiplos funcionários');
-    }
+    console.error('Erro ao marcar funcionários em serviço:', error);
+    toast.error('Erro ao atualizar status dos funcionários');
     return false;
   }
 }
@@ -470,48 +438,62 @@ export async function marcarFuncionarioDisponivel(
 }
 
 /**
- * Obtém a lista de funcionários atribuídos a uma etapa
+ * Obtém a lista de funcionários atribuídos a uma etapa específica
  */
 export async function obterFuncionariosAtribuidos(
-  ordemId: string, 
+  ordemId: string,
   etapa: EtapaOS,
   servicoTipo?: TipoServico
-): Promise<any[]> {
+): Promise<FuncionarioAtribuido[]> {
   try {
-    // Verificação de parâmetros obrigatórios
-    if (!ordemId || !etapa) {
-      console.error('Parâmetros obrigatórios faltando em obterFuncionariosAtribuidos');
-      return [];
-    }
-
-    console.log(`Buscando funcionários atribuídos à etapa ${etapa} ${servicoTipo ? `(${servicoTipo})` : ''}`);
-
-    // Obter dados da ordem usando cache
+    // Determinar a chave da etapa
+    const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo)
+      ? `${etapa}_${servicoTipo}`
+      : etapa;
+    
+    // Buscar dados da ordem
     const { data: ordemData } = await getDocumentWithCache("ordens_servico", ordemId);
     
     if (!ordemData) {
-      console.error("Ordem de serviço não encontrada");
+      console.error("Ordem não encontrada:", ordemId);
       return [];
     }
     
-    // Determinar a chave da etapa
-    const etapaKey = servicoTipo ? `${etapa}_${servicoTipo}` : etapa;
-    
-    // Buscar dados dos funcionários atribuídos a esta etapa
+    // Obter dados da etapa
     const etapaData = ordemData.etapasAndamento?.[etapaKey];
-    
-    if (!etapaData || !etapaData.funcionarios || !Array.isArray(etapaData.funcionarios)) {
+    if (!etapaData) {
+      console.log("Etapa não encontrada:", etapaKey);
       return [];
     }
     
-    // Retornar a lista de funcionários com dados formatados corretamente
-    return etapaData.funcionarios.map((f: any) => ({
+    // Verificar se há funcionários atribuídos
+    if (!Array.isArray(etapaData.funcionarios)) {
+      console.log("Nenhum funcionário atribuído para a etapa:", etapaKey);
+      
+      // Se não houver array de funcionários mas houver um funcionário principal,
+      // retornar ele como único funcionário atribuído
+      if (etapaData.funcionarioId && etapaData.funcionarioNome) {
+        return [{
+          id: etapaData.funcionarioId,
+          nome: etapaData.funcionarioNome,
+          inicio: etapaData.iniciado || new Date()
+        }];
+      }
+      
+      return [];
+    }
+    
+    // Mapear funcionários para o formato esperado
+    const funcionarios = etapaData.funcionarios.map((f: any) => ({
       id: f.id,
-      nome: f.nome || "Funcionário",
-      inicio: f.inicio?.toDate ? f.inicio.toDate() : new Date(f.inicio)
+      nome: f.nome,
+      inicio: f.inicio instanceof Date ? f.inicio : new Date(f.inicio)
     }));
+    
+    // Ordenar por data de início (mais recente primeiro)
+    return funcionarios.sort((a, b) => b.inicio.getTime() - a.inicio.getTime());
   } catch (error) {
-    console.error("Erro ao buscar funcionários atribuídos:", error);
+    console.error("Erro ao obter funcionários atribuídos:", error);
     return [];
   }
 }

@@ -257,6 +257,10 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate }: EtapasTrackerProps) 
         return;
       }
       
+      // Manter funcionários existentes e adicionar o novo se necessário
+      const funcionariosAtuais = Array.isArray(etapaAtual.funcionarios) ? etapaAtual.funcionarios : [];
+      const funcionarioJaExiste = funcionariosAtuais.some((f: any) => f.id === funcionarioId);
+      
       // Preparar objeto para atualização, garantindo que nenhum campo seja undefined
       const atualizacao: Record<string, any> = {
         [`etapasAndamento.${etapaKey}`]: {
@@ -266,15 +270,16 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate }: EtapasTrackerProps) 
           finalizado: concluida ? new Date() : null,
           iniciado: etapaAtual.iniciado || new Date(),
           servicoTipo: servicoTipo || null,
+          funcionarios: funcionarioJaExiste ? funcionariosAtuais : [
+            ...funcionariosAtuais,
+            {
+              id: funcionarioId,
+              nome: funcionarioNome,
+              inicio: new Date()
+            }
+          ]
         }
       };
-      
-      // Se a etapa atual tem funcionários, mantê-los
-      if (Array.isArray(etapaAtual.funcionarios)) {
-        atualizacao[`etapasAndamento.${etapaKey}`].funcionarios = etapaAtual.funcionarios;
-      } else {
-        atualizacao[`etapasAndamento.${etapaKey}`].funcionarios = [];
-      }
       
       // Log para depuração
       console.log("Dados a serem salvos:", atualizacao);

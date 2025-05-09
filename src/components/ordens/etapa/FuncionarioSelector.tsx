@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { AtribuirMultiplosFuncionariosDialog } from "@/components/funcionarios/AtribuirMultiplosFuncionariosDialog";
@@ -47,12 +46,12 @@ export function FuncionarioSelector({
   const [isLoading, setIsLoading] = useState(false);
 
   // Debug logs
-  console.log("EtapaFuncionarioSelector - render", { 
+  console.log("FuncionarioSelector - render", { 
     funcionarioSelecionadoId, 
     funcionariosAtribuidos: funcionariosAtribuidos.map(f => f.id)
   });
 
-  // Buscar funcionários atribuídos quando o componente for montado
+  // Buscar funcionários atribuídos quando o componente for montado ou quando houver mudanças relevantes
   useEffect(() => {
     const buscarFuncionariosAtribuidos = async () => {
       if (!ordemId) return;
@@ -70,7 +69,7 @@ export function FuncionarioSelector({
     };
     
     buscarFuncionariosAtribuidos();
-  }, [ordemId, etapa, servicoTipo]);
+  }, [ordemId, etapa, servicoTipo, dialogOpen]); // Adicionado dialogOpen para recarregar após fechamento do diálogo
 
   const handleOpenDialog = () => {
     setDialogOpen(true);
@@ -78,26 +77,35 @@ export function FuncionarioSelector({
 
   const handleConfirmAtribuicao = async (ids: string[], nomes: string[]) => {
     console.log("Confirmando atribuição:", ids, nomes);
-    await onSaveResponsavel(ids, nomes);
-    
-    // Atualizar a lista local com os novos funcionários
-    const novosFuncionarios = ids.map((id, index) => ({
-      id,
-      nome: nomes[index] || id,
-      inicio: new Date()
-    }));
-    
-    setFuncionariosAtribuidos(novosFuncionarios);
+    try {
+      await onSaveResponsavel(ids, nomes);
+      
+      // Atualizar a lista local com os novos funcionários
+      const novosFuncionarios = ids.map((id, index) => ({
+        id,
+        nome: nomes[index] || id,
+        inicio: new Date() // Manter como Date para consistência com a interface
+      }));
+      
+      setFuncionariosAtribuidos(novosFuncionarios);
+      setDialogOpen(false); // Fechar o diálogo após sucesso
+    } catch (error) {
+      console.error("Erro ao confirmar atribuição:", error);
+    }
   };
 
   const handleRemoverFuncionario = async (funcionarioId: string) => {
-    // Filtra o funcionário a ser removido
-    const funcionariosRestantes = funcionariosAtribuidos.filter(f => f.id !== funcionarioId);
-    const ids = funcionariosRestantes.map(f => f.id);
-    const nomes = funcionariosRestantes.map(f => f.nome);
-    
-    await onSaveResponsavel(ids, nomes);
-    setFuncionariosAtribuidos(funcionariosRestantes);
+    try {
+      // Filtra o funcionário a ser removido
+      const funcionariosRestantes = funcionariosAtribuidos.filter(f => f.id !== funcionarioId);
+      const ids = funcionariosRestantes.map(f => f.id);
+      const nomes = funcionariosRestantes.map(f => f.nome);
+      
+      await onSaveResponsavel(ids, nomes);
+      setFuncionariosAtribuidos(funcionariosRestantes);
+    } catch (error) {
+      console.error("Erro ao remover funcionário:", error);
+    }
   };
 
   if (isEtapaConcluida) {
@@ -134,34 +142,40 @@ export function FuncionarioSelector({
             </span>
           </div>
           <div className="space-y-2">
-            {funcionariosAtribuidos.map(funcionario => (
-              <div key={funcionario.id} className="flex justify-between items-center p-2 bg-background rounded border">
-                <div>
-                  <div className="font-medium">{funcionario.nome}</div>
-                  <div className="text-xs text-muted-foreground">
-                    Desde: {format(new Date(funcionario.inicio), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+            {funcionariosAtribuidos.map(funcionario => {
+              // Garantir que a data seja válida antes de formatar
+              const dataInicio = funcionario.inicio instanceof Date ? funcionario.inicio : new Date(funcionario.inicio);
+              const dataFormatada = isNaN(dataInicio.getTime()) 
+                ? "Data não disponível" 
+                : format(dataInicio, "dd/MM/yyyy HH:mm", { locale: ptBR });
+
+              return (
+                <div key={funcionario.id} className="flex justify-between items-center p-2 bg-background rounded border">
+                  <div>
+                    <div className="font-medium">{funcionario.nome}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Desde: {dataFormatada}
+                    </div>
                   </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => handleRemoverFuncionario(funcionario.id)}
+                    disabled={isSaving}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                  onClick={() => handleRemoverFuncionario(funcionario.id)}
-                  disabled={isSaving}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ) : (
-        <div className="flex items-center justify-center border border-dashed rounded-lg p-6 bg-muted/10">
-          <div className="text-center text-muted-foreground">
-            <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Nenhum funcionário atribuído</p>
-            <p className="text-xs mt-1">Clique em "Atribuir Funcionários" para começar</p>
-          </div>
+        <div className="flex flex-col items-center justify-center border border-dashed rounded-lg p-6 bg-muted/10">
+          <Users className="h-8 w-8 mb-2 opacity-50" />
+          <p className="text-sm">Nenhum funcionário atribuído</p>
+          <p className="text-xs mt-1">Clique em "Atribuir Funcionários" para começar</p>
         </div>
       )}
       
@@ -184,10 +198,6 @@ export function FuncionarioSelector({
           onConfirm={(id, nome) => handleConfirmAtribuicao([id], [nome])}
           funcionarioAtualId={funcionarioSelecionadoId}
           especialidadeRequerida={servicoTipo}
-          title="Atribuir Funcionário"
-          description="Selecione o funcionário responsável por esta etapa."
-          confirmLabel="Confirmar Atribuição"
-          apenasDisponiveis={false}
         />
       )}
     </div>

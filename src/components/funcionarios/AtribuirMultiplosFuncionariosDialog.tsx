@@ -29,16 +29,6 @@ export function AtribuirMultiplosFuncionariosDialog({
   apenasDisponiveis = true,
   confirmLabel = "Confirmar"
 }: AtribuirMultiplosFuncionariosDialogProps) {
-  // Estado local para armazenar seleções antes de confirmar
-  const [localSelecionados, setLocalSelecionados] = useState<string[]>(funcionariosSelecionadosIds);
-  
-  // Efeito para atualizar o estado local quando os props mudarem
-  useEffect(() => {
-    if (open) {
-      setLocalSelecionados(funcionariosSelecionadosIds);
-    }
-  }, [open, funcionariosSelecionadosIds]);
-
   const {
     funcionariosFiltradosAtual,
     loading,
@@ -47,29 +37,18 @@ export function AtribuirMultiplosFuncionariosDialog({
     isFuncionarioSelected,
     handleConfirm
   } = useAtribuirFuncionariosDialog({
-    funcionariosSelecionadosIds: localSelecionados,
+    funcionariosSelecionadosIds,
     especialidadeRequerida,
     apenasDisponiveis,
-    onConfirm
+    onConfirm,
+    isOpen: open
   });
-
-  // Memoize a função de toggle para evitar recriações desnecessárias
-  const memoizedHandleToggle = useCallback((id: string) => {
-    handleToggleFuncionario(id);
-    
-    // Atualizar também o estado local
-    setLocalSelecionados(prev => {
-      if (prev.includes(id)) {
-        return prev.filter(fId => fId !== id);
-      } else {
-        return [...prev, id];
-      }
-    });
-  }, [handleToggleFuncionario]);
 
   // Handler para confirmar a seleção
   const handleConfirmSelection = useCallback(() => {
+    console.log('Tentando confirmar seleção...');
     if (handleConfirm(onConfirm)) {
+      console.log('Seleção confirmada, fechando diálogo');
       onOpenChange(false);
     }
   }, [handleConfirm, onConfirm, onOpenChange]);
@@ -100,7 +79,10 @@ export function AtribuirMultiplosFuncionariosDialog({
                     status={funcionario.status}
                     especialidades={funcionario.especialidades}
                     isChecked={isFuncionarioSelected(funcionario.id)}
-                    onToggle={memoizedHandleToggle}
+                    onToggle={(id) => {
+                      console.log('Checkbox clicado:', id);
+                      handleToggleFuncionario(id);
+                    }}
                   />
                 ))}
               </div>

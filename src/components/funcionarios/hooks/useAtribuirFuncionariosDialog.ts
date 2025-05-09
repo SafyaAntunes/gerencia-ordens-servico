@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useFuncionariosDisponibilidade } from '@/hooks/useFuncionariosDisponibilidade';
 import { TipoServico } from '@/types/ordens';
 import { toast } from "sonner";
@@ -8,60 +8,66 @@ interface UseAtribuirFuncionariosDialogProps {
   especialidadeRequerida?: TipoServico;
   apenasDisponiveis?: boolean;
   onConfirm?: (ids: string[], nomes: string[]) => void;
+  isOpen?: boolean;
 }
 
 export function useAtribuirFuncionariosDialog({
   funcionariosSelecionadosIds = [],
   especialidadeRequerida,
   apenasDisponiveis = true,
-  onConfirm
+  onConfirm,
+  isOpen = false
 }: UseAtribuirFuncionariosDialogProps) {
   const { funcionariosStatus, funcionariosDisponiveis, loading } = useFuncionariosDisponibilidade();
-  const [funcionariosSelecionados, setFuncionariosSelecionados] = useState<string[]>(funcionariosSelecionadosIds || []);
-  const [forceUpdate, setForceUpdate] = useState<number>(0);
+  const [funcionariosSelecionados, setFuncionariosSelecionados] = useState<string[]>(funcionariosSelecionadosIds);
+  const previousIdsRef = useRef<string[]>(funcionariosSelecionadosIds);
 
-  // Inicialização do estado com os IDs passados como props
+  // Sincronizar com os IDs passados como props apenas quando o diálogo abrir
+  // ou quando os IDs mudarem significativamente
   useEffect(() => {
-    setFuncionariosSelecionados(funcionariosSelecionadosIds || []);
-  }, [funcionariosSelecionadosIds]);
+    if (!isOpen) return;
+
+    const previousIds = previousIdsRef.current;
+    const currentIds = funcionariosSelecionadosIds;
+
+    // Verifica se os arrays são realmente diferentes em conteúdo
+    const isDifferent = previousIds.length !== currentIds.length ||
+      previousIds.some((id, index) => currentIds[index] !== id);
+
+    if (isDifferent) {
+      setFuncionariosSelecionados(currentIds);
+      previousIdsRef.current = currentIds;
+    }
+  }, [isOpen, funcionariosSelecionadosIds]);
 
   // Filtrar funcionários com base nas condições
   const funcionariosFiltradosAtual = funcionariosStatus.filter(funcionario => {
-    // Filtrar por especialidade se necessário
-    if (especialidadeRequerida) {
-      if (!funcionario.especialidades?.includes(especialidadeRequerida)) {
-        return false;
-      }
+    if (especialidadeRequerida && !funcionario.especialidades?.includes(especialidadeRequerida)) {
+      return false;
     }
-
-    // Filtrar por disponibilidade se necessário
     if (apenasDisponiveis && funcionario.status !== 'disponivel') {
       return false;
     }
-
     return true;
   });
 
-  // Toggle de seleção de funcionário - otimizado para forçar atualização visual
   const handleToggleFuncionario = useCallback((id: string) => {
     setFuncionariosSelecionados(prev => {
       const isSelected = prev.includes(id);
-      const novosSelecionados = isSelected 
-        ? prev.filter(fid => fid !== id) 
+      const newSelection = isSelected 
+        ? prev.filter(fid => fid !== id)
         : [...prev, id];
-      return novosSelecionados;
+      console.log('Toggle funcionário:', { id, wasSelected: isSelected, newSelection });
+      return newSelection;
     });
-    
-    // Forçar re-renderização quando o toggle é chamado
-    setForceUpdate(prev => prev + 1);
   }, []);
 
-  // Verificar se um funcionário está selecionado
   const isFuncionarioSelected = useCallback((id: string) => {
-    return funcionariosSelecionados.includes(id);
+    const isSelected = funcionariosSelecionados.includes(id);
+    console.log('Checking funcionário selection:', { id, isSelected });
+    return isSelected;
   }, [funcionariosSelecionados]);
 
-  // Confirmar seleção
   const handleConfirm = useCallback((dialogOnConfirm?: (ids: string[], nomes: string[]) => void) => {
     const onConfirmFn = dialogOnConfirm || onConfirm;
 
@@ -80,6 +86,7 @@ export function useAtribuirFuncionariosDialog({
       return funcionario?.nome || id;
     });
 
+    console.log('Confirmando seleção:', { ids: funcionariosSelecionados, nomes: funcionariosSelecionadosNomes });
     onConfirmFn(funcionariosSelecionados, funcionariosSelecionadosNomes);
     return true;
   }, [funcionariosSelecionados, funcionariosStatus, onConfirm]);
@@ -88,7 +95,6 @@ export function useAtribuirFuncionariosDialog({
     funcionariosFiltradosAtual,
     loading,
     funcionariosSelecionados,
-    forceUpdate,
     handleToggleFuncionario,
     isFuncionarioSelected,
     handleConfirm
