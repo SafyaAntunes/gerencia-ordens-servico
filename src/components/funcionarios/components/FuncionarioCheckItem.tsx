@@ -1,5 +1,4 @@
-
-import { memo } from "react";
+import { memo, useCallback } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -22,26 +21,29 @@ export const FuncionarioCheckItem = memo(function FuncionarioCheckItem({
   isChecked,
   onToggle
 }: FuncionarioCheckItemProps) {
-  console.log(`Renderizando checkbox para ${nome}, checked=${isChecked}`);
-  
+  // Memoize o handler de clique para evitar recriações
+  const handleToggle = useCallback(() => {
+    onToggle(id);
+  }, [id, onToggle]);
+
+  // Memoize o handler do label para evitar recriações
+  const handleLabelClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault(); // Evitar cliques duplos
+    onToggle(id);
+  }, [id, onToggle]);
+
   return (
     <div className="flex items-center space-x-2 border p-3 rounded-lg">
       <Checkbox 
         id={`funcionario-${id}`}
         checked={isChecked}
-        onCheckedChange={() => {
-          console.log(`Checkbox ${id} clicado, atual=${isChecked}`);
-          onToggle(id);
-        }}
+        onCheckedChange={handleToggle}
       />
       <div className="flex-1">
         <Label 
           htmlFor={`funcionario-${id}`}
           className="flex justify-between cursor-pointer"
-          onClick={(e) => {
-            e.preventDefault(); // Evitar cliques duplos
-            onToggle(id);
-          }}
+          onClick={handleLabelClick}
         >
           <span className="font-medium">{nome}</span>
           {status === 'disponivel' ? (

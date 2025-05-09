@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { TipoServico } from '@/types/ordens';
 import { useAtribuirFuncionariosDialog } from "./hooks/useAtribuirFuncionariosDialog";
 import { FuncionarioCheckItem } from "./components/FuncionarioCheckItem";
+import { useCallback, useMemo } from "react";
 
 interface AtribuirMultiplosFuncionariosDialogProps {
   open: boolean;
@@ -30,21 +30,33 @@ export function AtribuirMultiplosFuncionariosDialog({
   apenasDisponiveis = true,
   confirmLabel = "Confirmar"
 }: AtribuirMultiplosFuncionariosDialogProps) {
-  console.log("Dialog render - props.funcionariosSelecionadosIds:", funcionariosSelecionadosIds);
-  console.log("Dialog open state:", open);
-  
   const {
-    funcionariosSelecionados,
     funcionariosFiltradosAtual,
-    isFuncionarioSelected,
+    loading,
+    funcionariosSelecionados,
     handleToggleFuncionario,
-    handleConfirm,
-    loading
+    handleConfirm
   } = useAtribuirFuncionariosDialog({
     funcionariosSelecionadosIds,
     especialidadeRequerida,
-    apenasDisponiveis
+    apenasDisponiveis,
+    onConfirm
   });
+
+  // Memoize a função de toggle para evitar recriações desnecessárias
+  const memoizedHandleToggle = useCallback((id: string) => {
+    handleToggleFuncionario(id);
+  }, [handleToggleFuncionario]);
+
+  // Memoize a função de verificação de seleção
+  const isFuncionarioSelected = useCallback((id: string) => {
+    return funcionariosSelecionados.includes(id);
+  }, [funcionariosSelecionados]);
+
+  // Memoize a lista de funcionários filtrados
+  const memoizedFuncionarios = useMemo(() => {
+    return funcionariosFiltradosAtual;
+  }, [funcionariosFiltradosAtual]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -61,10 +73,10 @@ export function AtribuirMultiplosFuncionariosDialog({
             <div className="flex items-center justify-center py-6">
               <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
             </div>
-          ) : funcionariosFiltradosAtual.length > 0 ? (
+          ) : memoizedFuncionarios.length > 0 ? (
             <ScrollArea className="h-[300px] pr-4">
               <div className="space-y-3">
-                {funcionariosFiltradosAtual.map(funcionario => (
+                {memoizedFuncionarios.map(funcionario => (
                   <FuncionarioCheckItem
                     key={funcionario.id}
                     id={funcionario.id}
@@ -72,7 +84,7 @@ export function AtribuirMultiplosFuncionariosDialog({
                     status={funcionario.status}
                     especialidades={funcionario.especialidades}
                     isChecked={isFuncionarioSelected(funcionario.id)}
-                    onToggle={handleToggleFuncionario}
+                    onToggle={memoizedHandleToggle}
                   />
                 ))}
               </div>
@@ -87,13 +99,8 @@ export function AtribuirMultiplosFuncionariosDialog({
           )}
         </div>
         
-        <DialogFooter className="flex items-center justify-between">
-          <div>
-            <Badge variant="outline" className="mr-2">
-              {funcionariosSelecionados.length} selecionados
-            </Badge>
-          </div>
-          <div className="flex gap-2">
+        <DialogFooter>
+          <div className="flex justify-between w-full">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>

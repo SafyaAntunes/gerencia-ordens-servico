@@ -1,62 +1,55 @@
-
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useFuncionariosDisponibilidade } from '@/hooks/useFuncionariosDisponibilidade';
 import { TipoServico } from '@/types/ordens';
 import { toast } from "sonner";
 
 interface UseAtribuirFuncionariosDialogProps {
-  funcionariosSelecionadosIds: string[];
+  funcionariosSelecionadosIds?: string[];
   especialidadeRequerida?: TipoServico;
   apenasDisponiveis?: boolean;
 }
 
 export function useAtribuirFuncionariosDialog({
-  funcionariosSelecionadosIds,
+  funcionariosSelecionadosIds = [],
   especialidadeRequerida,
   apenasDisponiveis = true
 }: UseAtribuirFuncionariosDialogProps) {
-  const [funcionariosSelecionados, setFuncionariosSelecionados] = useState<string[]>([]);
   const { funcionariosStatus, funcionariosDisponiveis, loading } = useFuncionariosDisponibilidade();
+  const [funcionariosSelecionados, setFuncionariosSelecionados] = useState<string[]>(funcionariosSelecionadosIds);
 
   // Debug logs para acompanhar mudanças de estado
   console.log("Dialog hook - funcionariosSelecionados:", funcionariosSelecionados);
   console.log("Dialog hook - props.funcionariosSelecionadosIds:", funcionariosSelecionadosIds);
 
-  // Sincronizar com o estado do pai quando os IDs mudam
+  // Atualizar selecionados quando as props mudarem
   useEffect(() => {
     console.log("Dialog hook - syncing selected IDs:", funcionariosSelecionadosIds);
-    // Importante: Crie uma nova referência do array para garantir que o React detecte a mudança
-    setFuncionariosSelecionados([...funcionariosSelecionadosIds]);
+    setFuncionariosSelecionados(funcionariosSelecionadosIds);
   }, [funcionariosSelecionadosIds]);
 
-  // Memoize funções e valores calculados para evitar recálculos desnecessários
-  const funcionariosElegiveis = useCallback(() => {
-    return apenasDisponiveis 
-      ? funcionariosDisponiveis 
-      : funcionariosStatus.filter(f => f.status !== 'inativo');
-  }, [apenasDisponiveis, funcionariosDisponiveis, funcionariosStatus]);
-  
-  // Memoize a lista filtrada de funcionários
-  const funcionariosFiltrados = useCallback(() => {
-    const elegiveis = funcionariosElegiveis();
-    return especialidadeRequerida
-      ? elegiveis.filter(f => 
-          f.especialidades && f.especialidades.includes(especialidadeRequerida)
-        )
-      : elegiveis;
-  }, [especialidadeRequerida, funcionariosElegiveis]);
+  // Filtrar funcionários com base nas condições
+  const funcionariosFiltradosAtual = funcionariosStatus.filter(funcionario => {
+    // Filtrar por especialidade se necessário
+    if (especialidadeRequerida) {
+      if (!funcionario.especialidades?.includes(especialidadeRequerida)) {
+        return false;
+      }
+    }
 
-  // Otimizar o toggle de funcionário com useCallback
+    // Filtrar por disponibilidade se necessário
+    if (apenasDisponiveis && funcionario.status !== 'disponivel') {
+      return false;
+    }
+
+    return true;
+  });
+
+  // Toggle de seleção de funcionário
   const handleToggleFuncionario = useCallback((id: string) => {
     console.log("Toggle funcionário:", id);
     setFuncionariosSelecionados(prev => {
-      // Verificar se o ID já está selecionado
-      const isSelected = prev.includes(id);
-      console.log(`Funcionário ${id} está ${isSelected ? 'selecionado' : 'não selecionado'}`);
-      
-      // Criar uma nova referência do array para garantir que o React detecte a mudança
-      if (isSelected) {
-        const newSelection = prev.filter(funcionarioId => funcionarioId !== id);
+      if (prev.includes(id)) {
+        const newSelection = prev.filter(fid => fid !== id);
         console.log("Nova seleção após remover:", newSelection);
         return newSelection;
       } else {
@@ -67,38 +60,35 @@ export function useAtribuirFuncionariosDialog({
     });
   }, []);
 
-  // Verificar se um funcionário está selecionado - melhorado para ser mais eficiente
+  // Verificar se um funcionário está selecionado
   const isFuncionarioSelected = useCallback((id: string) => {
     return funcionariosSelecionados.includes(id);
   }, [funcionariosSelecionados]);
 
-  // Otimize o handleConfirm para ser mais eficiente
+  // Confirmar seleção
   const handleConfirm = useCallback((onConfirm: (ids: string[], nomes: string[]) => void) => {
     if (funcionariosSelecionados.length === 0) {
       toast.error("Selecione pelo menos um funcionário para continuar");
       return false;
     }
-    
-    // Obter nomes dos funcionários selecionados
-    const funcionariosNomes = funcionariosSelecionados.map(id => {
+
+    const funcionariosSelecionadosNomes = funcionariosSelecionados.map(id => {
       const funcionario = funcionariosStatus.find(f => f.id === id);
-      return funcionario?.nome || '';
-    }).filter(nome => nome !== '');
+      return funcionario?.nome || id;
+    });
+
+    console.log("Confirmando seleção:", funcionariosSelecionados, funcionariosSelecionadosNomes);
     
-    console.log("Confirmando seleção:", funcionariosSelecionados, funcionariosNomes);
-    
-    // Chamar onConfirm apenas uma vez ao clicar no botão
-    onConfirm(funcionariosSelecionados, funcionariosNomes);
+    onConfirm(funcionariosSelecionados, funcionariosSelecionadosNomes);
     return true;
   }, [funcionariosSelecionados, funcionariosStatus]);
 
   return {
+    funcionariosFiltradosAtual,
+    loading,
     funcionariosSelecionados,
-    setFuncionariosSelecionados,
-    funcionariosFiltradosAtual: funcionariosFiltrados(),
-    isFuncionarioSelected,
     handleToggleFuncionario,
-    handleConfirm,
-    loading
+    isFuncionarioSelected,
+    handleConfirm
   };
 }
