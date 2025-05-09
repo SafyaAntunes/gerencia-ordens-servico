@@ -197,7 +197,7 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
     
     try {
       // Determinar a chave da etapa com base no tipo de serviço
-      const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final') && servicoTipo) 
+      const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo) 
         ? `${etapa}_${servicoTipo}` 
         : etapa;
       
@@ -216,17 +216,16 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
       const etapasAndamento = dadosAtuais.etapasAndamento || {};
       const etapaAtual = etapasAndamento[etapaKey] || {};
       
-      // Preparar objeto para atualização
+      // Preparar objeto para atualização, garantindo que nenhum campo seja undefined
       const atualizacao = {
         [`etapasAndamento.${etapaKey}`]: {
-          ...etapaAtual,  // Preserva todos os dados anteriores
           concluido: concluida,
-          funcionarioId: funcionarioId,
+          funcionarioId: funcionarioId || null,
           funcionarioNome: funcionarioNome || "",
-          finalizado: concluida ? new Date() : null, // Definir como null quando reaberto
-          iniciado: etapaAtual.iniciado || new Date(),  // Mantém data inicio ou atualiza se for nova atribuição
-          // Se for etapa de inspeção, preserva o tipo de serviço
-          ...(servicoTipo ? { servicoTipo } : {})
+          finalizado: concluida ? new Date() : null,
+          iniciado: etapaAtual.iniciado || new Date(),
+          servicoTipo: servicoTipo || null,
+          funcionarios: etapaAtual.funcionarios || []
         }
       };
       

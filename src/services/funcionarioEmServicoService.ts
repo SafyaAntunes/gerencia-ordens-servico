@@ -1,4 +1,3 @@
-
 import { db } from '@/lib/firebase';
 import { doc, updateDoc, getDoc, setDoc, collection, query, where, getDocs, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { toast } from 'sonner';
@@ -23,58 +22,40 @@ export async function marcarFuncionarioEmServico(
   servicoTipo?: TipoServico
 ): Promise<boolean> {
   try {
-    // Verificar se o funcionário existe
-    const funcionarioRef = doc(db, 'funcionarios', funcionarioId);
+    // Determinar a chave da etapa com base no tipo de serviço
+    const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo)
+      ? `${etapa}_${servicoTipo}`
+      : etapa;
+    
+    // Obter dados do funcionário
+    const funcionarioRef = doc(db, "funcionarios", funcionarioId);
     const funcionarioDoc = await getDoc(funcionarioRef);
     
     if (!funcionarioDoc.exists()) {
-      toast.error('Funcionário não encontrado');
+      toast.error("Funcionário não encontrado");
       return false;
     }
     
-    // Se o funcionário estiver inativo, não permitir marcar como em serviço
     const funcionarioData = funcionarioDoc.data();
-    if (funcionarioData.ativo === false) {
-      toast.error('Funcionário inativo não pode ser atribuído a serviços');
-      return false;
-    }
     
-    // Verificar se a ordem existe
-    const ordemRef = doc(db, 'ordens_servico', ordemId);
-    const ordemDoc = await getDoc(ordemRef);
-    
-    if (!ordemDoc.exists()) {
-      toast.error('Ordem de serviço não encontrada');
-      return false;
-    }
-    
-    // Atualizar status do funcionário
+    // Atualizar último serviço do funcionário
     await updateDoc(funcionarioRef, {
-      em_servico: true,
       ultima_atividade: {
-        ordemId,
-        etapa,
-        servicoTipo,
-        inicio: new Date(),
-        ordemNome: ordemDoc.data().nome || ordemId
+        ordemId: ordemId || null,
+        etapa: etapa || null,
+        servicoTipo: servicoTipo || null,
+        data: new Date()
       }
     });
     
-    // Registrar a atribuição na coleção de registros
-    const registroId = `${funcionarioId}_${ordemId}_${etapa}_${servicoTipo || 'geral'}_${new Date().getTime()}`;
-    const registroRef = doc(db, 'registros_servico', registroId);
+    // Obter dados da ordem
+    const ordemRef = doc(db, "ordens_servico", ordemId);
+    const ordemDoc = await getDoc(ordemRef);
     
-    await setDoc(registroRef, {
-      funcionarioId,
-      ordemId,
-      etapa,
-      servicoTipo,
-      inicio: new Date(),
-      ordemNome: ordemDoc.data().nome || ordemId
-    });
-
-    // Atualizar o documento da ordem para adicionar este funcionário à etapa
-    const etapaKey = servicoTipo ? `${etapa}_${servicoTipo}` : etapa;
+    if (!ordemDoc.exists()) {
+      toast.error("Ordem de serviço não encontrada");
+      return false;
+    }
     
     // Verificar se já existe informação sobre esta etapa
     const etapaPath = `etapasAndamento.${etapaKey}`;
@@ -83,14 +64,15 @@ export async function marcarFuncionarioEmServico(
     // Criar ou atualizar a lista de funcionários para esta etapa
     const funcionariosData = {
       id: funcionarioId,
-      nome: funcionarioData.nome,
+      nome: funcionarioData.nome || "",
       inicio: new Date()
     };
     
     // Se etapaData.funcionarios não existir, criar um array com este funcionário
     if (!etapaData.funcionarios) {
       await updateDoc(ordemRef, {
-        [`${etapaPath}.funcionarios`]: [funcionariosData]
+        [`${etapaPath}.funcionarios`]: [funcionariosData],
+        [`${etapaPath}.iniciado`]: new Date()
       });
     } else {
       // Verificar se o funcionário já está na lista
@@ -101,13 +83,6 @@ export async function marcarFuncionarioEmServico(
           [`${etapaPath}.funcionarios`]: arrayUnion(funcionariosData)
         });
       }
-    }
-    
-    // Garantir que a etapa esteja marcada como iniciada
-    if (!etapaData.iniciado) {
-      await updateDoc(ordemRef, {
-        [`${etapaPath}.iniciado`]: new Date()
-      });
     }
     
     return true;
@@ -213,168 +188,4 @@ export async function marcarFuncionarioDisponivel(
         if (funcionariosAtualizados.length === 0 && !etapaData.concluido) {
           // Podemos opcionalmente marcar a etapa como "parada" ou manter um registro que não há funcionários
           await updateDoc(ordemRef, {
-            [`${etapaPath}.semFuncionarios`]: true
-          });
-        }
-      }
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Erro ao marcar funcionário como disponível:', error);
-    toast.error('Erro ao atualizar status do funcionário');
-    return false;
-  }
-}
-
-/**
- * Verifica se um funcionário está disponível para ser atribuído a um novo serviço
- */
-export async function verificarDisponibilidadeFuncionario(funcionarioId: string): Promise<boolean> {
-  try {
-    const funcionarioRef = doc(db, 'funcionarios', funcionarioId);
-    const funcionarioDoc = await getDoc(funcionarioRef);
-    
-    if (!funcionarioDoc.exists()) {
-      return false;
-    }
-    
-    const funcionarioData = funcionarioDoc.data();
-    
-    // Funcionário inativo nunca está disponível
-    if (funcionarioData.ativo === false) {
-      return false;
-    }
-    
-    // Verificar flag em_servico
-    return !funcionarioData.em_servico;
-  } catch (error) {
-    console.error('Erro ao verificar disponibilidade do funcionário:', error);
-    return false;
-  }
-}
-
-/**
- * Função administrativa para forçar a liberação de um funcionário
- * Útil quando há problemas de sincronização ou bugs
- */
-export async function forcarLiberacaoFuncionario(funcionarioId: string): Promise<boolean> {
-  try {
-    const funcionarioRef = doc(db, 'funcionarios', funcionarioId);
-    await updateDoc(funcionarioRef, {
-      em_servico: false
-    });
-    
-    // Fechar todos os registros em aberto
-    const registrosRef = collection(db, 'registros_servico');
-    const q = query(
-      registrosRef,
-      where('funcionarioId', '==', funcionarioId),
-      where('fim', '==', null)
-    );
-    
-    const registrosSnapshot = await getDocs(q);
-    
-    const updatePromises = registrosSnapshot.docs.map(docSnapshot => {
-      const registroRef = doc(db, 'registros_servico', docSnapshot.id);
-      return updateDoc(registroRef, {
-        fim: new Date(),
-        liberacao_forcada: true
-      });
-    });
-    
-    await Promise.all(updatePromises);
-    
-    toast.success('Funcionário liberado com sucesso');
-    return true;
-  } catch (error) {
-    console.error('Erro ao forçar liberação do funcionário:', error);
-    toast.error('Erro ao liberar funcionário');
-    return false;
-  }
-}
-
-/**
- * Marca vários funcionários como "em serviço" na mesma atividade
- */
-export async function marcarVariosFuncionariosEmServico(
-  funcionariosIds: string[],
-  ordemId: string,
-  etapa: EtapaOS,
-  servicoTipo?: TipoServico
-): Promise<boolean> {
-  try {
-    if (funcionariosIds.length === 0) {
-      toast.error('Nenhum funcionário selecionado');
-      return false;
-    }
-
-    // Verificar se a ordem existe
-    const ordemRef = doc(db, 'ordens_servico', ordemId);
-    const ordemDoc = await getDoc(ordemRef);
-    
-    if (!ordemDoc.exists()) {
-      toast.error('Ordem de serviço não encontrada');
-      return false;
-    }
-
-    const ordemNome = ordemDoc.data().nome || ordemId;
-    
-    // Para cada funcionário, marcar como em serviço
-    const promises = funcionariosIds.map(async (funcionarioId) => {
-      return marcarFuncionarioEmServico(funcionarioId, ordemId, etapa, servicoTipo);
-    });
-    
-    const resultados = await Promise.all(promises);
-    
-    // Verificar se todos foram atribuídos com sucesso
-    const todosSucesso = resultados.every(resultado => resultado === true);
-    
-    if (todosSucesso) {
-      toast.success(`${funcionariosIds.length} funcionários atribuídos com sucesso`);
-      return true;
-    } else {
-      toast.warning('Alguns funcionários não puderam ser atribuídos');
-      return false;
-    }
-  } catch (error) {
-    console.error('Erro ao marcar vários funcionários em serviço:', error);
-    toast.error('Erro ao atribuir funcionários');
-    return false;
-  }
-}
-
-/**
- * Obtém todos os funcionários atribuídos a uma etapa específica
- */
-export async function obterFuncionariosAtribuidos(
-  ordemId: string,
-  etapa: EtapaOS,
-  servicoTipo?: TipoServico
-): Promise<Array<{id: string, nome: string, inicio: Date}>> {
-  try {
-    const ordemRef = doc(db, 'ordens_servico', ordemId);
-    const ordemDoc = await getDoc(ordemRef);
-    
-    if (!ordemDoc.exists()) {
-      console.error('Ordem não encontrada');
-      return [];
-    }
-    
-    const etapaKey = servicoTipo ? `${etapa}_${servicoTipo}` : etapa;
-    const etapaData = ordemDoc.data().etapasAndamento?.[etapaKey] || {};
-    
-    if (!etapaData.funcionarios || !Array.isArray(etapaData.funcionarios)) {
-      return [];
-    }
-    
-    return etapaData.funcionarios.map((f: any) => ({
-      id: f.id,
-      nome: f.nome,
-      inicio: f.inicio ? new Date(f.inicio) : new Date()
-    }));
-  } catch (error) {
-    console.error('Erro ao obter funcionários atribuídos:', error);
-    return [];
-  }
-}
+            [`
