@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -37,13 +36,12 @@ export function AtribuirMultiplosFuncionariosDialog({
   const [funcionariosSelecionados, setFuncionariosSelecionados] = useState<string[]>(funcionariosSelecionadosIds);
   const { funcionariosStatus, funcionariosDisponiveis, loading } = useFuncionariosDisponibilidade();
 
-  // Atualizar os funcionários selecionados SOMENTE quando o modal for aberto
-  // E não após cada interação do usuário
+  // Atualizar os funcionários selecionados apenas quando o modal for aberto pela primeira vez
   useEffect(() => {
     if (open) {
       setFuncionariosSelecionados(funcionariosSelecionadosIds);
     }
-  }, [open, funcionariosSelecionadosIds]);
+  }, [open]);
   
   // Filtrar funcionários elegíveis
   const funcionariosElegiveis = apenasDisponiveis 
