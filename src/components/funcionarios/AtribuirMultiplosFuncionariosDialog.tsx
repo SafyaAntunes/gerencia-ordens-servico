@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -36,12 +37,14 @@ export function AtribuirMultiplosFuncionariosDialog({
   const [funcionariosSelecionados, setFuncionariosSelecionados] = useState<string[]>(funcionariosSelecionadosIds);
   const { funcionariosStatus, funcionariosDisponiveis, loading } = useFuncionariosDisponibilidade();
 
-  // Atualizar os funcionários selecionados apenas quando o modal for aberto pela primeira vez
+  // Atualizar os funcionários selecionados APENAS quando o modal for aberto
+  // Isso evita que o estado seja resetado durante interações do usuário
   useEffect(() => {
     if (open) {
-      setFuncionariosSelecionados(funcionariosSelecionadosIds);
+      console.log("Dialog aberto, atualizando seleção com IDs:", funcionariosSelecionadosIds);
+      setFuncionariosSelecionados(funcionariosSelecionadosIds || []);
     }
-  }, [open]);
+  }, [open, funcionariosSelecionadosIds]);
   
   // Filtrar funcionários elegíveis
   const funcionariosElegiveis = apenasDisponiveis 
@@ -56,6 +59,7 @@ export function AtribuirMultiplosFuncionariosDialog({
     : funcionariosElegiveis;
 
   const handleToggleFuncionario = (id: string) => {
+    console.log("Toggle funcionário:", id);
     setFuncionariosSelecionados(prev => {
       if (prev.includes(id)) {
         return prev.filter(funcionarioId => funcionarioId !== id);
@@ -77,6 +81,7 @@ export function AtribuirMultiplosFuncionariosDialog({
       return funcionario?.nome || '';
     }).filter(nome => nome !== '');
     
+    console.log("Confirmando com funcionários:", funcionariosSelecionados, funcionariosNomes);
     onConfirm(funcionariosSelecionados, funcionariosNomes);
     onOpenChange(false);
   };
@@ -172,4 +177,3 @@ export function AtribuirMultiplosFuncionariosDialog({
     </Dialog>
   );
 }
-

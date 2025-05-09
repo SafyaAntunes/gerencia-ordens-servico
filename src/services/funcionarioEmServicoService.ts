@@ -1,4 +1,3 @@
-
 import { db } from '@/lib/firebase';
 import { doc, updateDoc, getDoc, setDoc, collection, query, where, getDocs, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { toast } from 'sonner';
@@ -353,6 +352,7 @@ export async function obterFuncionariosAtribuidos(
   servicoTipo?: TipoServico
 ): Promise<Array<{id: string, nome: string, inicio: Date}>> {
   try {
+    console.log(`Buscando funcionários para ordem=${ordemId}, etapa=${etapa}, servicoTipo=${servicoTipo || 'N/A'}`);
     const ordemRef = doc(db, 'ordens_servico', ordemId);
     const ordemDoc = await getDoc(ordemRef);
     
@@ -362,16 +362,30 @@ export async function obterFuncionariosAtribuidos(
     }
     
     const etapaKey = servicoTipo ? `${etapa}_${servicoTipo}` : etapa;
-    const etapaData = ordemDoc.data().etapasAndamento?.[etapaKey] || {};
+    const ordemData = ordemDoc.data();
+    
+    // Log detalhado da estrutura
+    console.log("Estrutura da ordem:", {
+      temEtapasAndamento: !!ordemData.etapasAndamento,
+      etapasKeys: ordemData.etapasAndamento ? Object.keys(ordemData.etapasAndamento) : [],
+      etapaKeyBuscada: etapaKey,
+      temEtapaEspecifica: ordemData.etapasAndamento && ordemData.etapasAndamento[etapaKey],
+      etapaEspecifica: ordemData.etapasAndamento && ordemData.etapasAndamento[etapaKey],
+    });
+    
+    const etapaData = ordemData.etapasAndamento?.[etapaKey] || {};
     
     if (!etapaData.funcionarios || !Array.isArray(etapaData.funcionarios)) {
+      console.log(`Nenhum funcionário encontrado para etapa ${etapaKey}`);
       return [];
     }
+    
+    console.log(`Funcionários encontrados para etapa ${etapaKey}:`, etapaData.funcionarios);
     
     return etapaData.funcionarios.map((f: any) => ({
       id: f.id,
       nome: f.nome,
-      inicio: f.inicio ? new Date(f.inicio) : new Date()
+      inicio: f.inicio?.toDate ? f.inicio.toDate() : new Date(f.inicio)
     }));
   } catch (error) {
     console.error('Erro ao obter funcionários atribuídos:', error);

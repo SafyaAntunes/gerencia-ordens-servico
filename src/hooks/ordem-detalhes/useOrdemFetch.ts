@@ -51,6 +51,7 @@ export const useOrdemFetch = (id: string | undefined) => {
       
       if (docSnap.exists()) {
         const data = docSnap.data();
+        console.log("Dados brutos da ordem:", data);
         
         // Garantir que temos dados completos do cliente
         let clienteData = data.cliente || {};
@@ -91,8 +92,9 @@ export const useOrdemFetch = (id: string | undefined) => {
         const dataAbertura = processarData(data.dataAbertura);
         const dataPrevistaEntrega = processarData(data.dataPrevistaEntrega);
         
-        // Processar datas dentro de etapasAndamento
+        // Processar etapasAndamento com seus funcionários
         const etapasProcessadas = { ...data.etapasAndamento };
+        
         if (etapasProcessadas) {
           Object.keys(etapasProcessadas).forEach(etapaKey => {
             const etapa = etapasProcessadas[etapaKey];
@@ -103,6 +105,15 @@ export const useOrdemFetch = (id: string | undefined) => {
               }
               if (etapa.finalizado) {
                 etapa.finalizado = processarData(etapa.finalizado);
+              }
+              
+              // Processar datas dos funcionários
+              if (etapa.funcionarios && Array.isArray(etapa.funcionarios)) {
+                etapa.funcionarios = etapa.funcionarios.map((f: any) => ({
+                  ...f,
+                  inicio: f.inicio ? processarData(f.inicio) : new Date()
+                }));
+                console.log(`Funcionários processados para etapa ${etapaKey}:`, etapa.funcionarios);
               }
             }
           });
