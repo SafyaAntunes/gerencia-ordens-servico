@@ -1,12 +1,11 @@
-
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { User, Save, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Funcionario } from "@/types/funcionarios";
-import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { EtapaOS, TipoServico } from "@/types/ordens";
+import { marcarFuncionarioEmServico } from "@/services/funcionarioEmServicoService";
 
 interface FuncionarioSelectorProps {
   ordemId: string;
@@ -31,8 +30,8 @@ export default function FuncionarioSelector({
   onSaveResponsavel,
   isSaving = false
 }: FuncionarioSelectorProps) {
-  // Force a controlled value for the Select component
   const [selectedValue, setSelectedValue] = useState<string>("");
+  const [isMarkingAsBusy, setIsMarkingAsBusy] = useState(false);
   
   // Sync with parent component value
   useEffect(() => {
@@ -67,12 +66,32 @@ export default function FuncionarioSelector({
     }
     
     try {
+      setIsMarkingAsBusy(true);
+      
+      // Primeiro, marcar o funcionário como ocupado
+      const marcadoComoOcupado = await marcarFuncionarioEmServico(
+        selectedValue,
+        ordemId,
+        etapa,
+        servicoTipo
+      );
+      
+      if (!marcadoComoOcupado) {
+        toast.error("Erro ao marcar funcionário como ocupado");
+        return;
+      }
+      
+      // Depois, salvar o responsável
       await onSaveResponsavel();
+      
+      toast.success("Funcionário atribuído com sucesso");
     } catch (error) {
       console.error("Erro ao salvar responsável:", error);
       toast.error("Erro ao salvar responsável");
+    } finally {
+      setIsMarkingAsBusy(false);
     }
-  }, [selectedValue, onSaveResponsavel]);
+  }, [selectedValue, ordemId, etapa, servicoTipo, onSaveResponsavel]);
   
   return (
     <div className="flex flex-col gap-4 p-4 border rounded-lg">
@@ -83,7 +102,7 @@ export default function FuncionarioSelector({
         <Select
           value={selectedValue}
           onValueChange={handleChange}
-          disabled={isEtapaConcluida || isSaving}
+          disabled={isEtapaConcluida || isSaving || isMarkingAsBusy}
         >
           <SelectTrigger id="funcionario-select" className="w-full">
             <SelectValue placeholder="Selecione um funcionário" />
@@ -106,10 +125,10 @@ export default function FuncionarioSelector({
 
       <Button
         onClick={handleSave}
-        disabled={!selectedValue || isEtapaConcluida || isSaving}
+        disabled={!selectedValue || isEtapaConcluida || isSaving || isMarkingAsBusy}
         className="w-full"
       >
-        {isSaving ? (
+        {isSaving || isMarkingAsBusy ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             Salvando...

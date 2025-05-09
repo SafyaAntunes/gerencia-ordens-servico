@@ -1,4 +1,3 @@
-
 import { db } from '@/lib/firebase';
 import { doc, updateDoc, getDoc, setDoc, collection, query, where, getDocs, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
 import { toast } from 'sonner';
@@ -120,9 +119,13 @@ export async function marcarFuncionarioEmServico(
       return false;
     }
     
-    // Atualizar último serviço do funcionário
+    // Usar batch para otimizar múltiplas escritas
+    const batch = writeBatch(db);
+    
+    // Atualizar último serviço do funcionário e marcar como ocupado
     const funcionarioRef = doc(db, "funcionarios", funcionarioId);
-    await updateDoc(funcionarioRef, {
+    batch.update(funcionarioRef, {
+      em_servico: true,
       ultima_atividade: {
         ordemId: ordemId,
         etapa: etapa,
@@ -146,31 +149,39 @@ export async function marcarFuncionarioEmServico(
     const etapaPath = `etapasAndamento.${etapaKey}`;
     const etapaData = ordemData.etapasAndamento?.[etapaKey] || {};
     
-    // Criar ou atualizar a lista de funcionários para esta etapa
-    const funcionariosData = {
-      id: funcionarioId,
-      nome: funcionarioData.nome || "",
-      inicio: new Date()
+    // Preparar dados da etapa
+    const etapaUpdate = {
+      funcionarioId: funcionarioId,
+      funcionarioNome: funcionarioData.nome || "",
+      iniciado: new Date(),
+      concluido: false,
+      finalizado: null,
+      servicoTipo: servicoTipo || null,
+      status: "em_andamento"
     };
     
+    // Atualizar a etapa na ordem
     const ordemRef = doc(db, "ordens_servico", ordemId);
+    batch.update(ordemRef, {
+      [etapaPath]: etapaUpdate
+    });
     
-    // Se etapaData.funcionarios não existir, criar um array com este funcionário
-    if (!etapaData.funcionarios) {
-      await updateDoc(ordemRef, {
-        [`${etapaPath}.funcionarios`]: [funcionariosData],
-        [`${etapaPath}.iniciado`]: new Date()
-      });
-    } else {
-      // Verificar se o funcionário já está na lista
-      const funcionarioJaExiste = etapaData.funcionarios.some((f: any) => f.id === funcionarioId);
-      if (!funcionarioJaExiste) {
-        // Adicionar ao array de funcionários
-        await updateDoc(ordemRef, {
-          [`${etapaPath}.funcionarios`]: arrayUnion(funcionariosData)
-        });
-      }
-    }
+    // Criar registro de serviço
+    const registrosRef = collection(db, 'registros_servico');
+    const novoRegistro = {
+      funcionarioId,
+      ordemId,
+      etapa,
+      servicoTipo: servicoTipo || null,
+      inicio: new Date(),
+      fim: null
+    };
+    
+    const registroRef = doc(registrosRef);
+    batch.set(registroRef, novoRegistro);
+    
+    // Executar todas as atualizações em uma única transação
+    await batch.commit();
     
     return true;
   } catch (error) {
