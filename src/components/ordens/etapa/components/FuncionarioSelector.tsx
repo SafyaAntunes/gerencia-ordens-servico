@@ -1,3 +1,4 @@
+
 import React, { useCallback } from "react";
 import { User, Save, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -30,14 +31,49 @@ export default function FuncionarioSelector({
   onSaveResponsavel,
   isSaving = false
 }: FuncionarioSelectorProps) {
-  const handleFuncionarioChange = useCallback((value: string) => {
-    onFuncionarioChange(value);
-  }, [onFuncionarioChange]);
-
-  const handleSaveResponsavel = useCallback(async () => {
-    await onSaveResponsavel();
-  }, [onSaveResponsavel]);
-
+  // Force a controlled value for the Select component
+  const [selectedValue, setSelectedValue] = useState<string>("");
+  
+  // Sync with parent component value
+  useEffect(() => {
+    if (funcionarioSelecionadoId) {
+      setSelectedValue(funcionarioSelecionadoId);
+      console.log("FuncionarioSelector - Received ID:", funcionarioSelecionadoId);
+    } else {
+      setSelectedValue("");
+      console.log("FuncionarioSelector - Clearing selected value");
+    }
+  }, [funcionarioSelecionadoId]);
+  
+  const handleChange = useCallback((value: string) => {
+    console.log("Select value changed to:", value);
+    setSelectedValue(value);
+    
+    // Validate funcionario exists
+    const funcionarioExists = funcionariosOptions.some(f => f.id === value);
+    if (funcionarioExists) {
+      onFuncionarioChange(value);
+    } else {
+      console.warn("ID de funcionário inválido:", value);
+      toast.error("Funcionário inválido selecionado");
+    }
+  }, [funcionariosOptions, onFuncionarioChange]);
+  
+  const handleSave = useCallback(async () => {
+    console.log("Salvando responsável com ID:", selectedValue);
+    if (!selectedValue) {
+      toast.error("Selecione um funcionário primeiro");
+      return;
+    }
+    
+    try {
+      await onSaveResponsavel();
+    } catch (error) {
+      console.error("Erro ao salvar responsável:", error);
+      toast.error("Erro ao salvar responsável");
+    }
+  }, [selectedValue, onSaveResponsavel]);
+  
   return (
     <div className="flex flex-col gap-4 p-4 border rounded-lg">
       <div className="space-y-2">
@@ -45,26 +81,32 @@ export default function FuncionarioSelector({
           Responsável pela etapa
         </label>
         <Select
-          value={funcionarioSelecionadoId}
-          onValueChange={handleFuncionarioChange}
+          value={selectedValue}
+          onValueChange={handleChange}
           disabled={isEtapaConcluida || isSaving}
         >
           <SelectTrigger id="funcionario-select" className="w-full">
             <SelectValue placeholder="Selecione um funcionário" />
           </SelectTrigger>
           <SelectContent>
-            {funcionariosOptions.map((funcionario) => (
-              <SelectItem key={funcionario.id} value={funcionario.id}>
-                {funcionario.nome}
-              </SelectItem>
-            ))}
+            {funcionariosOptions.length === 0 ? (
+              <div className="p-2 text-center text-sm text-muted-foreground">
+                Nenhum funcionário disponível
+              </div>
+            ) : (
+              funcionariosOptions.map((funcionario) => (
+                <SelectItem key={funcionario.id} value={funcionario.id}>
+                  {funcionario.nome}
+                </SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
       </div>
 
       <Button
-        onClick={handleSaveResponsavel}
-        disabled={!funcionarioSelecionadoId || isEtapaConcluida || isSaving}
+        onClick={handleSave}
+        disabled={!selectedValue || isEtapaConcluida || isSaving}
         className="w-full"
       >
         {isSaving ? (
@@ -73,7 +115,10 @@ export default function FuncionarioSelector({
             Salvando...
           </>
         ) : (
-          "Salvar Responsável"
+          <>
+            <Save className="mr-2 h-4 w-4" />
+            Salvar Responsável
+          </>
         )}
       </Button>
     </div>
