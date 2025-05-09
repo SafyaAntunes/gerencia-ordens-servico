@@ -5,7 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { TipoServico } from '@/types/ordens';
 import { useAtribuirFuncionariosDialog } from "./hooks/useAtribuirFuncionariosDialog";
 import { FuncionarioCheckItem } from "./components/FuncionarioCheckItem";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 interface AtribuirMultiplosFuncionariosDialogProps {
   open: boolean;
@@ -30,17 +30,30 @@ export function AtribuirMultiplosFuncionariosDialog({
   apenasDisponiveis = true,
   confirmLabel = "Confirmar"
 }: AtribuirMultiplosFuncionariosDialogProps) {
+  // Estado local para armazenar seleções antes de confirmar
+  const [localSelecionados, setLocalSelecionados] = useState<string[]>(funcionariosSelecionadosIds);
+  
+  // Efeito para atualizar o estado local quando os props mudarem
+  useEffect(() => {
+    if (open) {
+      console.log("Dialog aberto - atualizando selecionados:", funcionariosSelecionadosIds);
+      setLocalSelecionados(funcionariosSelecionadosIds);
+    }
+  }, [open, funcionariosSelecionadosIds]);
+
   console.log("Dialog render - funcionariosSelecionadosIds:", funcionariosSelecionadosIds);
+  console.log("Dialog render - localSelecionados:", localSelecionados);
 
   const {
     funcionariosFiltradosAtual,
     loading,
     funcionariosSelecionados,
+    forceUpdate,
     handleToggleFuncionario,
     isFuncionarioSelected,
     handleConfirm
   } = useAtribuirFuncionariosDialog({
-    funcionariosSelecionadosIds,
+    funcionariosSelecionadosIds: localSelecionados,
     especialidadeRequerida,
     apenasDisponiveis,
     onConfirm
@@ -53,28 +66,16 @@ export function AtribuirMultiplosFuncionariosDialog({
   const memoizedHandleToggle = useCallback((id: string) => {
     console.log("Dialog component - toggle funcionário:", id);
     handleToggleFuncionario(id);
-  }, [handleToggleFuncionario]);
-
-  // Renderização otimizada dos itens de funcionário
-  const funcionarioItems = useMemo(() => {
-    console.log("Rerenderizando lista de funcionários, total:", funcionariosFiltradosAtual.length);
-    return funcionariosFiltradosAtual.map(funcionario => {
-      const isSelected = isFuncionarioSelected(funcionario.id);
-      console.log(`Renderizando item ${funcionario.id} (${funcionario.nome}): selecionado=${isSelected}`);
-      
-      return (
-        <FuncionarioCheckItem
-          key={funcionario.id}
-          id={funcionario.id}
-          nome={funcionario.nome}
-          status={funcionario.status}
-          especialidades={funcionario.especialidades}
-          isChecked={isSelected}
-          onToggle={memoizedHandleToggle}
-        />
-      );
+    
+    // Atualizar também o estado local
+    setLocalSelecionados(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(fId => fId !== id);
+      } else {
+        return [...prev, id];
+      }
     });
-  }, [funcionariosFiltradosAtual, isFuncionarioSelected, memoizedHandleToggle]);
+  }, [handleToggleFuncionario]);
 
   // Handler para confirmar a seleção
   const handleConfirmSelection = useCallback(() => {
@@ -84,6 +85,7 @@ export function AtribuirMultiplosFuncionariosDialog({
     }
   }, [handleConfirm, onConfirm, onOpenChange]);
 
+  // Usar key com forceUpdate para forçar rerenderização completa quando necessário
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
@@ -101,8 +103,18 @@ export function AtribuirMultiplosFuncionariosDialog({
             </div>
           ) : funcionariosFiltradosAtual.length > 0 ? (
             <ScrollArea className="h-[300px] pr-4">
-              <div className="space-y-3">
-                {funcionarioItems}
+              <div className="space-y-3" key={`funcionarios-list-${forceUpdate}`}>
+                {funcionariosFiltradosAtual.map(funcionario => (
+                  <FuncionarioCheckItem
+                    key={`${funcionario.id}-${isFuncionarioSelected(funcionario.id)}`}
+                    id={funcionario.id}
+                    nome={funcionario.nome}
+                    status={funcionario.status}
+                    especialidades={funcionario.especialidades}
+                    isChecked={isFuncionarioSelected(funcionario.id)}
+                    onToggle={memoizedHandleToggle}
+                  />
+                ))}
               </div>
             </ScrollArea>
           ) : (

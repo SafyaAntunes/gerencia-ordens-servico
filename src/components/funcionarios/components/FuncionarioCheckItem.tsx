@@ -36,11 +36,10 @@ export const FuncionarioCheckItem = memo(function FuncionarioCheckItem({
       className={`flex items-center space-x-2 border p-3 rounded-lg transition-colors ${
         isChecked ? "border-primary bg-primary/5" : ""
       }`}
-      onClick={handleToggle}
     >
       <Toggle
         pressed={isChecked}
-        onPressedChange={() => handleToggle()}
+        onPressedChange={handleToggle}
         size="sm"
         variant={isChecked ? "outline" : "default"}
         className={`h-8 w-8 p-0 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground rounded-md`}

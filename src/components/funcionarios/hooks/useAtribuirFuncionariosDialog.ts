@@ -18,22 +18,17 @@ export function useAtribuirFuncionariosDialog({
   onConfirm
 }: UseAtribuirFuncionariosDialogProps) {
   const { funcionariosStatus, funcionariosDisponiveis, loading } = useFuncionariosDisponibilidade();
-  const [funcionariosSelecionados, setFuncionariosSelecionados] = useState<string[]>([]);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [lastToggleId, setLastToggleId] = useState<string | null>(null);
+  const [funcionariosSelecionados, setFuncionariosSelecionados] = useState<string[]>(funcionariosSelecionadosIds || []);
+  const [forceUpdate, setForceUpdate] = useState<number>(0);
 
   // Inicialização do estado com os IDs passados como props
   useEffect(() => {
-    if (!isInitialized || JSON.stringify(funcionariosSelecionadosIds) !== JSON.stringify(funcionariosSelecionados)) {
-      console.log("Dialog hook - Inicializando selecionados:", funcionariosSelecionadosIds);
-      setFuncionariosSelecionados(funcionariosSelecionadosIds || []);
-      setIsInitialized(true);
-    }
-  }, [funcionariosSelecionadosIds, isInitialized, funcionariosSelecionados]);
+    console.log("Dialog hook - Recebendo funcionariosSelecionadosIds:", funcionariosSelecionadosIds);
+    setFuncionariosSelecionados(funcionariosSelecionadosIds || []);
+  }, [funcionariosSelecionadosIds]);
 
   // Debug logs para acompanhar mudanças de estado
   console.log("Dialog hook - funcionariosSelecionados atual:", funcionariosSelecionados);
-  console.log("Dialog hook - props.funcionariosSelecionadosIds:", funcionariosSelecionadosIds);
 
   // Filtrar funcionários com base nas condições
   const funcionariosFiltradosAtual = funcionariosStatus.filter(funcionario => {
@@ -55,20 +50,19 @@ export function useAtribuirFuncionariosDialog({
   // Toggle de seleção de funcionário - otimizado para forçar atualização visual
   const handleToggleFuncionario = useCallback((id: string) => {
     console.log("Toggle funcionário:", id);
-    setLastToggleId(id); // Armazena o ID do último funcionário a ser toggled
     
     setFuncionariosSelecionados(prev => {
       const isSelected = prev.includes(id);
-      if (isSelected) {
-        const newSelection = prev.filter(fid => fid !== id);
-        console.log("Nova seleção após remover:", newSelection);
-        return newSelection;
-      } else {
-        const newSelection = [...prev, id];
-        console.log("Nova seleção após adicionar:", newSelection);
-        return newSelection;
-      }
+      const novosSelecionados = isSelected 
+        ? prev.filter(fid => fid !== id) 
+        : [...prev, id];
+      
+      console.log("Nova seleção após toggle:", novosSelecionados);
+      return novosSelecionados;
     });
+    
+    // Forçar re-renderização quando o toggle é chamado
+    setForceUpdate(prev => prev + 1);
   }, []);
 
   // Verificar se um funcionário está selecionado
@@ -107,7 +101,7 @@ export function useAtribuirFuncionariosDialog({
     funcionariosFiltradosAtual,
     loading,
     funcionariosSelecionados,
-    lastToggleId,
+    forceUpdate, // Exportar forceUpdate para componentes que precisem reagir a mudanças
     handleToggleFuncionario,
     isFuncionarioSelected,
     handleConfirm
