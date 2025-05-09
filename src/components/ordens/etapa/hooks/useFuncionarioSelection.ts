@@ -29,6 +29,13 @@ export function useFuncionarioSelection({
   const [funcionarioSelecionadoNome, setFuncionarioSelecionadoNome] = useState<string>("");
   const [isInitialized, setIsInitialized] = useState(false);
   
+  // Debug log para entender o ciclo de vida
+  console.log("useFuncionarioSelection - Render com:", { 
+    etapaInfoId: etapaInfo?.funcionarioId,
+    initialId: initialFuncionarioId,
+    selecionadoId: funcionarioSelecionadoId
+  });
+  
   // Fetch funcionarios from database once on mount
   useEffect(() => {
     console.log("useFuncionarioSelection - Fetching funcionarios");

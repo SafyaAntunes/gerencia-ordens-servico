@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useState } from "react";
 import { User, Save, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -33,11 +34,15 @@ export default function FuncionarioSelector({
   const [selectedValue, setSelectedValue] = useState<string>("");
   const [isMarkingAsBusy, setIsMarkingAsBusy] = useState(false);
   
+  // Debug logs
+  console.log("FuncionarioSelector - render com ID:", funcionarioSelecionadoId);
+  console.log("FuncionarioSelector - options:", funcionariosOptions);
+  
   // Sync with parent component value
   useEffect(() => {
     if (funcionarioSelecionadoId) {
+      console.log("FuncionarioSelector - Atualizando ID para:", funcionarioSelecionadoId);
       setSelectedValue(funcionarioSelecionadoId);
-      console.log("FuncionarioSelector - Received ID:", funcionarioSelecionadoId);
     } else {
       setSelectedValue("");
       console.log("FuncionarioSelector - Clearing selected value");
@@ -51,6 +56,7 @@ export default function FuncionarioSelector({
     // Validate funcionario exists
     const funcionarioExists = funcionariosOptions.some(f => f.id === value);
     if (funcionarioExists) {
+      console.log("Funcionário existe, chamando onFuncionarioChange");
       onFuncionarioChange(value);
     } else {
       console.warn("ID de funcionário inválido:", value);

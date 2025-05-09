@@ -37,15 +37,17 @@ export function AtribuirMultiplosFuncionariosDialog({
   const [funcionariosSelecionados, setFuncionariosSelecionados] = useState<string[]>(funcionariosSelecionadosIds);
   const { funcionariosStatus, funcionariosDisponiveis, loading } = useFuncionariosDisponibilidade();
 
-  // Sincronizar com o estado do pai quando mudar
+  // Log para depuração
+  console.log("Dialog render - funcionariosSelecionados:", funcionariosSelecionados);
+  console.log("Dialog render - funcionariosSelecionadosIds:", funcionariosSelecionadosIds);
+
+  // Sincronizar com o estado do pai quando o diálogo é aberto ou os IDs mudam
   useEffect(() => {
     if (open) {
+      console.log("Dialog opened - syncing selected IDs:", funcionariosSelecionadosIds);
       setFuncionariosSelecionados(funcionariosSelecionadosIds);
     }
   }, [funcionariosSelecionadosIds, open]);
-
-  // REMOVIDO o useEffect que estava causando múltiplas chamadas para onConfirm
-  // Isso evitará as notificações repetidas
 
   // Memoize funções e valores calculados para evitar recálculos desnecessários
   const funcionariosElegiveis = useCallback(() => {
@@ -66,14 +68,29 @@ export function AtribuirMultiplosFuncionariosDialog({
 
   // Otimize o toggle de funcionário com useCallback
   const handleToggleFuncionario = useCallback((id: string) => {
+    console.log("Toggle funcionário:", id);
     setFuncionariosSelecionados(prev => {
-      if (prev.includes(id)) {
-        return prev.filter(funcionarioId => funcionarioId !== id);
+      const isSelected = prev.includes(id);
+      console.log(`Funcionário ${id} está ${isSelected ? 'selecionado' : 'não selecionado'}`);
+      
+      if (isSelected) {
+        const newSelection = prev.filter(funcionarioId => funcionarioId !== id);
+        console.log("Nova seleção após remover:", newSelection);
+        return newSelection;
       } else {
-        return [...prev, id];
+        const newSelection = [...prev, id];
+        console.log("Nova seleção após adicionar:", newSelection);
+        return newSelection;
       }
     });
   }, []);
+
+  // Verifica se um funcionário está selecionado
+  const isFuncionarioSelected = useCallback((id: string) => {
+    const isSelected = funcionariosSelecionados.includes(id);
+    console.log(`Verificando se funcionário ${id} está selecionado:`, isSelected);
+    return isSelected;
+  }, [funcionariosSelecionados]);
 
   // Otimize o handleConfirm para ser mais eficiente
   const handleConfirm = useCallback(() => {
@@ -87,6 +104,8 @@ export function AtribuirMultiplosFuncionariosDialog({
       const funcionario = funcionariosStatus.find(f => f.id === id);
       return funcionario?.nome || '';
     }).filter(nome => nome !== '');
+    
+    console.log("Confirmando seleção:", funcionariosSelecionados, funcionariosNomes);
     
     // Chamar onConfirm apenas uma vez ao clicar no botão
     onConfirm(funcionariosSelecionados, funcionariosNomes);
@@ -117,14 +136,15 @@ export function AtribuirMultiplosFuncionariosDialog({
                 {funcionariosFiltradosAtual.map(funcionario => (
                   <div key={funcionario.id} className="flex items-center space-x-2 border p-3 rounded-lg">
                     <Checkbox 
-                      id={`funcionario-${funcionario.id}`} 
-                      checked={funcionariosSelecionados.includes(funcionario.id)}
+                      id={`funcionario-${funcionario.id}`}
+                      checked={isFuncionarioSelected(funcionario.id)}
                       onCheckedChange={() => handleToggleFuncionario(funcionario.id)}
                     />
                     <div className="flex-1">
                       <Label 
                         htmlFor={`funcionario-${funcionario.id}`}
                         className="flex justify-between cursor-pointer"
+                        onClick={() => handleToggleFuncionario(funcionario.id)}
                       >
                         <span className="font-medium">{funcionario.nome}</span>
                         {funcionario.status === 'disponivel' ? (

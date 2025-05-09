@@ -1,11 +1,11 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { AtribuirMultiplosFuncionariosDialog } from "@/components/funcionarios/AtribuirMultiplosFuncionariosDialog";
 import { AtribuirFuncionarioDialog } from "@/components/funcionarios/AtribuirFuncionarioDialog";
 import { Badge } from "@/components/ui/badge";
 import { Users, UserPlus, X } from "lucide-react";
 import { obterFuncionariosAtribuidos } from "@/services/funcionarioEmServicoService";
-import { useEffect } from "react";
 import { EtapaOS, TipoServico } from "@/types/ordens";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -46,6 +46,12 @@ export function FuncionarioSelector({
   const [funcionariosAtribuidos, setFuncionariosAtribuidos] = useState<FuncionarioAtribuido[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Debug logs
+  console.log("EtapaFuncionarioSelector - render", { 
+    funcionarioSelecionadoId, 
+    funcionariosAtribuidos: funcionariosAtribuidos.map(f => f.id)
+  });
+
   // Buscar funcionários atribuídos quando o componente for montado
   useEffect(() => {
     const buscarFuncionariosAtribuidos = async () => {
@@ -54,6 +60,7 @@ export function FuncionarioSelector({
       setIsLoading(true);
       try {
         const funcionarios = await obterFuncionariosAtribuidos(ordemId, etapa, servicoTipo);
+        console.log("Funcionários atribuídos recebidos:", funcionarios);
         setFuncionariosAtribuidos(funcionarios);
       } catch (error) {
         console.error("Erro ao buscar funcionários atribuídos:", error);
@@ -70,6 +77,7 @@ export function FuncionarioSelector({
   };
 
   const handleConfirmAtribuicao = async (ids: string[], nomes: string[]) => {
+    console.log("Confirmando atribuição:", ids, nomes);
     await onSaveResponsavel(ids, nomes);
     
     // Atualizar a lista local com os novos funcionários

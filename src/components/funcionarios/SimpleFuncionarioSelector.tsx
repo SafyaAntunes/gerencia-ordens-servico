@@ -36,6 +36,9 @@ export function SimpleFuncionarioSelector({
   const [funcionarioId, setFuncionarioId] = useState<string>(funcionarioAtualId || "");
   const { funcionariosStatus, funcionariosDisponiveis, loading } = useFuncionariosDisponibilidade();
 
+  // Debug logs
+  console.log("SimpleFuncionarioSelector - render com ID:", funcionarioAtualId);
+  
   // Quando o funcionário atual mudar externamente
   useEffect(() => {
     if (funcionarioAtualId) {
