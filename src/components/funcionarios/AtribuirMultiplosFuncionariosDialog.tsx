@@ -36,12 +36,22 @@ export function AtribuirMultiplosFuncionariosDialog({
   const [funcionariosSelecionados, setFuncionariosSelecionados] = useState<string[]>(funcionariosSelecionadosIds);
   const { funcionariosStatus, funcionariosDisponiveis, loading } = useFuncionariosDisponibilidade();
 
-  // Atualizar os funcionários selecionados apenas quando o modal for aberto pela primeira vez
+  // Sincronizar com o estado do pai quando mudar
   useEffect(() => {
-    if (open) {
-      setFuncionariosSelecionados(funcionariosSelecionadosIds);
+    setFuncionariosSelecionados(funcionariosSelecionadosIds);
+  }, [funcionariosSelecionadosIds]);
+
+  // Atualizar o estado do pai quando as seleções mudarem
+  useEffect(() => {
+    if (funcionariosSelecionados.length > 0) {
+      const funcionariosNomes = funcionariosSelecionados.map(id => {
+        const funcionario = funcionariosStatus.find(f => f.id === id);
+        return funcionario?.nome || '';
+      }).filter(nome => nome !== '');
+      
+      onConfirm(funcionariosSelecionados, funcionariosNomes);
     }
-  }, [open]);
+  }, [funcionariosSelecionados, funcionariosStatus, onConfirm]);
   
   // Filtrar funcionários elegíveis
   const funcionariosElegiveis = apenasDisponiveis 
