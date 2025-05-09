@@ -1,3 +1,4 @@
+
 import { db } from '@/lib/firebase';
 import { doc, updateDoc, getDoc, setDoc, collection, query, where, getDocs, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { toast } from 'sonner';
@@ -188,4 +189,56 @@ export async function marcarFuncionarioDisponivel(
         if (funcionariosAtualizados.length === 0 && !etapaData.concluido) {
           // Podemos opcionalmente marcar a etapa como "parada" ou manter um registro que não há funcionários
           await updateDoc(ordemRef, {
-            [`
+            [`${etapaPath}.status`]: "parada"
+          });
+        }
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Erro ao marcar funcionário como disponível:', error);
+    toast.error('Erro ao atualizar status do funcionário');
+    return false;
+  }
+}
+
+/**
+ * Obtém a lista de funcionários atribuídos a uma etapa
+ */
+export async function obterFuncionariosAtribuidos(
+  ordemId: string, 
+  etapa: EtapaOS,
+  servicoTipo?: TipoServico
+): Promise<any[]> {
+  try {
+    // Obter dados da ordem
+    const ordemRef = doc(db, 'ordens_servico', ordemId);
+    const ordemDoc = await getDoc(ordemRef);
+    
+    if (!ordemDoc.exists()) {
+      console.error("Ordem de serviço não encontrada");
+      return [];
+    }
+    
+    // Determinar a chave da etapa
+    const etapaKey = servicoTipo ? `${etapa}_${servicoTipo}` : etapa;
+    
+    // Buscar dados dos funcionários atribuídos a esta etapa
+    const etapaData = ordemDoc.data().etapasAndamento?.[etapaKey];
+    
+    if (!etapaData || !etapaData.funcionarios || !Array.isArray(etapaData.funcionarios)) {
+      return [];
+    }
+    
+    // Retornar a lista de funcionários com dados formatados corretamente
+    return etapaData.funcionarios.map((f: any) => ({
+      id: f.id,
+      nome: f.nome || "Funcionário",
+      inicio: f.inicio?.toDate ? f.inicio.toDate() : new Date(f.inicio)
+    }));
+  } catch (error) {
+    console.error("Erro ao buscar funcionários atribuídos:", error);
+    return [];
+  }
+}
