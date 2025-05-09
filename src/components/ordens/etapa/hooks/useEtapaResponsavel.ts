@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { EtapaOS, TipoServico } from "@/types/ordens";
 import { toast } from "sonner";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
@@ -16,6 +16,22 @@ interface UseEtapaResponsavelProps {
   etapaInfo?: any;
   ordemId: string;
 }
+
+// Objeto para armazenar timestamps de notificações para evitar duplicatas em um curto período
+const notificationTimestamps: Record<string, number> = {};
+
+// Função para verificar se uma notificação similar já foi mostrada recentemente
+const shouldShowNotification = (message: string, cooldownMs = 3000): boolean => {
+  const now = Date.now();
+  const lastShown = notificationTimestamps[message] || 0;
+  
+  if (now - lastShown > cooldownMs) {
+    notificationTimestamps[message] = now;
+    return true;
+  }
+  
+  return false;
+};
 
 export function useEtapaResponsavel({
   etapa,
@@ -36,7 +52,7 @@ export function useEtapaResponsavel({
   );
 
   // Função para salvar o responsável
-  const handleSaveResponsavel = async (funcionariosIds: string[] = [], funcionariosNomes: string[] = []) => {
+  const handleSaveResponsavel = useCallback(async (funcionariosIds: string[] = [], funcionariosNomes: string[] = []) => {
     if (!ordemId) {
       toast.error("ID da ordem não encontrado");
       return;
@@ -45,6 +61,13 @@ export function useEtapaResponsavel({
     // Validação adicional
     if (funcionariosIds.length === 0) {
       toast.error("Nenhum funcionário selecionado");
+      return;
+    }
+    
+    // Evitar salvar novamente se os dados forem os mesmos
+    const principalId = funcionariosIds[0];
+    if (lastSavedFuncionarioId === principalId && !isSaving) {
+      console.log("Funcionário já está atribuído, ignorando requisição");
       return;
     }
     
@@ -78,7 +101,9 @@ export function useEtapaResponsavel({
           [`etapasAndamento.${etapaKey}.funcionarioNome`]: null
         });
         
-        toast.success(`Todos funcionários removidos da etapa ${etapa}`);
+        if (shouldShowNotification(`Todos funcionários removidos da etapa ${etapa}`)) {
+          toast.success(`Todos funcionários removidos da etapa ${etapa}`);
+        }
         setLastSavedFuncionarioId(undefined);
         setLastSavedFuncionarioNome(undefined);
         return;
@@ -98,7 +123,9 @@ export function useEtapaResponsavel({
         [`etapasAndamento.${etapaKey}.funcionarioNome`]: principalNome || ""
       });
       
-      toast.success(`Responsáveis atualizados com sucesso!`);
+      if (shouldShowNotification(`Responsáveis atualizados com sucesso!`)) {
+        toast.success(`Responsáveis atualizados com sucesso!`);
+      }
       
       // Atualizar estado local
       setLastSavedFuncionarioId(principalId);
@@ -120,10 +147,10 @@ export function useEtapaResponsavel({
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [etapa, servicoTipo, ordemId, lastSavedFuncionarioId, isSaving, isEtapaConcluida, onEtapaStatusChange]);
 
-  // Changed to return boolean instead of Promise<boolean> to match expected type
-  const handleCustomTimerStart = () => {
+  // Otimizado com useCallback
+  const handleCustomTimerStart = useCallback(() => {
     if (!funcionarioSelecionadoId) {
       toast.error("Selecione um funcionário antes de iniciar o timer");
       return false;
@@ -136,9 +163,9 @@ export function useEtapaResponsavel({
     );
     
     return true;
-  };
+  }, [funcionarioSelecionadoId, funcionarioSelecionadoNome, handleSaveResponsavel]);
 
-  const handleMarcarConcluidoClick = async () => {
+  const handleMarcarConcluidoClick = useCallback(async () => {
     if (!onEtapaStatusChange) return;
     
     // Usar o último funcionário salvo ou o selecionado
@@ -157,7 +184,7 @@ export function useEtapaResponsavel({
       useNome,
       servicoTipo
     );
-  };
+  }, [etapa, funcionarioSelecionadoId, funcionarioSelecionadoNome, lastSavedFuncionarioId, lastSavedFuncionarioNome, onEtapaStatusChange, servicoTipo]);
 
   return {
     handleSaveResponsavel,

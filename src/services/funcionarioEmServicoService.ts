@@ -1,8 +1,50 @@
 
 import { db } from '@/lib/firebase';
-import { doc, updateDoc, getDoc, setDoc, collection, query, where, getDocs, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, setDoc, collection, query, where, getDocs, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { EtapaOS, TipoServico } from '@/types/ordens';
+
+// Cache para documentos do Firestore
+const documentCache: Record<string, {data: any, timestamp: number}> = {};
+const CACHE_TTL = 10000; // 10 segundos de TTL para o cache
+
+// Objeto para armazenar timestamps de notificações para evitar duplicatas em um curto período
+const notificationTimestamps: Record<string, number> = {};
+
+// Função para verificar se uma notificação similar já foi mostrada recentemente
+const shouldShowNotification = (message: string, cooldownMs = 3000): boolean => {
+  const now = Date.now();
+  const lastShown = notificationTimestamps[message] || 0;
+  
+  if (now - lastShown > cooldownMs) {
+    notificationTimestamps[message] = now;
+    return true;
+  }
+  
+  return false;
+};
+
+// Função otimizada para obter documentos com cache
+async function getDocumentWithCache(collectionName: string, docId: string) {
+  const cacheKey = `${collectionName}/${docId}`;
+  const now = Date.now();
+  const cachedDoc = documentCache[cacheKey];
+  
+  if (cachedDoc && (now - cachedDoc.timestamp < CACHE_TTL)) {
+    return { data: cachedDoc.data, fromCache: true };
+  }
+  
+  const docRef = doc(db, collectionName, docId);
+  const docSnap = await getDoc(docRef);
+  
+  if (docSnap.exists()) {
+    const data = docSnap.data();
+    documentCache[cacheKey] = { data, timestamp: now };
+    return { data, fromCache: false };
+  }
+  
+  return { data: null, fromCache: false };
+}
 
 // Tipo de registro de serviço
 interface ServicoRegistro {
@@ -36,18 +78,19 @@ export async function marcarFuncionarioEmServico(
     
     console.log(`Marcando funcionário ${funcionarioId} em serviço para etapa ${etapaKey}`);
     
-    // Obter dados do funcionário
-    const funcionarioRef = doc(db, "funcionarios", funcionarioId);
-    const funcionarioDoc = await getDoc(funcionarioRef);
+    // Obter dados do funcionário usando cache
+    const { data: funcionarioData, fromCache: isFuncionarioFromCache } = 
+      await getDocumentWithCache("funcionarios", funcionarioId);
     
-    if (!funcionarioDoc.exists()) {
-      toast.error("Funcionário não encontrado");
+    if (!funcionarioData) {
+      if (shouldShowNotification("Funcionário não encontrado")) {
+        toast.error("Funcionário não encontrado");
+      }
       return false;
     }
     
-    const funcionarioData = funcionarioDoc.data();
-    
     // Atualizar último serviço do funcionário
+    const funcionarioRef = doc(db, "funcionarios", funcionarioId);
     await updateDoc(funcionarioRef, {
       ultima_atividade: {
         ordemId: ordemId,
@@ -57,18 +100,20 @@ export async function marcarFuncionarioEmServico(
       }
     });
     
-    // Obter dados da ordem
-    const ordemRef = doc(db, "ordens_servico", ordemId);
-    const ordemDoc = await getDoc(ordemRef);
+    // Obter dados da ordem usando cache
+    const { data: ordemData, fromCache: isOrdemFromCache } = 
+      await getDocumentWithCache("ordens_servico", ordemId);
     
-    if (!ordemDoc.exists()) {
-      toast.error("Ordem de serviço não encontrada");
+    if (!ordemData) {
+      if (shouldShowNotification("Ordem de serviço não encontrada")) {
+        toast.error("Ordem de serviço não encontrada");
+      }
       return false;
     }
     
     // Verificar se já existe informação sobre esta etapa
     const etapaPath = `etapasAndamento.${etapaKey}`;
-    const etapaData = ordemDoc.data().etapasAndamento?.[etapaKey] || {};
+    const etapaData = ordemData.etapasAndamento?.[etapaKey] || {};
     
     // Criar ou atualizar a lista de funcionários para esta etapa
     const funcionariosData = {
@@ -76,6 +121,8 @@ export async function marcarFuncionarioEmServico(
       nome: funcionarioData.nome || "",
       inicio: new Date()
     };
+    
+    const ordemRef = doc(db, "ordens_servico", ordemId);
     
     // Se etapaData.funcionarios não existir, criar um array com este funcionário
     if (!etapaData.funcionarios) {
@@ -118,16 +165,70 @@ export async function marcarVariosFuncionariosEmServico(
       return false;
     }
 
-    // Processar cada funcionário individualmente
-    const resultados = await Promise.all(
-      funcionariosIds.map(id => marcarFuncionarioEmServico(id, ordemId, etapa, servicoTipo))
-    );
-
-    // Verificar se todos foram bem-sucedidos
-    return resultados.every(result => result === true);
+    // Usar batch para otimizar múltiplas escritas no Firestore
+    if (funcionariosIds.length > 1) {
+      const batch = writeBatch(db);
+      
+      // Determinar a chave da etapa
+      const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo)
+        ? `${etapa}_${servicoTipo}`
+        : etapa;
+      
+      // Obter dados da ordem
+      const { data: ordemData } = await getDocumentWithCache("ordens_servico", ordemId);
+      
+      if (!ordemData) {
+        toast.error("Ordem de serviço não encontrada");
+        return false;
+      }
+      
+      const funcionariosPromises = funcionariosIds.map(async (id) => {
+        const { data: funcionarioData } = await getDocumentWithCache("funcionarios", id);
+        if (funcionarioData) {
+          const funcionarioRef = doc(db, "funcionarios", id);
+          batch.update(funcionarioRef, {
+            ultima_atividade: {
+              ordemId,
+              etapa,
+              servicoTipo: servicoTipo || null,
+              data: new Date()
+            }
+          });
+          
+          return {
+            id,
+            nome: funcionarioData.nome || "",
+            inicio: new Date()
+          };
+        }
+        return null;
+      });
+      
+      const funcionariosData = (await Promise.all(funcionariosPromises)).filter(Boolean);
+      
+      if (funcionariosData.length > 0) {
+        const ordemRef = doc(db, "ordens_servico", ordemId);
+        
+        // Atualizar a lista de funcionários da etapa
+        batch.update(ordemRef, {
+          [`etapasAndamento.${etapaKey}.funcionarios`]: funcionariosData,
+          [`etapasAndamento.${etapaKey}.iniciado`]: new Date()
+        });
+        
+        await batch.commit();
+        return true;
+      }
+      
+      return false;
+    } else {
+      // Se for apenas um funcionário, usar o método simples
+      return await marcarFuncionarioEmServico(funcionariosIds[0], ordemId, etapa, servicoTipo);
+    }
   } catch (error) {
     console.error('Erro ao marcar vários funcionários em serviço:', error);
-    toast.error('Erro ao atribuir múltiplos funcionários');
+    if (shouldShowNotification('Erro ao atribuir múltiplos funcionários')) {
+      toast.error('Erro ao atribuir múltiplos funcionários');
+    }
     return false;
   }
 }
@@ -138,15 +239,12 @@ export async function marcarVariosFuncionariosEmServico(
 export async function forcarLiberacaoFuncionario(funcionarioId: string): Promise<boolean> {
   try {
     // Verificar se o funcionário existe
-    const funcionarioRef = doc(db, 'funcionarios', funcionarioId);
-    const funcionarioDoc = await getDoc(funcionarioRef);
+    const { data: funcionarioData } = await getDocumentWithCache("funcionarios", funcionarioId);
     
-    if (!funcionarioDoc.exists()) {
+    if (!funcionarioData) {
       toast.error('Funcionário não encontrado');
       return false;
     }
-    
-    const funcionarioData = funcionarioDoc.data();
     
     // Se o funcionário não tiver atividade atual, não há nada a fazer
     if (!funcionarioData.ultima_atividade || !funcionarioData.ultima_atividade.ordemId) {
@@ -169,7 +267,7 @@ export async function forcarLiberacaoFuncionario(funcionarioId: string): Promise
       toast.success('Funcionário liberado com sucesso');
     }
     
-    // Encerrar quaisquer registros de serviço abertos
+    // Encerrar quaisquer registros de serviço abertos - use batch para otimizar
     const registrosRef = collection(db, 'registros_servico');
     const q = query(
       registrosRef,
@@ -179,18 +277,16 @@ export async function forcarLiberacaoFuncionario(funcionarioId: string): Promise
     
     const registrosSnapshot = await getDocs(q);
     
-    // Marcar todos os registros como encerrados
-    const atualizacoes = registrosSnapshot.docs.map(doc => updateDoc(
-      doc.ref,
-      { fim: new Date() }
-    ));
-    
-    // Aguardar todas as atualizações
-    if (atualizacoes.length > 0) {
-      await Promise.all(atualizacoes);
+    if (!registrosSnapshot.empty) {
+      const batch = writeBatch(db);
+      registrosSnapshot.docs.forEach(doc => {
+        batch.update(doc.ref, { fim: new Date() });
+      });
+      await batch.commit();
     }
     
     // Atualizar o status do funcionário para disponível
+    const funcionarioRef = doc(db, "funcionarios", funcionarioId);
     await updateDoc(funcionarioRef, {
       em_servico: false,
       ultima_atividade: {
@@ -226,13 +322,15 @@ export async function marcarFuncionarioDisponivel(
     console.log(`Marcando funcionário ${funcionarioId} disponível para etapa ${etapa} (serviço: ${servicoTipo || 'nenhum'})`);
 
     // Verificar se o funcionário existe
-    const funcionarioRef = doc(db, 'funcionarios', funcionarioId);
-    const funcionarioDoc = await getDoc(funcionarioRef);
+    const { data: funcionarioData } = await getDocumentWithCache("funcionarios", funcionarioId);
     
-    if (!funcionarioDoc.exists()) {
+    if (!funcionarioData) {
       toast.error('Funcionário não encontrado');
       return false;
     }
+    
+    // Usar batch para otimizar múltiplas escritas
+    const batch = writeBatch(db);
     
     // Encontrar o registro correspondente para esta atividade
     const registrosRef = collection(db, 'registros_servico');
@@ -259,9 +357,9 @@ export async function marcarFuncionarioDisponivel(
     const registrosSnapshot = await getDocs(q);
     
     // Atualizar o registro com data de fim
-    registrosSnapshot.forEach(async (docSnapshot) => {
+    registrosSnapshot.forEach((docSnapshot) => {
       const registroRef = doc(db, 'registros_servico', docSnapshot.id);
-      await updateDoc(registroRef, {
+      batch.update(registroRef, {
         fim: new Date()
       });
     });
@@ -277,23 +375,23 @@ export async function marcarFuncionarioDisponivel(
     
     // Se não tiver outros serviços ativos, marcar como disponível
     if (outrosServicosSnapshot.empty) {
-      await updateDoc(funcionarioRef, {
+      const funcionarioRef = doc(db, "funcionarios", funcionarioId);
+      batch.update(funcionarioRef, {
         em_servico: false,
         ultima_atividade: {
-          ...funcionarioDoc.data().ultima_atividade,
+          ...funcionarioData.ultima_atividade,
           fim: new Date()
         }
       });
     }
     
     // Atualizar o documento da ordem para remover este funcionário da etapa
-    const ordemRef = doc(db, 'ordens_servico', ordemId);
-    const ordemDoc = await getDoc(ordemRef);
+    const { data: ordemData } = await getDocumentWithCache("ordens_servico", ordemId);
     
-    if (ordemDoc.exists()) {
+    if (ordemData) {
       const etapaKey = servicoTipo ? `${etapa}_${servicoTipo}` : etapa;
       const etapaPath = `etapasAndamento.${etapaKey}`;
-      const etapaData = ordemDoc.data().etapasAndamento?.[etapaKey] || {};
+      const etapaData = ordemData.etapasAndamento?.[etapaKey] || {};
       
       if (etapaData.funcionarios && Array.isArray(etapaData.funcionarios)) {
         // Remover este funcionário do array de funcionários
@@ -301,20 +399,25 @@ export async function marcarFuncionarioDisponivel(
           (f: any) => f.id !== funcionarioId
         );
         
+        const ordemRef = doc(db, "ordens_servico", ordemId);
+        
         // Atualizar a lista de funcionários
-        await updateDoc(ordemRef, {
+        batch.update(ordemRef, {
           [`${etapaPath}.funcionarios`]: funcionariosAtualizados
         });
         
         // Se não houver mais funcionários trabalhando nesta etapa e não estiver marcada como concluída
         if (funcionariosAtualizados.length === 0 && !etapaData.concluido) {
           // Podemos opcionalmente marcar a etapa como "parada" ou manter um registro que não há funcionários
-          await updateDoc(ordemRef, {
+          batch.update(ordemRef, {
             [`${etapaPath}.status`]: "parada"
           });
         }
       }
     }
+    
+    // Commit all changes in one batch
+    await batch.commit();
     
     return true;
   } catch (error) {
@@ -341,11 +444,10 @@ export async function obterFuncionariosAtribuidos(
 
     console.log(`Buscando funcionários atribuídos à etapa ${etapa} ${servicoTipo ? `(${servicoTipo})` : ''}`);
 
-    // Obter dados da ordem
-    const ordemRef = doc(db, 'ordens_servico', ordemId);
-    const ordemDoc = await getDoc(ordemRef);
+    // Obter dados da ordem usando cache
+    const { data: ordemData } = await getDocumentWithCache("ordens_servico", ordemId);
     
-    if (!ordemDoc.exists()) {
+    if (!ordemData) {
       console.error("Ordem de serviço não encontrada");
       return [];
     }
@@ -354,7 +456,7 @@ export async function obterFuncionariosAtribuidos(
     const etapaKey = servicoTipo ? `${etapa}_${servicoTipo}` : etapa;
     
     // Buscar dados dos funcionários atribuídos a esta etapa
-    const etapaData = ordemDoc.data().etapasAndamento?.[etapaKey];
+    const etapaData = ordemData.etapasAndamento?.[etapaKey];
     
     if (!etapaData || !etapaData.funcionarios || !Array.isArray(etapaData.funcionarios)) {
       return [];

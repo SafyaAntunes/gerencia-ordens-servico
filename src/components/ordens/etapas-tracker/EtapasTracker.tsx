@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
@@ -12,12 +12,29 @@ import { EtapasSelector } from "./EtapasSelector";
 import { EtapaContent } from "./EtapaContent";
 import { useEtapasProgress } from "./useEtapasProgress";
 
+// Objeto para armazenar timestamps de notificações para evitar duplicatas em um curto período
+const notificationTimestamps: Record<string, number> = {};
+
+// Função para verificar se uma notificação similar já foi mostrada recentemente
+const shouldShowNotification = (message: string, cooldownMs = 3000): boolean => {
+  const now = Date.now();
+  const lastShown = notificationTimestamps[message] || 0;
+  
+  if (now - lastShown > cooldownMs) {
+    notificationTimestamps[message] = now;
+    return true;
+  }
+  
+  return false;
+};
+
 interface EtapasTrackerProps {
   ordem: OrdemServico;
   onOrdemUpdate: (ordemAtualizada: OrdemServico) => void;
 }
 
-const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
+// Memoized component for better performance
+const EtapasTracker = React.memo(({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
   // Incluir todas as etapas na lista
   const [etapasAtivas, setEtapasAtivas] = useState<EtapaOS[]>([]);
   const [selectedEtapa, setSelectedEtapa] = useState<EtapaOS | null>(null);
@@ -25,14 +42,22 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
   const { funcionario } = useAuth();
   const { progressoTotal, calcularProgressoTotal } = useEtapasProgress();
 
-  const verificarEtapasDisponiveis = () => {
+  // Use memoization for expensive calculations
+  const verificarEtapasDisponiveis = useCallback(() => {
     const temMontagem = ordem.servicos.some(s => s.tipo === 'montagem');
     const temDinamometro = ordem.servicos.some(s => s.tipo === 'dinamometro');
     return {
       montagem: temMontagem,
       dinamometro: temDinamometro
     };
-  };
+  }, [ordem.servicos]);
+
+  // Use memoization for expensive operations
+  const servicosAtivos = useMemo(() => {
+    return ordem.servicos.filter(servico =>
+      servico.subatividades && servico.subatividades.some(sub => sub.selecionada)
+    );
+  }, [ordem.servicos]);
 
   useEffect(() => {
     if (!ordem || !funcionario) {
@@ -61,10 +86,13 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
       setSelectedEtapa(allEtapas[0]);
     }
     setSelectedServicoTipo(null);
+    
+    // Calculate progress efficiently
     calcularProgressoTotal(ordem);
-  }, [ordem, funcionario, calcularProgressoTotal, selectedEtapa]);
+  }, [ordem.id, funcionario, calcularProgressoTotal, verificarEtapasDisponiveis]);
 
-  const handleServicoStatusChange = async (
+  // Optimize event handlers with useCallback
+  const handleServicoStatusChange = useCallback(async (
     servicoTipo: TipoServico, 
     concluido: boolean, 
     funcionarioId?: string, 
@@ -118,14 +146,16 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         onOrdemUpdate(ordemAtualizada);
       }
       
-      toast.success(`Serviço ${servicoTipo} ${concluido ? 'concluído' : 'reaberto'}`);
+      if (shouldShowNotification(`Serviço ${servicoTipo} ${concluido ? 'concluído' : 'reaberto'}`)) {
+        toast.success(`Serviço ${servicoTipo} ${concluido ? 'concluído' : 'reaberto'}`);
+      }
     } catch (error) {
       console.error("Erro ao atualizar status do serviço:", error);
       toast.error("Erro ao atualizar status do serviço");
     }
-  };
+  }, [ordem, funcionario, onOrdemUpdate]);
 
-  const handleSubatividadeToggle = async (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => {
+  const handleSubatividadeToggle = useCallback(async (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => {
     if (!ordem?.id) return;
     
     if (funcionario?.nivelPermissao !== 'admin' && 
@@ -172,14 +202,16 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
       }
       
       // Provide feedback to the user
-      toast.success(`Subatividade ${checked ? 'concluída' : 'reaberta'}`);
+      if (shouldShowNotification(`Subatividade ${checked ? 'concluída' : 'reaberta'}`)) {
+        toast.success(`Subatividade ${checked ? 'concluída' : 'reaberta'}`);
+      }
     } catch (error) {
       console.error("Erro ao atualizar subatividade:", error);
       toast.error("Erro ao atualizar subatividade");
     }
-  };
+  }, [ordem, funcionario, onOrdemUpdate]);
 
-  const handleEtapaStatusChange = async (
+  const handleEtapaStatusChange = useCallback(async (
     etapa: EtapaOS, 
     concluida: boolean, 
     funcionarioId?: string, 
@@ -216,6 +248,14 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
       const dadosAtuais = ordemDoc.data();
       const etapasAndamento = dadosAtuais.etapasAndamento || {};
       const etapaAtual = etapasAndamento[etapaKey] || {};
+      
+      // Verificar se já está com os mesmos valores para evitar atualização desnecessária
+      if (etapaAtual.concluido === concluida && 
+          etapaAtual.funcionarioId === funcionarioId &&
+          etapaAtual.funcionarioNome === funcionarioNome) {
+        console.log("Etapa já está com os mesmos valores, ignorando atualização");
+        return;
+      }
       
       // Preparar objeto para atualização, garantindo que nenhum campo seja undefined
       const atualizacao: Record<string, any> = {
@@ -267,28 +307,32 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
         acao = 'atualizada';
       }
       
-      toast.success(`Etapa ${etapaNomesBR[etapa] || etapa}${servicoMsg} ${acao}`);
+      if (shouldShowNotification(`Etapa ${etapaNomesBR[etapa] || etapa}${servicoMsg} ${acao}`)) {
+        toast.success(`Etapa ${etapaNomesBR[etapa] || etapa}${servicoMsg} ${acao}`);
+      }
     } catch (error) {
       console.error("Erro ao atualizar status da etapa:", error);
       toast.error("Erro ao atualizar status da etapa");
     }
-  };
+  }, [ordem, onOrdemUpdate]);
 
-  const etapasDisponiveis = verificarEtapasDisponiveis();
-  
-  // Verificar se temos serviços do tipo específico (lavagem, inspeção inicial, inspeção final)
-  const temServicoLavagem = ordem.servicos.some(s => s.tipo === 'lavagem');
-  const temServicoInspecaoInicial = ordem.servicos.some(s => s.tipo === 'inspecao_inicial');
-  const temServicoInspecaoFinal = ordem.servicos.some(s => s.tipo === 'inspecao_final');
-  
-  // Verificar se há serviços ativos com subatividades selecionadas
-  const servicosAtivos = ordem.servicos.filter(servico =>
-    servico.subatividades && servico.subatividades.some(sub => sub.selecionada)
-  );
-  
   if (servicosAtivos.length === 0) {
     return <EmptyServices />;
   }
+
+  // Memoize etapasDisponiveis for better performance
+  const etapasDisponiveis = verificarEtapasDisponiveis();
+  
+  const isRetificaHabilitada = () => ordem.status === 'fabricacao';
+  const isInspecaoFinalHabilitada = () => {
+    const { etapasAndamento } = ordem;
+    
+    const retificaConcluida = etapasAndamento?.['retifica']?.concluido === true;
+    const montagemConcluida = etapasAndamento?.['montagem']?.concluido === true;
+    const dinamometroConcluida = etapasAndamento?.['dinamometro']?.concluido === true;
+    
+    return retificaConcluida || montagemConcluida || dinamometroConcluida;
+  };
 
   return (
     <div className="space-y-6">
@@ -311,22 +355,13 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
           <EtapasSelector 
             etapasAtivas={etapasAtivas} 
             selectedEtapa={selectedEtapa}
-            etapasDisponiveis={verificarEtapasDisponiveis()}
+            etapasDisponiveis={etapasDisponiveis}
             onEtapaSelect={(etapa) => {
               setSelectedEtapa(etapa);
               setSelectedServicoTipo(null);
             }}
-            isRetificaHabilitada={() => ordem.status === 'fabricacao'}
-            isInspecaoFinalHabilitada={() => {
-              const { etapasAndamento } = ordem;
-              
-              // Modificar a lógica já que inspeção final agora é serviço
-              const retificaConcluida = etapasAndamento?.['retifica']?.concluido === true;
-              const montagemConcluida = etapasAndamento?.['montagem']?.concluido === true;
-              const dinamometroConcluida = etapasAndamento?.['dinamometro']?.concluido === true;
-              
-              return retificaConcluida || montagemConcluida || dinamometroConcluida;
-            }}
+            isRetificaHabilitada={isRetificaHabilitada}
+            isInspecaoFinalHabilitada={isInspecaoFinalHabilitada}
           />
           
           {selectedEtapa && (
@@ -344,7 +379,9 @@ const EtapasTracker = ({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
       </Card>
     </div>
   );
-};
+});
+
+EtapasTracker.displayName = "EtapasTracker";
 
 // Helper functions
 export const etapaNomesBR: Record<EtapaOS, string> = {

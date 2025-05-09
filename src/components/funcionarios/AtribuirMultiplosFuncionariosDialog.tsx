@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useCallback, memo } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -38,34 +39,33 @@ export function AtribuirMultiplosFuncionariosDialog({
 
   // Sincronizar com o estado do pai quando mudar
   useEffect(() => {
-    setFuncionariosSelecionados(funcionariosSelecionadosIds);
-  }, [funcionariosSelecionadosIds]);
-
-  // Atualizar o estado do pai quando as seleções mudarem
-  useEffect(() => {
-    if (funcionariosSelecionados.length > 0) {
-      const funcionariosNomes = funcionariosSelecionados.map(id => {
-        const funcionario = funcionariosStatus.find(f => f.id === id);
-        return funcionario?.nome || '';
-      }).filter(nome => nome !== '');
-      
-      onConfirm(funcionariosSelecionados, funcionariosNomes);
+    if (open) {
+      setFuncionariosSelecionados(funcionariosSelecionadosIds);
     }
-  }, [funcionariosSelecionados, funcionariosStatus, onConfirm]);
+  }, [funcionariosSelecionadosIds, open]);
+
+  // REMOVIDO o useEffect que estava causando múltiplas chamadas para onConfirm
+  // Isso evitará as notificações repetidas
+
+  // Memoize funções e valores calculados para evitar recálculos desnecessários
+  const funcionariosElegiveis = useCallback(() => {
+    return apenasDisponiveis 
+      ? funcionariosDisponiveis 
+      : funcionariosStatus.filter(f => f.status !== 'inativo');
+  }, [apenasDisponiveis, funcionariosDisponiveis, funcionariosStatus]);
   
-  // Filtrar funcionários elegíveis
-  const funcionariosElegiveis = apenasDisponiveis 
-    ? funcionariosDisponiveis 
-    : funcionariosStatus.filter(f => f.status !== 'inativo');
+  // Memoize a lista filtrada de funcionários
+  const funcionariosFiltrados = useCallback(() => {
+    const elegiveis = funcionariosElegiveis();
+    return especialidadeRequerida
+      ? elegiveis.filter(f => 
+          f.especialidades && f.especialidades.includes(especialidadeRequerida)
+        )
+      : elegiveis;
+  }, [especialidadeRequerida, funcionariosElegiveis]);
 
-  // Se tiver especialidade requerida, filtrar mais
-  const funcionariosFiltrados = especialidadeRequerida
-    ? funcionariosElegiveis.filter(f => 
-        f.especialidades && f.especialidades.includes(especialidadeRequerida)
-      )
-    : funcionariosElegiveis;
-
-  const handleToggleFuncionario = (id: string) => {
+  // Otimize o toggle de funcionário com useCallback
+  const handleToggleFuncionario = useCallback((id: string) => {
     setFuncionariosSelecionados(prev => {
       if (prev.includes(id)) {
         return prev.filter(funcionarioId => funcionarioId !== id);
@@ -73,9 +73,10 @@ export function AtribuirMultiplosFuncionariosDialog({
         return [...prev, id];
       }
     });
-  };
+  }, []);
 
-  const handleConfirm = () => {
+  // Otimize o handleConfirm para ser mais eficiente
+  const handleConfirm = useCallback(() => {
     if (funcionariosSelecionados.length === 0) {
       toast.error("Selecione pelo menos um funcionário para continuar");
       return;
@@ -87,9 +88,13 @@ export function AtribuirMultiplosFuncionariosDialog({
       return funcionario?.nome || '';
     }).filter(nome => nome !== '');
     
+    // Chamar onConfirm apenas uma vez ao clicar no botão
     onConfirm(funcionariosSelecionados, funcionariosNomes);
     onOpenChange(false);
-  };
+  }, [funcionariosSelecionados, funcionariosStatus, onConfirm, onOpenChange]);
+
+  // Memoize a lista de funcionários filtrados atual
+  const funcionariosFiltradosAtual = funcionariosFiltrados();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -106,10 +111,10 @@ export function AtribuirMultiplosFuncionariosDialog({
             <div className="flex items-center justify-center py-6">
               <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
             </div>
-          ) : funcionariosFiltrados.length > 0 ? (
+          ) : funcionariosFiltradosAtual.length > 0 ? (
             <ScrollArea className="h-[300px] pr-4">
               <div className="space-y-3">
-                {funcionariosFiltrados.map(funcionario => (
+                {funcionariosFiltradosAtual.map(funcionario => (
                   <div key={funcionario.id} className="flex items-center space-x-2 border p-3 rounded-lg">
                     <Checkbox 
                       id={`funcionario-${funcionario.id}`} 
@@ -182,4 +187,3 @@ export function AtribuirMultiplosFuncionariosDialog({
     </Dialog>
   );
 }
-
