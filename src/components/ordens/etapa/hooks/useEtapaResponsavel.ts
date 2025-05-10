@@ -5,7 +5,6 @@ import { EtapaOS, TipoServico } from "@/types/ordens";
 import { useAuth } from "@/hooks/useAuth";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { clearDocumentCache } from "@/services/funcionarioEmServicoService";
 
 interface UseEtapaResponsavelProps {
   etapa: EtapaOS;
@@ -101,7 +100,7 @@ export function useEtapaResponsavel({
       
       // Limpar cache para garantir dados atualizados
       const cacheKey = `ordens_servico/${ordemId}`;
-      clearDocumentCache(cacheKey);
+
       
       // Usar onEtapaStatusChange se disponível
       if (onEtapaStatusChange) {
