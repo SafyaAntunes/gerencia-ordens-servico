@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PlusCircle, Filter, Search, Users, CheckCircle2, FilterX, Clock, ListFilter } from "lucide-react";
 import Layout from "@/components/layout/Layout";
@@ -79,7 +78,7 @@ export default function Funcionarios({ onLogout, meuPerfil = false }: Funcionari
       // Caso contrário, carrega todos os funcionários (para administradores/gerentes)
       fetchFuncionarios();
     }
-  }, [currentUser, isMeuPerfil, funcionarioId]);
+  }, [currentUser, isMeuPerfil, funcionarioId, isDialogOpen]);
   
   const loadSingleFuncionario = async (id: string) => {
     setLoading(true);

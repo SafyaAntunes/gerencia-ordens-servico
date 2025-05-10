@@ -107,15 +107,16 @@ export async function marcarFuncionarioEmServico(
     const etapaPath = `etapasAndamento.${etapaKey}`;
     const etapaData = ordemData.etapasAndamento?.[etapaKey] || {};
     
-    // Preparar dados da etapa
+    // Preparar dados da etapa - apenas atualizar os campos necessários
     const etapaUpdate = {
+      ...etapaData, // Manter dados existentes
       funcionarioId: funcionarioId,
       funcionarioNome: funcionarioData.nome || "",
-      iniciado: new Date(),
-      concluido: false,
-      finalizado: null,
+      iniciado: etapaData.iniciado || new Date(),
+      concluido: etapaData.concluido || false,
+      finalizado: etapaData.finalizado || null,
       servicoTipo: servicoTipo || null,
-      status: "em_andamento"
+      status: etapaData.status || "em_andamento"
     };
     
     // Atualizar a etapa na ordem

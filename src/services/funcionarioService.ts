@@ -1,4 +1,3 @@
-
 import { db } from '@/lib/firebase';
 import { Funcionario } from '@/types/funcionarios';
 import { 
@@ -13,7 +12,9 @@ import {
   where,
   serverTimestamp,
   DocumentReference,
-  DocumentData
+  DocumentData,
+  enableIndexedDbPersistence,
+  disableNetwork
 } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { registerUser } from './authService';
@@ -184,6 +185,11 @@ export const saveFuncionario = async (funcionario: Funcionario): Promise<boolean
         );
       }
     }
+
+    // Desabilitar temporariamente a rede para forçar uma nova leitura
+    await disableNetwork(db);
+    // Reabilitar a rede
+    await enableIndexedDbPersistence(db);
     
     return true;
   } catch (error) {

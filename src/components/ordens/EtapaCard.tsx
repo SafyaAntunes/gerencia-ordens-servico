@@ -240,8 +240,14 @@ export default function EtapaCard({
   
   const handleConfirmarAtribuicao = () => {
     if (onEtapaStatusChange) {
-      const funcId = funcionarioSelecionadoId || funcionario?.id;
-      const funcNome = funcionarioSelecionadoNome || funcionario?.nome;
+      // Usar apenas o funcionário selecionado, sem fallback para o logado
+      const funcId = funcionarioSelecionadoId;
+      const funcNome = funcionarioSelecionadoNome;
+      
+      if (!funcId) {
+        toast.error("Selecione um funcionário para continuar");
+        return;
+      }
       
       if (dialogAction === 'start') {
         // Apenas inicia o timer com o funcionário selecionado
@@ -274,14 +280,14 @@ export default function EtapaCard({
 
   // Add a new handler for the Save Responsavel functionality
   const handleSaveResponsavel = () => {
-    if (!funcionario?.id) {
-      toast.error("É necessário estar logado para salvar o responsável");
+    if (!funcionarioSelecionadoId) {
+      toast.error("Selecione um funcionário para salvar o responsável");
       return;
     }
     
-    // If dialog is open for funcionario selection, use the selected one
-    const funcId = funcionarioSelecionadoId || funcionario.id;
-    const funcNome = funcionarioSelecionadoNome || funcionario.nome;
+    // Usar apenas o funcionário selecionado, sem fallback para o logado
+    const funcId = funcionarioSelecionadoId;
+    const funcNome = funcionarioSelecionadoNome;
     
     if (onEtapaStatusChange) {
       // Keep the current status (completed or not) but update the responsible person

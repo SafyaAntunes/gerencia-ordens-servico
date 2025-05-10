@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -34,15 +33,13 @@ export function AtribuirFuncionarioDialog({
   const [funcionarioSelecionadoId, setFuncionarioSelecionadoId] = useState<string>(funcionarioAtualId || "");
   const [funcionarioSelecionadoNome, setFuncionarioSelecionadoNome] = useState<string>(funcionarioAtualNome || "");
 
-  // Atualizar o funcionário selecionado quando as props mudarem
+  // Atualizar o funcionário selecionado quando o diálogo abrir ou quando as props mudarem
   useEffect(() => {
-    if (funcionarioAtualId) {
-      setFuncionarioSelecionadoId(funcionarioAtualId);
+    if (open) {
+      setFuncionarioSelecionadoId(funcionarioAtualId || "");
+      setFuncionarioSelecionadoNome(funcionarioAtualNome || "");
     }
-    if (funcionarioAtualNome) {
-      setFuncionarioSelecionadoNome(funcionarioAtualNome);
-    }
-  }, [funcionarioAtualId, funcionarioAtualNome]);
+  }, [open, funcionarioAtualId, funcionarioAtualNome]);
 
   const handleFuncionarioSelecionado = (id: string, nome: string) => {
     setFuncionarioSelecionadoId(id);

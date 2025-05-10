@@ -1,4 +1,3 @@
-
 import {
   Dialog,
   DialogContent,
@@ -19,7 +18,7 @@ import { Funcionario } from "@/types/funcionarios";
 interface EtapaAtribuirDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  dialogAction: 'start' | 'finish';
+  dialogAction: "start" | "finish";
   funcionarioOptions: Funcionario[];
   currentFuncionarioId?: string;
   currentFuncionarioNome?: string;
@@ -37,7 +36,7 @@ export default function EtapaAtribuirDialog({
   currentFuncionarioNome,
   selectedFuncionarioId,
   onFuncionarioChange,
-  onConfirm
+  onConfirm,
 }: EtapaAtribuirDialogProps) {
   const currentUserOption = {
     id: currentFuncionarioId || "",
@@ -53,10 +52,10 @@ export default function EtapaAtribuirDialog({
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
             <label htmlFor="funcionario-select-etapa" className="block text-sm font-medium">
-              Selecione o funcionário que {dialogAction === 'start' ? 'executará' : 'executou'} esta etapa
+              Selecione o funcionário que {dialogAction === "start" ? "executará" : "executou"} esta etapa
             </label>
-            
-            <Select onValueChange={onFuncionarioChange} value={selectedFuncionarioId || currentFuncionarioId || ""}>
+
+            <Select onValueChange={onFuncionarioChange} value={selectedFuncionarioId}>
               <SelectTrigger id="funcionario-select-etapa" className="w-full">
                 <SelectValue placeholder="Selecione um funcionário" />
               </SelectTrigger>
@@ -67,13 +66,12 @@ export default function EtapaAtribuirDialog({
                   </SelectItem>
                 )}
                 {funcionarioOptions
-                  .filter(f => f.id !== currentFuncionarioId)
-                  .map(f => (
+                  .filter((f) => f.id !== currentFuncionarioId)
+                  .map((f) => (
                     <SelectItem key={f.id} value={f.id}>
                       {f.nome}
                     </SelectItem>
-                  ))
-                }
+                  ))}
               </SelectContent>
             </Select>
           </div>

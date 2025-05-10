@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { getFuncionarios } from "@/services/funcionarioService";
@@ -73,7 +72,7 @@ export function useFuncionarioSelection({
       currentUserId: funcionario?.id 
     });
     
-    // Priority: etapaInfo > initialFuncionarioId > current user
+    // Priority: etapaInfo > initialFuncionarioId
     if (etapaInfo?.funcionarioId) {
       foundId = etapaInfo.funcionarioId;
       foundNome = etapaInfo.funcionarioNome || "";
@@ -95,24 +94,17 @@ export function useFuncionarioSelection({
           foundNome = funcionarioEncontrado.nome;
         }
       }
-    } else if (funcionario?.id) {
-      foundId = funcionario.id;
-      foundNome = funcionario.nome || "";
     }
+    // Removido o fallback para funcionario?.id (usuário logado)
     
     // Check if the funcionario exists in our options
     const funcionarioExiste = foundId ? funcionariosData.some(f => f.id === foundId) : false;
     
     if (foundId && !funcionarioExiste) {
       console.warn(`Funcionário com ID ${foundId} não encontrado na lista.`);
-      // Use current user as fallback
-      if (funcionario?.id) {
-        foundId = funcionario.id;
-        foundNome = funcionario.nome || "";
-      } else {
-        foundId = "";
-        foundNome = "";
-      }
+      // Não faz fallback para usuário logado, apenas limpa
+      foundId = "";
+      foundNome = "";
     }
     
     console.log("Selected funcionario:", { id: foundId, nome: foundNome });

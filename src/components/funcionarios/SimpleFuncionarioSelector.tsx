@@ -1,5 +1,4 @@
-
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +8,7 @@ import { Funcionario } from '@/types/funcionarios';
 import { TipoServico } from '@/types/ordens';
 import { CircleCheck, Clock } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { toast } from "sonner";
 
 interface SimpleFuncionarioSelectorProps {
   especialidadeRequerida?: TipoServico;
@@ -33,17 +33,13 @@ export function SimpleFuncionarioSelector({
   label = "Selecionar Funcionário",
   apenasDisponiveis = false
 }: SimpleFuncionarioSelectorProps) {
-  const [funcionarioId, setFuncionarioId] = useState<string>("");
+  const [funcionarioId, setFuncionarioId] = useState<string>(funcionarioAtualId || "");
   const { funcionariosStatus, funcionariosDisponiveis, loading } = useFuncionariosDisponibilidade();
 
-  // Debug logs
-  console.log("SimpleFuncionarioSelector - render com ID:", funcionarioAtualId);
-  console.log("SimpleFuncionarioSelector - estado interno:", funcionarioId);
-  
-  // Quando o funcionário atual mudar externamente
+  // Atualizar o estado quando o funcionário atual mudar
   useEffect(() => {
-    if (funcionarioAtualId !== undefined) {
-      console.log("SimpleFuncionarioSelector - funcionarioAtualId mudou:", funcionarioAtualId);
+    console.log("funcionarioAtualId mudou:", funcionarioAtualId);
+    if (funcionarioAtualId) {
       setFuncionarioId(funcionarioAtualId);
     }
   }, [funcionarioAtualId]);
@@ -65,17 +61,26 @@ export function SimpleFuncionarioSelector({
       : elegiveis;
   }, [especialidadeRequerida, funcionariosElegiveis]);
 
+  // Encontrar o funcionário selecionado atual
+  const funcionarioSelecionado = useMemo(() => {
+    const todosFuncionarios = [...funcionariosStatus, ...funcionariosDisponiveis];
+    return todosFuncionarios.find(f => f.id === funcionarioId);
+  }, [funcionariosStatus, funcionariosDisponiveis, funcionarioId]);
+
   const handleChange = useCallback((id: string) => {
-    console.log("SimpleFuncionarioSelector - handleChange:", id);
     setFuncionarioId(id);
     
-    const funcionario = funcionariosStatus.find(f => f.id === id);
+    const funcionario = funcionariosStatus.find(f => f.id === id) || 
+                       funcionariosDisponiveis.find(f => f.id === id);
+    
     if (funcionario) {
+      console.log("Funcionário selecionado:", funcionario);
       onFuncionarioSelecionado(id, funcionario.nome);
     } else {
-      console.warn("SimpleFuncionarioSelector - Funcionário não encontrado:", id);
+      console.error("Funcionário não encontrado:", id);
+      toast.error("Funcionário não encontrado");
     }
-  }, [funcionariosStatus, onFuncionarioSelecionado]);
+  }, [funcionariosStatus, funcionariosDisponiveis, onFuncionarioSelecionado]);
 
   // Memoize a lista de funcionários filtrados atual
   const funcionariosFiltradosAtual = funcionariosFiltrados();
@@ -100,7 +105,39 @@ export function SimpleFuncionarioSelector({
             onValueChange={handleChange}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Selecionar funcionário" />
+              <SelectValue>
+                {funcionarioSelecionado ? (
+                  <div className="flex items-center gap-2">
+                    {funcionarioSelecionado.nome}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>
+                            {funcionarioSelecionado.status === 'disponivel' ? (
+                              <Badge variant="success" className="ml-2 text-xs">
+                                <CircleCheck className="h-3 w-3 mr-1" />
+                                Disponível
+                              </Badge>
+                            ) : (
+                              <Badge variant="warning" className="ml-2 text-xs">
+                                <Clock className="h-3 w-3 mr-1" />
+                                Ocupado
+                              </Badge>
+                            )}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {funcionarioSelecionado.status === 'disponivel' 
+                            ? 'Funcionário disponível para atribuição' 
+                            : 'Funcionário está trabalhando em outra tarefa'}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                ) : (
+                  "Selecionar funcionário"
+                )}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {funcionariosFiltradosAtual.map((funcionario) => (

@@ -81,6 +81,13 @@ export default function EtapaCard({
     funcionarioNome
   });
   
+  // Atualizar funcionário selecionado quando etapaInfo mudar
+  useEffect(() => {
+    if (etapaInfo?.funcionarioId && etapaInfo.funcionarioId !== funcionarioSelecionadoId) {
+      handleFuncionarioChange(etapaInfo.funcionarioId);
+    }
+  }, [etapaInfo?.funcionarioId, funcionarioSelecionadoId, handleFuncionarioChange]);
+  
   // Gerenciamento do responsável com hook personalizado
   const {
     handleSaveResponsavel,
@@ -117,9 +124,8 @@ export default function EtapaCard({
     }
     
     if (onEtapaStatusChange) {
-      // Usa o ID e nome do funcionário selecionado ou o último salvo
-      const useId = funcionarioSelecionadoId || lastSavedFuncionarioId || funcionario?.id;
-      const useNome = funcionarioSelecionadoNome || lastSavedFuncionarioNome || funcionario?.nome;
+      const useId = lastSavedFuncionarioId || funcionarioSelecionadoId || funcionario?.id;
+      const useNome = lastSavedFuncionarioNome || funcionarioSelecionadoNome || funcionario?.nome;
       
       onEtapaStatusChange(
         etapa, 
