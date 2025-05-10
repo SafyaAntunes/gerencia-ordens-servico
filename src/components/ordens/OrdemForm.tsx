@@ -358,17 +358,35 @@ export default function OrdemForm({
     
     const loadSubatividades = async (tipo: TipoServico) => {
       try {
+        // Se já existem subatividades para este tipo, não carregue novamente
+        if (servicosSubatividades[tipo]?.length > 0) {
+          return;
+        }
+
         // Carregar subatividades do banco de dados
         const subatividadesList = await getSubatividadesByTipo(tipo);
         if (subatividadesList && subatividadesList.length > 0) {
           // Use as subatividades do banco de dados
-          setServicosSubatividades(prev => ({
-            ...prev,
-            [tipo]: subatividadesList.map(sub => ({
-              ...sub,
-              selecionada: false
-            }))
-          }));
+          setServicosSubatividades(prev => {
+            const existingSubs = prev[tipo] || [];
+            const newSubs = subatividadesList.map(sub => {
+              // Se a subatividade já existe, mantenha seu estado
+              const existingSub = existingSubs.find(e => e.id === sub.id);
+              if (existingSub) {
+                return existingSub;
+              }
+              // Se é uma nova subatividade, inicialize como não selecionada
+              return {
+                ...sub,
+                selecionada: false
+              };
+            });
+            
+            return {
+              ...prev,
+              [tipo]: newSubs
+            };
+          });
         } else {
           // Se não houver subatividades no banco, use os padrões como fallback
           const defaultSubs = SUBATIVIDADES[tipo] || [];

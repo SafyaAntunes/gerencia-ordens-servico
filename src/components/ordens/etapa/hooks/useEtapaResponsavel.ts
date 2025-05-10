@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import useSWR, { mutate } from "swr";
+import { marcarFuncionarioEmServico } from "@/services/funcionarioEmServicoService";
 
 interface UseEtapaResponsavelProps {
   etapa: EtapaOS;
@@ -52,6 +53,9 @@ export function useEtapaResponsavel({
     if (etapaInfo?.funcionarioId) {
       setLastSavedFuncionarioId(etapaInfo.funcionarioId);
       setLastSavedFuncionarioNome(etapaInfo.funcionarioNome);
+    } else {
+      setLastSavedFuncionarioId(undefined);
+      setLastSavedFuncionarioNome(undefined);
     }
   }, [etapaInfo?.funcionarioId, etapaInfo?.funcionarioNome]);
 
@@ -71,69 +75,40 @@ export function useEtapaResponsavel({
     return false;
   }, []);
 
+  const cacheKey = `ordens_servico/${ordemId}`;
+
   const handleSaveResponsavel = useCallback(async () => {
-    if (!funcionarioSelecionadoId || isSaving) {
-      console.log("Não foi possível salvar responsável:", {
-        funcionarioSelecionadoId,
-        isSaving
-      });
-      if (!funcionarioSelecionadoId) {
-        toast.error("Selecione um funcionário antes de salvar");
-      }
-      return;
-    }
-
-    const isSameFuncionario = lastSavedFuncionarioId === funcionarioSelecionadoId;
-    const now = Date.now();
-    const timeSinceLastUpdate = now - lastUpdateTime.current;
-
-    if (isSameFuncionario && timeSinceLastUpdate < updateDebounceMs) {
-      console.log("Ignorando atualização recente para o mesmo funcionário");
-      return;
-    }
-
+    if (isSaving) return;
+    
     setIsSaving(true);
+    const now = Date.now();
+    
     try {
-      console.log("Salvando responsável:", {
-        funcionarioId: funcionarioSelecionadoId,
-        funcionarioNome: funcionarioSelecionadoNome,
-        etapa,
-        servicoTipo,
-        ordemId
-      });
-
-      const cacheKey = `ordens_servico/${ordemId}`;
-
-      if (onEtapaStatusChange) {
-        await onEtapaStatusChange(
-          etapa,
-          !!isEtapaConcluida,
-          funcionarioSelecionadoId,
-          funcionarioSelecionadoNome,
-          servicoTipo
-        );
-      } else {
-        const etapaKey =
-          (["inspecao_inicial", "inspecao_final", "lavagem"].includes(etapa) && servicoTipo)
-            ? `${etapa}_${servicoTipo}`
-            : etapa;
-
-        const ordemRef = doc(db, "ordens_servico", ordemId);
-        await updateDoc(ordemRef, {
-          [`etapasAndamento.${etapaKey}.funcionarioId`]: funcionarioSelecionadoId,
-          [`etapasAndamento.${etapaKey}.funcionarioNome`]: funcionarioSelecionadoNome || "",
-          [`etapasAndamento.${etapaKey}.iniciado`]: etapaInfo?.iniciado || new Date(),
-          [`etapasAndamento.${etapaKey}.concluido`]: etapaInfo?.concluido || false,
-          [`etapasAndamento.${etapaKey}.finalizado`]: etapaInfo?.finalizado || null,
-          [`etapasAndamento.${etapaKey}.servicoTipo`]: servicoTipo || null,
-          [`etapasAndamento.${etapaKey}.status`]: etapaInfo?.status || "em_andamento"
-        });
+      // Se não houver funcionário selecionado, não fazer nada
+      if (!funcionarioSelecionadoId) {
+        console.log("Nenhum funcionário selecionado para salvar");
+        return;
       }
 
+      // Primeiro, marcar o funcionário como ocupado usando o serviço
+      const success = await marcarFuncionarioEmServico(
+        funcionarioSelecionadoId,
+        ordemId,
+        etapa,
+        servicoTipo
+      );
+
+      if (!success) {
+        toast.error("Erro ao atribuir funcionário");
+        return;
+      }
+
+      // Depois, atualizar o estado local e o cache
       setLastSavedFuncionarioId(funcionarioSelecionadoId);
       setLastSavedFuncionarioNome(funcionarioSelecionadoNome);
       lastUpdateTime.current = now;
 
+      // Atualizar o cache
       await mutate(cacheKey);
 
       if (canShowNotification("Responsável atualizado")) {
@@ -146,16 +121,13 @@ export function useEtapaResponsavel({
       setIsSaving(false);
     }
   }, [
+    isSaving,
     funcionarioSelecionadoId,
     funcionarioSelecionadoNome,
-    isSaving,
+    ordemId,
     etapa,
     servicoTipo,
-    ordemId,
-    lastSavedFuncionarioId,
-    isEtapaConcluida,
-    onEtapaStatusChange,
-    canShowNotification
+    cacheKey
   ]);
 
   useEffect(() => {

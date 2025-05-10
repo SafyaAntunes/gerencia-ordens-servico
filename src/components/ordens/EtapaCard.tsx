@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { getFuncionarios } from "@/services/funcionarioService";
 import { Funcionario } from "@/types/funcionarios";
+import { marcarFuncionarioEmServico } from "@/services/funcionarioEmServicoService";
 import {
   EtapaHeader,
   EtapaProgress,
@@ -56,6 +57,18 @@ export default function EtapaCard({
   const [dialogAction, setDialogAction] = useState<'start' | 'finish'>('start');
   const [funcionarioSelecionadoId, setFuncionarioSelecionadoId] = useState<string>("");
   const [funcionarioSelecionadoNome, setFuncionarioSelecionadoNome] = useState<string>("");
+  
+  // Inicializar o funcionário selecionado com o valor do backend
+  useEffect(() => {
+    if (etapaInfo?.funcionarioId) {
+      setFuncionarioSelecionadoId(etapaInfo.funcionarioId);
+      setFuncionarioSelecionadoNome(etapaInfo.funcionarioNome || "");
+    } else {
+      // Se não houver funcionário atribuído, limpar a seleção
+      setFuncionarioSelecionadoId("");
+      setFuncionarioSelecionadoNome("");
+    }
+  }, [etapaInfo?.funcionarioId, etapaInfo?.funcionarioNome]);
   
   // Verificar se o usuário tem permissão para atribuir funcionários
   const podeAtribuirFuncionario = funcionario?.nivelPermissao === 'admin' || 
@@ -238,32 +251,47 @@ export default function EtapaCard({
     }
   };
   
-  const handleConfirmarAtribuicao = () => {
-    if (onEtapaStatusChange) {
-      // Usar apenas o funcionário selecionado, sem fallback para o logado
-      const funcId = funcionarioSelecionadoId;
-      const funcNome = funcionarioSelecionadoNome;
-      
-      if (!funcId) {
-        toast.error("Selecione um funcionário para continuar");
+  const handleConfirmarAtribuicao = async () => {
+    if (!funcionarioSelecionadoId) {
+      toast.error("Selecione um funcionário para continuar");
+      return;
+    }
+
+    try {
+      // Primeiro, marcar o funcionário como ocupado usando o serviço
+      const success = await marcarFuncionarioEmServico(
+        funcionarioSelecionadoId,
+        ordemId,
+        etapa,
+        servicoTipo
+      );
+
+      if (!success) {
+        toast.error("Erro ao atribuir funcionário");
         return;
       }
-      
+
       if (dialogAction === 'start') {
         // Apenas inicia o timer com o funcionário selecionado
         handleTimerStart();
-      } else if (dialogAction === 'finish') {
+      } else if (dialogAction === 'finish' && onEtapaStatusChange) {
         // Marca a etapa como concluída com o funcionário selecionado
         onEtapaStatusChange(
           etapa, 
           true, 
-          funcId, 
-          funcNome,
+          funcionarioSelecionadoId, 
+          funcionarioSelecionadoNome,
           (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
         );
       }
+
+      toast.success("Funcionário atribuído com sucesso!");
+    } catch (error) {
+      console.error("Erro ao atribuir funcionário:", error);
+      toast.error("Erro ao atribuir funcionário");
+    } finally {
+      setAtribuirFuncionarioDialogOpen(false);
     }
-    setAtribuirFuncionarioDialogOpen(false);
   };
 
   const handleFuncionarioChange = (value: string) => {
@@ -305,6 +333,27 @@ export default function EtapaCard({
     }
   };
 
+  const handleRemoverResponsavel = () => {
+    if (onEtapaStatusChange) {
+      // Manter o status atual mas remover o responsável
+      const etapaConcluida = isEtapaConcluida();
+      
+      onEtapaStatusChange(
+        etapa,
+        etapaConcluida,
+        "", // ID vazio para remover o responsável
+        "", // Nome vazio para remover o responsável
+        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+      );
+      
+      // Limpar a seleção local
+      setFuncionarioSelecionadoId("");
+      setFuncionarioSelecionadoNome("");
+      
+      toast.success("Responsável removido com sucesso!");
+    }
+  };
+
   return (
     <Card className="p-6 mb-4">
       <EtapaHeader 
@@ -321,8 +370,8 @@ export default function EtapaCard({
       {etapaComCronometro && (
         <EtapaTimerSection
           ordemId={ordemId}
-          funcionarioId={funcionarioId}
-          funcionarioNome={funcionarioNome}
+          funcionarioId={etapaInfo?.funcionarioId || ""}
+          funcionarioNome={etapaInfo?.funcionarioNome || ""}
           etapa={etapa}
           tipoServico={servicoTipo}
           isEtapaConcluida={isEtapaConcluida()}
@@ -331,14 +380,15 @@ export default function EtapaCard({
           onTimerStart={handleTimerStart}
           onCustomStart={handleCustomTimerStart}
           onSaveResponsavel={handleSaveResponsavel}
+          onRemoverResponsavel={handleRemoverResponsavel}
         />
       )}
       
       <EtapaServiceList
         servicos={servicos}
         ordemId={ordemId}
-        funcionarioId={funcionarioId}
-        funcionarioNome={funcionarioNome}
+        funcionarioId={etapaInfo?.funcionarioId || ""}
+        funcionarioNome={etapaInfo?.funcionarioNome || ""}
         etapa={etapa}
         onSubatividadeToggle={onSubatividadeToggle}
         onServicoStatusChange={onServicoStatusChange}
