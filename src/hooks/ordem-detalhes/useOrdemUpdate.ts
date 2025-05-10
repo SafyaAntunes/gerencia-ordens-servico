@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { db } from "@/lib/firebase";
 import { doc, updateDoc, Timestamp, getDoc } from "firebase/firestore";
@@ -36,38 +35,45 @@ export const useOrdemUpdate = (
         
         return newServicosTipos.map(tipo => {
           const existingServico = servicosMap[tipo];
-          
           const novasSubatividades = values.servicosSubatividades?.[tipo] || [];
           
-          if (existingServico && existingServico.subatividades) {
-            const subatividadesPreservadas = novasSubatividades.map(novaSub => {
+          if (existingServico) {
+            // Se o serviço já existe, mantenha suas propriedades e atualize apenas o necessário
+            const subatividadesAtualizadas = novasSubatividades.map(novaSub => {
               const subExistente = existingServico.subatividades?.find(s => s.id === novaSub.id);
               if (subExistente) {
                 return {
                   ...novaSub,
-                  concluida: subExistente.concluida !== undefined ? subExistente.concluida : novaSub.concluida
+                  concluida: subExistente.concluida,
+                  selecionada: novaSub.selecionada, // Usa o novo estado de seleção
+                  tempoEstimado: subExistente.tempoEstimado,
+                  servicoTipo: tipo
                 };
               }
-              return novaSub;
+              return {
+                ...novaSub,
+                servicoTipo: tipo
+              };
             });
-            
+
             return {
-              tipo,
-              descricao: values.servicosDescricoes?.[tipo] || "",
-              concluido: existingServico.concluido || false,
-              subatividades: subatividadesPreservadas,
-              // Removemos as referências ao funcionário responsável
-              funcionarioId: undefined,
-              funcionarioNome: undefined,
-              dataConclusao: existingServico.dataConclusao
+              ...existingServico,
+              descricao: values.servicosDescricoes?.[tipo] || existingServico.descricao || "",
+              subatividades: subatividadesAtualizadas,
+              atividadesRelacionadas: existingServico.atividadesRelacionadas || {}
             };
           }
           
+          // Se é um novo serviço, crie com valores padrão
           return {
             tipo,
             descricao: values.servicosDescricoes?.[tipo] || "",
             concluido: false,
-            subatividades: novasSubatividades,
+            subatividades: novasSubatividades.map(sub => ({
+              ...sub,
+              servicoTipo: tipo
+            })),
+            atividadesRelacionadas: {}
           };
         });
       };
@@ -101,7 +107,7 @@ export const useOrdemUpdate = (
         ? Timestamp.fromDate(values.dataPrevistaEntrega) 
         : Timestamp.now();
       
-      // Prepare update object - Use Record<string, any> to avoid type constraints
+      // Prepare update object
       const updateData: Record<string, any> = {
         nome: values.nome,
         cliente: clienteData,
@@ -110,6 +116,8 @@ export const useOrdemUpdate = (
         prioridade: values.prioridade,
         motorId: values.motorId,
         servicos: preserveExistingSubactivities(ordem.servicos, values.servicosTipos),
+        servicosSubatividades: values.servicosSubatividades, // Adiciona as subatividades ao objeto de atualização
+        servicosDescricoes: values.servicosDescricoes, // Adiciona as descrições ao objeto de atualização
       };
       
       // Remover os funcionários responsáveis de todas as etapas

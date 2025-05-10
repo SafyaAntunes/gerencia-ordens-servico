@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { TipoServico, SubAtividade, TipoAtividade, Servico } from "@/types/ordens";
 import { Button } from "@/components/ui/button";
@@ -86,12 +85,33 @@ export default function AtividadesConfigForm({
           
           servico.atividadesRelacionadas[tipoAtividade] = subatividadesDoServico.map(sub => {
             const existente = existentes?.find(e => e.id === sub.id);
-            return existente ? existente : { ...sub, selecionada: false };
+            if (existente) {
+              return {
+                ...sub,
+                selecionada: existente.selecionada,
+                concluida: existente.concluida,
+                tempoEstimado: existente.tempoEstimado,
+                servicoTipo: servico.tipo
+              };
+            }
+            return { 
+              ...sub, 
+              selecionada: false, 
+              concluida: false, 
+              tempoEstimado: 0,
+              servicoTipo: servico.tipo
+            };
           });
         } else {
           // Inicializa todas como não selecionadas
           servico.atividadesRelacionadas[tipoAtividade] = 
-            subatividadesDoServico.map(sub => ({ ...sub, selecionada: false }));
+            subatividadesDoServico.map(sub => ({ 
+              ...sub, 
+              selecionada: false,
+              concluida: false,
+              tempoEstimado: 0,
+              servicoTipo: servico.tipo
+            }));
         }
       });
       

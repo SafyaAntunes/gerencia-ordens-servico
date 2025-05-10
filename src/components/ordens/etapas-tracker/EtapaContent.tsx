@@ -1,4 +1,3 @@
-
 import React from "react";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
 import { EtapaCard } from "@/components/ordens/etapa";
@@ -12,6 +11,11 @@ interface EtapaContentProps {
   onSubatividadeToggle: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
   onServicoStatusChange: (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
   onEtapaStatusChange: (etapa: EtapaOS, concluida: boolean, funcionarioId?: string, funcionarioNome?: string, servicoTipo?: TipoServico) => void;
+  onSubatividadeSelecionadaToggle?: (
+    servicoTipo: TipoServico,
+    subatividadeId: string,
+    checked: boolean
+  ) => void;
 }
 
 export function EtapaContent({
@@ -21,7 +25,8 @@ export function EtapaContent({
   funcionario,
   onSubatividadeToggle,
   onServicoStatusChange,
-  onEtapaStatusChange
+  onEtapaStatusChange,
+  onSubatividadeSelecionadaToggle
 }: EtapaContentProps) {
   const getTiposParaEtapa = (etapa: EtapaOS): TipoServico[] => {
     const tiposServicos = ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'];
@@ -128,6 +133,7 @@ export function EtapaContent({
               onSubatividadeToggle={onSubatividadeToggle}
               onServicoStatusChange={onServicoStatusChange}
               onEtapaStatusChange={onEtapaStatusChange}
+              onSubatividadeSelecionadaToggle={onSubatividadeSelecionadaToggle}
             />
           );
         })}
@@ -154,6 +160,7 @@ export function EtapaContent({
           onSubatividadeToggle={onSubatividadeToggle}
           onServicoStatusChange={onServicoStatusChange}
           onEtapaStatusChange={onEtapaStatusChange}
+          onSubatividadeSelecionadaToggle={onSubatividadeSelecionadaToggle}
         />
       </div>
     );
@@ -176,6 +183,7 @@ export function EtapaContent({
             onSubatividadeToggle={onSubatividadeToggle}
             onServicoStatusChange={onServicoStatusChange}
             onEtapaStatusChange={onEtapaStatusChange}
+            onSubatividadeSelecionadaToggle={onSubatividadeSelecionadaToggle}
           />
         )}
       </div>

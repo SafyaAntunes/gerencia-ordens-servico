@@ -164,6 +164,50 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate }: EtapasTrackerProps) 
       toast.error("Você não tem permissão para gerenciar este tipo de serviço");
       return;
     }
+    const handleSubatividadeSelecionadaToggle = useCallback(async (
+      servicoTipo: TipoServico,
+      subatividadeId: string,
+      checked: boolean
+    ) => {
+      if (!ordem?.id) return;
+    
+      try {
+        const servicosAtualizados = ordem.servicos.map(servico => {
+          if (servico.tipo === servicoTipo && servico.subatividades) {
+            const subatividades = servico.subatividades.map(sub => {
+              if (sub.id === subatividadeId) {
+                return { ...sub, selecionada: checked };
+              }
+              return sub;
+            });
+    
+            return {
+              ...servico,
+              subatividades
+            };
+          }
+          return servico;
+        });
+    
+        const ordemRef = doc(db, "ordens_servico", ordem.id);
+        await updateDoc(ordemRef, { servicos: servicosAtualizados });
+    
+        const ordemAtualizada = {
+          ...ordem,
+          servicos: servicosAtualizados
+        };
+    
+        if (onOrdemUpdate) {
+          onOrdemUpdate(ordemAtualizada);
+        }
+    
+        toast.success("Subatividade selecionada com sucesso!");
+      } catch (error) {
+        console.error("Erro ao atualizar seleção de subatividade:", error);
+        toast.error("Erro ao selecionar subatividade");
+      }
+    }, [ordem, onOrdemUpdate]);
+    
     
     try {
       console.log("Toggling subatividade in EtapasTracker:", { servicoTipo, subatividadeId, checked });
@@ -358,6 +402,7 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate }: EtapasTrackerProps) 
               onSubatividadeToggle={handleSubatividadeToggle}
               onServicoStatusChange={handleServicoStatusChange}
               onEtapaStatusChange={handleEtapaStatusChange}
+              onSubatividadeSelecionadaToggle={handleSubatividadeSelecionadaToggle}
             />
           )}
         </CardContent>
