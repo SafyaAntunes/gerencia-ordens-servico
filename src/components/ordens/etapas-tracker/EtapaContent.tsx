@@ -1,17 +1,19 @@
 
 import React from "react";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
-import { EtapaCard } from "@/components/ordens/etapa";
-import { formatServicoTipo, etapaNomesBR } from "./EtapasTracker";
+import { Funcionario } from "@/types/funcionarios";
+import EtapaCard from "@/components/ordens/etapa/EtapaCard";
+import { etapaNomesBR } from "./EtapasTracker";
 
 interface EtapaContentProps {
   ordem: OrdemServico;
   selectedEtapa: EtapaOS;
   selectedServicoTipo: TipoServico | null;
-  funcionario: any;
+  funcionario: Funcionario | null;
   onSubatividadeToggle: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
   onServicoStatusChange: (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
   onEtapaStatusChange: (etapa: EtapaOS, concluida: boolean, funcionarioId?: string, funcionarioNome?: string, servicoTipo?: TipoServico) => void;
+  onSubatividadeSelecionadaToggle: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
 }
 
 export function EtapaContent({
@@ -21,136 +23,82 @@ export function EtapaContent({
   funcionario,
   onSubatividadeToggle,
   onServicoStatusChange,
-  onEtapaStatusChange
+  onEtapaStatusChange,
+  onSubatividadeSelecionadaToggle
 }: EtapaContentProps) {
-  const getTiposParaEtapa = (etapa: EtapaOS): TipoServico[] => {
-    const tiposServicos = ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'];
+  let servicosParaExibir: Servico[] = [];
+  
+  if (selectedEtapa === 'inspecao_inicial' || selectedEtapa === 'inspecao_final' || selectedEtapa === 'lavagem') {
+    // Para estas etapas, precisamos exibir os serviços separadamente
+    servicosParaExibir = ordem.servicos.filter(servico => {
+      // Excluir serviços do tipo lavagem, inspecao_inicial e inspecao_final
+      // pois serão tratados como etapas independentes
+      if (servico.tipo === 'lavagem' || 
+          servico.tipo === 'inspecao_inicial' || 
+          servico.tipo === 'inspecao_final') {
+        return false;
+      }
+      
+      // Incluir apenas serviços com subatividades selecionadas
+      return servico.subatividades && servico.subatividades.some(sub => sub.selecionada);
+    });
     
-    switch (etapa) {
-      case 'inspecao_inicial':
-      case 'inspecao_final':
-      case 'lavagem':
-        return ordem.servicos
-          .filter(servico => tiposServicos.includes(servico.tipo))
-          .map(servico => servico.tipo);
-      case 'retifica':
-        if (funcionario?.nivelPermissao !== 'admin' && funcionario?.nivelPermissao !== 'gerente') {
-          return ordem.servicos.filter(servico =>
-            tiposServicos.includes(servico.tipo) &&
-            funcionario?.especialidades.includes(servico.tipo)
-          ).map(servico => servico.tipo);
-        } else {
-          return ordem.servicos.filter(servico =>
-            tiposServicos.includes(servico.tipo)
-          ).map(servico => servico.tipo);
-        }
-      default:
-        return [];
-    }
-  };
-
-  const getServicosParaEtapa = (etapa: EtapaOS, servicoTipo?: TipoServico): Servico[] => {
-    switch (etapa) {
-      case 'retifica':
-        if (servicoTipo) {
-          // Retornar serviços apenas do tipo específico
-          return ordem.servicos.filter(servico => servico.tipo === servicoTipo);
-        } else if (funcionario?.nivelPermissao !== 'admin' && funcionario?.nivelPermissao !== 'gerente') {
-          return ordem.servicos.filter(servico =>
-            ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo) &&
-            funcionario?.especialidades.includes(servico.tipo)
-          );
-        } else {
-          return ordem.servicos.filter(servico =>
-            ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo)
-          );
-        }
-      case 'montagem':
-        return ordem.servicos.filter(servico => servico.tipo === 'montagem');
-      case 'dinamometro':
-        return ordem.servicos.filter(servico => servico.tipo === 'dinamometro');
-      case 'lavagem':
-        // Retornar serviço específico de lavagem para a etapa lavagem
-        return ordem.servicos.filter(servico => servico.tipo === 'lavagem');
-      case 'inspecao_inicial':
-        // Retornar serviço específico de inspeção inicial para a etapa inspeção inicial
-        return ordem.servicos.filter(servico => servico.tipo === 'inspecao_inicial');
-      case 'inspecao_final':
-        // Retornar serviço específico de inspeção final para a etapa inspeção final
-        return ordem.servicos.filter(servico => servico.tipo === 'inspecao_final');
-      default:
-        return [];
-    }
-  };
-
-  const getEtapaInfo = (etapa: EtapaOS, servicoTipo?: TipoServico) => {
-    if ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo) {
-      const etapaKey = `${etapa}_${servicoTipo}` as any;
-      return ordem.etapasAndamento[etapaKey] || { 
-        concluido: false,
-        servicoTipo: servicoTipo 
-      };
-    }
-    return ordem.etapasAndamento[etapa];
-  };
-
-  const getEtapaTitulo = (etapa: EtapaOS, servicoTipo?: TipoServico) => {
-    if (
-      (etapa === "inspecao_inicial" || etapa === "inspecao_final" || etapa === "lavagem") 
-      && servicoTipo
-    ) {
-      return `${etapaNomesBR[etapa]} - ${formatServicoTipo(servicoTipo)}`;
-    }
-    return etapaNomesBR[etapa];
-  };
-
-  // Verifica se a etapa atual é Retífica e devemos mostrar cada tipo de serviço separadamente
-  if (selectedEtapa === "retifica") {
-    const tiposDeServico = getTiposParaEtapa(selectedEtapa);
-    
+    // Mostrar um card para cada serviço
     return (
-      <div className="grid gap-4">
-        {tiposDeServico.map(tipo => {
-          // Buscar serviços deste tipo específico
-          const servicosDesseTipo = getServicosParaEtapa(selectedEtapa, tipo);
-          
-          return (
-            <EtapaCard
-              key={`${selectedEtapa}-${tipo}`}
-              ordemId={ordem.id}
-              etapa={selectedEtapa}
-              etapaNome={`${getEtapaTitulo(selectedEtapa)} - ${formatServicoTipo(tipo)}`}
-              funcionarioId={funcionario?.id || ""}
-              funcionarioNome={funcionario?.nome}
-              servicos={servicosDesseTipo}
-              etapaInfo={getEtapaInfo(selectedEtapa, tipo)}
-              servicoTipo={tipo}
-              onSubatividadeToggle={onSubatividadeToggle}
-              onServicoStatusChange={onServicoStatusChange}
-              onEtapaStatusChange={onEtapaStatusChange}
-            />
-          );
-        })}
+      <div className="space-y-6 mt-4">
+        {servicosParaExibir.map((servico) => (
+          <EtapaCard
+            key={`${selectedEtapa}-${servico.tipo}`}
+            ordemId={ordem.id}
+            etapa={selectedEtapa}
+            etapaNome={`${etapaNomesBR[selectedEtapa]} - ${formatServicoTipoLocal(servico.tipo)}`}
+            funcionarioId={funcionario?.id || ""}
+            funcionarioNome={funcionario?.nome}
+            servicos={[servico]}
+            etapaInfo={getEtapaInfoForServico(ordem, selectedEtapa, servico.tipo)}
+            servicoTipo={servico.tipo}
+            onSubatividadeToggle={onSubatividadeToggle}
+            onServicoStatusChange={onServicoStatusChange}
+            onEtapaStatusChange={onEtapaStatusChange}
+          />
+        ))}
       </div>
     );
-  }
-
-  // MODIFICADO: Para lavagem, inspeção_inicial, inspeção_final usar sempre os serviços específicos
-  // E não mostrar o fallback para os cards duplicados
-  else if (selectedEtapa === "lavagem" || selectedEtapa === "inspecao_inicial" || selectedEtapa === "inspecao_final") {
-    const servicos = getServicosParaEtapa(selectedEtapa);
+  } else {
+    // Para outras etapas, exibir todos os serviços relevantes em um único card
+    servicosParaExibir = ordem.servicos.filter(servico => {
+      // Para retifica, exibir serviços do tipo bloco, biela, cabecote, virabrequim, eixo_comando
+      if (selectedEtapa === 'retifica') {
+        return ['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo);
+      }
+      
+      // Para montagem, exibir serviços do tipo montagem
+      if (selectedEtapa === 'montagem') {
+        return servico.tipo === 'montagem';
+      }
+      
+      // Para dinamometro, exibir serviços do tipo dinamometro
+      if (selectedEtapa === 'dinamometro') {
+        return servico.tipo === 'dinamometro';
+      }
+      
+      return false;
+    }).filter(servico => {
+      // Filtrar apenas serviços com subatividades selecionadas
+      return servico.subatividades && servico.subatividades.some(sub => sub.selecionada);
+    });
     
+    // Mostrar um card para a etapa com todos os serviços relevantes
     return (
-      <div>
+      <div className="mt-4">
         <EtapaCard
-          key={selectedEtapa}
           ordemId={ordem.id}
           etapa={selectedEtapa}
-          etapaNome={getEtapaTitulo(selectedEtapa)}
+          etapaNome={etapaNomesBR[selectedEtapa]}
           funcionarioId={funcionario?.id || ""}
           funcionarioNome={funcionario?.nome}
-          servicos={servicos}
-          etapaInfo={getEtapaInfo(selectedEtapa)}
+          servicos={servicosParaExibir}
+          etapaInfo={ordem.etapasAndamento?.[selectedEtapa]}
           onSubatividadeToggle={onSubatividadeToggle}
           onServicoStatusChange={onServicoStatusChange}
           onEtapaStatusChange={onEtapaStatusChange}
@@ -158,27 +106,26 @@ export function EtapaContent({
       </div>
     );
   }
-  
-  // Render other steps (montagem, dinamometro)
-  else {
-    return (
-      <div>
-        {selectedEtapa && funcionario && (
-          <EtapaCard
-            key={selectedEtapa}
-            ordemId={ordem.id}
-            etapa={selectedEtapa}
-            etapaNome={getEtapaTitulo(selectedEtapa)}
-            funcionarioId={funcionario?.id || ""}
-            funcionarioNome={funcionario?.nome}
-            servicos={getServicosParaEtapa(selectedEtapa)}
-            etapaInfo={getEtapaInfo(selectedEtapa)}
-            onSubatividadeToggle={onSubatividadeToggle}
-            onServicoStatusChange={onServicoStatusChange}
-            onEtapaStatusChange={onEtapaStatusChange}
-          />
-        )}
-      </div>
-    );
-  }
+}
+
+// Funções auxiliares
+function formatServicoTipoLocal(tipo: TipoServico): string {
+  const labels: Record<TipoServico, string> = {
+    bloco: "Bloco",
+    biela: "Biela",
+    cabecote: "Cabeçote",
+    virabrequim: "Virabrequim",
+    eixo_comando: "Eixo de Comando",
+    montagem: "Montagem",
+    dinamometro: "Dinamômetro",
+    lavagem: "Lavagem",
+    inspecao_inicial: "Inspeção Inicial",
+    inspecao_final: "Inspeção Final"
+  };
+  return labels[tipo] || tipo;
+}
+
+function getEtapaInfoForServico(ordem: OrdemServico, etapa: EtapaOS, servicoTipo: TipoServico) {
+  const etapaKey = `${etapa}_${servicoTipo}`;
+  return ordem.etapasAndamento?.[etapaKey];
 }

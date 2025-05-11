@@ -32,7 +32,10 @@ export default function EtapaTimerSection(props: EtapaTimerSectionProps) {
             variant="default" 
             size="sm" 
             className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
-            onClick={concluirButtonProps.onClick}
+            onClick={() => {
+              concluirButtonProps.onClick();
+              return true;
+            }}
           >
             <CheckCircle2 className="h-4 w-4 mr-1" />
             Marcar Etapa como Concluída

@@ -1,16 +1,15 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, Servico, TipoServico } from "@/types/ordens";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { useEtapaCard } from "./useEtapaCard";
-import { 
-  EtapaHeader, 
-  EtapaProgressDisplay, 
-  EtapaTimerSection, 
-  EtapaServicosLista,
-  FuncionarioSelector
-} from "./components";
+import EtapaHeader from "./components/EtapaHeader";
+import EtapaProgressDisplay from "./components/EtapaProgressDisplay";
+import EtapaTimerSection from "./components/EtapaTimerSection";
+import EtapaServicosLista from "./EtapaServicosLista";
+import FuncionarioSelector from "./components/FuncionarioSelector";
 import { useSubatividadesVerifier } from "./hooks/useSubatividadesVerifier";
 import { useEtapaStatusHandlers } from "./hooks/useEtapaStatusHandlers";
 import { useFuncionarioSelection } from "./hooks/useFuncionarioSelection";
