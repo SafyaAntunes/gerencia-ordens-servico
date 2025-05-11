@@ -1,60 +1,123 @@
 
-import { EtapaOS, TipoServico } from "@/types/ordens";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import EtapaTimerWrapper from "./EtapaTimerWrapper";
-import EtapaConcluirButton from "./EtapaConcluirButton";
+import { Card } from "@/components/ui/card";
+import { Play, Pause, StopCircle } from "lucide-react";
+import { useEtapaTimerData } from "../hooks/useEtapaTimerData";
+import { EtapaOS, TipoServico } from "@/types/ordens";
 
 interface EtapaTimerSectionProps {
-  ordemId: string;
-  funcionarioId: string;
-  funcionarioNome?: string;
   etapa: EtapaOS;
-  tipoServico?: TipoServico;
-  isEtapaConcluida: boolean;
-  onEtapaConcluida: (tempoTotal: number) => void;
-  onMarcarConcluido: () => void;
-  onTimerStart: () => boolean;
-  onCustomStart: () => boolean;
-  onSaveResponsavel: () => void;
+  ordemId: string;
+  servicoTipo?: TipoServico;
+  etapaInfo?: any;
+  disabled?: boolean;
 }
 
-export default function EtapaTimerSection({
-  ordemId,
-  funcionarioId,
-  funcionarioNome,
+export function EtapaTimerSection({ 
   etapa,
-  tipoServico,
-  isEtapaConcluida,
-  onEtapaConcluida,
-  onMarcarConcluido,
-  onTimerStart,
-  onCustomStart
+  ordemId,
+  servicoTipo,
+  etapaInfo,
+  disabled = false
 }: EtapaTimerSectionProps) {
-  const handleTimerFinish = (tempoTotal: number) => {
-    onEtapaConcluida(tempoTotal);
+  const {
+    isRunning,
+    isPaused,
+    displayTime,
+    startTimer,
+    pauseTimer,
+    resumeTimer,
+    stopTimer,
+    timerId
+  } = useEtapaTimerData({
+    etapa,
+    ordemId,
+    servicoTipo,
+    etapaInfo
+  });
+
+  const canStart = !isRunning && !isPaused && !disabled;
+  const canPause = isRunning && !isPaused && !disabled;
+  const canResume = !isRunning && isPaused && !disabled;
+  const canStop = (isRunning || isPaused) && !disabled;
+
+  const handleStartClick = () => {
+    return startTimer();
   };
-  
+
+  const handlePauseClick = () => {
+    pauseTimer();
+    return true;
+  };
+
+  const handleResumeClick = () => {
+    resumeTimer();
+    return true;
+  };
+
+  const handleStopClick = () => {
+    stopTimer();
+    return true;
+  };
+
   return (
-    <div className="p-4 border rounded-md mb-4">
-      <EtapaTimerWrapper
-        ordemId={ordemId}
-        funcionarioId={funcionarioId}
-        funcionarioNome={funcionarioNome}
-        etapa={etapa}
-        tipoServico={tipoServico}
-        isEtapaConcluida={isEtapaConcluida}
-        onEtapaConcluida={handleTimerFinish}
-        onTimerStart={onTimerStart}
-        onCustomStart={onCustomStart}
-      />
-      
-      <div className="flex space-x-2 mt-4">
-        <EtapaConcluirButton 
-          isConcluida={isEtapaConcluida} 
-          onClick={onMarcarConcluido} 
-          className="flex-1"
-        />
+    <div className="bg-muted/40 p-4 rounded-lg">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="text-2xl font-mono">{displayTime}</div>
+        
+        <div className="flex flex-wrap gap-2">
+          {canStart && (
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={handleStartClick}
+              disabled={disabled}
+            >
+              <Play className="mr-1 h-4 w-4" />
+              Iniciar
+            </Button>
+          )}
+          
+          {canPause && (
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={handlePauseClick}
+              disabled={disabled}
+            >
+              <Pause className="mr-1 h-4 w-4" />
+              Pausar
+            </Button>
+          )}
+          
+          {canResume && (
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={handleResumeClick}
+              disabled={disabled}
+            >
+              <Play className="mr-1 h-4 w-4" />
+              Continuar
+            </Button>
+          )}
+          
+          {canStop && (
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={handleStopClick}
+              disabled={disabled}
+            >
+              <StopCircle className="mr-1 h-4 w-4" />
+              Parar
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
 }
+
+export default EtapaTimerSection;

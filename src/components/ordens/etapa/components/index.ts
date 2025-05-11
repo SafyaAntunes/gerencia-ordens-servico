@@ -1,8 +1,18 @@
 
-export { default as EtapaHeader } from './EtapaHeader';
-export { default as EtapaProgressDisplay } from './EtapaProgressDisplay';
-export { default as EtapaTimerSection } from './EtapaTimerSection';
-export { default as EtapaServicosLista } from './EtapaServicosLista';
-export { FuncionarioSelector } from '../FuncionarioSelector';
-export { default as EtapaConcluirButton } from './EtapaConcluirButton';
-export { default as EtapaTimerWrapper } from './EtapaTimerWrapper';
+import EtapaConcluirButton from "./EtapaConcluirButton";
+import EtapaHeader from "./EtapaHeader";
+import EtapaProgressDisplay from "./EtapaProgressDisplay";
+import { EtapaTimerSection } from "./EtapaTimerSection";
+import EtapaTimerWrapper from "./EtapaTimerWrapper";
+import EtapaServicosLista from "../EtapaServicosLista";
+import FuncionarioSelector from "./FuncionarioSelector";
+
+export {
+  EtapaConcluirButton,
+  EtapaHeader,
+  EtapaProgressDisplay,
+  EtapaTimerSection,
+  EtapaTimerWrapper,
+  EtapaServicosLista,
+  FuncionarioSelector
+};

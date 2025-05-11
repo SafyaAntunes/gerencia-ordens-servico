@@ -1,214 +1,210 @@
-import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/card";
-import { EtapaOS, Servico, TipoServico } from "@/types/ordens";
-import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
-import { useEtapaCard } from "./useEtapaCard";
-import { 
-  EtapaHeader, 
-  EtapaProgressDisplay, 
-  EtapaTimerSection, 
-  EtapaServicosLista,
-  FuncionarioSelector
-} from "./components";
-import { useSubatividadesVerifier } from "./hooks/useSubatividadesVerifier";
-import { useEtapaStatusHandlers } from "./hooks/useEtapaStatusHandlers";
-import { useFuncionarioSelection } from "./hooks/useFuncionarioSelection";
-import { useEtapaResponsavel } from "./hooks/useEtapaResponsavel";
 
-interface EtapaCardProps {
+import { useState, useCallback, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
+import { CheckCircle2, XCircle } from "lucide-react";
+import { EtapaOS, Servico, TipoServico } from "@/types/ordens";
+
+import { EtapaStatus } from "./EtapaStatus";
+import { EtapaProgresso } from "./EtapaProgresso";
+import { EtapaServicosLista } from "./components";
+import FuncionarioSelector from "./components/FuncionarioSelector";
+import EtapaConcluirButton from "./components/EtapaConcluirButton";
+import EtapaTimerSection from "./components/EtapaTimerSection";
+import { useEtapaSubatividades } from "./hooks/useEtapaSubatividades";
+
+export interface EtapaCardProps {
   ordemId: string;
   etapa: EtapaOS;
   etapaNome: string;
   funcionarioId: string;
   funcionarioNome?: string;
-  servicos?: Servico[];
-  etapaInfo?: {
-    concluido?: boolean;
-    iniciado?: Date;
-    finalizado?: Date;
-    usarCronometro?: boolean;
-    pausas?: { inicio: number; fim?: number; motivo?: string }[];
-    funcionarioId?: string;
-    funcionarioNome?: string;
-    servicoTipo?: TipoServico;
-  };
+  servicos: Servico[];
+  etapaInfo: any;
   servicoTipo?: TipoServico;
-  onSubatividadeToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
-  onServicoStatusChange?: (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
-  onEtapaStatusChange?: (etapa: EtapaOS, concluida: boolean, funcionarioId?: string, funcionarioNome?: string, servicoTipo?: TipoServico) => void;
+  onSubatividadeToggle: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
+  onServicoStatusChange: (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
+  onEtapaStatusChange: (etapa: EtapaOS, concluida: boolean, funcionarioId?: string, funcionarioNome?: string, servicoTipo?: TipoServico) => void;
+  onSubatividadeSelecionadaToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
 }
 
-export default function EtapaCard({
+export function EtapaCard({
   ordemId,
   etapa,
   etapaNome,
   funcionarioId,
   funcionarioNome,
   servicos = [],
-  etapaInfo,
+  etapaInfo = {},
   servicoTipo,
   onSubatividadeToggle,
   onServicoStatusChange,
-  onEtapaStatusChange
+  onEtapaStatusChange,
+  onSubatividadeSelecionadaToggle
 }: EtapaCardProps) {
-  const { funcionario } = useAuth();
-  const { todasSubatividadesConcluidas } = useSubatividadesVerifier();
-  const { 
-    isAtivo, 
-    setIsAtivo, 
-    isEtapaConcluida, 
-    getEtapaStatus 
-  } = useEtapaStatusHandlers(etapa, servicoTipo);
-  
-  const {
-    podeAtribuirFuncionario,
-    podeTrabalharNaEtapa,
-    handleIniciarTimer,
-    handleTimerStart,
-    handleMarcarConcluido
-  } = useEtapaCard(etapa, servicoTipo);
-  
-  // Estado para armazenar o ID e nome do funcionário selecionado utilizando o hook personalizado
-  const {
-    funcionariosOptions,
-    funcionarioSelecionadoId,
-    funcionarioSelecionadoNome,
-    handleFuncionarioChange
-  } = useFuncionarioSelection({
-    etapaInfo,
-    funcionarioId,
-    funcionarioNome
-  });
-  
-  // Atualizar funcionário selecionado quando etapaInfo mudar
-  useEffect(() => {
-    if (etapaInfo?.funcionarioId && etapaInfo.funcionarioId !== funcionarioSelecionadoId) {
-      handleFuncionarioChange(etapaInfo.funcionarioId);
-    }
-  }, [etapaInfo?.funcionarioId, funcionarioSelecionadoId, handleFuncionarioChange]);
-  
-  // Gerenciamento do responsável com hook personalizado
-  const {
-    handleSaveResponsavel,
-    handleCustomTimerStart,
-    handleMarcarConcluidoClick,
-    lastSavedFuncionarioId,
-    lastSavedFuncionarioNome,
-    isSaving
-  } = useEtapaResponsavel({
-    etapa,
-    servicoTipo,
-    funcionarioSelecionadoId,
-    funcionarioSelecionadoNome,
-    isEtapaConcluida: isEtapaConcluida(etapaInfo),
-    onEtapaStatusChange,
-    etapaInfo,
-    ordemId
-  });
-  
-  // Atualizar estado ativo do timer baseado no etapaInfo
-  useEffect(() => {
-    if (etapaInfo?.iniciado && !etapaInfo?.concluido) {
-      setIsAtivo(true);
-    } else {
-      setIsAtivo(false);
-    }
-  }, [etapaInfo, setIsAtivo]);
+  const [funcionarioSelecionadoId, setFuncionarioSelecionadoId] = useState<string>(
+    etapaInfo?.funcionarioId || funcionarioId || ""
+  );
+  const [funcionarioSelecionadoNome, setFuncionarioSelecionadoNome] = useState<string>(
+    etapaInfo?.funcionarioNome || funcionarioNome || ""
+  );
+  const [funcionariosOptions, setFuncionariosOptions] = useState<any[]>([]);
+  const [isSavingResponsavel, setIsSavingResponsavel] = useState(false);
+  const [isLoadingFuncionarios, setIsLoadingFuncionarios] = useState(false);
+  const { verificarSubatividadesConcluidas, todasSubatividadesConcluidas } = useEtapaSubatividades();
 
-  const handleEtapaConcluida = (tempoTotal: number) => {
-    // Verificar se todas as subatividades estão concluídas
-    if (!todasSubatividadesConcluidas(servicos)) {
-      toast.error("É necessário concluir todas as subatividades antes de finalizar a etapa");
-      return;
+  // Função para buscar os funcionários
+  const fetchFuncionarios = useCallback(async () => {
+    try {
+      setIsLoadingFuncionarios(true);
+      // Simula uma chamada à API
+      // Em uma implementação real, você buscaria os dados do banco
+      const funcionarios = [
+        { id: funcionarioId, nome: funcionarioNome || "Funcionário atual" }
+      ];
+      
+      // Adicionar o funcionário da etapa se ele existir
+      if (etapaInfo?.funcionarioId && etapaInfo.funcionarioId !== funcionarioId) {
+        funcionarios.push({
+          id: etapaInfo.funcionarioId,
+          nome: etapaInfo.funcionarioNome || "Funcionário da etapa"
+        });
+      }
+      
+      setFuncionariosOptions(funcionarios);
+    } catch (error) {
+      console.error("Erro ao buscar funcionários:", error);
+      toast.error("Erro ao buscar funcionários");
+    } finally {
+      setIsLoadingFuncionarios(false);
+    }
+  }, [funcionarioId, funcionarioNome, etapaInfo]);
+  
+  // Carregar funcionários quando o componente montar
+  useEffect(() => {
+    fetchFuncionarios();
+  }, [fetchFuncionarios]);
+  
+  // Manter o estado sincronizado com as props
+  useEffect(() => {
+    setFuncionarioSelecionadoId(etapaInfo?.funcionarioId || funcionarioId || "");
+    setFuncionarioSelecionadoNome(etapaInfo?.funcionarioNome || funcionarioNome || "");
+  }, [etapaInfo?.funcionarioId, funcionarioId, etapaInfo?.funcionarioNome, funcionarioNome]);
+  
+  const handleFuncionarioChange = useCallback((id: string) => {
+    const funcionario = funcionariosOptions.find(f => f.id === id);
+    setFuncionarioSelecionadoId(id);
+    setFuncionarioSelecionadoNome(funcionario?.nome || "");
+  }, [funcionariosOptions]);
+  
+  const handleSaveResponsavel = useCallback(async (idArray?: string[], nomeArray?: string[]) => {
+    try {
+      setIsSavingResponsavel(true);
+      
+      // Usar o primeiro elemento de cada array, se estiverem presentes
+      const id = idArray && idArray.length > 0 ? idArray[0] : "";
+      const nome = nomeArray && nomeArray.length > 0 ? nomeArray[0] : "";
+      
+      // Atualizar o estado local primeiro
+      setFuncionarioSelecionadoId(id);
+      setFuncionarioSelecionadoNome(nome);
+      
+      // Chamar método pai para atualizar etapa
+      if (onEtapaStatusChange) {
+        await onEtapaStatusChange(etapa, false, id, nome, servicoTipo);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Erro ao salvar responsável:", error);
+      toast.error("Erro ao salvar responsável");
+      return false;
+    } finally {
+      setIsSavingResponsavel(false);
+    }
+  }, [etapa, onEtapaStatusChange, servicoTipo]);
+  
+  const handleConcluirEtapa = useCallback(async (concluir: boolean) => {
+    if (concluir && !verificarSubatividadesConcluidas(servicos)) {
+      return false;
     }
     
-    if (onEtapaStatusChange) {
-      const useId = lastSavedFuncionarioId || funcionarioSelecionadoId || funcionario?.id;
-      const useNome = lastSavedFuncionarioNome || funcionarioSelecionadoNome || funcionario?.nome;
-      
-      onEtapaStatusChange(
-        etapa, 
-        true, 
-        useId, 
-        useNome,
-        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+    if (!funcionarioSelecionadoId) {
+      toast.error("Selecione um responsável antes de concluir a etapa");
+      return false;
+    }
+    
+    try {
+      await onEtapaStatusChange(
+        etapa,
+        concluir,
+        funcionarioSelecionadoId,
+        funcionarioSelecionadoNome,
+        servicoTipo
       );
+      
+      return true;
+    } catch (error) {
+      console.error("Erro ao atualizar status da etapa:", error);
+      toast.error("Erro ao atualizar status da etapa");
+      return false;
     }
-  };
-
-  // MODIFICADO: Não mostrar cronômetro para nenhuma etapa (lavagem, inspeção inicial e inspeção final)
-  // Agora usaremos apenas o cronômetro do serviço para todas essas etapas
-  const etapaComCronometro = [].includes(etapa);
+  }, [etapa, funcionarioSelecionadoId, funcionarioSelecionadoNome, onEtapaStatusChange, servicos, servicoTipo, verificarSubatividadesConcluidas]);
   
-  // Verificar se este card específico precisa de cronômetro
-  const mostrarCronometro = () => {
-    // Se não for uma etapa que pode ter cronômetro, não mostrar
-    if (!etapaComCronometro) return false;
-    
-    // Como todas as etapas foram removidas da lista etapaComCronometro,
-    // esta função sempre retornará false
-    return false;
-  };
-
   return (
-    <Card className="p-6 mb-4">
-      <EtapaHeader 
-        etapaNome={etapaNome}
-        status={getEtapaStatus(etapaInfo)}
-        isEtapaConcluida={isEtapaConcluida(etapaInfo)}
-        funcionarioNome={etapaInfo?.funcionarioNome || "Não definido"}
-        podeReiniciar={false}
-        onReiniciar={() => {}}
-      />
+    <Card className="w-full">
+      <CardHeader className="pb-4">
+        <div className="flex justify-between items-center">
+          <div className="flex flex-col">
+            <h2 className="text-lg font-semibold">{etapaNome}</h2>
+            <EtapaProgresso servicos={servicos} etapaInfo={etapaInfo} />
+          </div>
+          <EtapaStatus concluido={etapaInfo?.concluido} />
+        </div>
+      </CardHeader>
       
-      <EtapaProgressDisplay 
-        servicos={servicos} 
-        onAllServicosConcluidos={() => {
-          // Não fazer nada automático, deixar usuário clicar em concluir
-        }} 
-      />
-      
-      {!isEtapaConcluida(etapaInfo) && (
+      <CardContent className="space-y-4">
         <FuncionarioSelector
           ordemId={ordemId}
           etapa={etapa}
           servicoTipo={servicoTipo}
           funcionarioSelecionadoId={funcionarioSelecionadoId}
           funcionariosOptions={funcionariosOptions}
-          isEtapaConcluida={isEtapaConcluida(etapaInfo)}
+          isEtapaConcluida={!!etapaInfo?.concluido}
           onFuncionarioChange={handleFuncionarioChange}
           onSaveResponsavel={handleSaveResponsavel}
-          isSaving={isSaving}
+          isSaving={isSavingResponsavel}
         />
-      )}
-      
-      {/* MODIFICADO: Usar a função mostrarCronometro para decidir se exibe o cronômetro */}
-      {mostrarCronometro() && (
-        <EtapaTimerSection 
-          ordemId={ordemId}
-          funcionarioId={lastSavedFuncionarioId || funcionarioSelecionadoId || funcionarioId}
-          funcionarioNome={lastSavedFuncionarioNome || funcionarioSelecionadoNome || funcionarioNome}
+        
+        <EtapaTimerSection
           etapa={etapa}
-          tipoServico={servicoTipo}
-          isEtapaConcluida={isEtapaConcluida(etapaInfo)}
-          onEtapaConcluida={handleEtapaConcluida}
-          onMarcarConcluido={handleMarcarConcluidoClick}
-          onTimerStart={handleTimerStart}
-          onCustomStart={handleCustomTimerStart}
-          onSaveResponsavel={handleSaveResponsavel}
+          ordemId={ordemId}
+          servicoTipo={servicoTipo}
+          etapaInfo={etapaInfo}
+          disabled={!funcionarioSelecionadoId || etapaInfo?.concluido}
         />
-      )}
+        
+        <EtapaServicosLista
+          servicos={servicos}
+          ordemId={ordemId}
+          funcionarioId={funcionarioSelecionadoId}
+          funcionarioNome={funcionarioSelecionadoNome}
+          etapa={etapa}
+          onSubatividadeToggle={onSubatividadeToggle}
+          onServicoStatusChange={onServicoStatusChange}
+        />
+      </CardContent>
       
-      <EtapaServicosLista
-        servicos={servicos}
-        ordemId={ordemId}
-        funcionarioId={lastSavedFuncionarioId || funcionarioSelecionadoId || funcionarioId}
-        funcionarioNome={lastSavedFuncionarioNome || funcionarioSelecionadoNome || funcionarioNome}
-        etapa={etapa}
-        onSubatividadeToggle={onSubatividadeToggle}
-        onServicoStatusChange={onServicoStatusChange}
-      />
+      <CardFooter className="pt-2">
+        <EtapaConcluirButton
+          concluido={!!etapaInfo?.concluido}
+          todasSubatividadesConcluidas={todasSubatividadesConcluidas(servicos)}
+          onConcluir={handleConcluirEtapa}
+          temFuncionarioSelecionado={!!funcionarioSelecionadoId}
+        />
+      </CardFooter>
     </Card>
   );
 }
