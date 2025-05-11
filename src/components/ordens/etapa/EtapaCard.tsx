@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
@@ -7,12 +6,12 @@ import { toast } from "sonner";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { EtapaOS, Servico, TipoServico } from "@/types/ordens";
 
-import { EtapaStatus } from "./EtapaStatus";
-import { EtapaProgresso } from "./EtapaProgresso";
+import EtapaStatus from "./EtapaStatus";
+import EtapaProgresso from "./EtapaProgresso";
 import { EtapaServicosLista } from "./components";
 import FuncionarioSelector from "./components/FuncionarioSelector";
 import EtapaConcluirButton from "./components/EtapaConcluirButton";
-import EtapaTimerSection from "./components/EtapaTimerSection";
+import { EtapaTimerSection } from "./components";
 import { useEtapaSubatividades } from "./hooks/useEtapaSubatividades";
 
 export interface EtapaCardProps {
@@ -99,13 +98,13 @@ export function EtapaCard({
     setFuncionarioSelecionadoNome(funcionario?.nome || "");
   }, [funcionariosOptions]);
   
-  const handleSaveResponsavel = useCallback(async (idArray?: string[], nomeArray?: string[]) => {
+  const handleSaveResponsavel = useCallback(async (ids?: string[], nomes?: string[]) => {
     try {
       setIsSavingResponsavel(true);
       
       // Usar o primeiro elemento de cada array, se estiverem presentes
-      const id = idArray && idArray.length > 0 ? idArray[0] : "";
-      const nome = nomeArray && nomeArray.length > 0 ? nomeArray[0] : "";
+      const id = ids && ids.length > 0 ? ids[0] : "";
+      const nome = nomes && nomes.length > 0 ? nomes[0] : "";
       
       // Atualizar o estado local primeiro
       setFuncionarioSelecionadoId(id);
@@ -153,6 +152,11 @@ export function EtapaCard({
     }
   }, [etapa, funcionarioSelecionadoId, funcionarioSelecionadoNome, onEtapaStatusChange, servicos, servicoTipo, verificarSubatividadesConcluidas]);
   
+  // Wrapper function to handle void return type expected by EtapaConcluirButton
+  const handleConcluirEtapaClick = () => {
+    handleConcluirEtapa(true);
+  };
+  
   return (
     <Card className="w-full">
       <CardHeader className="pb-4">
@@ -199,12 +203,15 @@ export function EtapaCard({
       
       <CardFooter className="pt-2">
         <EtapaConcluirButton
-          concluido={!!etapaInfo?.concluido}
+          isConcluida={!!etapaInfo?.concluido}
+          onClick={handleConcluirEtapaClick}
+          className=""
           todasSubatividadesConcluidas={todasSubatividadesConcluidas(servicos)}
-          onConcluir={handleConcluirEtapa}
           temFuncionarioSelecionado={!!funcionarioSelecionadoId}
         />
       </CardFooter>
     </Card>
   );
 }
+
+export default EtapaCard;

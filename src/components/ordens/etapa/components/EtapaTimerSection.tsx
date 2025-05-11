@@ -3,8 +3,8 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Play, Pause, StopCircle } from "lucide-react";
-import { useEtapaTimerData } from "../hooks/useEtapaTimerData";
 import { EtapaOS, TipoServico } from "@/types/ordens";
+import { useOrdemTimer } from "@/hooks/useOrdemTimer";
 
 interface EtapaTimerSectionProps {
   etapa: EtapaOS;
@@ -21,20 +21,20 @@ export function EtapaTimerSection({
   etapaInfo,
   disabled = false
 }: EtapaTimerSectionProps) {
+  // Use the useOrdemTimer hook directly
   const {
     isRunning,
     isPaused,
     displayTime,
-    startTimer,
-    pauseTimer,
-    resumeTimer,
-    stopTimer,
-    timerId
-  } = useEtapaTimerData({
-    etapa,
+    handleStart: startTimer,
+    handlePause: pauseTimer,
+    handleResume: resumeTimer,
+    handleFinish: stopTimer
+  } = useOrdemTimer({
     ordemId,
-    servicoTipo,
-    etapaInfo
+    etapa,
+    tipoServico: servicoTipo,
+    isEtapaConcluida: etapaInfo?.concluido || false
   });
 
   const canStart = !isRunning && !isPaused && !disabled;
@@ -119,5 +119,3 @@ export function EtapaTimerSection({
     </div>
   );
 }
-
-export default EtapaTimerSection;
