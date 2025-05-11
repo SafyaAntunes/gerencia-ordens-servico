@@ -7,11 +7,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { getFuncionarios } from "@/services/funcionarioService";
 import { Funcionario } from "@/types/funcionarios";
-import { EtapaStatus } from "./EtapaStatus";
-import { EtapaProgresso } from "./EtapaProgresso";
-import { EtapaConcluiButton } from "./EtapaConcluiButton";
-import { EtapaServicos } from "./EtapaServicos";
-import { EtapaTimer } from "./EtapaTimer";
+import EtapaStatus from "./EtapaStatus";
+import EtapaProgresso from "./EtapaProgresso";
+import EtapaConcluiButton from "./EtapaConcluiButton";
+import EtapaServicos from "./EtapaServicos";
+import EtapaTimer from "./EtapaTimer";
 import FuncionarioSelector from "./FuncionarioSelector";
 
 interface EtapaCardProps {
