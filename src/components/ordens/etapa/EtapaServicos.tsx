@@ -10,6 +10,7 @@ interface EtapaServicosProps {
   etapa: EtapaOS;
   onSubatividadeToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
   onServicoStatusChange?: (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
+  onSubatividadeSelecionadaToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void; // Add this prop to match usage in EtapaCard
 }
 
 export default function EtapaServicos({
@@ -19,7 +20,8 @@ export default function EtapaServicos({
   funcionarioNome,
   etapa,
   onSubatividadeToggle,
-  onServicoStatusChange
+  onServicoStatusChange,
+  onSubatividadeSelecionadaToggle
 }: EtapaServicosProps) {
   if (servicos.length === 0) {
     return null;
@@ -43,6 +45,11 @@ export default function EtapaServicos({
           onServicoStatusChange={
             onServicoStatusChange ? 
               (concluido, funcId, funcNome) => onServicoStatusChange(servico.tipo, concluido, funcId, funcNome) : 
+              undefined
+          }
+          onSubatividadeSelecionadaToggle={
+            onSubatividadeSelecionadaToggle ? 
+              (subId, checked) => onSubatividadeSelecionadaToggle(servico.tipo, subId, checked) : 
               undefined
           }
         />

@@ -1,3 +1,4 @@
+
 import { formatTime } from "@/utils/timerUtils";
 import { useOrdemTimer } from "@/hooks/useOrdemTimer";
 import { EtapaOS, TipoServico, TipoAtividade } from "@/types/ordens";
@@ -14,9 +15,11 @@ export interface EtapaTimerProps {
   funcionarioId: string;
   funcionarioNome?: string;
   etapa: EtapaOS;
-  tipoServico?: TipoServico;
+  servicoTipo?: TipoServico; // Add this prop to match the usage in EtapaCard
+  tipoServico?: TipoServico; // Keep this for backward compatibility
   onStart?: () => void;
   onCustomStart?: () => boolean;
+  onCustomTimerStart?: () => boolean; // Add this prop to match the usage in EtapaCard
   onPause?: (motivo?: string) => void;
   onResume?: () => void;
   onFinish?: (tempoTotal: number) => void;
@@ -28,22 +31,28 @@ export default function EtapaTimer({
   funcionarioId,
   funcionarioNome,
   etapa,
+  servicoTipo,
   tipoServico,
   onStart,
   onCustomStart,
+  onCustomTimerStart,
   onPause,
   onResume,
   onFinish,
   isEtapaConcluida = false,
 }: EtapaTimerProps) {
+  // Use either servicoTipo or tipoServico (for backward compatibility)
+  const actualTipoServico = servicoTipo || tipoServico;
+  
   // Logging detalhado para debug de problemas de renderização
   console.log("EtapaTimer renderizando com props:", {
     ordemId, 
     funcionarioId,
     etapa, 
-    tipoServico, 
+    tipoServico: actualTipoServico, 
     isEtapaConcluida,
     hasOnCustomStart: !!onCustomStart,
+    hasOnCustomTimerStart: !!onCustomTimerStart,
     hasOnStart: !!onStart,
     hasOnFinish: !!onFinish
   });
@@ -65,8 +74,8 @@ export default function EtapaTimer({
 
   // Atualizar tempo padrão quando as configurações ou tipo de serviço mudarem
   useEffect(() => {
-    if (tipoServico && itens.length > 0) {
-      const configuracaoServico = itens.find(item => item.tipo === tipoServico);
+    if (actualTipoServico && itens.length > 0) {
+      const configuracaoServico = itens.find(item => item.tipo === actualTipoServico);
       if (configuracaoServico) {
         // Converter HH:MM para minutos
         const partes = configuracaoServico.horaPadrao.split(':');
@@ -75,14 +84,14 @@ export default function EtapaTimer({
         setTempoPadrao(horasEmMinutos + minutos);
       }
     }
-  }, [tipoServico, itens, etapa]);
+  }, [actualTipoServico, itens, etapa]);
 
   // Validação adicional para prevenir erros
   if (!ordemId || !etapa) {
     console.error("EtapaTimer: props essenciais estão faltando", {
       ordemId, 
       etapa, 
-      tipoServico
+      tipoServico: actualTipoServico
     });
     return <div className="text-red-500">Erro: Dados insuficientes para iniciar o cronômetro</div>;
   }
@@ -101,15 +110,15 @@ export default function EtapaTimer({
   } = useOrdemTimer({
     ordemId,
     etapa,
-    tipoServico,
+    tipoServico: actualTipoServico,
     onStart: () => {
-      console.log("Timer started for:", {ordemId, etapa, tipoServico});
+      console.log("Timer started for:", {ordemId, etapa, tipoServico: actualTipoServico});
       if (onStart) onStart();
     },
     onPause,
     onResume,
     onFinish: (tempoTotal) => {
-      console.log("Timer finished with total time:", tempoTotal, "for", {ordemId, etapa, tipoServico});
+      console.log("Timer finished with total time:", tempoTotal, "for", {ordemId, etapa, tipoServico: actualTipoServico});
       if (onFinish) onFinish(tempoTotal);
     },
     isEtapaConcluida
@@ -128,10 +137,13 @@ export default function EtapaTimer({
   
   // Function to manage timer start, possibly opening dialog
   const handleStartTimer = () => {
-    console.log("handleStartTimer called in EtapaTimer", {ordemId, etapa, tipoServico});
+    console.log("handleStartTimer called in EtapaTimer", {ordemId, etapa, tipoServico: actualTipoServico});
     
-    if (onCustomStart) {
-      const shouldStartTimer = onCustomStart();
+    // Use onCustomTimerStart if provided, otherwise fall back to onCustomStart
+    const customStartHandler = onCustomTimerStart || onCustomStart;
+    
+    if (customStartHandler) {
+      const shouldStartTimer = customStartHandler();
       console.log("onCustomStart result:", shouldStartTimer);
       
       // Se onCustomStart retornar true, inicie o timer diretamente
