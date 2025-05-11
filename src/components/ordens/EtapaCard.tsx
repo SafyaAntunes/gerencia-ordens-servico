@@ -305,6 +305,27 @@ export default function EtapaCard({
     }
   };
 
+  const handleRemoverResponsavel = () => {
+    if (onEtapaStatusChange) {
+      // Manter o status atual mas remover o responsável
+      const etapaConcluida = isEtapaConcluida();
+      
+      onEtapaStatusChange(
+        etapa,
+        etapaConcluida,
+        "", // ID vazio para remover o responsável
+        "", // Nome vazio para remover o responsável
+        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+      );
+      
+      // Limpar a seleção local
+      setFuncionarioSelecionadoId("");
+      setFuncionarioSelecionadoNome("");
+      
+      toast.success("Responsável removido com sucesso!");
+    }
+  };
+
   return (
     <Card className="p-6 mb-4">
       <EtapaHeader 

@@ -124,9 +124,9 @@ export default function EtapaCard({
     }
     
     if (onEtapaStatusChange) {
-      const useId = lastSavedFuncionarioId || funcionarioSelecionadoId || funcionario?.id;
-      const useNome = lastSavedFuncionarioNome || funcionarioSelecionadoNome || funcionario?.nome;
-      
+      const useId = funcionarioSelecionadoId || funcionario?.id;
+      const useNome = funcionarioSelecionadoNome || funcionario?.nome;
+
       onEtapaStatusChange(
         etapa, 
         true, 
