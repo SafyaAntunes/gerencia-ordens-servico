@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +10,7 @@ interface InspecaoServicosSelectorProps {
   etapa: EtapaOS;
 }
 
-export function InspecaoServicosSelector({ servicosTipo, etapa }: InspecaoServicosSelectorProps) {
+export default function InspecaoServicosSelector({ servicosTipo, etapa }: InspecaoServicosSelectorProps) {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEtapaInicial = etapa === 'inspecao_inicial';

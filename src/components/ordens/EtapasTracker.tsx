@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { OrdemServico, Servico, TipoServico, EtapaOS } from "@/types/ordens";
 import { EtapaContent, EtapasSelector, InspecaoServicosSelector } from "@/components/ordens/etapas-tracker";
@@ -23,6 +22,22 @@ export default function EtapasTracker({ ordem, onOrdemUpdate, onFuncionariosChan
     handleEtapaStatusChange, 
     handleSubatividadeSelecionadaToggle
   } = useEtapasProgress({ ordem, onOrdemUpdate });
+
+  const etapasAtivas: EtapaOS[] = ["lavagem", "inspecao_inicial", "retifica", "montagem", "dinamometro", "inspecao_final"];
+  const etapasDisponiveis = {
+    montagem: ordem.servicos.some(s => s.tipo === "montagem"),
+    dinamometro: ordem.servicos.some(s => s.tipo === "dinamometro")
+  };
+
+  const isRetificaHabilitada = () => {
+    return ordem.servicos.some(s => 
+      ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo)
+    );
+  };
+
+  const isInspecaoFinalHabilitada = () => {
+    return ordem.etapasAndamento.retifica?.concluido === true;
+  };
   
   const precisaEscolherServico = etapaAtual === "inspecao_inicial" || etapaAtual === "inspecao_final";
   
@@ -31,9 +46,12 @@ export default function EtapasTracker({ ordem, onOrdemUpdate, onFuncionariosChan
       <div className="flex flex-col md:flex-row items-start gap-4">
         <div className="w-full md:w-1/3">
           <EtapasSelector 
-            etapaAtual={etapaAtual} 
-            onEtapaChange={setEtapaAtual} 
-            etapaInfos={etapaInfos}
+            etapasAtivas={etapasAtivas}
+            selectedEtapa={etapaAtual}
+            etapasDisponiveis={etapasDisponiveis}
+            onEtapaSelect={setEtapaAtual}
+            isRetificaHabilitada={isRetificaHabilitada}
+            isInspecaoFinalHabilitada={isInspecaoFinalHabilitada}
           />
         </div>
         
@@ -44,8 +62,8 @@ export default function EtapasTracker({ ordem, onOrdemUpdate, onFuncionariosChan
         <div className="w-full md:w-2/3">
           {precisaEscolherServico && (
             <InspecaoServicosSelector 
-              servicoTipo={servicoTipo} 
-              onServicoChange={setServicoTipo}
+              servicosTipo={["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"]}
+              etapa={etapaAtual}
             />
           )}
           

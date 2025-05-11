@@ -1,4 +1,3 @@
-
 import { EtapaOS, Servico, TipoServico } from "@/types/ordens";
 import { Card } from "@/components/ui/card";
 import { EmptyServices } from "./EmptyServices";
@@ -18,7 +17,7 @@ interface EtapaContentProps {
   onFuncionariosChange?: (etapa: EtapaOS, funcionariosIds: string[], funcionariosNomes: string[], servicoTipo?: string) => void;
 }
 
-export function EtapaContent({
+export default function EtapaContent({
   ordemId,
   etapa,
   etapaInfo,

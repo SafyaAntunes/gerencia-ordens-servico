@@ -8,8 +8,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { EmptyServices } from "./EmptyServices";
-import { EtapasSelector } from "./EtapasSelector";
-import { EtapaContent } from "./EtapaContent";
 import { useEtapasProgress } from "./useEtapasProgress";
 
 // Objeto para armazenar timestamps de notificações para evitar duplicatas em um curto período

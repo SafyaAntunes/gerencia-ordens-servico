@@ -1,11 +1,15 @@
-
 import { useState, useCallback } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { OrdemServico, EtapaOS } from "@/types/ordens";
 import { toast } from "sonner";
 
-export function useEtapasProgress() {
+interface UseEtapasProgressProps {
+  ordem: OrdemServico;
+  onOrdemUpdate: (ordemAtualizada: OrdemServico) => void;
+}
+
+export function useEtapasProgress({ ordem, onOrdemUpdate }: UseEtapasProgressProps) {
   const [progressoTotal, setProgressoTotal] = useState(0);
   
   const calcularProgressoTotal = useCallback((ordemAtual: OrdemServico) => {
@@ -136,6 +140,62 @@ export function useEtapasProgress() {
   return {
     progressoTotal,
     calcularProgressoTotal,
-    atualizarProgressoNoDB
+    atualizarProgressoNoDB,
+    etapaInfos: ordem.etapasAndamento || {},
+    servicosByEtapa: ordem.servicos.reduce((acc, servico) => {
+      // Determine the etapa based on the service type
+      let etapa: EtapaOS;
+      if (servico.tipo === 'lavagem') {
+        etapa = 'lavagem';
+      } else if (servico.tipo === 'inspecao_inicial') {
+        etapa = 'inspecao_inicial';
+      } else if (servico.tipo === 'inspecao_final') {
+        etapa = 'inspecao_final';
+      } else if (['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo)) {
+        etapa = 'retifica';
+      } else if (servico.tipo === 'montagem') {
+        etapa = 'montagem';
+      } else if (servico.tipo === 'dinamometro') {
+        etapa = 'dinamometro';
+      } else {
+        return acc;
+      }
+
+      if (!acc[etapa]) {
+        acc[etapa] = [];
+      }
+      acc[etapa].push(servico);
+      return acc;
+    }, {} as Record<EtapaOS, typeof ordem.servicos>),
+    handleSubatividadeToggle: async (servicoTipo: string, subatividadeId: string, checked: boolean) => {
+      const ordemRef = doc(db, "ordens_servico", ordem.id);
+      await updateDoc(ordemRef, {
+        [`servicos.${ordem.servicos.findIndex(s => s.tipo === servicoTipo)}.subatividades.${ordem.servicos.find(s => s.tipo === servicoTipo)?.subatividades.findIndex(sub => sub.id === subatividadeId)}.selecionada`]: checked
+      });
+    },
+    handleServicoStatusChange: async (servicoTipo: string, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => {
+      const ordemRef = doc(db, "ordens_servico", ordem.id);
+      await updateDoc(ordemRef, {
+        [`servicos.${ordem.servicos.findIndex(s => s.tipo === servicoTipo)}.concluido`]: concluido,
+        [`servicos.${ordem.servicos.findIndex(s => s.tipo === servicoTipo)}.funcionarioId`]: funcionarioId,
+        [`servicos.${ordem.servicos.findIndex(s => s.tipo === servicoTipo)}.funcionarioNome`]: funcionarioNome
+      });
+    },
+    handleEtapaStatusChange: async (etapa: string, concluida: boolean, funcionarioId?: string, funcionarioNome?: string, servicoTipo?: string) => {
+      const ordemRef = doc(db, "ordens_servico", ordem.id);
+      const etapaKey = servicoTipo ? `${etapa}_${servicoTipo}` : etapa;
+      await updateDoc(ordemRef, {
+        [`etapasAndamento.${etapaKey}.concluido`]: concluida,
+        [`etapasAndamento.${etapaKey}.funcionarioId`]: funcionarioId,
+        [`etapasAndamento.${etapaKey}.funcionarioNome`]: funcionarioNome,
+        [`etapasAndamento.${etapaKey}.finalizado`]: concluida ? new Date() : null
+      });
+    },
+    handleSubatividadeSelecionadaToggle: async (servicoTipo: string, subatividadeId: string, checked: boolean) => {
+      const ordemRef = doc(db, "ordens_servico", ordem.id);
+      await updateDoc(ordemRef, {
+        [`servicos.${ordem.servicos.findIndex(s => s.tipo === servicoTipo)}.subatividades.${ordem.servicos.find(s => s.tipo === servicoTipo)?.subatividades.findIndex(sub => sub.id === subatividadeId)}.selecionada`]: checked
+      });
+    }
   };
 }

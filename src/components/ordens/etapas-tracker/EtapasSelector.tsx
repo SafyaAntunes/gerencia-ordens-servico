@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +17,7 @@ interface EtapasSelectorProps {
   isInspecaoFinalHabilitada: () => boolean;
 }
 
-export function EtapasSelector({
+export default function EtapasSelector({
   etapasAtivas,
   selectedEtapa,
   etapasDisponiveis,
