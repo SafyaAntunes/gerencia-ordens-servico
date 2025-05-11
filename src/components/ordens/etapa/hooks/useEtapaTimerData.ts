@@ -2,21 +2,8 @@
 import { useState, useEffect } from 'react';
 import { EtapaOS, TipoServico, TipoAtividade } from '@/types/ordens';
 import { useConfiguracoesServico } from '@/hooks/useConfiguracoesServico';
-import { useOrdemTimer } from '@/hooks/useOrdemTimer';
 
-interface UseEtapaTimerDataProps {
-  etapa: EtapaOS;
-  ordemId: string;
-  servicoTipo?: TipoServico;
-  etapaInfo?: any;
-}
-
-export function useEtapaTimerData({
-  etapa,
-  ordemId,
-  servicoTipo,
-  etapaInfo
-}: UseEtapaTimerDataProps) {
+export function useEtapaTimerData(etapa: EtapaOS, tipoServico?: TipoServico) {
   const [tempoPadrao, setTempoPadrao] = useState<number>(0);
   const [tempoEstimadoMS, setTempoEstimadoMS] = useState<number>(0);
 
@@ -35,8 +22,8 @@ export function useEtapaTimerData({
 
   // Update standard time when configurations or service type change
   useEffect(() => {
-    if (servicoTipo && itens.length > 0) {
-      const configuracaoServico = itens.find(item => item.tipo === servicoTipo);
+    if (tipoServico && itens.length > 0) {
+      const configuracaoServico = itens.find(item => item.tipo === tipoServico);
       if (configuracaoServico) {
         // Convert HH:MM to minutes
         const partes = configuracaoServico.horaPadrao.split(':');
@@ -51,36 +38,11 @@ export function useEtapaTimerData({
         setTempoEstimadoMS(milliseconds);
       }
     }
-  }, [servicoTipo, itens, etapa]);
-
-  // Use the timer hook
-  const {
-    isRunning,
-    isPaused,
-    displayTime,
-    totalSavedTime,
-    handleStart: startTimer,
-    handlePause: pauseTimer,
-    handleResume: resumeTimer,
-    handleFinish: stopTimer
-  } = useOrdemTimer({
-    ordemId,
-    etapa,
-    tipoServico: servicoTipo,
-    isEtapaConcluida: etapaInfo?.concluido || false
-  });
+  }, [tipoServico, itens, etapa]);
 
   return {
-    isRunning,
-    isPaused,
-    displayTime,
-    startTimer,
-    pauseTimer,
-    resumeTimer,
-    stopTimer,
     tempoPadrao,
     tempoEstimadoMS,
-    tipoAtividade,
-    timerId: null // Compatibilidade com código existente
+    tipoAtividade
   };
 }

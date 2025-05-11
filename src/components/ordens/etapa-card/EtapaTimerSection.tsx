@@ -1,4 +1,3 @@
-
 import { EtapaOS, TipoServico } from "@/types/ordens";
 import OrdemCronometro from "../OrdemCronometro";
 import useEtapaTimerSection from "@/hooks/useEtapaTimerSection";
@@ -86,6 +85,3 @@ export function EtapaTimerSection({
     </div>
   );
 }
-
-// Export as named export and default as well
-export default EtapaTimerSection;

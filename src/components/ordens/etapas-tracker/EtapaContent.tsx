@@ -1,4 +1,3 @@
-
 import React from "react";
 import { EtapaOS, OrdemServico, Servico, TipoServico } from "@/types/ordens";
 import { EtapaCard } from "@/components/ordens/etapa";
@@ -12,7 +11,7 @@ interface EtapaContentProps {
   onSubatividadeToggle: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
   onServicoStatusChange: (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
   onEtapaStatusChange: (etapa: EtapaOS, concluida: boolean, funcionarioId?: string, funcionarioNome?: string, servicoTipo?: TipoServico) => void;
-  onSubatividadeSelecionadaToggle: (
+  onSubatividadeSelecionadaToggle?: (
     servicoTipo: TipoServico,
     subatividadeId: string,
     checked: boolean

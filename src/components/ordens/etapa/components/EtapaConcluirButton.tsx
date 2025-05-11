@@ -6,17 +6,12 @@ interface EtapaConcluirButtonProps {
   isConcluida: boolean;
   onClick: () => void;
   className?: string;
-  todasSubatividadesConcluidas?: boolean;
-  temFuncionarioSelecionado?: boolean;
-  onConcluir?: (concluir: boolean) => Promise<boolean>;
 }
 
 export default function EtapaConcluirButton({
   isConcluida,
   onClick,
-  className = "",
-  todasSubatividadesConcluidas,
-  temFuncionarioSelecionado
+  className = ""
 }: EtapaConcluirButtonProps) {
   if (isConcluida) {
     return null;
@@ -28,7 +23,6 @@ export default function EtapaConcluirButton({
       size="sm" 
       className={`w-full bg-blue-500 hover:bg-blue-600 text-white ${className}`}
       onClick={onClick}
-      disabled={todasSubatividadesConcluidas === false || !temFuncionarioSelecionado}
     >
       <CheckCircle2 className="h-4 w-4 mr-1" />
       Marcar Etapa como Concluída
