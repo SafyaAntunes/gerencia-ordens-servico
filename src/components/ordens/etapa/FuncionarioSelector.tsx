@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { AtribuirMultiplosFuncionariosDialog } from "@/components/funcionarios/AtribuirMultiplosFuncionariosDialog";
 import { AtribuirFuncionarioDialog } from "@/components/funcionarios/AtribuirFuncionarioDialog";
 import { Badge } from "@/components/ui/badge";
-import { Users, UserPlus, X } from "lucide-react";
+import { Users, UserPlus, X, Loader2 } from "lucide-react";
 import { obterFuncionariosAtribuidos } from "@/services/funcionarioEmServicoService";
 import { EtapaOS, TipoServico } from "@/types/ordens";
 import { format } from "date-fns";
@@ -44,6 +45,7 @@ export function FuncionarioSelector({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [funcionariosAtribuidos, setFuncionariosAtribuidos] = useState<FuncionarioAtribuido[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   // Debug logs
   console.log("FuncionarioSelector - render", { 
@@ -96,6 +98,7 @@ export function FuncionarioSelector({
 
   const handleRemoverFuncionario = async (funcionarioId: string) => {
     try {
+      setIsRemoving(true);
       // Filtra o funcionário a ser removido
       const funcionariosRestantes = funcionariosAtribuidos.filter(f => f.id !== funcionarioId);
       const ids = funcionariosRestantes.map(f => f.id);
@@ -103,8 +106,27 @@ export function FuncionarioSelector({
       
       await onSaveResponsavel(ids, nomes);
       setFuncionariosAtribuidos(funcionariosRestantes);
+      
+      // Se todos os funcionários foram removidos, certifique-se de passar arrays vazios
+      if (ids.length === 0) {
+        await onSaveResponsavel([], []);
+      }
     } catch (error) {
       console.error("Erro ao remover funcionário:", error);
+    } finally {
+      setIsRemoving(false);
+    }
+  };
+
+  const handleRemoverTodos = async () => {
+    try {
+      setIsRemoving(true);
+      await onSaveResponsavel([], []);
+      setFuncionariosAtribuidos([]);
+    } catch (error) {
+      console.error("Erro ao remover todos funcionários:", error);
+    } finally {
+      setIsRemoving(false);
     }
   };
 
@@ -116,16 +138,31 @@ export function FuncionarioSelector({
     <div className="mt-3 mb-4 space-y-3">
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-medium">Funcionários Responsáveis:</h4>
-        <Button 
-          variant="outline" 
-          size="sm"
-          className="flex items-center gap-1.5"
-          onClick={handleOpenDialog}
-          disabled={isSaving}
-        >
-          <UserPlus className="h-3.5 w-3.5" />
-          {funcionariosAtribuidos.length === 0 ? "Atribuir Funcionários" : "Gerenciar Funcionários"}
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="flex items-center gap-1.5"
+            onClick={handleOpenDialog}
+            disabled={isSaving || isRemoving}
+          >
+            <UserPlus className="h-3.5 w-3.5" />
+            {funcionariosAtribuidos.length === 0 ? "Atribuir" : "Gerenciar"}
+          </Button>
+          
+          {funcionariosAtribuidos.length > 0 && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="flex items-center gap-1.5"
+              onClick={handleRemoverTodos}
+              disabled={isSaving || isRemoving}
+            >
+              <X className="h-3.5 w-3.5" />
+              Remover Todos
+            </Button>
+          )}
+        </div>
       </div>
       
       {isLoading ? (
@@ -162,9 +199,13 @@ export function FuncionarioSelector({
                     size="icon" 
                     className="h-8 w-8 text-muted-foreground hover:text-destructive"
                     onClick={() => handleRemoverFuncionario(funcionario.id)}
-                    disabled={isSaving}
+                    disabled={isSaving || isRemoving}
                   >
-                    <X className="h-4 w-4" />
+                    {isRemoving ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <X className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
               );
@@ -175,7 +216,7 @@ export function FuncionarioSelector({
         <div className="flex flex-col items-center justify-center border border-dashed rounded-lg p-6 bg-muted/10">
           <Users className="h-8 w-8 mb-2 opacity-50" />
           <p className="text-sm">Nenhum funcionário atribuído</p>
-          <p className="text-xs mt-1">Clique em "Atribuir Funcionários" para começar</p>
+          <p className="text-xs mt-1">Clique em "Atribuir" para começar</p>
         </div>
       )}
       
