@@ -1,9 +1,8 @@
-
 import { OrdemServico, StatusOS, EtapaOS } from "@/types/ordens";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OrderDetailsTab } from "@/components/ordens/detalhes/OrderDetailsTab";
 import { FotosTab } from "@/components/ordens/detalhes/FotosTab";
-import EtapasTracker from "@/components/ordens/EtapasTracker";
+import EtapasTracker from "@/components/ordens/etapas-tracker/EtapasTracker";
 import ProgressoRelatorio from "@/components/ordens/ProgressoRelatorio";
 
 interface OrdemTabsProps {

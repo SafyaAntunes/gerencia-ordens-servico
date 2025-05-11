@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -9,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { EmptyServices } from "./EmptyServices";
 import { useEtapasProgress } from "./useEtapasProgress";
+import EtapasSelector from "./EtapasSelector";
+import EtapaContent from "./EtapaContent";
 
 // Objeto para armazenar timestamps de notificações para evitar duplicatas em um curto período
 const notificationTimestamps: Record<string, number> = {};
@@ -38,7 +39,7 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate }: EtapasTrackerProps) 
   const [selectedEtapa, setSelectedEtapa] = useState<EtapaOS | null>(null);
   const [selectedServicoTipo, setSelectedServicoTipo] = useState<TipoServico | null>(null);
   const { funcionario } = useAuth();
-  const { progressoTotal, calcularProgressoTotal } = useEtapasProgress();
+  const { progressoTotal, calcularProgressoTotal } = useEtapasProgress({ ordem, onOrdemUpdate });
 
   // Use memoization for expensive calculations
   const verificarEtapasDisponiveis = useCallback(() => {
@@ -419,10 +420,15 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate }: EtapasTrackerProps) 
           
           {selectedEtapa && (
             <EtapaContent
-              ordem={ordem}
-              selectedEtapa={selectedEtapa}
-              selectedServicoTipo={selectedServicoTipo}
-              funcionario={funcionario}
+              ordemId={ordem.id}
+              etapa={selectedEtapa}
+              etapaInfo={ordem.etapasAndamento}
+              servicos={
+                ordem.servicos.filter(s => {
+                  return true; // ou ajuste conforme sua lógica
+                })
+              }
+              servicoTipo={selectedServicoTipo || undefined}
               onSubatividadeToggle={handleSubatividadeToggle}
               onServicoStatusChange={handleServicoStatusChange}
               onEtapaStatusChange={handleEtapaStatusChange}
