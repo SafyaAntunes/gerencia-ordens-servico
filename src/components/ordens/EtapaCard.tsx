@@ -279,50 +279,23 @@ export default function EtapaCard({
   };
 
   // Add a new handler for the Save Responsavel functionality
-  const handleSaveResponsavel = () => {
-    if (!funcionarioSelecionadoId) {
-      toast.error("Selecione um funcionário para salvar o responsável");
-      return;
-    }
-    
-    // Usar apenas o funcionário selecionado, sem fallback para o logado
-    const funcId = funcionarioSelecionadoId;
-    const funcNome = funcionarioSelecionadoNome;
-    
-    if (onEtapaStatusChange) {
-      // Keep the current status (completed or not) but update the responsible person
-      const etapaConcluida = isEtapaConcluida();
-      
-      onEtapaStatusChange(
-        etapa,
-        etapaConcluida,
-        funcId,
-        funcNome,
-        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
-      );
-      
-      toast.success(`Responsável ${funcNome} salvo com sucesso!`);
-    }
-  };
-
-  const handleRemoverResponsavel = () => {
-    if (onEtapaStatusChange) {
-      // Manter o status atual mas remover o responsável
-      const etapaConcluida = isEtapaConcluida();
-      
-      onEtapaStatusChange(
-        etapa,
-        etapaConcluida,
-        "", // ID vazio para remover o responsável
-        "", // Nome vazio para remover o responsável
-        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
-      );
-      
-      // Limpar a seleção local
-      setFuncionarioSelecionadoId("");
-      setFuncionarioSelecionadoNome("");
-      
-      toast.success("Responsável removido com sucesso!");
+  const handleSaveResponsavel = async (): Promise<void> => {
+    try {
+      if (funcionarioSelecionadoId && onEtapaStatusChange) {
+        await onEtapaStatusChange(
+          etapa,
+          !!etapaInfo?.concluido,
+          funcionarioSelecionadoId,
+          funcionarioSelecionadoNome,
+          (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+        );
+        toast.success(`Responsável salvo com sucesso!`);
+      } else {
+        toast.error("Selecione um funcionário para salvar como responsável");
+      }
+    } catch (error) {
+      console.error("Erro ao salvar responsável:", error);
+      toast.error("Erro ao salvar responsável");
     }
   };
 

@@ -12,7 +12,7 @@ interface UseEtapaTimerSectionProps {
   onMarcarConcluido: () => void;
   onTimerStart: () => boolean;
   onCustomStart: () => boolean;
-  onSaveResponsavel: () => void;
+  onSaveResponsavel: () => Promise<void>;
 }
 
 export default function useEtapaTimerSection({
@@ -25,7 +25,8 @@ export default function useEtapaTimerSection({
   onEtapaConcluida,
   onMarcarConcluido,
   onTimerStart,
-  onCustomStart
+  onCustomStart,
+  onSaveResponsavel
 }: UseEtapaTimerSectionProps) {
   // We can add additional logic here if needed in the future
   
@@ -46,6 +47,9 @@ export default function useEtapaTimerSection({
       isConcluida: isEtapaConcluida,
       onClick: onMarcarConcluido,
       className: ""
+    },
+    saveResponsavelProps: {
+      onSave: onSaveResponsavel
     }
   };
 }
