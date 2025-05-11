@@ -1,11 +1,11 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { UserPlus } from "lucide-react";
+import { UserPlus, X } from "lucide-react";
 import { AtribuirMultiplosFuncionariosDialog } from "@/components/funcionarios/AtribuirMultiplosFuncionariosDialog";
 import { useState } from "react";
-import { Funcionario } from "@/types/funcionarios";
 import { EtapaOS, TipoServico } from "@/types/ordens";
+import { toast } from "sonner";
 
 interface FuncionariosResponsaveisProps {
   funcionarioId?: string;
@@ -45,6 +45,17 @@ export default function FuncionariosResponsaveis({
     onFuncionariosChange(ids, nomes);
   };
   
+  const handleRemoveFuncionario = (index: number) => {
+    const newIds = [...todosIds];
+    const newNomes = [...todosNomes];
+    
+    newIds.splice(index, 1);
+    newNomes.splice(index, 1);
+    
+    onFuncionariosChange(newIds, newNomes);
+    toast.success("Funcionário removido com sucesso");
+  };
+  
   const temFuncionarios = todosIds.length > 0 && todosIds.some(id => id !== "");
 
   return (
@@ -78,13 +89,27 @@ export default function FuncionariosResponsaveis({
       ) : (
         <div className="space-y-2">
           {todosIds.map((id, index) => (
-            <div key={id} className="flex items-center gap-2 p-2 bg-gray-50 rounded-md">
-              <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
-                <svg className="h-4 w-4 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="currentColor"/>
-                </svg>
+            <div key={id} className="flex items-center justify-between gap-2 p-2 bg-gray-50 rounded-md">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
+                  <svg className="h-4 w-4 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="currentColor"/>
+                  </svg>
+                </div>
+                <span>{todosNomes[index] || "Funcionário"}</span>
               </div>
-              <span>{todosNomes[index] || "Funcionário"}</span>
+              
+              {!isEtapaConcluida && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => handleRemoveFuncionario(index)}
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-red-500"
+                >
+                  <X className="h-4 w-4" />
+                  <span className="sr-only">Remover</span>
+                </Button>
+              )}
             </div>
           ))}
         </div>

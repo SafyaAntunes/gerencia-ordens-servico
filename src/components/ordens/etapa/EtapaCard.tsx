@@ -13,6 +13,7 @@ import EtapaConcluiButton from "./EtapaConcluiButton";
 import EtapaServicos from "./EtapaServicos";
 import EtapaTimer from "./EtapaTimer";
 import FuncionariosResponsaveis from "./components/FuncionariosResponsaveis";
+import { useEtapaPermissoes } from "./hooks/useEtapaPermissoes";
 
 interface EtapaCardProps {
   ordemId: string;
@@ -57,6 +58,7 @@ export default function EtapaCard({
   onFuncionariosChange
 }: EtapaCardProps) {
   const { funcionario } = useAuth();
+  const { podeAtribuirFuncionario, podeTrabalharNaEtapa } = useEtapaPermissoes(etapa, servicoTipo);
   const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
   const [funcionarioSelecionadoId, setFuncionarioSelecionadoId] = useState<string>(etapaInfo?.funcionarioId || "");
   const [funcionarioSelecionadoNome, setFuncionarioSelecionadoNome] = useState<string | undefined>(etapaInfo?.funcionarioNome);
@@ -86,34 +88,6 @@ export default function EtapaCard({
       setFuncionarioSelecionadoNome(etapaInfo.funcionarioNome);
     }
   }, [etapaInfo?.funcionarioId, etapaInfo?.funcionarioNome]);
-
-  // Verificar se o usuário tem permissão para atribuir funcionários
-  const podeAtribuirFuncionario = funcionario?.nivelPermissao === 'admin' || 
-                                 funcionario?.nivelPermissao === 'gerente';
-  
-  const podeTrabalharNaEtapa = () => {
-    if (funcionario?.nivelPermissao === 'admin' || 
-        funcionario?.nivelPermissao === 'gerente') {
-      return true;
-    }
-    
-    if (etapa === 'lavagem') {
-      return funcionario?.especialidades?.includes('lavagem');
-    }
-    
-    if (etapa === 'inspecao_inicial' || etapa === 'inspecao_final') {
-      if (servicoTipo) {
-        return funcionario?.especialidades?.includes(servicoTipo);
-      }
-      return false;
-    }
-    
-    if (servicoTipo) {
-      return funcionario?.especialidades?.includes(servicoTipo);
-    }
-    
-    return funcionario?.especialidades?.includes(etapa);
-  };
   
   // Fetch funcionarios from database
   useEffect(() => {
@@ -188,8 +162,6 @@ export default function EtapaCard({
         setFuncionarioSelecionadoId(ids[0]);
         setFuncionarioSelecionadoNome(nomes[0]);
       }
-      
-      toast.success("Funcionários atribuídos com sucesso");
     }
   };
   
@@ -229,7 +201,7 @@ export default function EtapaCard({
       
       <EtapaProgresso servicos={servicos} />
       
-      {/* Novo componente de Funcionários Responsáveis */}
+      {/* Atribuição de Funcionários Responsáveis */}
       {(podeAtribuirFuncionario || podeTrabalharNaEtapa()) && (
         <FuncionariosResponsaveis
           funcionarioId={etapaInfo?.funcionarioId}
