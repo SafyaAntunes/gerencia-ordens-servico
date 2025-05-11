@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { getFuncionarios } from "@/services/funcionarioService";
@@ -68,16 +69,15 @@ export function useFuncionarioSelection({
     
     console.log("Setting up initial funcionario with:", { 
       etapaInfo: etapaInfo?.funcionarioId, 
-      initialFuncionarioId, 
-      currentUserId: funcionario?.id 
+      initialFuncionarioId
     });
     
-    // Priority: etapaInfo > initialFuncionarioId
+    // Priority: etapaInfo > initialFuncionarioId only (NO FALLBACK to current user)
     if (etapaInfo?.funcionarioId) {
       foundId = etapaInfo.funcionarioId;
       foundNome = etapaInfo.funcionarioNome || "";
       
-      if (!foundNome) {
+      if (!foundNome && foundId) {
         const funcionarioEncontrado = funcionariosData.find(f => f.id === foundId);
         if (funcionarioEncontrado) {
           foundNome = funcionarioEncontrado.nome;
@@ -88,23 +88,24 @@ export function useFuncionarioSelection({
       
       if (initialFuncionarioNome) {
         foundNome = initialFuncionarioNome;
-      } else {
+      } else if (foundId) {
         const funcionarioEncontrado = funcionariosData.find(f => f.id === foundId);
         if (funcionarioEncontrado) {
           foundNome = funcionarioEncontrado.nome;
         }
       }
     }
-    // Removido o fallback para funcionario?.id (usuário logado)
     
     // Check if the funcionario exists in our options
-    const funcionarioExiste = foundId ? funcionariosData.some(f => f.id === foundId) : false;
-    
-    if (foundId && !funcionarioExiste) {
-      console.warn(`Funcionário com ID ${foundId} não encontrado na lista.`);
-      // Não faz fallback para usuário logado, apenas limpa
-      foundId = "";
-      foundNome = "";
+    if (foundId) {
+      const funcionarioExiste = funcionariosData.some(f => f.id === foundId);
+      
+      if (!funcionarioExiste) {
+        console.warn(`Funcionário com ID ${foundId} não encontrado na lista.`);
+        // Reset values if funcionario not found
+        foundId = "";
+        foundNome = "";
+      }
     }
     
     console.log("Selected funcionario:", { id: foundId, nome: foundNome });
@@ -113,7 +114,7 @@ export function useFuncionarioSelection({
     setFuncionarioSelecionadoId(foundId);
     setFuncionarioSelecionadoNome(foundNome);
     setIsInitialized(true);
-  }, [etapaInfo, funcionario, initialFuncionarioId, initialFuncionarioNome]);
+  }, [etapaInfo, initialFuncionarioId, initialFuncionarioNome]);
   
   // Update when etapaInfo changes
   useEffect(() => {

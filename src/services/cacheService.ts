@@ -1,3 +1,4 @@
+
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -45,7 +46,9 @@ export async function getDocumentWithCache(collectionName: string, docId: string
 export function clearDocumentCache(key?: string) {
   if (key) {
     delete documentCache[key];
+    console.log(`Cache limpo para chave: ${key}`);
   } else {
     Object.keys(documentCache).forEach(k => delete documentCache[k]);
+    console.log("Cache limpo completamente");
   }
-} 
+}
