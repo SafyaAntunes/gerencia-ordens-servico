@@ -1,10 +1,10 @@
+
 import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { EtapaOS, TipoServico } from "@/types/ordens";
 import { useAuth } from "@/hooks/useAuth";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import useSWR, { mutate } from "swr";
 
 interface UseEtapaResponsavelProps {
   etapa: EtapaOS;
@@ -102,8 +102,6 @@ export function useEtapaResponsavel({
         ordemId
       });
 
-      const cacheKey = `ordens_servico/${ordemId}`;
-
       if (onEtapaStatusChange) {
         await onEtapaStatusChange(
           etapa,
@@ -118,23 +116,34 @@ export function useEtapaResponsavel({
             ? `${etapa}_${servicoTipo}`
             : etapa;
 
+        // Obter documento atual para garantir dados atualizados
         const ordemRef = doc(db, "ordens_servico", ordemId);
+        const ordemDoc = await getDoc(ordemRef);
+        
+        if (!ordemDoc.exists()) {
+          toast.error("Ordem não encontrada");
+          return;
+        }
+        
+        const dadosAtuais = ordemDoc.data();
+        const etapasAndamento = dadosAtuais.etapasAndamento || {};
+        const etapaAtual = etapasAndamento[etapaKey] || {};
+        
+        // Garantir que atualizamos usando os dados mais recentes
         await updateDoc(ordemRef, {
           [`etapasAndamento.${etapaKey}.funcionarioId`]: funcionarioSelecionadoId,
           [`etapasAndamento.${etapaKey}.funcionarioNome`]: funcionarioSelecionadoNome || "",
-          [`etapasAndamento.${etapaKey}.iniciado`]: etapaInfo?.iniciado || new Date(),
-          [`etapasAndamento.${etapaKey}.concluido`]: etapaInfo?.concluido || false,
-          [`etapasAndamento.${etapaKey}.finalizado`]: etapaInfo?.finalizado || null,
+          [`etapasAndamento.${etapaKey}.iniciado`]: etapaAtual.iniciado || new Date(),
+          [`etapasAndamento.${etapaKey}.concluido`]: etapaAtual.concluido || false,
+          [`etapasAndamento.${etapaKey}.finalizado`]: etapaAtual.finalizado || null,
           [`etapasAndamento.${etapaKey}.servicoTipo`]: servicoTipo || null,
-          [`etapasAndamento.${etapaKey}.status`]: etapaInfo?.status || "em_andamento"
+          [`etapasAndamento.${etapaKey}.status`]: etapaAtual.status || "em_andamento"
         });
       }
 
       setLastSavedFuncionarioId(funcionarioSelecionadoId);
       setLastSavedFuncionarioNome(funcionarioSelecionadoNome);
       lastUpdateTime.current = now;
-
-      await mutate(cacheKey);
 
       if (canShowNotification("Responsável atualizado")) {
         toast.success("Responsável atualizado com sucesso!");
@@ -170,6 +179,49 @@ export function useEtapaResponsavel({
       return () => clearTimeout(timeout);
     }
   }, [funcionarioSelecionadoId, lastSavedFuncionarioId, isSaving, handleSaveResponsavel]);
+
+  const handleRemoverFuncionario = useCallback(async () => {
+    if (isSaving) return;
+    
+    setIsSaving(true);
+    try {
+      console.log("Removendo funcionário da etapa:", {
+        etapa,
+        servicoTipo,
+        ordemId
+      });
+      
+      const etapaKey =
+        (["inspecao_inicial", "inspecao_final", "lavagem"].includes(etapa) && servicoTipo)
+          ? `${etapa}_${servicoTipo}`
+          : etapa;
+      
+      // Obter documento atual
+      const ordemRef = doc(db, "ordens_servico", ordemId);
+      const ordemDoc = await getDoc(ordemRef);
+      
+      if (!ordemDoc.exists()) {
+        toast.error("Ordem não encontrada");
+        return;
+      }
+      
+      // Remover explicitamente as propriedades do funcionário
+      await updateDoc(ordemRef, {
+        [`etapasAndamento.${etapaKey}.funcionarioId`]: "",
+        [`etapasAndamento.${etapaKey}.funcionarioNome`]: ""
+      });
+      
+      setLastSavedFuncionarioId(undefined);
+      setLastSavedFuncionarioNome(undefined);
+      
+      toast.success("Funcionário removido com sucesso");
+    } catch (error) {
+      console.error("Erro ao remover funcionário:", error);
+      toast.error("Erro ao remover funcionário");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [etapa, servicoTipo, ordemId, isSaving]);
 
   const handleMarcarConcluidoClick = useCallback(() => {
     if (isEtapaConcluida) {
@@ -210,6 +262,7 @@ export function useEtapaResponsavel({
 
   return {
     handleSaveResponsavel,
+    handleRemoverFuncionario,
     handleCustomTimerStart,
     handleMarcarConcluidoClick,
     lastSavedFuncionarioId,

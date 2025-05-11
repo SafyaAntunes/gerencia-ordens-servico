@@ -1,19 +1,12 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { AtribuirMultiplosFuncionariosDialog } from "@/components/funcionarios/AtribuirMultiplosFuncionariosDialog";
-import { AtribuirFuncionarioDialog } from "@/components/funcionarios/AtribuirFuncionarioDialog";
-import { Badge } from "@/components/ui/badge";
-import { Users, UserPlus, X } from "lucide-react";
-import { obterFuncionariosAtribuidos } from "@/services/funcionarioEmServicoService";
-import { EtapaOS, TipoServico } from "@/types/ordens";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
-interface FuncionarioAtribuido {
-  id: string;
-  nome: string;
-  inicio: Date;
-}
+import React, { useState, useEffect } from "react";
+import { User, Save, Loader2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Funcionario } from "@/types/funcionarios";
+import { toast } from "sonner";
+import { EtapaOS, TipoServico } from "@/types/ordens";
+import { marcarFuncionarioEmServico } from "@/services/funcionarioEmServicoService";
 
 interface FuncionarioSelectorProps {
   ordemId: string;
@@ -23,13 +16,11 @@ interface FuncionarioSelectorProps {
   funcionariosOptions: any[];
   isEtapaConcluida: boolean;
   onFuncionarioChange: (id: string) => void;
-  onSaveResponsavel: (ids: string[], nomes: string[]) => Promise<void>;
-  isMultiplosFuncionarios?: boolean;
+  onSaveResponsavel: () => Promise<void>;
   isSaving?: boolean;
 }
 
-// Using named export instead of default export
-export function FuncionarioSelector({
+export default function FuncionarioSelector({
   ordemId,
   etapa,
   servicoTipo,
@@ -38,168 +29,118 @@ export function FuncionarioSelector({
   isEtapaConcluida,
   onFuncionarioChange,
   onSaveResponsavel,
-  isMultiplosFuncionarios = true,
   isSaving = false
 }: FuncionarioSelectorProps) {
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [funcionariosAtribuidos, setFuncionariosAtribuidos] = useState<FuncionarioAtribuido[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
+  const [selectedValue, setSelectedValue] = useState<string>("");
+  const [isMarkingAsBusy, setIsMarkingAsBusy] = useState(false);
+  
   // Debug logs
-  console.log("FuncionarioSelector - render", { 
-    funcionarioSelecionadoId, 
-    funcionariosAtribuidos: funcionariosAtribuidos.map(f => f.id)
-  });
-
-  // Buscar funcionários atribuídos quando o componente for montado ou quando houver mudanças relevantes
+  console.log("FuncionarioSelector - render com ID:", funcionarioSelecionadoId);
+  console.log("FuncionarioSelector - options:", funcionariosOptions);
+  
+  // Sync with parent component value - melhorado para garantir sincronização correta
   useEffect(() => {
-    const buscarFuncionariosAtribuidos = async () => {
-      if (!ordemId) return;
-      
-      setIsLoading(true);
-      try {
-        const funcionarios = await obterFuncionariosAtribuidos(ordemId, etapa, servicoTipo);
-        console.log("Funcionários atribuídos recebidos:", funcionarios);
-        setFuncionariosAtribuidos(funcionarios);
-      } catch (error) {
-        console.error("Erro ao buscar funcionários atribuídos:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    console.log("FuncionarioSelector - funcionarioSelecionadoId mudou:", funcionarioSelecionadoId);
+    setSelectedValue(funcionarioSelecionadoId || "");
+  }, [funcionarioSelecionadoId]);
+  
+  const handleChange = (value: string) => {
+    console.log("Select value changed to:", value);
+    setSelectedValue(value);
     
-    buscarFuncionariosAtribuidos();
-  }, [ordemId, etapa, servicoTipo, dialogOpen]); // Adicionado dialogOpen para recarregar após fechamento do diálogo
-
-  const handleOpenDialog = () => {
-    setDialogOpen(true);
-  };
-
-  const handleConfirmAtribuicao = async (ids: string[], nomes: string[]) => {
-    console.log("Confirmando atribuição:", ids, nomes);
-    try {
-      await onSaveResponsavel(ids, nomes);
-      
-      // Atualizar a lista local com os novos funcionários
-      const novosFuncionarios = ids.map((id, index) => ({
-        id,
-        nome: nomes[index] || id,
-        inicio: new Date() // Manter como Date para consistência com a interface
-      }));
-      
-      setFuncionariosAtribuidos(novosFuncionarios);
-      setDialogOpen(false); // Fechar o diálogo após sucesso
-    } catch (error) {
-      console.error("Erro ao confirmar atribuição:", error);
+    // Validate funcionario exists
+    const funcionarioExists = funcionariosOptions.some(f => f.id === value);
+    if (funcionarioExists) {
+      console.log("Funcionário existe, chamando onFuncionarioChange");
+      onFuncionarioChange(value);
+    } else {
+      console.warn("ID de funcionário inválido:", value);
+      toast.error("Funcionário inválido selecionado");
     }
   };
-
-  const handleRemoverFuncionario = async (funcionarioId: string) => {
+  
+  const handleSave = async () => {
+    console.log("Salvando responsável com ID:", selectedValue);
+    if (!selectedValue) {
+      toast.error("Selecione um funcionário primeiro");
+      return;
+    }
+    
     try {
-      // Filtra o funcionário a ser removido
-      const funcionariosRestantes = funcionariosAtribuidos.filter(f => f.id !== funcionarioId);
-      const ids = funcionariosRestantes.map(f => f.id);
-      const nomes = funcionariosRestantes.map(f => f.nome);
+      setIsMarkingAsBusy(true);
       
-      await onSaveResponsavel(ids, nomes);
-      setFuncionariosAtribuidos(funcionariosRestantes);
+      // Primeiro, marcar o funcionário como ocupado
+      const marcadoComoOcupado = await marcarFuncionarioEmServico(
+        selectedValue,
+        ordemId,
+        etapa,
+        servicoTipo
+      );
+      
+      if (!marcadoComoOcupado) {
+        toast.error("Erro ao marcar funcionário como ocupado");
+        return;
+      }
+      
+      // Depois, salvar o responsável
+      await onSaveResponsavel();
+      
+      toast.success("Funcionário atribuído com sucesso");
     } catch (error) {
-      console.error("Erro ao remover funcionário:", error);
+      console.error("Erro ao salvar responsável:", error);
+      toast.error("Erro ao salvar responsável");
+    } finally {
+      setIsMarkingAsBusy(false);
     }
   };
-
-  if (isEtapaConcluida) {
-    return null;
-  }
-
+  
   return (
-    <div className="mt-3 mb-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium">Funcionários Responsáveis:</h4>
-        <Button 
-          variant="outline" 
-          size="sm"
-          className="flex items-center gap-1.5"
-          onClick={handleOpenDialog}
-          disabled={isSaving}
+    <div className="flex flex-col gap-4 p-4 border rounded-lg">
+      <div className="space-y-2">
+        <label htmlFor="funcionario-select" className="block text-sm font-medium">
+          Responsável pela etapa
+        </label>
+        <Select
+          value={selectedValue}
+          onValueChange={handleChange}
+          disabled={isEtapaConcluida || isSaving || isMarkingAsBusy}
         >
-          <UserPlus className="h-3.5 w-3.5" />
-          {funcionariosAtribuidos.length === 0 ? "Atribuir Funcionários" : "Gerenciar Funcionários"}
-        </Button>
+          <SelectTrigger id="funcionario-select" className="w-full">
+            <SelectValue placeholder="Selecione um funcionário" />
+          </SelectTrigger>
+          <SelectContent>
+            {funcionariosOptions.length === 0 ? (
+              <div className="p-2 text-center text-sm text-muted-foreground">
+                Nenhum funcionário disponível
+              </div>
+            ) : (
+              funcionariosOptions.map((funcionario) => (
+                <SelectItem key={funcionario.id} value={funcionario.id}>
+                  {funcionario.nome}
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
       </div>
-      
-      {isLoading ? (
-        <div className="py-2 flex items-center space-x-2">
-          <div className="h-4 w-4 rounded-full border-2 border-primary/30 border-t-primary animate-spin"></div>
-          <span className="text-sm text-muted-foreground">Carregando funcionários...</span>
-        </div>
-      ) : funcionariosAtribuidos.length > 0 ? (
-        <div className="border rounded-lg p-3 bg-muted/30">
-          <div className="flex gap-1.5 items-center mb-2">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">
-              {funcionariosAtribuidos.length} funcionário{funcionariosAtribuidos.length > 1 ? 's' : ''} atribuído{funcionariosAtribuidos.length > 1 ? 's' : ''}
-            </span>
-          </div>
-          <div className="space-y-2">
-            {funcionariosAtribuidos.map(funcionario => {
-              // Garantir que a data seja válida antes de formatar
-              const dataInicio = funcionario.inicio instanceof Date ? funcionario.inicio : new Date(funcionario.inicio);
-              const dataFormatada = isNaN(dataInicio.getTime()) 
-                ? "Data não disponível" 
-                : format(dataInicio, "dd/MM/yyyy HH:mm", { locale: ptBR });
 
-              return (
-                <div key={funcionario.id} className="flex justify-between items-center p-2 bg-background rounded border">
-                  <div>
-                    <div className="font-medium">{funcionario.nome}</div>
-                    <div className="text-xs text-muted-foreground">
-                      Desde: {dataFormatada}
-                    </div>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    onClick={() => handleRemoverFuncionario(funcionario.id)}
-                    disabled={isSaving}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center border border-dashed rounded-lg p-6 bg-muted/10">
-          <Users className="h-8 w-8 mb-2 opacity-50" />
-          <p className="text-sm">Nenhum funcionário atribuído</p>
-          <p className="text-xs mt-1">Clique em "Atribuir Funcionários" para começar</p>
-        </div>
-      )}
-      
-      {isMultiplosFuncionarios ? (
-        <AtribuirMultiplosFuncionariosDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          onConfirm={handleConfirmAtribuicao}
-          funcionariosSelecionadosIds={funcionariosAtribuidos.map(f => f.id)}
-          especialidadeRequerida={servicoTipo}
-          title="Gerenciar Funcionários"
-          description="Selecione os funcionários que estarão responsáveis por esta etapa."
-          confirmLabel="Confirmar Atribuição"
-          apenasDisponiveis={false}
-        />
-      ) : (
-        <AtribuirFuncionarioDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          onConfirm={(id, nome) => handleConfirmAtribuicao([id], [nome])}
-          funcionarioAtualId={funcionarioSelecionadoId}
-          especialidadeRequerida={servicoTipo}
-        />
-      )}
+      <Button
+        onClick={handleSave}
+        disabled={!selectedValue || isEtapaConcluida || isSaving || isMarkingAsBusy}
+        className="w-full"
+      >
+        {isSaving || isMarkingAsBusy ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Salvando...
+          </>
+        ) : (
+          <>
+            <Save className="mr-2 h-4 w-4" />
+            Salvar Responsável
+          </>
+        )}
+      </Button>
     </div>
   );
 }
