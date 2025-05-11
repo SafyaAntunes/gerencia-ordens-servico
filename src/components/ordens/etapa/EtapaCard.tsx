@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { useEtapaResponsavel } from "./hooks/useEtapaResponsavel";
@@ -225,7 +224,7 @@ export default function EtapaCard({
           etapa={etapa}
           servicoTipo={servicoTipo}
           isEtapaConcluida={isEtapaConcluida()}
-          onEtapaConcluida={handleEtapaConcluida}
+          onFinish={handleEtapaConcluida}
           onCustomTimerStart={handleCustomTimerStart}
         />
       )}
@@ -243,7 +242,7 @@ export default function EtapaCard({
       
       {!isEtapaConcluida() && todasSubatividadesConcluidas() && (
         <EtapaConcluiButton
-          concluido={isEtapaConcluida()}
+          isConcluida={isEtapaConcluida()}
           todasSubatividadesConcluidas={todasSubatividadesConcluidas()}
           onConcluir={handleMarcarConcluidoClick}
           temFuncionarioSelecionado={!!funcionarioSelecionadoId}

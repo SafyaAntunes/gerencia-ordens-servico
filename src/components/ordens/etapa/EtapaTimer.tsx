@@ -23,6 +23,7 @@ export interface EtapaTimerProps {
   onPause?: (motivo?: string) => void;
   onResume?: () => void;
   onFinish?: (tempoTotal: number) => void;
+  onEtapaConcluida?: (tempoTotal: number) => void; // Added this prop to match usage in EtapaCard
   isEtapaConcluida?: boolean;
 }
 
