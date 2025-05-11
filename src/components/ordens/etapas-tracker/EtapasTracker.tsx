@@ -10,7 +10,6 @@ import { EmptyServices } from "./EmptyServices";
 import { EtapasSelector } from "./EtapasSelector";
 import { EtapaContent } from "./EtapaContent";
 import { useEtapasProgress } from "./useEtapasProgress";
-import { marcarFuncionarioEmServico } from "@/services/funcionarioEmServicoService";
 
 // Objeto para armazenar timestamps de notificações para evitar duplicatas em um curto período
 const notificationTimestamps: Record<string, number> = {};
@@ -164,50 +163,6 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate }: EtapasTrackerProps) 
       toast.error("Você não tem permissão para gerenciar este tipo de serviço");
       return;
     }
-    const handleSubatividadeSelecionadaToggle = useCallback(async (
-      servicoTipo: TipoServico,
-      subatividadeId: string,
-      checked: boolean
-    ) => {
-      if (!ordem?.id) return;
-    
-      try {
-        const servicosAtualizados = ordem.servicos.map(servico => {
-          if (servico.tipo === servicoTipo && servico.subatividades) {
-            const subatividades = servico.subatividades.map(sub => {
-              if (sub.id === subatividadeId) {
-                return { ...sub, selecionada: checked };
-              }
-              return sub;
-            });
-    
-            return {
-              ...servico,
-              subatividades
-            };
-          }
-          return servico;
-        });
-    
-        const ordemRef = doc(db, "ordens_servico", ordem.id);
-        await updateDoc(ordemRef, { servicos: servicosAtualizados });
-    
-        const ordemAtualizada = {
-          ...ordem,
-          servicos: servicosAtualizados
-        };
-    
-        if (onOrdemUpdate) {
-          onOrdemUpdate(ordemAtualizada);
-        }
-    
-        toast.success("Subatividade selecionada com sucesso!");
-      } catch (error) {
-        console.error("Erro ao atualizar seleção de subatividade:", error);
-        toast.error("Erro ao selecionar subatividade");
-      }
-    }, [ordem, onOrdemUpdate]);
-    
     
     try {
       console.log("Toggling subatividade in EtapasTracker:", { servicoTipo, subatividadeId, checked });
@@ -264,70 +219,91 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate }: EtapasTrackerProps) 
     servicoTipo?: TipoServico
   ) => {
     if (!ordem?.id) {
-      console.error("Ordem não encontrada");
+      toast.error("ID da ordem não encontrado");
       return;
     }
-
+    
+    if (!funcionarioId) {
+      toast.error("É necessário selecionar um responsável");
+      return;
+    }
+    
     try {
-      const ordemRef = doc(db, "ordens_servico", ordem.id);
-      const etapaKey = (["inspecao_inicial", "inspecao_final", "lavagem"].includes(etapa) && servicoTipo)
-        ? `${etapa}_${servicoTipo}`
+      // Determinar a chave da etapa com base no tipo de serviço
+      const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo) 
+        ? `${etapa}_${servicoTipo}` 
         : etapa;
-
-      // Obter dados atuais da etapa
-      const etapaAtual = ordem.etapasAndamento?.[etapaKey] || {};
-
-      // Se estiver atribuindo um funcionário, usar o serviço marcarFuncionarioEmServico
-      if (funcionarioId && !concluida) {
-        const success = await marcarFuncionarioEmServico(
-          funcionarioId,
-          ordem.id,
-          etapa,
-          servicoTipo
-        );
-
-        if (!success) {
-          toast.error("Erro ao atribuir funcionário");
-          return;
-        }
+      
+      console.log(`Atualizando status da etapa ${etapaKey} para funcionário ${funcionarioNome} (${funcionarioId}), concluída: ${concluida}`);
+      
+      // Obter documento atual para garantir dados atualizados
+      const ordemRef = doc(db, "ordens_servico", ordem.id);
+      const ordemDoc = await getDoc(ordemRef);
+      
+      if (!ordemDoc.exists()) {
+        toast.error("Ordem de serviço não encontrada");
+        return;
       }
-
-      // Preparar objeto para atualização, mantendo dados existentes
+      
+      const dadosAtuais = ordemDoc.data();
+      const etapasAndamento = dadosAtuais.etapasAndamento || {};
+      const etapaAtual = etapasAndamento[etapaKey] || {};
+      
+      // Verificar se já está com os mesmos valores para evitar atualização desnecessária
+      if (etapaAtual.concluido === concluida && 
+          etapaAtual.funcionarioId === funcionarioId &&
+          etapaAtual.funcionarioNome === funcionarioNome) {
+        console.log("Etapa já está com os mesmos valores, ignorando atualização");
+        return;
+      }
+      
+      // Manter funcionários existentes e adicionar o novo se necessário
+      const funcionariosAtuais = Array.isArray(etapaAtual.funcionarios) ? etapaAtual.funcionarios : [];
+      const funcionarioJaExiste = funcionariosAtuais.some((f: any) => f.id === funcionarioId);
+      
+      // Preparar objeto para atualização, garantindo que nenhum campo seja undefined
       const atualizacao: Record<string, any> = {
         [`etapasAndamento.${etapaKey}`]: {
-          ...etapaAtual, // Manter todos os dados existentes
           concluido: Boolean(concluida),
           funcionarioId: funcionarioId || null,
           funcionarioNome: funcionarioNome || "",
-          finalizado: concluida ? new Date() : etapaAtual.finalizado,
+          finalizado: concluida ? new Date() : null,
           iniciado: etapaAtual.iniciado || new Date(),
-          servicoTipo: servicoTipo || etapaAtual.servicoTipo,
-          status: etapaAtual.status || "em_andamento"
+          servicoTipo: servicoTipo || null,
+          funcionarios: funcionarioJaExiste ? funcionariosAtuais : [
+            ...funcionariosAtuais,
+            {
+              id: funcionarioId,
+              nome: funcionarioNome,
+              inicio: new Date()
+            }
+          ]
         }
       };
-
+      
       // Log para depuração
       console.log("Dados a serem salvos:", atualizacao);
-
+      
       // Atualizar no Firebase
       await updateDoc(ordemRef, atualizacao);
-
-      // Atualizar estado local
+      
+      // IMPORTANTE: Atualizar o estado local com os novos dados
       const etapasAndamentoAtualizado = { ...ordem.etapasAndamento || {} };
       etapasAndamentoAtualizado[etapaKey] = atualizacao[`etapasAndamento.${etapaKey}`];
-
+      
       const ordemAtualizada = {
         ...ordem,
         etapasAndamento: etapasAndamentoAtualizado
       };
-
+      
+      // Atualizar estado local diretamente para refletir mudanças imediatamente
       if (onOrdemUpdate) {
         onOrdemUpdate(ordemAtualizada);
       }
-
+      
       const servicoMsg = servicoTipo ? ` - ${formatServicoTipo(servicoTipo)}` : '';
       let acao;
-
+      
       if (concluida) {
         acao = 'concluída';
       } else if (etapaAtual.funcionarioId !== funcionarioId) {
@@ -335,13 +311,13 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate }: EtapasTrackerProps) 
       } else {
         acao = 'atualizada';
       }
-
+      
       if (shouldShowNotification(`Etapa ${etapaNomesBR[etapa] || etapa}${servicoMsg} ${acao}`)) {
         toast.success(`Etapa ${etapaNomesBR[etapa] || etapa}${servicoMsg} ${acao}`);
       }
     } catch (error) {
-      console.error("Erro ao atualizar etapa:", error);
-      toast.error("Erro ao atualizar etapa");
+      console.error("Erro ao atualizar status da etapa:", error);
+      toast.error("Erro ao atualizar status da etapa");
     }
   }, [ordem, onOrdemUpdate]);
 
@@ -402,7 +378,6 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate }: EtapasTrackerProps) 
               onSubatividadeToggle={handleSubatividadeToggle}
               onServicoStatusChange={handleServicoStatusChange}
               onEtapaStatusChange={handleEtapaStatusChange}
-              onSubatividadeSelecionadaToggle={handleSubatividadeSelecionadaToggle}
             />
           )}
         </CardContent>

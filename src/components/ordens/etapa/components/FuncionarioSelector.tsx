@@ -1,6 +1,6 @@
 
 import React, { useCallback, useEffect, useState } from "react";
-import { User, Save, Loader2, X } from "lucide-react";
+import { User, Save, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Funcionario } from "@/types/funcionarios";
@@ -16,7 +16,7 @@ interface FuncionarioSelectorProps {
   funcionariosOptions: any[];
   isEtapaConcluida: boolean;
   onFuncionarioChange: (id: string) => void;
-  onSaveResponsavel: (ids?: string[], nomes?: string[]) => Promise<void>;
+  onSaveResponsavel: () => Promise<void>;
   isSaving?: boolean;
 }
 
@@ -38,7 +38,7 @@ export default function FuncionarioSelector({
   console.log("FuncionarioSelector - render com ID:", funcionarioSelecionadoId);
   console.log("FuncionarioSelector - options:", funcionariosOptions);
   
-  // Sync with parent component value
+  // Sync with parent component value - melhorado para garantir sincronização correta
   useEffect(() => {
     console.log("FuncionarioSelector - funcionarioSelecionadoId mudou:", funcionarioSelecionadoId);
     setSelectedValue(funcionarioSelecionadoId || "");
@@ -69,40 +69,30 @@ export default function FuncionarioSelector({
     try {
       setIsMarkingAsBusy(true);
       
-      // Passar o id e nome do funcionário escolhido
-      const funcionario = funcionariosOptions.find(f => f.id === selectedValue);
-      if (funcionario) {
-        await onSaveResponsavel([selectedValue], [funcionario.nome || ""]);
-        toast.success("Funcionário atribuído com sucesso");
-      } else {
-        toast.error("Funcionário não encontrado");
+      // Primeiro, marcar o funcionário como ocupado
+      const marcadoComoOcupado = await marcarFuncionarioEmServico(
+        selectedValue,
+        ordemId,
+        etapa,
+        servicoTipo
+      );
+      
+      if (!marcadoComoOcupado) {
+        toast.error("Erro ao marcar funcionário como ocupado");
+        return;
       }
+      
+      // Depois, salvar o responsável
+      await onSaveResponsavel();
+      
+      toast.success("Funcionário atribuído com sucesso");
     } catch (error) {
       console.error("Erro ao salvar responsável:", error);
       toast.error("Erro ao salvar responsável");
     } finally {
       setIsMarkingAsBusy(false);
     }
-  }, [selectedValue, funcionariosOptions, onSaveResponsavel]);
-  
-  const handleClear = useCallback(async () => {
-    try {
-      setIsMarkingAsBusy(true);
-      
-      // Chamar onSaveResponsavel com arrays vazios para remover o funcionário
-      await onSaveResponsavel([], []);
-      
-      // Limpar seleção local
-      setSelectedValue("");
-      
-      toast.success("Responsável removido com sucesso");
-    } catch (error) {
-      console.error("Erro ao remover responsável:", error);
-      toast.error("Erro ao remover responsável");
-    } finally {
-      setIsMarkingAsBusy(false);
-    }
-  }, [onSaveResponsavel]);
+  }, [selectedValue, ordemId, etapa, servicoTipo, onSaveResponsavel]);
   
   return (
     <div className="flex flex-col gap-4 p-4 border rounded-lg">
@@ -134,35 +124,23 @@ export default function FuncionarioSelector({
         </Select>
       </div>
 
-      <div className="flex gap-2">
-        <Button
-          onClick={handleSave}
-          disabled={!selectedValue || isEtapaConcluida || isSaving || isMarkingAsBusy}
-          className="flex-1"
-        >
-          {isSaving || isMarkingAsBusy ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Salvando...
-            </>
-          ) : (
-            <>
-              <Save className="mr-2 h-4 w-4" />
-              Salvar
-            </>
-          )}
-        </Button>
-        
-        {selectedValue && (
-          <Button
-            variant="outline"
-            onClick={handleClear}
-            disabled={isEtapaConcluida || isSaving || isMarkingAsBusy}
-          >
-            <X className="h-4 w-4" />
-          </Button>
+      <Button
+        onClick={handleSave}
+        disabled={!selectedValue || isEtapaConcluida || isSaving || isMarkingAsBusy}
+        className="w-full"
+      >
+        {isSaving || isMarkingAsBusy ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Salvando...
+          </>
+        ) : (
+          <>
+            <Save className="mr-2 h-4 w-4" />
+            Salvar Responsável
+          </>
         )}
-      </div>
+      </Button>
     </div>
   );
 }

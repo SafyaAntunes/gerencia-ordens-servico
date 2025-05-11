@@ -354,100 +354,83 @@ export default function OrdemForm({
   }, [defaultValues?.servicosSubatividades, defaultValues?.servicosDescricoes, defaultValues?.etapasTempoPreco]);
   
   useEffect(() => {
-    const loadSubatividades = async () => {
-      const tiposList = form.watch("servicosTipos") as TipoServico[];
-      if (!tiposList.length) return;
-      
+    const tiposList = form.watch("servicosTipos") || [];
+    
+    const loadSubatividades = async (tipo: TipoServico) => {
       try {
-        const subatividadesPromises = tiposList.map(async (tipo) => {
-          // Se já existem subatividades para este tipo, mantenha-as
-          if (servicosSubatividades[tipo]?.length > 0) {
-            return servicosSubatividades[tipo];
-          }
-          
-          try {
-            const subatividadesList = await getSubatividadesByTipo(tipo);
-            
-            // Se não houver subatividades no banco, use as padrões
-            if (!subatividadesList.length) {
-              const defaultSubs = SUBATIVIDADES[tipo] || [];
-              return defaultSubs.map(nome => ({
-                id: uuidv4(),
-                nome,
-                selecionada: false,
-                concluida: false,
-                tempoEstimado: 0,
-                servicoTipo: tipo
-              }));
-            }
-            
-            return subatividadesList.map(sub => ({
+        // Carregar subatividades do banco de dados
+        const subatividadesList = await getSubatividadesByTipo(tipo);
+        if (subatividadesList && subatividadesList.length > 0) {
+          // Use as subatividades do banco de dados
+          setServicosSubatividades(prev => ({
+            ...prev,
+            [tipo]: subatividadesList.map(sub => ({
               ...sub,
-              servicoTipo: tipo
-            }));
-          } catch (error) {
-            console.error(`Erro ao carregar subatividades para ${tipo}:`, error);
-            // Em caso de erro, use as subatividades padrão
-            const defaultSubs = SUBATIVIDADES[tipo] || [];
-            return defaultSubs.map(nome => ({
-              id: uuidv4(),
-              nome,
-              selecionada: false,
-              concluida: false,
-              tempoEstimado: 0,
-              servicoTipo: tipo
-            }));
-          }
-        });
-        
-        const results = await Promise.all(subatividadesPromises);
-        
-        // Atualizar o estado apenas para os tipos que não tinham subatividades
-        setServicosSubatividades(prev => {
-          const newState = { ...prev };
-          tiposList.forEach((tipo, index) => {
-            if (!prev[tipo]?.length && results[index]) {
-              newState[tipo] = results[index];
-            }
-          });
-          return newState;
-        });
+              selecionada: false
+            }))
+          }));
+        } else {
+          // Se não houver subatividades no banco, use os padrões como fallback
+          const defaultSubs = SUBATIVIDADES[tipo] || [];
+          const defaultSubatividades = defaultSubs.map(nome => ({
+            id: uuidv4(),
+            nome,
+            selecionada: false
+          }));
+          
+          setServicosSubatividades(prev => ({
+            ...prev,
+            [tipo]: defaultSubatividades
+          }));
+        }
       } catch (error) {
-        console.error("Erro ao carregar subatividades:", error);
-        toast.error("Erro ao carregar subatividades");
+        console.error(`Erro ao carregar subatividades para ${tipo}:`, error);
+        // Em caso de erro, ainda use os padrões
+        const defaultSubs = SUBATIVIDADES[tipo] || [];
+        const defaultSubatividades = defaultSubs.map(nome => ({
+          id: uuidv4(),
+          nome,
+          selecionada: false
+        }));
+        
+        setServicosSubatividades(prev => ({
+          ...prev,
+          [tipo]: defaultSubatividades
+        }));
       }
     };
     
-    loadSubatividades();
+    // Para cada tipo de serviço selecionado
+    tiposList.forEach((tipo) => {
+      if (!servicosSubatividades[tipo]) {
+        loadSubatividades(tipo as TipoServico);
+      }
+    });
+    
+    // Remover tipos não selecionados
+    Object.keys(servicosSubatividades).forEach((tipo) => {
+      if (!tiposList.includes(tipo)) {
+        setServicosSubatividades(prev => {
+          const newState = { ...prev };
+          delete newState[tipo];
+          return newState;
+        });
+      }
+    });
   }, [form.watch("servicosTipos")]);
   
   const handleServicoDescricaoChange = (tipo: string, descricao: string) => {
-    // Atualiza o estado local
     setServicosDescricoes(prev => ({
       ...prev,
       [tipo]: descricao
     }));
-
-    // Atualiza o estado do formulário
-    form.setValue(`servicosDescricoes.${tipo}`, descricao, { shouldDirty: true });
   };
   
   const handleSubatividadesChange = (tipo: TipoServico, subatividades: SubAtividade[]) => {
-    // Atualiza o estado local
-    setServicosSubatividades(prev => {
-      const newState = { ...prev };
-      newState[tipo] = subatividades.map(sub => ({
-        ...sub,
-        servicoTipo: tipo
-      }));
-      return newState;
-    });
-
-    // Atualiza o estado do formulário
-    form.setValue(`servicosSubatividades.${tipo}`, subatividades.map(sub => ({
-      ...sub,
-      servicoTipo: tipo
-    })), { shouldDirty: true });
+    setServicosSubatividades(prev => ({
+      ...prev,
+      [tipo]: subatividades
+    }));
   };
   
   const handleEtapaTempoPrecoChange = (etapa: EtapaOS, field: 'precoHora' | 'tempoEstimado', value: number) => {

@@ -4,9 +4,7 @@ import { EtapaOS, TipoServico } from "@/types/ordens";
 import { useAuth } from "@/hooks/useAuth";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { useQueryClient } from "@tanstack/react-query";
-import { marcarFuncionarioEmServico } from "@/services/funcionarioEmServicoService";
-import { clearDocumentCache } from "@/services/cacheService";
+import useSWR, { mutate } from "swr";
 
 interface UseEtapaResponsavelProps {
   etapa: EtapaOS;
@@ -49,16 +47,11 @@ export function useEtapaResponsavel({
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedFuncionarioId, setLastSavedFuncionarioId] = useState<string | undefined>(etapaInfo?.funcionarioId);
   const [lastSavedFuncionarioNome, setLastSavedFuncionarioNome] = useState<string | undefined>(etapaInfo?.funcionarioNome);
-  
-  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (etapaInfo?.funcionarioId) {
       setLastSavedFuncionarioId(etapaInfo.funcionarioId);
       setLastSavedFuncionarioNome(etapaInfo.funcionarioNome);
-    } else {
-      setLastSavedFuncionarioId(undefined);
-      setLastSavedFuncionarioNome(undefined);
     }
   }, [etapaInfo?.funcionarioId, etapaInfo?.funcionarioNome]);
 
@@ -78,96 +71,73 @@ export function useEtapaResponsavel({
     return false;
   }, []);
 
-  // Define cache key for this order
-  const cacheKey = `ordens/${ordemId}`;
+  const handleSaveResponsavel = useCallback(async () => {
+    if (!funcionarioSelecionadoId || isSaving) {
+      console.log("Não foi possível salvar responsável:", {
+        funcionarioSelecionadoId,
+        isSaving
+      });
+      if (!funcionarioSelecionadoId) {
+        toast.error("Selecione um funcionário antes de salvar");
+      }
+      return;
+    }
 
-  const handleSaveResponsavel = useCallback(async (ids?: string[], nomes?: string[]) => {
-    if (isSaving) return;
-    
-    setIsSaving(true);
+    const isSameFuncionario = lastSavedFuncionarioId === funcionarioSelecionadoId;
     const now = Date.now();
-    
-    try {
-      // Handle both single and multiple funcionarios assignment
-      let funcionariosIds: string[] = [];
-      let funcionariosNomes: string[] = [];
-      
-      // If we receive arrays of ids and names, use those (multi-funcionario mode)
-      if (ids && nomes) {
-        funcionariosIds = ids;
-        funcionariosNomes = nomes;
-      } 
-      // Otherwise use the single funcionario selected
-      else if (funcionarioSelecionadoId) {
-        funcionariosIds = [funcionarioSelecionadoId];
-        funcionariosNomes = [funcionarioSelecionadoNome || ''];
-      }
-      
-      console.log("Saving funcionarios:", funcionariosIds, funcionariosNomes);
-      
-      // If no funcionarios selected and this is a deletion operation
-      if (funcionariosIds.length === 0 && ids !== undefined) {
-        // Mark removal in Firebase - update with empty fields
-        const etapaDocRef = doc(db, `ordens/${ordemId}`);
-        await updateDoc(etapaDocRef, {
-          [`etapasAndamento.${etapa}.funcionarioId`]: "",
-          [`etapasAndamento.${etapa}.funcionarioNome`]: ""
-        });
-        
-        // Clear local cache for this order
-        clearDocumentCache(`ordens/${ordemId}`);
-        
-        // Update local state
-        setLastSavedFuncionarioId(undefined);
-        setLastSavedFuncionarioNome(undefined);
-        
-        // Invalidate queries to force a refetch
-        queryClient.invalidateQueries({queryKey: ['ordens', ordemId]});
-        
-        if (canShowNotification("Responsável removido")) {
-          toast.success("Responsável removido com sucesso!");
-        }
-        return;
-      }
-      
-      // If no funcionarios to save, don't do anything
-      if (funcionariosIds.length === 0) {
-        console.log("Nenhum funcionário para salvar");
-        return;
-      }
+    const timeSinceLastUpdate = now - lastUpdateTime.current;
 
-      // For multiple funcionarios or single funcionario
-      const promisesArray = funcionariosIds.map((id, index) => {
-        return marcarFuncionarioEmServico(
-          id,
-          ordemId,
+    if (isSameFuncionario && timeSinceLastUpdate < updateDebounceMs) {
+      console.log("Ignorando atualização recente para o mesmo funcionário");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      console.log("Salvando responsável:", {
+        funcionarioId: funcionarioSelecionadoId,
+        funcionarioNome: funcionarioSelecionadoNome,
+        etapa,
+        servicoTipo,
+        ordemId
+      });
+
+      const cacheKey = `ordens_servico/${ordemId}`;
+
+      if (onEtapaStatusChange) {
+        await onEtapaStatusChange(
           etapa,
+          !!isEtapaConcluida,
+          funcionarioSelecionadoId,
+          funcionarioSelecionadoNome,
           servicoTipo
         );
-      });
-      
-      // Wait for all promises to resolve
-      const results = await Promise.all(promisesArray);
-      
-      // Check if any failed
-      if (results.some(success => !success)) {
-        toast.error("Erro ao atribuir um ou mais funcionários");
-        return;
+      } else {
+        const etapaKey =
+          (["inspecao_inicial", "inspecao_final", "lavagem"].includes(etapa) && servicoTipo)
+            ? `${etapa}_${servicoTipo}`
+            : etapa;
+
+        const ordemRef = doc(db, "ordens_servico", ordemId);
+        await updateDoc(ordemRef, {
+          [`etapasAndamento.${etapaKey}.funcionarioId`]: funcionarioSelecionadoId,
+          [`etapasAndamento.${etapaKey}.funcionarioNome`]: funcionarioSelecionadoNome || "",
+          [`etapasAndamento.${etapaKey}.iniciado`]: etapaInfo?.iniciado || new Date(),
+          [`etapasAndamento.${etapaKey}.concluido`]: etapaInfo?.concluido || false,
+          [`etapasAndamento.${etapaKey}.finalizado`]: etapaInfo?.finalizado || null,
+          [`etapasAndamento.${etapaKey}.servicoTipo`]: servicoTipo || null,
+          [`etapasAndamento.${etapaKey}.status`]: etapaInfo?.status || "em_andamento"
+        });
       }
 
-      // Update local state
-      setLastSavedFuncionarioId(funcionariosIds[0]); // Keep first one for backwards compatibility
-      setLastSavedFuncionarioNome(funcionariosNomes[0]);
+      setLastSavedFuncionarioId(funcionarioSelecionadoId);
+      setLastSavedFuncionarioNome(funcionarioSelecionadoNome);
       lastUpdateTime.current = now;
 
-      // Clear cache to ensure fresh data on next fetch
-      clearDocumentCache(cacheKey);
-      
-      // Invalidate queries to force a refetch
-      queryClient.invalidateQueries({queryKey: ['ordens', ordemId]});
+      await mutate(cacheKey);
 
       if (canShowNotification("Responsável atualizado")) {
-        toast.success(`${funcionariosIds.length > 1 ? 'Responsáveis atualizados' : 'Responsável atualizado'} com sucesso!`);
+        toast.success("Responsável atualizado com sucesso!");
       }
     } catch (error) {
       console.error("Erro ao salvar responsável:", error);
@@ -176,18 +146,18 @@ export function useEtapaResponsavel({
       setIsSaving(false);
     }
   }, [
-    isSaving,
     funcionarioSelecionadoId,
     funcionarioSelecionadoNome,
-    ordemId,
+    isSaving,
     etapa,
     servicoTipo,
-    cacheKey,
-    canShowNotification,
-    queryClient
+    ordemId,
+    lastSavedFuncionarioId,
+    isEtapaConcluida,
+    onEtapaStatusChange,
+    canShowNotification
   ]);
 
-  // Auto-save effect when funcionario changes
   useEffect(() => {
     if (
       funcionarioSelecionadoId &&
