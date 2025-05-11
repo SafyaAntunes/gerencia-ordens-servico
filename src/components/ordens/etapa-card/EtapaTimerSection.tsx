@@ -1,9 +1,7 @@
 
+import React from "react";
 import { EtapaOS, TipoServico } from "@/types/ordens";
-import OrdemCronometro from "../OrdemCronometro";
-import useEtapaTimerSection from "@/hooks/useEtapaTimerSection";
-import { Button } from "@/components/ui/button";
-import { CheckCircle2 } from "lucide-react";
+import EtapaTimer from "../etapa/EtapaTimer";
 
 interface EtapaTimerSectionProps {
   ordemId: string;
@@ -12,36 +10,38 @@ interface EtapaTimerSectionProps {
   etapa: EtapaOS;
   tipoServico?: TipoServico;
   isEtapaConcluida: boolean;
-  onEtapaConcluida: (tempoTotal: number) => void;
-  onMarcarConcluido: () => void;
-  onTimerStart: () => boolean;
-  onCustomStart: () => boolean;
-  onSaveResponsavel: () => void;
+  onEtapaConcluida?: (tempoTotal: number) => void;
+  onMarcarConcluido?: () => void;
+  onTimerStart?: () => void;
+  onCustomStart?: () => boolean;
+  onSaveResponsavel?: () => Promise<void>;
 }
 
-export default function EtapaTimerSection(props: EtapaTimerSectionProps) {
-  const { timerProps, concluirButtonProps } = useEtapaTimerSection(props);
-  
+export default function EtapaTimerSection({
+  ordemId,
+  funcionarioId,
+  funcionarioNome,
+  etapa,
+  tipoServico,
+  isEtapaConcluida,
+  onEtapaConcluida,
+  onTimerStart,
+  onCustomStart,
+  onSaveResponsavel
+}: EtapaTimerSectionProps) {
   return (
-    <div className="p-4 border rounded-md mb-4">
-      <OrdemCronometro {...timerProps} />
-      
-      <div className="flex space-x-2 mt-4">
-        {!concluirButtonProps.isConcluida && (
-          <Button 
-            variant="default" 
-            size="sm" 
-            className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
-            onClick={() => {
-              concluirButtonProps.onClick();
-              return true;
-            }}
-          >
-            <CheckCircle2 className="h-4 w-4 mr-1" />
-            Marcar Etapa como Concluída
-          </Button>
-        )}
-      </div>
+    <div className="my-4 p-4 border rounded-lg">
+      <EtapaTimer
+        ordemId={ordemId}
+        funcionarioId={funcionarioId}
+        funcionarioNome={funcionarioNome}
+        etapa={etapa}
+        servicoTipo={tipoServico}
+        isEtapaConcluida={isEtapaConcluida}
+        onFinish={onEtapaConcluida}
+        onCustomTimerStart={onCustomStart}
+        onEtapaConcluida={onEtapaConcluida} // Compatibilidade com interfaces antigas
+      />
     </div>
   );
 }

@@ -1,40 +1,54 @@
 
 import { Button } from "@/components/ui/button";
-import { CheckCircle2 } from "lucide-react";
+import { CircleCheck } from "lucide-react";
+import { toast } from "sonner";
 
 interface EtapaConcluiButtonProps {
-  isConcluida?: boolean; // Renamed from 'concluido' to match usage
-  concluido?: boolean; // Keep both for backward compatibility
+  isConcluida: boolean;
   todasSubatividadesConcluidas: boolean;
   onConcluir: () => void;
   temFuncionarioSelecionado: boolean;
+  concluido?: boolean; // Para compatibilidade
 }
 
 export default function EtapaConcluiButton({
   isConcluida,
-  concluido,
   todasSubatividadesConcluidas,
   onConcluir,
-  temFuncionarioSelecionado
+  temFuncionarioSelecionado,
+  concluido
 }: EtapaConcluiButtonProps) {
-  // Use either isConcluida or concluido
+  // Usar isConcluida ou concluido (para retrocompatibilidade)
   const etapaConcluida = isConcluida || concluido;
-  
-  if (etapaConcluida) {
-    return null;
-  }
-  
+
+  const handleClick = () => {
+    if (etapaConcluida) {
+      toast.info("Esta etapa já está concluída");
+      return;
+    }
+
+    if (!todasSubatividadesConcluidas) {
+      toast.error("É necessário concluir todas as subatividades antes de finalizar a etapa");
+      return;
+    }
+
+    if (!temFuncionarioSelecionado) {
+      toast.error("É necessário selecionar um funcionário responsável");
+      return;
+    }
+
+    onConcluir();
+  };
+
   return (
     <div className="mt-4">
-      <Button 
-        variant="default" 
-        size="sm" 
-        className="w-full bg-blue-500 hover:bg-blue-600 text-white"
-        onClick={onConcluir}
-        disabled={!temFuncionarioSelecionado || !todasSubatividadesConcluidas}
+      <Button
+        onClick={handleClick}
+        disabled={etapaConcluida || !todasSubatividadesConcluidas || !temFuncionarioSelecionado}
+        className="w-full bg-green-600 hover:bg-green-700"
       >
-        <CheckCircle2 className="h-4 w-4 mr-1" />
-        Marcar Etapa como Concluída
+        <CircleCheck className="mr-2 h-4 w-4" />
+        Concluir Etapa
       </Button>
     </div>
   );

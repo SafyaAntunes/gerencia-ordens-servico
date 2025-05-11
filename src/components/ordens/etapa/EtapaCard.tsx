@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { useEtapaResponsavel } from "./hooks/useEtapaResponsavel";
@@ -11,7 +12,7 @@ import EtapaProgresso from "./EtapaProgresso";
 import EtapaConcluiButton from "./EtapaConcluiButton";
 import EtapaServicos from "./EtapaServicos";
 import EtapaTimer from "./EtapaTimer";
-import FuncionarioSelector from "./FuncionarioSelector";
+import FuncionariosResponsaveis from "./components/FuncionariosResponsaveis";
 
 interface EtapaCardProps {
   ordemId: string;
@@ -28,6 +29,8 @@ interface EtapaCardProps {
     pausas?: { inicio: number; fim?: number; motivo?: string }[];
     funcionarioId?: string;
     funcionarioNome?: string;
+    funcionariosIds?: string[];
+    funcionariosNomes?: string[];
     servicoTipo?: TipoServico;
   };
   servicoTipo?: TipoServico;
@@ -35,6 +38,7 @@ interface EtapaCardProps {
   onServicoStatusChange?: (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
   onEtapaStatusChange?: (etapa: EtapaOS, concluida: boolean, funcionarioId?: string, funcionarioNome?: string, servicoTipo?: TipoServico) => void;
   onSubatividadeSelecionadaToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
+  onFuncionariosChange?: (etapa: EtapaOS, funcionariosIds: string[], funcionariosNomes: string[], servicoTipo?: TipoServico) => void;
 }
 
 export default function EtapaCard({
@@ -49,7 +53,8 @@ export default function EtapaCard({
   onSubatividadeToggle,
   onServicoStatusChange,
   onEtapaStatusChange,
-  onSubatividadeSelecionadaToggle
+  onSubatividadeSelecionadaToggle,
+  onFuncionariosChange
 }: EtapaCardProps) {
   const { funcionario } = useAuth();
   const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
@@ -165,6 +170,28 @@ export default function EtapaCard({
     setFuncionarioSelecionadoId(id);
     setFuncionarioSelecionadoNome(funcionarioSelecionado?.nome);
   };
+
+  // Lidar com a atribuição de múltiplos funcionários
+  const handleFuncionariosChange = (ids: string[], nomes: string[]) => {
+    console.log("Funcionários atribuídos:", { ids, nomes });
+    
+    if (onFuncionariosChange) {
+      onFuncionariosChange(
+        etapa, 
+        ids, 
+        nomes, 
+        (etapa === "inspecao_inicial" || etapa === "inspecao_final") ? servicoTipo : undefined
+      );
+      
+      // Se houver pelo menos um funcionário na lista, usar o primeiro como responsável principal
+      if (ids.length > 0 && nomes.length > 0) {
+        setFuncionarioSelecionadoId(ids[0]);
+        setFuncionarioSelecionadoNome(nomes[0]);
+      }
+      
+      toast.success("Funcionários atribuídos com sucesso");
+    }
+  };
   
   // Lidar com a etapa concluída pelo timer
   const handleEtapaConcluida = (tempoTotal: number) => {
@@ -202,17 +229,18 @@ export default function EtapaCard({
       
       <EtapaProgresso servicos={servicos} />
       
-      {(podeAtribuirFuncionario || podeTrabalharNaEtapa()) && !isEtapaConcluida() && (
-        <FuncionarioSelector
+      {/* Novo componente de Funcionários Responsáveis */}
+      {(podeAtribuirFuncionario || podeTrabalharNaEtapa()) && (
+        <FuncionariosResponsaveis
+          funcionarioId={etapaInfo?.funcionarioId}
+          funcionarioNome={etapaInfo?.funcionarioNome}
+          funcionariosIds={etapaInfo?.funcionariosIds}
+          funcionariosNomes={etapaInfo?.funcionariosNomes}
           ordemId={ordemId}
           etapa={etapa}
           servicoTipo={servicoTipo}
-          funcionarioSelecionadoId={funcionarioSelecionadoId}
-          funcionariosOptions={funcionariosOptions}
           isEtapaConcluida={isEtapaConcluida()}
-          onFuncionarioChange={handleFuncionarioChange}
-          onSaveResponsavel={handleSaveResponsavel}
-          isSaving={isSaving}
+          onFuncionariosChange={handleFuncionariosChange}
         />
       )}
       
