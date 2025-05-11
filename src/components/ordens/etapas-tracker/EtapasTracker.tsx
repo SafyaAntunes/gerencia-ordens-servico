@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -211,6 +212,55 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate }: EtapasTrackerProps) 
     }
   }, [ordem, funcionario, onOrdemUpdate]);
 
+  // Add the missing function for handling subatividade selecionada toggle
+  const handleSubatividadeSelecionadaToggle = useCallback(async (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => {
+    if (!ordem?.id) return;
+    
+    try {
+      console.log("Toggling subatividade selecionada:", { servicoTipo, subatividadeId, checked });
+      
+      // Update the services with the new selection status
+      const servicosAtualizados = ordem.servicos.map(servico => {
+        if (servico.tipo === servicoTipo && servico.subatividades) {
+          const subatividades = servico.subatividades.map(sub => {
+            if (sub.id === subatividadeId) {
+              return { ...sub, selecionada: checked };
+            }
+            return sub;
+          });
+          
+          return { 
+            ...servico, 
+            subatividades
+          };
+        }
+        return servico;
+      });
+      
+      const ordemRef = doc(db, "ordens_servico", ordem.id);
+      await updateDoc(ordemRef, { servicos: servicosAtualizados });
+      
+      // Update local state
+      const ordemAtualizada = {
+        ...ordem,
+        servicos: servicosAtualizados
+      };
+      
+      // Notify parent component
+      if (onOrdemUpdate) {
+        onOrdemUpdate(ordemAtualizada);
+      }
+      
+      // Provide user feedback
+      if (shouldShowNotification(`Subatividade ${checked ? 'selecionada' : 'removida'}`)) {
+        toast.success(`Subatividade ${checked ? 'selecionada' : 'removida'} com sucesso`);
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar seleção da subatividade:", error);
+      toast.error("Erro ao atualizar seleção da subatividade");
+    }
+  }, [ordem, onOrdemUpdate]);
+
   const handleEtapaStatusChange = useCallback(async (
     etapa: EtapaOS, 
     concluida: boolean, 
@@ -378,6 +428,7 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate }: EtapasTrackerProps) 
               onSubatividadeToggle={handleSubatividadeToggle}
               onServicoStatusChange={handleServicoStatusChange}
               onEtapaStatusChange={handleEtapaStatusChange}
+              onSubatividadeSelecionadaToggle={handleSubatividadeSelecionadaToggle}
             />
           )}
         </CardContent>
