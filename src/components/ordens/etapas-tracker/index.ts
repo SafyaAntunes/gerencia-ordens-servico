@@ -1,4 +1,7 @@
-export { default as EtapaContent } from "./EtapaContent";
-export { default as EtapasSelector } from "./EtapasSelector";
-export { default as InspecaoServicosSelector } from "./InspecaoServicosSelector";
-export { default as EtapasTracker } from "./EtapasTracker";
+
+import EtapaContent from "./EtapaContent";
+import EtapasSelector from "./EtapasSelector";
+import InspecaoServicosSelector from "./InspecaoServicosSelector";
+import EtapasTracker from "./EtapasTracker";
+
+export { EtapaContent, EtapasSelector, InspecaoServicosSelector, EtapasTracker };

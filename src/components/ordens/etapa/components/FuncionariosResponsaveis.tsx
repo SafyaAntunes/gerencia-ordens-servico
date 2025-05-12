@@ -43,6 +43,7 @@ export default function FuncionariosResponsaveis({
   
   const handleFuncionariosConfirm = (ids: string[], nomes: string[]) => {
     onFuncionariosChange(ids, nomes);
+    toast.success("Funcionários atribuídos com sucesso");
   };
   
   const handleRemoveFuncionario = (index: number) => {
@@ -89,7 +90,7 @@ export default function FuncionariosResponsaveis({
       ) : (
         <div className="space-y-2">
           {todosIds.map((id, index) => (
-            <div key={id} className="flex items-center justify-between gap-2 p-2 bg-gray-50 rounded-md">
+            <div key={`${id}-${index}`} className="flex items-center justify-between gap-2 p-2 bg-gray-50 rounded-md">
               <div className="flex items-center gap-2">
                 <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
                   <svg className="h-4 w-4 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

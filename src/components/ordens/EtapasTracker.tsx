@@ -1,8 +1,12 @@
+
 import React, { useState } from "react";
 import { OrdemServico, Servico, TipoServico, EtapaOS } from "@/types/ordens";
-import { EtapaContent, EtapasSelector, InspecaoServicosSelector } from "@/components/ordens/etapas-tracker";
 import { Separator } from "@/components/ui/separator";
 import { useEtapasProgress } from "@/components/ordens/etapas-tracker/useEtapasProgress";
+// Import components directly to avoid errors
+import EtapaContent from "@/components/ordens/etapas-tracker/EtapaContent";
+import EtapasSelector from "@/components/ordens/etapas-tracker/EtapasSelector";
+import InspecaoServicosSelector from "@/components/ordens/etapas-tracker/InspecaoServicosSelector";
 
 interface EtapasTrackerProps {
   ordem: OrdemServico;
@@ -15,8 +19,8 @@ export default function EtapasTracker({ ordem, onOrdemUpdate, onFuncionariosChan
   const [servicoTipo, setServicoTipo] = useState<TipoServico | undefined>(undefined);
   
   const { 
-    etapaInfos, 
-    servicosByEtapa, 
+    progressoTotal, 
+    calcularProgressoTotal,
     handleSubatividadeToggle,
     handleServicoStatusChange,
     handleEtapaStatusChange, 
@@ -36,10 +40,48 @@ export default function EtapasTracker({ ordem, onOrdemUpdate, onFuncionariosChan
   };
 
   const isInspecaoFinalHabilitada = () => {
-    return ordem.etapasAndamento.retifica?.concluido === true;
+    return ordem.etapasAndamento?.retifica?.concluido === true;
   };
   
   const precisaEscolherServico = etapaAtual === "inspecao_inicial" || etapaAtual === "inspecao_final";
+  
+  // Get services by etapa
+  const getServicosByEtapa = () => {
+    const result: Record<EtapaOS, Servico[]> = {} as Record<EtapaOS, Servico[]>;
+    
+    ordem.servicos.forEach(servico => {
+      let etapa: EtapaOS;
+      if (servico.tipo === 'lavagem') {
+        etapa = 'lavagem';
+      } else if (servico.tipo === 'inspecao_inicial') {
+        etapa = 'inspecao_inicial';
+      } else if (servico.tipo === 'inspecao_final') {
+        etapa = 'inspecao_final';
+      } else if (['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo)) {
+        etapa = 'retifica';
+      } else if (servico.tipo === 'montagem') {
+        etapa = 'montagem';
+      } else if (servico.tipo === 'dinamometro') {
+        etapa = 'dinamometro';
+      } else {
+        return;
+      }
+
+      if (!result[etapa]) {
+        result[etapa] = [];
+      }
+      result[etapa].push(servico);
+    });
+    
+    return result;
+  };
+  
+  const servicosByEtapa = getServicosByEtapa();
+  
+  // Handler for service type selection
+  const handleServicoTipoSelect = (tipo: TipoServico) => {
+    setServicoTipo(tipo);
+  };
   
   return (
     <div className="space-y-6">
@@ -64,6 +106,8 @@ export default function EtapasTracker({ ordem, onOrdemUpdate, onFuncionariosChan
             <InspecaoServicosSelector 
               servicosTipo={["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"]}
               etapa={etapaAtual}
+              selectedServicoTipo={servicoTipo}
+              onServicoTipoSelect={handleServicoTipoSelect}
             />
           )}
           
@@ -71,7 +115,7 @@ export default function EtapasTracker({ ordem, onOrdemUpdate, onFuncionariosChan
             <EtapaContent 
               ordemId={ordem.id}
               etapa={etapaAtual}
-              etapaInfo={etapaInfos[etapaAtual]}
+              etapaInfo={ordem.etapasAndamento}
               servicos={
                 precisaEscolherServico && servicoTipo ? 
                   ordem.servicos.filter(s => s.tipo === servicoTipo) : 

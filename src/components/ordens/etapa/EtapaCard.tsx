@@ -136,17 +136,9 @@ export default function EtapaCard({
       return "nao_iniciado";
     }
   };
-  
-  // Lidar com a mudança de funcionário
-  const handleFuncionarioChange = (id: string) => {
-    console.log("handleFuncionarioChange:", id);
-    const funcionarioSelecionado = funcionariosOptions.find(f => f.id === id);
-    setFuncionarioSelecionadoId(id);
-    setFuncionarioSelecionadoNome(funcionarioSelecionado?.nome);
-  };
 
   // Lidar com a atribuição de múltiplos funcionários
-  const handleFuncionariosChange = (ids: string[], nomes: string[]) => {
+  const handleFuncionariosChangeLocal = (ids: string[], nomes: string[]) => {
     console.log("Funcionários atribuídos:", { ids, nomes });
     
     if (onFuncionariosChange) {
@@ -212,7 +204,7 @@ export default function EtapaCard({
           etapa={etapa}
           servicoTipo={servicoTipo}
           isEtapaConcluida={isEtapaConcluida()}
-          onFuncionariosChange={handleFuncionariosChange}
+          onFuncionariosChange={handleFuncionariosChangeLocal}
         />
       )}
       
