@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -59,6 +60,7 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate, onFuncionariosChange }
     );
   }, [ordem.servicos]);
 
+  // Use efeito para determinar quais etapas estão disponíveis para esta ordem
   useEffect(() => {
     if (!ordem || !funcionario) {
       setEtapasAtivas([]);
@@ -108,6 +110,7 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate, onFuncionariosChange }
     }
     
     try {
+      console.log("Atualizando status do serviço:", { servicoTipo, concluido, funcionarioId });
       // Important: Only update the status of the specific service, not others
       const servicosAtualizados = ordem.servicos.map(servico => {
         if (servico.tipo === servicoTipo) {
@@ -371,9 +374,115 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate, onFuncionariosChange }
     }
   }, [ordem, onOrdemUpdate]);
 
+  // Handle funcionarios change para múltiplos funcionários
+  const handleFuncionariosChange = useCallback((
+    etapa: EtapaOS, 
+    funcionariosIds: string[], 
+    funcionariosNomes: string[], 
+    servicoTipo?: string
+  ) => {
+    console.log("handleFuncionariosChange em EtapasTracker:", { etapa, funcionariosIds, funcionariosNomes, servicoTipo });
+    
+    if (onFuncionariosChange) {
+      onFuncionariosChange(etapa, funcionariosIds, funcionariosNomes, servicoTipo);
+    }
+    
+    // Determinar a chave da etapa com base no tipo de serviço
+    const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo) 
+      ? `${etapa}_${servicoTipo}` 
+      : etapa;
+    
+    // Atualizar localmente as informações de funcionários para refletir imediatamente na interface
+    if (ordem.id) {
+      console.log("Atualizando funcionários para etapa:", etapaKey);
+      
+      // Atualizar no Firebase
+      const ordemRef = doc(db, "ordens_servico", ordem.id);
+      
+      // Preparar dados de funcionários
+      const funcionarios = funcionariosIds.map((id, index) => ({
+        id,
+        nome: funcionariosNomes[index] || "",
+        inicio: new Date()
+      }));
+      
+      // Verificar se a etapa já tem informações
+      const etapaAtual = ordem.etapasAndamento?.[etapaKey] || {};
+      
+      const atualizacao = {
+        [`etapasAndamento.${etapaKey}`]: {
+          ...etapaAtual,
+          funcionarioId: funcionariosIds[0] || null, // Manter compatibilidade com campos antigos
+          funcionarioNome: funcionariosNomes[0] || "",
+          funcionarios: funcionarios,
+          iniciado: etapaAtual.iniciado || new Date(),
+          servicoTipo: servicoTipo || null
+        }
+      };
+      
+      // Atualizar no Firebase
+      updateDoc(ordemRef, atualizacao).then(() => {
+        console.log("Funcionários atualizados com sucesso");
+        
+        // Atualizar estado local
+        const etapasAndamentoAtualizado = { ...ordem.etapasAndamento || {} };
+        etapasAndamentoAtualizado[etapaKey] = atualizacao[`etapasAndamento.${etapaKey}`];
+        
+        const ordemAtualizada = {
+          ...ordem,
+          etapasAndamento: etapasAndamentoAtualizado
+        };
+        
+        if (onOrdemUpdate) {
+          onOrdemUpdate(ordemAtualizada);
+        }
+      }).catch(error => {
+        console.error("Erro ao atualizar funcionários:", error);
+        toast.error("Erro ao atualizar funcionários");
+      });
+    }
+  }, [ordem, onOrdemUpdate, onFuncionariosChange]);
+
+  // Preparar os serviços para a etapa atual
+  const getServicosParaEtapaAtual = useMemo(() => {
+    if (!selectedEtapa) return [];
+
+    console.log("Obtendo serviços para etapa:", selectedEtapa);
+    
+    // Para etapa de retifica, mostrar todos os serviços de retifica
+    if (selectedEtapa === "retifica") {
+      return ordem.servicos.filter(s => 
+        ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo)
+      );
+    }
+    
+    // Para etapa de lavagem, mostrar serviços de lavagem
+    if (selectedEtapa === "lavagem") {
+      return ordem.servicos.filter(s => s.tipo === "lavagem");
+    }
+    
+    // Para outras etapas regulares, mostrar serviços do mesmo tipo
+    const servicosEtapa = ordem.servicos.filter(s => s.tipo === selectedEtapa);
+    
+    // Caso especial para inspeção inicial/final
+    if ((selectedEtapa === "inspecao_inicial" || selectedEtapa === "inspecao_final")) {
+      if (selectedServicoTipo) {
+        // Se um tipo específico foi selecionado, filtrar apenas por ele
+        return ordem.servicos.filter(s => s.tipo === selectedServicoTipo);
+      } else {
+        // Senão, mostrar todos os serviços de inspeção e outros serviços que precisam ser inspecionados
+        const tipos = ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"];
+        return ordem.servicos.filter(s => 
+          s.tipo === selectedEtapa || tipos.includes(s.tipo)
+        );
+      }
+    }
+    
+    return servicosEtapa;
+  }, [selectedEtapa, selectedServicoTipo, ordem.servicos]);
+
   if (servicosAtivos.length === 0) {
-    // Fix: Ensure we're passing the required 'etapa' prop to EmptyServices
-    // Default to 'lavagem' if no selectedEtapa is available
+    // Garantir que estamos passando a etapa correta para EmptyServices
     return <EmptyServices etapa={selectedEtapa || 'lavagem'} />;
   }
 
@@ -390,13 +499,6 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate, onFuncionariosChange }
     
     return retificaConcluida || montagemConcluida || dinamometroConcluida;
   };
-
-  // Handle funcionario changes in EtapaContent
-  const handleFuncionariosChange = useCallback((etapa: EtapaOS, funcionariosIds: string[], funcionariosNomes: string[], servicoTipo?: string) => {
-    if (onFuncionariosChange) {
-      onFuncionariosChange(etapa, funcionariosIds, funcionariosNomes, servicoTipo);
-    }
-  }, [onFuncionariosChange]);
 
   return (
     <div className="space-y-6">
@@ -433,11 +535,7 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate, onFuncionariosChange }
               ordemId={ordem.id}
               etapa={selectedEtapa}
               etapaInfo={ordem.etapasAndamento}
-              servicos={
-                ordem.servicos.filter(s => {
-                  return true; // ou ajuste conforme sua lógica
-                })
-              }
+              servicos={getServicosParaEtapaAtual}
               servicoTipo={selectedServicoTipo || undefined}
               onSubatividadeToggle={handleSubatividadeToggle}
               onServicoStatusChange={handleServicoStatusChange}

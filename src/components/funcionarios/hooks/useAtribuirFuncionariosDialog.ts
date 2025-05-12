@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useFuncionariosDisponibilidade } from '@/hooks/useFuncionariosDisponibilidade';
 import { TipoServico } from '@/types/ordens';
@@ -35,6 +36,7 @@ export function useAtribuirFuncionariosDialog({
       previousIds.some((id, index) => currentIds[index] !== id);
 
     if (isDifferent) {
+      console.log("Atualizando funcionários selecionados de:", previousIds, "para:", currentIds);
       setFuncionariosSelecionados(currentIds);
       previousIdsRef.current = currentIds;
     }
@@ -42,12 +44,21 @@ export function useAtribuirFuncionariosDialog({
 
   // Filtrar funcionários com base nas condições
   const funcionariosFiltradosAtual = funcionariosStatus.filter(funcionario => {
-    if (especialidadeRequerida && !funcionario.especialidades?.includes(especialidadeRequerida)) {
-      return false;
-    }
+    // Filtro por status apenas se apenasDisponiveis estiver ativado
     if (apenasDisponiveis && funcionario.status !== 'disponivel') {
       return false;
     }
+    
+    // Sempre filtrar funcionários inativos
+    if (funcionario.status === 'inativo') {
+      return false;
+    }
+    
+    // Filtrar por especialidade se fornecida
+    if (especialidadeRequerida && !funcionario.especialidades?.includes(especialidadeRequerida)) {
+      return false;
+    }
+    
     return true;
   });
 

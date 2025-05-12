@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -26,7 +27,7 @@ export function AtribuirMultiplosFuncionariosDialog({
   especialidadeRequerida,
   title = "Atribuir Funcionários",
   description = "Selecione os funcionários para realizar este serviço.",
-  apenasDisponiveis = true,
+  apenasDisponiveis = false,
   confirmLabel = "Confirmar"
 }: AtribuirMultiplosFuncionariosDialogProps) {
   const {
@@ -43,6 +44,9 @@ export function AtribuirMultiplosFuncionariosDialog({
     onConfirm,
     isOpen: open
   });
+  
+  console.log("AtribuirMultiplosFuncionariosDialog - apenasDisponiveis:", apenasDisponiveis);
+  console.log("AtribuirMultiplosFuncionariosDialog - funcionários filtrados:", funcionariosFiltradosAtual.map(f => f.nome));
 
   // Handler para confirmar a seleção
   const handleConfirmSelection = useCallback(() => {
@@ -89,7 +93,7 @@ export function AtribuirMultiplosFuncionariosDialog({
             </ScrollArea>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              Nenhum funcionário disponível
+              Nenhum funcionário {apenasDisponiveis ? "disponível" : ""} 
               {especialidadeRequerida && (
                 <> com especialidade em {especialidadeRequerida}</>
               )}
