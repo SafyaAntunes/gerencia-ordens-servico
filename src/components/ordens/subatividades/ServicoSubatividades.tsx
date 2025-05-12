@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SubAtividade, TipoServico } from "@/types/ordens";
@@ -25,7 +24,7 @@ export const ServicoSubatividades = ({
       }
       return sub;
     });
-    
+    console.log("onChange chamado com:", updatedSubatividades);
     onChange(updatedSubatividades);
   };
   

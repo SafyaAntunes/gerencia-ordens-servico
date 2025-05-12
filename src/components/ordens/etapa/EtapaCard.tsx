@@ -208,18 +208,7 @@ export default function EtapaCard({
         />
       )}
       
-      {etapaComCronometro && (
-        <EtapaTimer
-          ordemId={ordemId}
-          funcionarioId={funcionarioSelecionadoId || funcionarioId}
-          funcionarioNome={funcionarioSelecionadoNome || funcionarioNome}
-          etapa={etapa}
-          servicoTipo={servicoTipo}
-          isEtapaConcluida={isEtapaConcluida()}
-          onFinish={handleEtapaConcluida}
-          onCustomTimerStart={handleCustomTimerStart}
-        />
-      )}
+      
       
       <EtapaServicos
         servicos={servicos}

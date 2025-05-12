@@ -118,8 +118,8 @@ export function useServicoTracker({
     }
     
     if (onServicoStatusChange) {
-      // Usar o ID do funcionário atual
-      onServicoStatusChange(true, funcionario?.id, funcionario?.nome);
+      // Usar o ID e nome do funcionário atribuído, não do logado
+      onServicoStatusChange(true, funcionarioId, funcionarioNome);
     }
   };
 
