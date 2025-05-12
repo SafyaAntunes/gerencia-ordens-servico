@@ -30,34 +30,12 @@ export default function EtapaContent({
   onSubatividadeSelecionadaToggle,
   onFuncionariosChange
 }: EtapaContentProps) {
-  // Filter services based on the etapa
   const etapaKey = servicoTipo ? `${etapa}_${servicoTipo}` : etapa;
   const etapaInfoEspecifica = etapaInfo ? 
     (servicoTipo ? etapaInfo[`${etapa}_${servicoTipo}`] : etapaInfo[etapa]) : 
     undefined;
   
-  // Filter services to only show the relevant ones for this etapa
-  const servicosFiltrados = servicos.filter(servico => {
-    // For inspection stages, only show the selected service type
-    if ((etapa === "inspecao_inicial" || etapa === "inspecao_final") && servicoTipo) {
-      return servico.tipo === servicoTipo;
-    }
-    
-    // For lavagem stage, only show lavagem services
-    if (etapa === "lavagem") {
-      return servico.tipo === "lavagem";
-    }
-    
-    // For retifica, only show retifica related services
-    if (etapa === "retifica") {
-      return ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(servico.tipo);
-    }
-    
-    // For other stages, return the specific services
-    return servico.tipo === etapa;
-  });
-  
-  if (servicosFiltrados.length === 0) {
+  if (servicos.length === 0) {
     return <EmptyServices etapa={etapa} />;
   }
 
@@ -80,7 +58,7 @@ export default function EtapaContent({
         etapaNome={getNomeEtapa(etapa, servicoTipo)}
         funcionarioId={etapaInfoEspecifica?.funcionarioId || ""}
         funcionarioNome={etapaInfoEspecifica?.funcionarioNome || ""}
-        servicos={servicosFiltrados}
+        servicos={servicos}
         etapaInfo={etapaInfoEspecifica}
         servicoTipo={servicoTipo}
         onSubatividadeToggle={onSubatividadeToggle}
