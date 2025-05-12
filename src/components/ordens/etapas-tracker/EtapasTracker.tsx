@@ -30,10 +30,11 @@ const shouldShowNotification = (message: string, cooldownMs = 3000): boolean => 
 interface EtapasTrackerProps {
   ordem: OrdemServico;
   onOrdemUpdate: (ordemAtualizada: OrdemServico) => void;
+  onFuncionariosChange?: (etapa: EtapaOS, funcionariosIds: string[], funcionariosNomes: string[], servicoTipo?: string) => void;
 }
 
 // Memoized component for better performance
-const EtapasTracker = React.memo(({ ordem, onOrdemUpdate }: EtapasTrackerProps) => {
+const EtapasTracker = React.memo(({ ordem, onOrdemUpdate, onFuncionariosChange }: EtapasTrackerProps) => {
   // Incluir todas as etapas na lista
   const [etapasAtivas, setEtapasAtivas] = useState<EtapaOS[]>([]);
   const [selectedEtapa, setSelectedEtapa] = useState<EtapaOS | null>(null);
@@ -388,6 +389,13 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate }: EtapasTrackerProps) 
     return retificaConcluida || montagemConcluida || dinamometroConcluida;
   };
 
+  // Handle funcionario changes in EtapaContent
+  const handleFuncionariosChange = useCallback((etapa: EtapaOS, funcionariosIds: string[], funcionariosNomes: string[], servicoTipo?: string) => {
+    if (onFuncionariosChange) {
+      onFuncionariosChange(etapa, funcionariosIds, funcionariosNomes, servicoTipo);
+    }
+  }, [onFuncionariosChange]);
+
   return (
     <div className="space-y-6">
       <Card className="w-full">
@@ -433,6 +441,7 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate }: EtapasTrackerProps) 
               onServicoStatusChange={handleServicoStatusChange}
               onEtapaStatusChange={handleEtapaStatusChange}
               onSubatividadeSelecionadaToggle={handleSubatividadeSelecionadaToggle}
+              onFuncionariosChange={handleFuncionariosChange}
             />
           )}
         </CardContent>
