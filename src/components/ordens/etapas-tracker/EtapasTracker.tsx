@@ -132,7 +132,7 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate, onFuncionariosChange }
         }
         // Important: Return other services unchanged
         return servico;
-      };
+      });
       
       const ordemRef = doc(db, "ordens_servico", ordem.id);
       await updateDoc(ordemRef, { servicos: servicosAtualizados });
