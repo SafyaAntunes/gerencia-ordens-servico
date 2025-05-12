@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { OrdemServico, Servico, TipoServico, EtapaOS } from "@/types/ordens";
 import { Separator } from "@/components/ui/separator";
 import { useEtapasProgress } from "@/components/ordens/etapas-tracker/useEtapasProgress";
@@ -83,6 +83,23 @@ export default function EtapasTracker({ ordem, onOrdemUpdate, onFuncionariosChan
     setServicoTipo(tipo);
   };
   
+  // Limpar o tipo de serviço quando a etapa mudar
+  useEffect(() => {
+    if (!precisaEscolherServico) {
+      setServicoTipo(undefined);
+    }
+  }, [etapaAtual, precisaEscolherServico]);
+  
+  // Manipulador de mudança de etapa
+  const handleEtapaSelect = (novaEtapa: EtapaOS) => {
+    setEtapaAtual(novaEtapa);
+    
+    // Se a nova etapa não precisar escolher serviço, limpar o tipo de serviço
+    if (!(novaEtapa === "inspecao_inicial" || novaEtapa === "inspecao_final")) {
+      setServicoTipo(undefined);
+    }
+  };
+  
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row items-start gap-4">
@@ -91,7 +108,7 @@ export default function EtapasTracker({ ordem, onOrdemUpdate, onFuncionariosChan
             etapasAtivas={etapasAtivas}
             selectedEtapa={etapaAtual}
             etapasDisponiveis={etapasDisponiveis}
-            onEtapaSelect={setEtapaAtual}
+            onEtapaSelect={handleEtapaSelect}
             isRetificaHabilitada={isRetificaHabilitada}
             isInspecaoFinalHabilitada={isInspecaoFinalHabilitada}
           />

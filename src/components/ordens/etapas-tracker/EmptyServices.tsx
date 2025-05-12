@@ -1,32 +1,40 @@
 
-import React from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EtapaOS } from "@/types/ordens";
+import { Card } from "@/components/ui/card";
+import { LayoutDashboard } from "lucide-react";
 
 interface EmptyServicesProps {
-  etapa?: EtapaOS;
+  etapa: EtapaOS;
 }
 
 export function EmptyServices({ etapa }: EmptyServicesProps) {
-  const etapaLabel = etapa ? 
-    (etapa === 'inspecao_inicial' ? 'Inspeção Inicial' : 
-     etapa === 'inspecao_final' ? 'Inspeção Final' : 
-     etapa.charAt(0).toUpperCase() + etapa.slice(1)) : 
-    'Etapa';
+  // Obter rótulo personalizado com base na etapa
+  const getEtapaLabel = () => {
+    switch (etapa) {
+      case 'lavagem':
+        return 'serviços de lavagem';
+      case 'inspecao_inicial':
+        return 'serviços de inspeção inicial';
+      case 'inspecao_final':
+        return 'serviços de inspeção final';
+      case 'retifica':
+        return 'serviços de retífica';
+      case 'montagem':
+        return 'serviços de montagem';
+      case 'dinamometro':
+        return 'serviços de dinamômetro';
+      default:
+        return 'serviços';
+    }
+  };
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Tracker de Serviços</CardTitle>
-        <CardDescription>
-          Não há serviços com subatividades selecionadas para esta etapa: {etapaLabel}.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className="text-muted-foreground text-center py-6">
-          Edite a ordem para selecionar serviços e subatividades.
-        </p>
-      </CardContent>
+    <Card className="p-8 flex flex-col items-center justify-center text-center">
+      <LayoutDashboard className="h-12 w-12 text-muted-foreground mb-4" />
+      <h3 className="text-lg font-medium">Nenhum serviço encontrado</h3>
+      <p className="text-muted-foreground mt-1">
+        Não há {getEtapaLabel()} disponíveis para esta ordem de serviço.
+      </p>
     </Card>
   );
 }

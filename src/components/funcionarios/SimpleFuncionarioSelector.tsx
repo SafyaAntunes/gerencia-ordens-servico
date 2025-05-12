@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -34,7 +35,7 @@ export function SimpleFuncionarioSelector({
   apenasDisponiveis = false
 }: SimpleFuncionarioSelectorProps) {
   const [funcionarioId, setFuncionarioId] = useState<string>(funcionarioAtualId || "");
-  const { funcionariosStatus, funcionariosDisponiveis, loading } = useFuncionariosDisponibilidade();
+  const { funcionariosStatus, loading } = useFuncionariosDisponibilidade();
 
   // Atualizar o estado quando o funcionário atual mudar
   useEffect(() => {
@@ -45,33 +46,36 @@ export function SimpleFuncionarioSelector({
   }, [funcionarioAtualId]);
 
   // Filtrar funcionários elegíveis - memoizado para performance
-  const funcionariosElegiveis = useCallback(() => {
+  const funcionariosElegiveis = useMemo(() => {
+    // Mudança: não filtrar por disponibilidade a menos que especificamente solicitado
     return apenasDisponiveis 
-      ? funcionariosDisponiveis 
+      ? funcionariosStatus.filter(f => f.status === 'disponivel')
       : funcionariosStatus.filter(f => f.status !== 'inativo');
-  }, [apenasDisponiveis, funcionariosDisponiveis, funcionariosStatus]);
+  }, [apenasDisponiveis, funcionariosStatus]);
 
   // Se tiver especialidade requerida, filtrar mais - memoizado para performance
-  const funcionariosFiltrados = useCallback(() => {
-    const elegiveis = funcionariosElegiveis();
-    return especialidadeRequerida
-      ? elegiveis.filter(f => 
-          f.especialidades && f.especialidades.includes(especialidadeRequerida)
-        )
-      : elegiveis;
+  const funcionariosFiltrados = useMemo(() => {
+    const elegiveis = funcionariosElegiveis;
+    
+    // Se tiver especialidade, filtra por ela, senão retorna todos
+    if (especialidadeRequerida) {
+      return elegiveis.filter(f => 
+        f.especialidades && f.especialidades.includes(especialidadeRequerida)
+      );
+    }
+    
+    return elegiveis;
   }, [especialidadeRequerida, funcionariosElegiveis]);
 
   // Encontrar o funcionário selecionado atual
   const funcionarioSelecionado = useMemo(() => {
-    const todosFuncionarios = [...funcionariosStatus, ...funcionariosDisponiveis];
-    return todosFuncionarios.find(f => f.id === funcionarioId);
-  }, [funcionariosStatus, funcionariosDisponiveis, funcionarioId]);
+    return funcionariosStatus.find(f => f.id === funcionarioId);
+  }, [funcionariosStatus, funcionarioId]);
 
   const handleChange = useCallback((id: string) => {
     setFuncionarioId(id);
     
-    const funcionario = funcionariosStatus.find(f => f.id === id) || 
-                       funcionariosDisponiveis.find(f => f.id === id);
+    const funcionario = funcionariosStatus.find(f => f.id === id);
     
     if (funcionario) {
       console.log("Funcionário selecionado:", funcionario);
@@ -80,10 +84,7 @@ export function SimpleFuncionarioSelector({
       console.error("Funcionário não encontrado:", id);
       toast.error("Funcionário não encontrado");
     }
-  }, [funcionariosStatus, funcionariosDisponiveis, onFuncionarioSelecionado]);
-
-  // Memoize a lista de funcionários filtrados atual
-  const funcionariosFiltradosAtual = funcionariosFiltrados();
+  }, [funcionariosStatus, onFuncionarioSelecionado]);
 
   if (loading) {
     return (
@@ -140,49 +141,49 @@ export function SimpleFuncionarioSelector({
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {funcionariosFiltradosAtual.map((funcionario) => (
-                <SelectItem 
-                  key={funcionario.id} 
-                  value={funcionario.id}
-                  className="flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-2">
-                    {funcionario.nome}
-                    
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span>
-                            {funcionario.status === 'disponivel' ? (
-                              <Badge variant="success" className="ml-2 text-xs">
-                                <CircleCheck className="h-3 w-3 mr-1" />
-                                Disponível
-                              </Badge>
-                            ) : (
-                              <Badge variant="warning" className="ml-2 text-xs">
-                                <Clock className="h-3 w-3 mr-1" />
-                                Ocupado
-                              </Badge>
-                            )}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {funcionario.status === 'disponivel' 
-                            ? 'Funcionário disponível para atribuição' 
-                            : 'Funcionário está trabalhando em outra tarefa'}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                </SelectItem>
-              ))}
-
-              {funcionariosFiltradosAtual.length === 0 && (
+              {funcionariosFiltrados.length === 0 ? (
                 <div className="p-2 text-sm text-muted-foreground text-center">
                   {especialidadeRequerida 
                     ? `Nenhum funcionário com especialidade em ${especialidadeRequerida} disponível` 
                     : "Nenhum funcionário disponível"}
                 </div>
+              ) : (
+                funcionariosFiltrados.map((funcionario) => (
+                  <SelectItem 
+                    key={funcionario.id} 
+                    value={funcionario.id}
+                    className="flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2">
+                      {funcionario.nome}
+                      
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span>
+                              {funcionario.status === 'disponivel' ? (
+                                <Badge variant="success" className="ml-2 text-xs">
+                                  <CircleCheck className="h-3 w-3 mr-1" />
+                                  Disponível
+                                </Badge>
+                              ) : (
+                                <Badge variant="warning" className="ml-2 text-xs">
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  Ocupado
+                                </Badge>
+                              )}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {funcionario.status === 'disponivel' 
+                              ? 'Funcionário disponível para atribuição' 
+                              : 'Funcionário está trabalhando em outra tarefa'}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </SelectItem>
+                ))
               )}
             </SelectContent>
           </Select>
