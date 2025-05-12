@@ -132,7 +132,7 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate, onFuncionariosChange }
         }
         // Important: Return other services unchanged
         return servico;
-      });
+      };
       
       const ordemRef = doc(db, "ordens_servico", ordem.id);
       await updateDoc(ordemRef, { servicos: servicosAtualizados });
@@ -372,7 +372,9 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate, onFuncionariosChange }
   }, [ordem, onOrdemUpdate]);
 
   if (servicosAtivos.length === 0) {
-    return <EmptyServices />;
+    // Fix: Ensure we're passing the required 'etapa' prop to EmptyServices
+    // Default to 'lavagem' if no selectedEtapa is available
+    return <EmptyServices etapa={selectedEtapa || 'lavagem'} />;
   }
 
   // Memoize etapasDisponiveis for better performance
