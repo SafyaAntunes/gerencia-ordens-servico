@@ -33,10 +33,13 @@ export default function ServicoDetails({
       )}
 
       {subatividades.length > 0 && (
-        <div>
-          <h4 className="text-sm font-medium mb-2">Subatividades</h4>
+        <div role="group" aria-labelledby="subatividades-heading">
+          <h4 id="subatividades-heading" className="text-sm font-medium mb-2">
+            Subatividades
+          </h4>
           <div className="space-y-2">
             {subatividades.map((subatividade) => {
+              const checkboxId = `subatividade-${subatividade.id}`;
               return (
                 <div 
                   key={subatividade.id} 
@@ -44,14 +47,16 @@ export default function ServicoDetails({
                 >
                   <div className="flex items-center gap-2">
                     <Checkbox
-                      id={`subatividade-${subatividade.id}`}
+                      id={checkboxId}
                       checked={subatividade.concluida}
                       onCheckedChange={(checked) => handleToggle(subatividade.id, checked === true)}
                       disabled={!temPermissao}
                       className="data-[state=checked]:bg-green-600"
+                      aria-label={subatividade.nome}
+                      aria-describedby={subatividade.tempoEstimado ? `tempo-${subatividade.id}` : undefined}
                     />
                     <Label
-                      htmlFor={`subatividade-${subatividade.id}`}
+                      htmlFor={checkboxId}
                       className={cn(
                         "text-sm cursor-pointer select-none",
                         subatividade.concluida ? "text-muted-foreground line-through" : ""
@@ -61,7 +66,10 @@ export default function ServicoDetails({
                     </Label>
                   </div>
                   {subatividade.tempoEstimado && (
-                    <span className="text-xs text-muted-foreground">
+                    <span 
+                      id={`tempo-${subatividade.id}`}
+                      className="text-xs text-muted-foreground"
+                    >
                       {subatividade.tempoEstimado} {subatividade.tempoEstimado === 1 ? 'hora' : 'horas'}
                     </span>
                   )}

@@ -282,54 +282,35 @@ export default function OrdemForm({
   useEffect(() => {
     const tiposList = servicosTipos;
 
-    const loadSubatividades = async (tipo: TipoServico) => {
-      try {
-        const subatividadesList = await getSubatividadesByTipo(tipo);
+    const fetchAllSubatividades = async () => {
+      const result: Record<string, SubAtividade[]> = {};
 
-        setServicosSubatividades(prev => {
-          // Se já existe, não sobrescreva!
-          if (prev[tipo] && prev[tipo].length > 0) return prev;
+      await Promise.all(
+        tiposList.map(async (tipo) => {
+          try {
+            const subatividadesList = await getSubatividadesByTipo(tipo as TipoServico);
+            const doRol = subatividadesList || [];
+            const salvas = defaultValues?.servicosSubatividades?.[tipo] || [];
+            const todas = [...doRol, ...salvas.filter(salva => !doRol.some(sub => sub.id === salva.id))];
+            const atualizadas = todas.map(sub => {
+              const salva = salvas.find(s => s.id === sub.id);
+              return {
+                ...sub,
+                selecionada: salva ? salva.selecionada : false
+              };
+            });
+            result[tipo] = atualizadas;
+          } catch {
+            result[tipo] = [];
+          }
+        })
+      );
 
-          // Priorize o estado local (prev), depois o defaultValues
-          const salvas = prev[tipo] || defaultValues?.servicosSubatividades?.[tipo] || [];
-          const atualizadas = (subatividadesList || []).map(sub => {
-            const salva = salvas.find(s => s.id === sub.id);
-            return {
-              ...sub,
-              selecionada: salva ? salva.selecionada : false
-            };
-          });
-          return {
-            ...prev,
-            [tipo]: atualizadas
-          };
-        });
-      } catch (error) {
-        console.error(`Erro ao carregar subatividades para ${tipo}:`, error);
-        setServicosSubatividades(prev => ({
-          ...prev,
-          [tipo]: []
-        }));
-      }
+      setServicosSubatividades(result);
     };
 
-    tiposList.forEach((tipo) => {
-      if (!servicosSubatividades[tipo] || servicosSubatividades[tipo].length === 0) {
-        loadSubatividades(tipo as TipoServico);
-      }
-    });
-
-    // Remover subatividades de tipos que não estão mais selecionados
-    Object.keys(servicosSubatividades).forEach((tipo) => {
-      if (!tiposList.includes(tipo)) {
-        setServicosSubatividades(prev => {
-          const newState = { ...prev };
-          delete newState[tipo];
-          return newState;
-        });
-      }
-    });
-  }, [servicosTipos]);
+    fetchAllSubatividades();
+  }, [servicosTipos, defaultValues?.id]);
   
   const handleServicoDescricaoChange = (tipo: string, descricao: string) => {
     setServicosDescricoes(prev => ({
@@ -338,19 +319,27 @@ export default function OrdemForm({
     }));
   };
   
-  const handleSubatividadesChange = (tipo: TipoServico, subatividades: SubAtividade[]) => {
-    console.log("handleSubatividadesChange", tipo, subatividades);
-    setServicosSubatividades(prev => ({
-      ...prev,
-      [tipo]: subatividades
-    }));
-    
-    // Se a função de callback para seleção de subatividades existir, chame-a para cada subatividade alterada
+  const handleSubatividadesChange = (tipo: TipoServico, subatividadesAtualizadas: SubAtividade[]) => {
+    setServicosSubatividades(prev => {
+      // Pega todas as subatividades possíveis (do estado atual)
+      const todas = prev[tipo] || [];
+      // Cria um map para lookup rápido
+      const atualizadasMap = new Map(subatividadesAtualizadas.map(s => [s.id, s.selecionada]));
+      // Atualiza o status de seleção das subatividades conforme o array recebido
+      const novas = todas.map(sub => ({
+        ...sub,
+        selecionada: atualizadasMap.has(sub.id) ? atualizadasMap.get(sub.id) : sub.selecionada
+      }));
+      return {
+        ...prev,
+        [tipo]: novas
+      };
+    });
+
+    // Callback de seleção (mantém igual)
     if (onSubatividadeSelecionadaToggle) {
       const prevSubs = servicosSubatividades[tipo] || [];
-      
-      // Compara subatividades anteriores com as novas para identificar mudanças na seleção
-      subatividades.forEach(newSub => {
+      subatividadesAtualizadas.forEach(newSub => {
         const oldSub = prevSubs.find(s => s.id === newSub.id);
         if (oldSub && oldSub.selecionada !== newSub.selecionada) {
           onSubatividadeSelecionadaToggle(tipo, newSub.id, newSub.selecionada);
