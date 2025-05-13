@@ -1,5 +1,5 @@
 
-import { ServicoStatus, ServicoStatusType } from "../types/servicoTrackerTypes";
+import { ServicoStatus } from "../types/servicoTrackerTypes";
 import { TipoServico } from "@/types/ordens";
 
 /**
@@ -25,8 +25,8 @@ export const getTipoServicoNome = (tipo: TipoServico): string => {
 /**
  * Converte o status do serviço para um nome mais amigável
  */
-export const getServicoStatusNome = (status: ServicoStatusType): string => {
-  const nomes: Record<ServicoStatusType, string> = {
+export const getServicoStatusNome = (status: ServicoStatus): string => {
+  const nomes: Record<ServicoStatus, string> = {
     nao_iniciado: "Não iniciado",
     em_andamento: "Em andamento",
     concluido: "Concluído",
