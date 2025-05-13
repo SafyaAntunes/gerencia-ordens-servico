@@ -5,7 +5,7 @@ import { LogoutProps } from "@/types/props";
 import { useAuth } from "@/hooks/useAuth";
 import { SubAtividade } from "@/types/ordens";
 import { useOrdemDetalhes } from "@/hooks/useOrdemDetalhes";
-import OrdemForm from "@/components/ordens/OrdemForm";
+import OrdemForm from "@/components/ordens/form";
 import { OrdemTabs } from "@/components/ordens/detalhes/OrdemTabs";
 import { DeleteOrdemDialog } from "@/components/ordens/detalhes/DeleteOrdemDialog";
 import { LoadingOrdem } from "@/components/ordens/detalhes/LoadingOrdem";
