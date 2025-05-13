@@ -18,7 +18,7 @@ interface ServicoTrackerProps {
   funcionarioNome?: string;
   onSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
   onServicoStatusChange: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
-  onSubatividadeSelecionadaToggle?: (subatividadeId: string, checked: boolean) => void; // Added this prop to match usage
+  onSubatividadeSelecionadaToggle?: (subatividadeId: string, checked: boolean) => void;
   className?: string;
   etapa?: string;
 }

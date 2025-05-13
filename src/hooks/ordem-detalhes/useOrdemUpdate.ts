@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { db } from "@/lib/firebase";
 import { doc, updateDoc, Timestamp, getDoc } from "firebase/firestore";
@@ -27,7 +26,7 @@ export const useOrdemUpdate = (
         return;
       }
       
-      // Preserve existing subactivities
+      // Revised function to properly preserve existing subactivities and add new ones
       const preserveExistingSubactivities = (currentServicos = [], newServicosTipos = []) => {
         const servicosMap = currentServicos.reduce((acc, servico) => {
           acc[servico.tipo] = servico;
@@ -37,37 +36,41 @@ export const useOrdemUpdate = (
         return newServicosTipos.map(tipo => {
           const existingServico = servicosMap[tipo];
           
-          const novasSubatividades = values.servicosSubatividades?.[tipo] || [];
+          // Get the updated subactividades from the form values
+          const formSubatividades = values.servicosSubatividades?.[tipo] || [];
+          
+          // Process subatividades - preserve existing status for those that were already present
+          let processedSubatividades = [];
           
           if (existingServico && existingServico.subatividades) {
-            const subatividadesPreservadas = novasSubatividades.map(novaSub => {
-              const subExistente = existingServico.subatividades?.find(s => s.id === novaSub.id);
-              if (subExistente) {
-                return {
-                  ...novaSub,
-                  concluida: subExistente.concluida !== undefined ? subExistente.concluida : novaSub.concluida
-                };
-              }
-              return novaSub;
+            // For each subatividade in the form submission
+            processedSubatividades = formSubatividades.map(formSub => {
+              // Find if this subatividade existed before
+              const existingSub = existingServico.subatividades?.find(s => s.id === formSub.id);
+              
+              // If the subatividade existed, preserve its 'concluida' status
+              // Otherwise, use the value from the form (which will be false for new selections)
+              return {
+                ...formSub,
+                concluida: existingSub ? existingSub.concluida : false
+              };
             });
-            
-            return {
-              tipo,
-              descricao: values.servicosDescricoes?.[tipo] || "",
-              concluido: existingServico.concluido || false,
-              subatividades: subatividadesPreservadas,
-              // Removemos as referências ao funcionário responsável
-              funcionarioId: undefined,
-              funcionarioNome: undefined,
-              dataConclusao: existingServico.dataConclusao
-            };
+          } else {
+            // If this is a new service type, initialize all subatividades as not completed
+            processedSubatividades = formSubatividades.map(sub => ({
+              ...sub,
+              concluida: false
+            }));
           }
           
           return {
             tipo,
             descricao: values.servicosDescricoes?.[tipo] || "",
-            concluido: false,
-            subatividades: novasSubatividades,
+            concluido: existingServico?.concluido || false,
+            subatividades: processedSubatividades,
+            funcionarioId: existingServico?.funcionarioId,
+            funcionarioNome: existingServico?.funcionarioNome,
+            dataConclusao: existingServico?.dataConclusao
           };
         });
       };

@@ -285,18 +285,24 @@ export default function OrdemForm({
         const subatividadesList = await getSubatividadesByTipo(tipo);
 
         setServicosSubatividades(prev => {
-          // Se já existe, não sobrescreva!
-          if (prev[tipo] && prev[tipo].length > 0) return prev;
-
-          // Priorize o estado local (prev), depois o defaultValues
-          const salvas = prev[tipo] || defaultValues?.servicosSubatividades?.[tipo] || [];
+          // Always get the complete list of subatividades from the API
+          const existingSubatividades = prev[tipo] || [];
+          const defaultSubatividades = defaultValues?.servicosSubatividades?.[tipo] || [];
+          
+          // Combine existing and newly fetched subatividades
           const atualizadas = (subatividadesList || []).map(sub => {
-            const salva = salvas.find(s => s.id === sub.id);
+            // Look for this subatividade in existing or default values
+            const existingItem = existingSubatividades.find(s => s.id === sub.id);
+            const defaultItem = defaultSubatividades.find(s => s.id === sub.id);
+            
+            // Prioritize: 1. Current state, 2. Default values, 3. New values
             return {
               ...sub,
-              selecionada: salva ? salva.selecionada : false
+              selecionada: existingItem?.selecionada ?? defaultItem?.selecionada ?? false,
+              concluida: existingItem?.concluida ?? defaultItem?.concluida ?? false
             };
           });
+          
           return {
             ...prev,
             [tipo]: atualizadas
@@ -311,10 +317,9 @@ export default function OrdemForm({
       }
     };
 
+    // Always load subatividades for all selected service types
     tiposList.forEach((tipo) => {
-      if (!servicosSubatividades[tipo] || servicosSubatividades[tipo].length === 0) {
-        loadSubatividades(tipo as TipoServico);
-      }
+      loadSubatividades(tipo as TipoServico);
     });
 
     // Remover subatividades de tipos que não estão mais selecionados
