@@ -22,6 +22,13 @@ export function ServicoTracker({
   onSubatividadeSelecionadaToggle,
   onServicoUpdate
 }: ServicoTrackerProps) {
+  const [localServico, setLocalServico] = useState<Servico>(servico);
+  
+  // Effect to update local state when servico prop changes
+  useEffect(() => {
+    setLocalServico(servico);
+  }, [servico]);
+  
   const {
     isShowingDetails,
     toggleDetails,
@@ -31,7 +38,7 @@ export function ServicoTracker({
     temPermissao,
     timer
   } = useServicoTracker({
-    servico,
+    servico: localServico,
     ordemId,
     funcionarioId,
     funcionarioNome,
@@ -39,24 +46,29 @@ export function ServicoTracker({
     onSubatividadeToggle,
     onServicoStatusChange,
     onSubatividadeSelecionadaToggle,
-    onServicoUpdate
+    onServicoUpdate: (updatedServico) => {
+      setLocalServico(updatedServico);
+      if (onServicoUpdate) {
+        onServicoUpdate(updatedServico);
+      }
+    }
   });
 
   // Calculate progress
-  const totalSubatividades = servico.subatividades?.length || 0;
-  const completedSubatividades = servico.subatividades?.filter(sub => sub.concluida).length || 0;
+  const totalSubatividades = localServico.subatividades?.length || 0;
+  const completedSubatividades = localServico.subatividades?.filter(sub => sub.concluida).length || 0;
   const progressPercentage = totalSubatividades > 0 
     ? Math.round((completedSubatividades / totalSubatividades) * 100) 
     : 0;
 
   // Determine service status
-  const servicoStatus = servico.concluido 
+  const servicoStatus = localServico.concluido 
     ? 'concluido' 
     : timer.isRunning && !timer.isPaused 
       ? 'em_andamento' 
       : timer.isPaused 
         ? 'pausado'
-        : servico.funcionarioId 
+        : localServico.funcionarioId 
           ? 'em_andamento' 
           : 'nao_iniciado';
 
@@ -64,13 +76,13 @@ export function ServicoTracker({
     <Card className="mb-4">
       <CardHeader className="pb-2">
         <ServicoHeader
-          tipo={servico.tipo}
+          tipo={localServico.tipo}
           servicoStatus={servicoStatus}
           progressPercentage={progressPercentage}
           completedSubatividades={completedSubatividades}
           totalSubatividades={totalSubatividades}
-          funcionarioNome={servico.funcionarioNome}
-          concluido={servico.concluido}
+          funcionarioNome={localServico.funcionarioNome}
+          concluido={localServico.concluido}
           isOpen={isShowingDetails}
           onToggleOpen={toggleDetails}
           displayTime={timer.displayTime}
@@ -80,7 +92,7 @@ export function ServicoTracker({
       {isShowingDetails && (
         <CardContent>
           <ServicoDetails
-            servico={servico}
+            servico={localServico}
             onSubatividadeToggle={handleSubatividadeToggle}
             onServicoConcluidoToggle={handleServicoConcluidoToggle}
             onSubatividadeSelecionadaToggle={handleSubatividadeSelecionadaToggle}

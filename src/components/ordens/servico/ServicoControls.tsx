@@ -4,6 +4,7 @@ import { Play, Pause, StopCircle, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import PausaDialog from "../PausaDialog";
 import { Servico } from "@/types/ordens";
+import { toast } from "sonner";
 
 interface ServicoControlsProps {
   isRunning?: boolean;
@@ -61,6 +62,11 @@ export default function ServicoControls({
   };
   
   const handleMarcarConcluido = () => {
+    if (!allSelectedSubatividadesComplete && !todasSubatividadesConcluidas) {
+      toast.error("Complete todas as subatividades antes de marcar o serviço como concluído.");
+      return;
+    }
+    
     if (onServicoConcluidoToggle) {
       onServicoConcluidoToggle(true);
     } else if (onMarcarConcluido) {
@@ -121,27 +127,34 @@ export default function ServicoControls({
       </div>
       
       {!concluido && (onServicoConcluidoToggle || onMarcarConcluido) && (
-        <div className="pt-0 pb-4">
-          <Button 
-            variant="default" 
-            size="sm" 
-            onClick={handleMarcarConcluido}
-            disabled={!allSelectedSubatividadesComplete && !todasSubatividadesConcluidas}
-            className={`w-full ${
-              allSelectedSubatividadesComplete || todasSubatividadesConcluidas
-                ? 'bg-blue-500 hover:bg-blue-600'
-                : 'bg-gray-400'
-            } text-white`}
-            title={
-              !allSelectedSubatividadesComplete && !todasSubatividadesConcluidas
-                ? "Complete todas as subatividades primeiro"
-                : "Marcar como concluído"
-            }
-          >
-            <CheckCircle2 className="h-4 w-4 mr-1" />
-            Marcar Concluído
-          </Button>
-        </div>
+        <>
+          {subatividadesSelecionadas > 0 && (
+            <div className="text-xs text-center mb-2">
+              {subatividadesConcluidas}/{subatividadesSelecionadas} subatividades concluídas
+            </div>
+          )}
+          <div className="pt-0 pb-4">
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={handleMarcarConcluido}
+              disabled={!allSelectedSubatividadesComplete && !todasSubatividadesConcluidas}
+              className={`w-full ${
+                allSelectedSubatividadesComplete || todasSubatividadesConcluidas
+                  ? 'bg-blue-500 hover:bg-blue-600'
+                  : 'bg-gray-400'
+              } text-white`}
+              title={
+                !allSelectedSubatividadesComplete && !todasSubatividadesConcluidas
+                  ? "Complete todas as subatividades primeiro"
+                  : "Marcar como concluído"
+              }
+            >
+              <CheckCircle2 className="h-4 w-4 mr-1" />
+              Marcar Concluído
+            </Button>
+          </div>
+        </>
       )}
       
       <PausaDialog 
