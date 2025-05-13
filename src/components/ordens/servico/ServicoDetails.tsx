@@ -1,5 +1,9 @@
 
-import { Button, Card, Checkbox, Progress } from "@/components/ui/";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
+import { Check, RotateCcw } from "lucide-react";
 import { Servico, SubAtividade } from "@/types/ordens";
 
 interface ServicoDetailsProps {

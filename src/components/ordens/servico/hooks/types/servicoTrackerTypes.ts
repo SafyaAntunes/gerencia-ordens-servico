@@ -1,4 +1,6 @@
 
+import { Servico, EtapaOS } from "@/types/ordens";
+
 export type ServicoStatus = 'pending' | 'in-progress' | 'completed';
 
 export type ServicoStatusType = 'nao_iniciado' | 'em_andamento' | 'concluido' | 'pausado';
