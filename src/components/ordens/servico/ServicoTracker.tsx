@@ -53,6 +53,9 @@ export function ServicoTracker({
   const subatividadesSelecionadas = servico.subatividades?.filter(s => s.selecionada)?.length || 0;
   const totalSubatividades = servico.subatividades?.length || 0;
   const subatividadesConcluidas = servico.subatividades?.filter(s => s.concluida)?.length || 0;
+  const progressPercentage = totalSubatividades > 0 
+    ? Math.round((subatividadesConcluidas / totalSubatividades) * 100) 
+    : 0;
 
   return (
     <Card>
@@ -60,8 +63,12 @@ export function ServicoTracker({
         <ServicoHeader 
           tipo={servico.tipo} 
           concluido={servico.concluido}
-          onToggleDetails={toggleDetails}
-          isExpanded={isShowingDetails}
+          isOpen={isShowingDetails}
+          onToggleOpen={toggleDetails}
+          progressPercentage={progressPercentage}
+          completedSubatividades={subatividadesConcluidas}
+          totalSubatividades={totalSubatividades}
+          funcionarioNome={servico.funcionarioNome}
         />
       </CardHeader>
       
@@ -75,15 +82,20 @@ export function ServicoTracker({
           />
           
           <ServicoControls
+            temPermissao={temPermissao}
             subatividadesConcluidas={subatividadesConcluidas}
             subatividadesSelecionadas={subatividadesSelecionadas}
             totalSubatividades={totalSubatividades}
             servico={servico}
-            temPermissao={temPermissao}
+            todasSubatividadesConcluidas={subatividadesConcluidas === totalSubatividades && totalSubatividades > 0}
             onServicoConcluidoToggle={handleServicoConcluidoToggle}
+            concluido={servico.concluido}
           />
         </CardContent>
       )}
     </Card>
   );
 }
+
+// Export as default as well for compatibility
+export default ServicoTracker;

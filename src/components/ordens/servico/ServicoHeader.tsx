@@ -4,20 +4,19 @@ import { formatTime } from "@/utils/timerUtils";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Clock, ChevronDown, ChevronUp } from "lucide-react";
-import { ServicoStatus } from "./hooks/types/servicoTrackerTypes";
+import { ServicoStatus, ServicoStatusType } from "./hooks/types/servicoTrackerTypes";
 import { Button } from "@/components/ui/button";
 
 interface ServicoHeaderProps {
   tipo: TipoServico;
-  displayTime: string | number;
-  servicoStatus: ServicoStatus;
-  progressPercentage: number;
-  completedSubatividades: number;
-  totalSubatividades: number;
-  tempoTotalEstimado: number;
+  displayTime?: string | number;
+  servicoStatus?: ServicoStatusType;
+  progressPercentage?: number;
+  completedSubatividades?: number;
+  totalSubatividades?: number;
+  tempoTotalEstimado?: number;
   funcionarioNome?: string;
   concluido: boolean;
-  temPermissao: boolean;
   isOpen?: boolean;
   onToggleOpen: () => void;
   onReiniciarServico?: (e: React.MouseEvent) => void;
@@ -27,13 +26,12 @@ export default function ServicoHeader({
   tipo,
   displayTime,
   servicoStatus,
-  progressPercentage,
-  completedSubatividades,
-  totalSubatividades,
+  progressPercentage = 0,
+  completedSubatividades = 0,
+  totalSubatividades = 0,
   tempoTotalEstimado,
   funcionarioNome,
   concluido,
-  temPermissao,
   isOpen,
   onToggleOpen
 }: ServicoHeaderProps) {
@@ -66,13 +64,15 @@ export default function ServicoHeader({
         <div className="flex-1">
           <h3 className="text-lg font-medium">{getTipoTitle(tipo)}</h3>
           
-          <div className="flex items-center text-sm text-muted-foreground mt-1">
-            <Clock className="h-4 w-4 mr-1" />
-            <span>Tempo: {formattedTime}</span>
-            {tempoTotalEstimado > 0 && (
-              <span className="ml-2">/ Estimado: {formatTime(tempoTotalEstimado * 3600 * 1000)}</span>
-            )}
-          </div>
+          {displayTime && (
+            <div className="flex items-center text-sm text-muted-foreground mt-1">
+              <Clock className="h-4 w-4 mr-1" />
+              <span>Tempo: {formattedTime}</span>
+              {tempoTotalEstimado && tempoTotalEstimado > 0 && (
+                <span className="ml-2">/ Estimado: {formatTime(tempoTotalEstimado * 3600 * 1000)}</span>
+              )}
+            </div>
+          )}
         </div>
         
         <div className="flex items-center space-x-2">

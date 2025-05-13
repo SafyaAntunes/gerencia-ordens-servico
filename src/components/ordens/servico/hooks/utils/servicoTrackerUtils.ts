@@ -1,5 +1,5 @@
 
-import { ServicoStatus } from "../types/servicoTrackerTypes";
+import { ServicoStatusType } from "../types/servicoTrackerTypes";
 import { TipoServico } from "@/types/ordens";
 
 export const formatTimeDisplay = (seconds: number): string => {
@@ -16,7 +16,7 @@ export const getServicoStatus = (
   isRunning: boolean,
   isPaused: boolean,
   concluido: boolean
-): ServicoStatus => {
+): ServicoStatusType => {
   if (concluido) {
     return "concluido";
   } else if (isRunning) {
