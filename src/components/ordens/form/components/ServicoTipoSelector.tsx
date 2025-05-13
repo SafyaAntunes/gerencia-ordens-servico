@@ -1,5 +1,5 @@
 
-import { memo, useCallback } from "react";
+import { memo, useCallback, useEffect } from "react";
 import { FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SubAtividade, TipoServico } from "@/types/ordens";
@@ -7,6 +7,7 @@ import { ServicoSubatividades } from "@/components/ordens/subatividades";
 import { tiposServico } from "../types";
 import { UseFormReturn } from "react-hook-form";
 import { FormValues } from "../types";
+import { useServicoSubatividades } from "@/hooks/useServicoSubatividades";
 
 interface ServicoTipoSelectorProps {
   form: UseFormReturn<FormValues>;
@@ -20,6 +21,8 @@ export const ServicoTipoSelector = memo(({
   servicosSubatividades,
   onSubatividadesChange 
 }: ServicoTipoSelectorProps) => {
+  // Get default subatividades for fallback
+  const { defaultSubatividades } = useServicoSubatividades();
   
   // Use useCallback to memoize handleSubatividadeChange for each tipo
   const getMemoizedChangeHandler = useCallback((tipo: TipoServico) => {
@@ -27,6 +30,28 @@ export const ServicoTipoSelector = memo(({
       onSubatividadesChange(tipo, subatividades);
     };
   }, [onSubatividadesChange]);
+  
+  // Effect to ensure we have subatividades for each selected service type
+  useEffect(() => {
+    const servicosTipos = form.getValues("servicosTipos") || [];
+    
+    servicosTipos.forEach(tipo => {
+      // If there are no subatividades for this service type but we have defaults, 
+      // create basic subatividades from the defaults
+      if ((!servicosSubatividades[tipo] || servicosSubatividades[tipo].length === 0) && 
+          defaultSubatividades && defaultSubatividades[tipo as TipoServico]) {
+        
+        const defaultSubs = defaultSubatividades[tipo as TipoServico].map(nome => ({
+          id: nome,
+          nome,
+          selecionada: true,
+          concluida: false,
+        }));
+        
+        onSubatividadesChange(tipo as TipoServico, defaultSubs);
+      }
+    });
+  }, [form, servicosSubatividades, defaultSubatividades, onSubatividadesChange]);
   
   return (
     <div>

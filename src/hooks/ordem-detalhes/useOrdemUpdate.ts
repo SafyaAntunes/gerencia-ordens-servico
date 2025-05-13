@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { db } from "@/lib/firebase";
 import { doc, updateDoc, Timestamp, getDoc } from "firebase/firestore";
@@ -26,8 +27,9 @@ export const useOrdemUpdate = (
         return;
       }
       
-      // Revised function to properly preserve existing subactivities and add new ones
+      // Enhanced function to properly preserve existing subactivities and add new ones
       const preserveExistingSubactivities = (currentServicos = [], newServicosTipos = []) => {
+        // Create a map of existing services for quick lookup
         const servicosMap = currentServicos.reduce((acc, servico) => {
           acc[servico.tipo] = servico;
           return acc;
@@ -39,23 +41,31 @@ export const useOrdemUpdate = (
           // Get the updated subatividades from the form values
           const formSubatividades = values.servicosSubatividades?.[tipo] || [];
           
+          // If this is a new service type (not in the existing order)
+          const isNewServiceType = !existingServico;
+          
           // Process subatividades - preserve existing status for those that were already present
-          let processedSubatividades = formSubatividades.map(formSub => {
-            // Find if this subatividade existed before
-            const existingSub = existingServico?.subatividades?.find(s => s.id === formSub.id);
-            
-            // Only include subatividades that are marked as selected
-            if (formSub.selecionada) {
+          let processedSubatividades = formSubatividades
+            .filter(formSub => formSub.selecionada) // Only include selected subatividades
+            .map(formSub => {
+              // Find if this subatividade existed before
+              const existingSub = existingServico?.subatividades?.find(s => s.id === formSub.id);
+              
               return {
                 ...formSub,
                 // If the subatividade existed, preserve its 'concluida' status
                 // Otherwise, set it to false for new selections
                 concluida: existingSub ? existingSub.concluida : false
               };
-            }
-            return null;
-          }).filter(Boolean); // Remove null entries (unselected subatividades)
+            });
           
+          // If this is not a new service type AND we don't have any processed subatividades,
+          // but we have existing subatividades, preserve those
+          if (!isNewServiceType && processedSubatividades.length === 0 && existingServico?.subatividades?.length > 0) {
+            processedSubatividades = [...existingServico.subatividades];
+          }
+          
+          // Build the servico object
           return {
             tipo,
             descricao: values.servicosDescricoes?.[tipo] || "",

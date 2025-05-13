@@ -18,6 +18,7 @@ import {
 } from "./components";
 import { formSchema, FormValues, OrdemFormProps } from "./types";
 import { SubAtividade, TipoServico } from "@/types/ordens";
+import { useServicoSubatividades } from "@/hooks/useServicoSubatividades";
 
 export const OrdemForm = ({ 
   onSubmit, 
@@ -34,6 +35,7 @@ export const OrdemForm = ({
   const [activeTab, setActiveTab] = useState("dados");
   const [selectedClienteId, setSelectedClienteId] = useState<string>(defaultValues?.clienteId || "");
   
+  // Initialize form with schema validation
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -51,8 +53,10 @@ export const OrdemForm = ({
     },
   });
   
+  // Watch service types to trigger side effects
   const servicosTipos = form.watch("servicosTipos") || [];
   
+  // Use the refactored hook for form data handling
   const { 
     servicosDescricoes, 
     servicosSubatividades, 
@@ -71,8 +75,12 @@ export const OrdemForm = ({
     defaultFotosSaida
   });
   
+  // Access the default subatividades
+  const { defaultSubatividades } = useServicoSubatividades();
+  
   // Memoize the subatividades change handler
   const memoizedSubatividadesChange = useCallback((tipo: TipoServico, subatividades: SubAtividade[]) => {
+    console.log("Changing subatividades for", tipo, subatividades);
     handleSubatividadesChange(tipo, subatividades);
   }, [handleSubatividadesChange]);
   

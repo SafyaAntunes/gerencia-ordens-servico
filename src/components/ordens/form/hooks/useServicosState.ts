@@ -3,6 +3,7 @@ import { SubAtividade, TipoServico } from "@/types/ordens";
 import { getSubatividadesByTipo } from "@/services/subatividadeService";
 import { isEqual } from "lodash";
 import { FormValues } from "../types";
+import { useServicoSubatividades } from "@/hooks/useServicoSubatividades";
 
 export const useServicosState = (
   servicosTipos: string[], 
@@ -14,6 +15,9 @@ export const useServicosState = (
   // Keep track of previously loaded service types to prevent unnecessary rerenders
   const [previousServiceTypes, setPreviousServiceTypes] = useState<string[]>([]);
   const [hasInitialized, setHasInitialized] = useState(false);
+
+  // Get default subatividades from the hook to use as fallback
+  const { defaultSubatividades } = useServicoSubatividades();
 
   // Load default values only once on initialization
   useEffect(() => {
@@ -64,8 +68,21 @@ export const useServicosState = (
           // Get default values from form initialization (if editing an order)
           const defaultSubatividades = defaultValues?.servicosSubatividades?.[tipo] || [];
           
+          // If we got an empty list from the API but have defaultSubatividades from the hook,
+          // use those as a fallback
+          let availableSubatividades = subatividadesList;
+          if ((!subatividadesList || subatividadesList.length === 0) && defaultSubatividades[tipo]) {
+            // Convert string array to SubAtividade array
+            availableSubatividades = defaultSubatividades[tipo].map(nome => ({
+              id: nome,
+              nome: nome,
+              selecionada: true,
+              concluida: false
+            }));
+          }
+          
           // Create a combined list of all subactivities, preserving states from existing selections
-          const updatedSubatividades = (subatividadesList || []).map(sub => {
+          const updatedSubatividades = (availableSubatividades || []).map(sub => {
             // Look for this subatividade in existing or default values
             const existingItem = existingSubatividades.find(s => s.id === sub.id);
             const defaultItem = defaultSubatividades.find(s => s.id === sub.id);
@@ -84,6 +101,18 @@ export const useServicosState = (
             return prev;
           }
           
+          // If we received nothing from the API, check for existing service data
+          if (!availableSubatividades || availableSubatividades.length === 0) {
+            // If we don't have any subatividades for this tipo but have existing ones in the form data,
+            // keep those existing ones
+            if (defaultSubatividades && defaultValues?.servicosSubatividades?.[tipo]?.length > 0) {
+              return {
+                ...prev,
+                [tipo]: defaultValues.servicosSubatividades[tipo]
+              };
+            }
+          }
+          
           return {
             ...prev,
             [tipo]: updatedSubatividades
@@ -91,7 +120,31 @@ export const useServicosState = (
         });
       } catch (error) {
         console.error(`Erro ao carregar subatividades para ${tipo}:`, error);
-        if (isMounted) {
+        
+        // If there was an error fetching from API but we have default subatividades for this type,
+        // use those instead of showing an empty list
+        if (defaultSubatividades && defaultSubatividades[tipo as TipoServico]) {
+          setServicosSubatividades(prev => {
+            // If we already have subatividades for this type (from editing an existing order),
+            // keep those instead of overwriting with defaults
+            if (prev[tipo] && prev[tipo].length > 0) {
+              return prev;
+            }
+            
+            // Otherwise use the defaults from the hook as a fallback
+            const defaultSubs = defaultSubatividades[tipo as TipoServico].map(nome => ({
+              id: nome,
+              nome,
+              selecionada: true,
+              concluida: false,
+            }));
+            
+            return {
+              ...prev,
+              [tipo]: defaultSubs
+            };
+          });
+        } else {
           setServicosSubatividades(prev => ({
             ...prev,
             [tipo]: []
@@ -122,7 +175,7 @@ export const useServicosState = (
     return () => {
       isMounted = false;
     };
-  }, [servicosTipos, defaultValues?.servicosSubatividades, previousServiceTypes]);
+  }, [servicosTipos, defaultValues?.servicosSubatividades, previousServiceTypes, defaultSubatividades]);
 
   const handleServicoDescricaoChange = useCallback((tipo: string, descricao: string) => {
     setServicosDescricoes(prev => {
