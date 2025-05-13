@@ -7,7 +7,7 @@ import { Form } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import FotosForm from "@/components/ordens/FotosForm";
-import { useOrdemFormData } from "./hooks/useOrdemFormData";
+import { useOrdemFormData } from "./hooks";
 import { 
   BasicInfoFields, 
   ClienteMotorSelector, 
@@ -64,7 +64,12 @@ export const OrdemForm = ({
     handleServicoDescricaoChange, 
     handleSubatividadesChange,
     handleEtapaTempoPrecoChange 
-  } = useOrdemFormData(servicosTipos, defaultValues, defaultFotosEntrada, defaultFotosSaida);
+  } = useOrdemFormData({
+    servicosTipos,
+    defaultValues,
+    defaultFotosEntrada,
+    defaultFotosSaida
+  });
   
   // Memoize the subatividades change handler
   const memoizedSubatividadesChange = useCallback((tipo: TipoServico, subatividades: SubAtividade[]) => {
