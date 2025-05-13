@@ -44,7 +44,7 @@ import { Prioridade, TipoServico, Motor, SubAtividade, TipoAtividade, EtapaOS } 
 import { Cliente } from "@/types/clientes";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FotosForm from "./FotosForm";
-import { ServicoSubatividades } from "./ServicoSubatividades";
+import { ServicoSubatividades } from "./subatividades";
 import ClienteForm from "@/components/clientes/ClienteForm";
 import { v4 as uuidv4 } from "uuid";
 import { saveCliente, getMotores } from "@/services/clienteService";
@@ -99,6 +99,7 @@ type OrdemFormProps = {
   isSubatividadeEditingEnabled?: boolean;
   clientes?: Cliente[];
   isLoadingClientes?: boolean;
+  onSubatividadeSelecionadaToggle?: (servicoTipo: string, subatividadeId: string, checked: boolean) => void;
 };
 
 const tiposServico: { value: TipoServico; label: string }[] = [
@@ -125,6 +126,7 @@ export default function OrdemForm({
   isLoadingClientes = false,
   onSubatividadeToggle,
   isSubatividadeEditingEnabled = false,
+  onSubatividadeSelecionadaToggle,
 }: OrdemFormProps) {
   const [servicosDescricoes, setServicosDescricoes] = useState<Record<string, string>>({});
   const [servicosSubatividades, setServicosSubatividades] = useState<Record<string, SubAtividade[]>>({});
@@ -342,6 +344,19 @@ export default function OrdemForm({
       ...prev,
       [tipo]: subatividades
     }));
+    
+    // Se a função de callback para seleção de subatividades existir, chame-a para cada subatividade alterada
+    if (onSubatividadeSelecionadaToggle) {
+      const prevSubs = servicosSubatividades[tipo] || [];
+      
+      // Compara subatividades anteriores com as novas para identificar mudanças na seleção
+      subatividades.forEach(newSub => {
+        const oldSub = prevSubs.find(s => s.id === newSub.id);
+        if (oldSub && oldSub.selecionada !== newSub.selecionada) {
+          onSubatividadeSelecionadaToggle(tipo, newSub.id, newSub.selecionada);
+        }
+      });
+    }
   };
   
   const handleEtapaTempoPrecoChange = (etapa: EtapaOS, field: 'precoHora' | 'tempoEstimado', value: number) => {

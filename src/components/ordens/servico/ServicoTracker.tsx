@@ -1,138 +1,89 @@
 
-import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Servico } from "@/types/ordens";
-import { cn } from "@/lib/utils";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-
-import { useServicoTracker } from "./hooks/useServicoTracker";
+import { useState } from "react";
+import { Servico, EtapaOS } from "@/types/ordens";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { CheckCircle2, Clock, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useServicoTracker } from "./hooks";
 import ServicoHeader from "./ServicoHeader";
 import ServicoDetails from "./ServicoDetails";
 import ServicoControls from "./ServicoControls";
-import TimerPausas from "../etapa/TimerPausas";
 
 interface ServicoTrackerProps {
   servico: Servico;
-  ordemId?: string;
-  funcionarioId?: string;
+  ordemId: string;
+  funcionarioId: string;
   funcionarioNome?: string;
-  onSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
-  onServicoStatusChange: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
-  onSubatividadeSelecionadaToggle?: (subatividadeId: string, checked: boolean) => void; // Added this prop to match usage
-  className?: string;
-  etapa?: string;
+  etapa: EtapaOS;
+  onSubatividadeToggle?: (subatividadeId: string, checked: boolean) => void;
+  onServicoStatusChange?: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
+  onSubatividadeSelecionadaToggle?: (subatividadeId: string, checked: boolean) => void;
 }
 
-export default function ServicoTracker({
+export function ServicoTracker({
   servico,
-  ordemId = "",
-  funcionarioId = "",
+  ordemId,
+  funcionarioId,
   funcionarioNome,
+  etapa,
   onSubatividadeToggle,
   onServicoStatusChange,
-  className,
-  etapa,
+  onSubatividadeSelecionadaToggle
 }: ServicoTrackerProps) {
   const {
-    isOpen,
-    setIsOpen,
-    temPermissao,
-    isRunning,
-    isPaused,
-    displayTime,
-    servicoStatus,
-    progressPercentage,
-    completedSubatividades,
-    totalSubatividades,
-    tempoTotalEstimado,
-    subatividadesFiltradas,
-    handleLoadFuncionarios,
+    isShowingDetails,
+    toggleDetails,
     handleSubatividadeToggle,
-    handleStartClick,
-    handlePause,
-    handleResume,
-    handleFinish,
-    handleMarcarConcluido,
-    pausas,
+    handleServicoConcluidoToggle,
+    handleSubatividadeSelecionadaToggle,
+    temPermissao
   } = useServicoTracker({
     servico,
     ordemId,
     funcionarioId,
     funcionarioNome,
     etapa,
+    onSubatividadeToggle,
     onServicoStatusChange,
-    onSubatividadeToggle
+    onSubatividadeSelecionadaToggle
   });
 
-  // Load funcionarios if needed (when the component mounts)
-  useEffect(() => {
-    handleLoadFuncionarios();
-  }, [handleLoadFuncionarios]);
-
-  // Verifica se todas subatividades selecionadas estão concluídas
-  const todasSubatividadesConcluidas = subatividadesFiltradas.length === 0 || 
-    (subatividadesFiltradas.length > 0 && subatividadesFiltradas.every(sub => sub.concluida));
-
-  // Convert pausas for TimerPausas component format if needed
-  const formattedPausas = pausas.map(p => ({
-    inicio: p.iniciado,
-    fim: p.finalizado,
-    motivo: p.motivo
-  }));
+  const subatividadesSelecionadas = servico.subatividades?.filter(s => s.selecionada)?.length || 0;
+  const totalSubatividades = servico.subatividades?.length || 0;
+  const subatividadesConcluidas = servico.subatividades?.filter(s => s.concluida)?.length || 0;
 
   return (
-    <Card className={cn("w-full", className)}>
-      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CollapsibleTrigger asChild>
-          <CardContent className="pt-6">
-            <ServicoHeader 
-              tipo={servico.tipo}
-              displayTime={displayTime}
-              servicoStatus={servicoStatus}
-              progressPercentage={Number(progressPercentage)}
-              completedSubatividades={completedSubatividades}
-              totalSubatividades={totalSubatividades}
-              tempoTotalEstimado={tempoTotalEstimado}
-              funcionarioNome={servico.concluido ? servico.funcionarioNome : undefined}
-              concluido={servico.concluido}
-              temPermissao={temPermissao}
-              isOpen={isOpen}
-              onToggleOpen={() => setIsOpen(!isOpen)}
-            />
-          </CardContent>
-        </CollapsibleTrigger>
-
-        <CollapsibleContent>
-          <CardContent className="pt-0">
-            <ServicoDetails 
-              descricao={servico.descricao}
-              subatividades={subatividadesFiltradas}
-              temPermissao={temPermissao}
-              onSubatividadeToggle={handleSubatividadeToggle}
-            />
-            
-            {/* Mostrar pausas mesmo quando o serviço está concluído */}
-            {pausas && pausas.length > 0 && (
-              <div className="py-2">
-                <TimerPausas pausas={formattedPausas} />
-              </div>
-            )}
-            
-            <ServicoControls 
-              isRunning={isRunning}
-              isPaused={isPaused}
-              temPermissao={temPermissao}
-              concluido={servico.concluido}
-              todasSubatividadesConcluidas={todasSubatividadesConcluidas}
-              onStartClick={handleStartClick}
-              onPauseClick={handlePause}
-              onResumeClick={handleResume}
-              onFinishClick={handleFinish}
-              onMarcarConcluido={handleMarcarConcluido}
-            />
-          </CardContent>
-        </CollapsibleContent>
-      </Collapsible>
+    <Card>
+      <CardHeader className="p-4 pb-0">
+        <ServicoHeader 
+          tipo={servico.tipo} 
+          concluido={servico.concluido}
+          onToggleDetails={toggleDetails}
+          isExpanded={isShowingDetails}
+        />
+      </CardHeader>
+      
+      {isShowingDetails && (
+        <CardContent className="p-4 pt-2">
+          <ServicoDetails
+            descricao={servico.descricao}
+            subatividades={servico.subatividades || []}
+            temPermissao={temPermissao}
+            onSubatividadeToggle={handleSubatividadeToggle}
+          />
+          
+          <ServicoControls
+            subatividadesConcluidas={subatividadesConcluidas}
+            subatividadesSelecionadas={subatividadesSelecionadas}
+            totalSubatividades={totalSubatividades}
+            servico={servico}
+            temPermissao={temPermissao}
+            onServicoConcluidoToggle={handleServicoConcluidoToggle}
+          />
+        </CardContent>
+      )}
     </Card>
   );
 }

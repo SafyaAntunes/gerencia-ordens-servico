@@ -112,6 +112,39 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
     handleOrdemUpdate(ordemAtualizada);
   };
 
+  // Nova função para lidar com a seleção/deseleção de subatividades durante a edição
+  const handleSubatividadeSelecionadaToggle = (servicoTipo: string, subId: string, checked: boolean) => {
+    if (!ordem || !isEditando) return;
+    
+    console.log("Toggling subatividade seleção:", servicoTipo, subId, checked);
+    
+    const servicosAtualizados = ordem.servicos.map(servico => {
+      if (servico.tipo === servicoTipo) {
+        const subatividadesAtualizadas = servico.subatividades?.map(sub => {
+          if (sub.id === subId) {
+            return { ...sub, selecionada: checked };
+          }
+          return sub;
+        }) || [];
+        
+        return {
+          ...servico,
+          subatividades: subatividadesAtualizadas
+        };
+      }
+      return servico;
+    });
+    
+    // Atualiza a ordem localmente
+    const ordemAtualizada = {
+      ...ordem,
+      servicos: servicosAtualizados
+    };
+    
+    // Chama o método para atualizar o estado da ordem
+    handleOrdemUpdate(ordemAtualizada);
+  };
+
   return (
     <Layout onLogout={onLogout}>
       <div className="mb-4">
@@ -168,6 +201,7 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
           isSubatividadeEditingEnabled={true}
           clientes={clientes}
           isLoadingClientes={isLoadingClientes}
+          onSubatividadeSelecionadaToggle={handleSubatividadeSelecionadaToggle}
         />
       ) : (
         <OrdemTabs
