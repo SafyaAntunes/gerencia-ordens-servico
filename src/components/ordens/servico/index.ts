@@ -1,3 +1,3 @@
 
 export { ServicoTracker } from './ServicoTracker';
-export type { ServicoStatus, ServicoStatusType, ServicoTrackerProps } from './hooks/types/servicoTrackerTypes';
+export type { ServicoStatus } from './hooks/types/servicoTrackerTypes';

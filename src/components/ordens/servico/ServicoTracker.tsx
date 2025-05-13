@@ -38,7 +38,8 @@ export function ServicoTracker({
     etapa,
     onSubatividadeToggle,
     onServicoStatusChange,
-    onSubatividadeSelecionadaToggle
+    onSubatividadeSelecionadaToggle,
+    onServicoUpdate
   });
 
   // Calculate progress

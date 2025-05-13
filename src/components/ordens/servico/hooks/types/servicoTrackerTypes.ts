@@ -1,9 +1,8 @@
 
 import { Servico, EtapaOS } from "@/types/ordens";
+import { UseOrdemTimerResult } from "@/hooks/timer/types";
 
-export type ServicoStatus = 'pending' | 'in-progress' | 'completed';
-
-export type ServicoStatusType = 'nao_iniciado' | 'em_andamento' | 'concluido' | 'pausado';
+export type ServicoStatus = 'nao_iniciado' | 'em_andamento' | 'pausado' | 'concluido';
 
 export interface ServicoTrackerProps {
   servico: Servico;
@@ -14,14 +13,15 @@ export interface ServicoTrackerProps {
   onSubatividadeToggle?: (subatividadeId: string, checked: boolean) => void;
   onServicoStatusChange?: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
   onSubatividadeSelecionadaToggle?: (subatividadeId: string, checked: boolean) => void;
-  onServicoUpdate?: (servico: Servico) => void;
-  // Timer related props
-  displayTime?: string | number;
-  isRunning?: boolean;
-  isPaused?: boolean;
-  usarCronometro?: boolean;
-  onTimerStart?: () => void;
-  onTimerPause?: (motivo?: string) => void;
-  onTimerResume?: () => void;
-  onTimerFinish?: (tempoTotal: number) => void;
+  onServicoUpdate?: (servicoAtualizado: Servico) => void;
+}
+
+export interface ServicoTrackerHookResult {
+  isShowingDetails: boolean;
+  toggleDetails: () => void;
+  handleSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
+  handleServicoConcluidoToggle: (checked: boolean) => void;
+  handleSubatividadeSelecionadaToggle: (subatividadeId: string, checked: boolean) => void;
+  temPermissao: boolean;
+  timer: UseOrdemTimerResult;
 }
