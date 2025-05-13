@@ -1,110 +1,85 @@
 
-import { useEffect } from 'react';
-import { Servico } from '@/types/ordens';
+import { useState, useEffect } from 'react';
+import { Servico, EtapaOS } from '@/types/ordens';
 import { useServicoTracker } from './hooks/useServicoTracker';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Check, RotateCcw, User } from 'lucide-react';
+import { Check, RotateCcw, User, ChevronDown, ChevronUp } from 'lucide-react';
+import ServicoHeader from './ServicoHeader';
+import ServicoDetails from './ServicoDetails';
+import { ServicoTrackerProps } from './hooks/types/servicoTrackerTypes';
 
-interface ServicoTrackerProps {
-  servico: Servico;
-  onServicoUpdate?: (servico: Servico) => void;
-}
+export function ServicoTracker({
+  servico,
+  ordemId,
+  funcionarioId,
+  funcionarioNome,
+  etapa,
+  onSubatividadeToggle,
+  onServicoStatusChange,
+  onSubatividadeSelecionadaToggle,
+  onServicoUpdate
+}: ServicoTrackerProps) {
+  const {
+    isShowingDetails,
+    toggleDetails,
+    handleSubatividadeToggle,
+    handleServicoConcluidoToggle,
+    handleSubatividadeSelecionadaToggle,
+    temPermissao
+  } = useServicoTracker({
+    servico,
+    ordemId,
+    funcionarioId,
+    funcionarioNome,
+    etapa,
+    onSubatividadeToggle,
+    onServicoStatusChange,
+    onSubatividadeSelecionadaToggle
+  });
 
-export function ServicoTracker({ servico, onServicoUpdate }: ServicoTrackerProps) {
-  const { status, responsavel, handleAtribuir, handleConcluir, handleReabrir } = useServicoTracker(servico);
+  // Calculate progress
+  const totalSubatividades = servico.subatividades?.length || 0;
+  const completedSubatividades = servico.subatividades?.filter(sub => sub.concluida).length || 0;
+  const progressPercentage = totalSubatividades > 0 
+    ? Math.round((completedSubatividades / totalSubatividades) * 100) 
+    : 0;
 
-  const getStatusColor = () => {
-    switch (status) {
-      case 'completed': return 'bg-green-500 hover:bg-green-600';
-      case 'in-progress': return 'bg-blue-500 hover:bg-blue-600';
-      default: return 'bg-gray-500 hover:bg-gray-600';
-    }
-  };
-
-  const getStatusText = () => {
-    switch (status) {
-      case 'completed': return 'Concluído';
-      case 'in-progress': return 'Em progresso';
-      default: return 'Pendente';
-    }
-  };
-
-  const handleServicoUpdate = (updatedServico: Servico) => {
-    if (onServicoUpdate) {
-      onServicoUpdate(updatedServico);
-    }
-  };
-
-  const onConcluir = () => {
-    const updated = handleConcluir();
-    if (updated) handleServicoUpdate(updated);
-  };
-
-  const onReabrir = () => {
-    const updated = handleReabrir();
-    if (updated) handleServicoUpdate(updated);
-  };
-
-  // This would typically be connected to a dialog for selecting employees
-  const onAtribuir = (funcionarioId: string, funcionarioNome: string) => {
-    const updated = handleAtribuir(funcionarioId, funcionarioNome);
-    if (updated) handleServicoUpdate(updated);
-  };
+  // Determine service status
+  const servicoStatus = servico.concluido 
+    ? 'concluido' 
+    : servico.funcionarioId 
+      ? 'em_andamento' 
+      : 'nao_iniciado';
 
   return (
     <Card className="mb-4">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">{servico.tipo}</CardTitle>
-          <Badge className={`${getStatusColor()} text-white`}>
-            {getStatusText()}
-          </Badge>
-        </div>
+      <CardHeader className="pb-2">
+        <ServicoHeader
+          tipo={servico.tipo}
+          servicoStatus={servicoStatus}
+          progressPercentage={progressPercentage}
+          completedSubatividades={completedSubatividades}
+          totalSubatividades={totalSubatividades}
+          funcionarioNome={servico.funcionarioNome}
+          concluido={servico.concluido}
+          isOpen={isShowingDetails}
+          onToggleOpen={toggleDetails}
+        />
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-sm font-medium mb-1">Descrição</h3>
-            <p className="text-sm text-gray-600">{servico.descricao || "Nenhuma descrição disponível."}</p>
-          </div>
-          
-          {responsavel && (
-            <div>
-              <h3 className="text-sm font-medium mb-1">Responsável</h3>
-              <div className="flex items-center">
-                <User className="h-4 w-4 mr-2" />
-                <p className="text-sm">{responsavel}</p>
-              </div>
-            </div>
-          )}
-          
-          <div className="flex justify-end space-x-2 pt-2">
-            {status === 'completed' ? (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={onReabrir}
-                className="flex items-center"
-              >
-                <RotateCcw className="h-4 w-4 mr-1" />
-                Reabrir
-              </Button>
-            ) : (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={onConcluir}
-                className="flex items-center"
-              >
-                <Check className="h-4 w-4 mr-1" />
-                Concluir
-              </Button>
-            )}
-          </div>
-        </div>
-      </CardContent>
+
+      {isShowingDetails && (
+        <CardContent>
+          <ServicoDetails
+            servico={servico}
+            onSubatividadeToggle={handleSubatividadeToggle}
+            onServicoConcluidoToggle={handleServicoConcluidoToggle}
+            onSubatividadeSelecionadaToggle={handleSubatividadeSelecionadaToggle}
+            temPermissao={temPermissao}
+          />
+        </CardContent>
+      )}
     </Card>
   );
 }

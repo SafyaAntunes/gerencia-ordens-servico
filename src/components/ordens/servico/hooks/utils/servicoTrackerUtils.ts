@@ -1,6 +1,5 @@
-
-import { ServicoStatusType } from "../types/servicoTrackerTypes";
-import { TipoServico } from "@/types/ordens";
+import { Servico, SubAtividade } from "@/types/ordens";
+import { ServicoStatus, ServicoStatusType } from "../types/servicoTrackerTypes";
 
 export const formatTimeDisplay = (seconds: number): string => {
   const h = Math.floor(seconds / 3600);
