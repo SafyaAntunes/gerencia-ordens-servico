@@ -15,4 +15,13 @@ export interface ServicoTrackerProps {
   onServicoStatusChange?: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
   onSubatividadeSelecionadaToggle?: (subatividadeId: string, checked: boolean) => void;
   onServicoUpdate?: (servico: Servico) => void;
+  // Timer related props
+  displayTime?: string | number;
+  isRunning?: boolean;
+  isPaused?: boolean;
+  usarCronometro?: boolean;
+  onTimerStart?: () => void;
+  onTimerPause?: (motivo?: string) => void;
+  onTimerResume?: () => void;
+  onTimerFinish?: (tempoTotal: number) => void;
 }

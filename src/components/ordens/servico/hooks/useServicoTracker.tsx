@@ -1,102 +1,100 @@
 
 import { useState, useEffect } from 'react';
 import { ServicoStatus } from './types/servicoTrackerTypes';
-import { Servico } from '@/types/ordens';
+import { Servico, EtapaOS, TipoServico } from '@/types/ordens';
 import { useToast } from '@/components/ui/use-toast';
+import { useOrdemTimer } from '@/hooks/useOrdemTimer';
 
-export const useServicoTracker = (servico: Servico | undefined) => {
-  const [status, setStatus] = useState<ServicoStatus>('pending');
-  const [responsavel, setResponsavel] = useState<string | null>(null);
+interface UseServicoTrackerOptions {
+  servico: Servico;
+  ordemId: string;
+  funcionarioId: string;
+  funcionarioNome?: string;
+  etapa: EtapaOS;
+  onSubatividadeToggle?: (subatividadeId: string, checked: boolean) => void;
+  onServicoStatusChange?: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
+  onSubatividadeSelecionadaToggle?: (subatividadeId: string, checked: boolean) => void;
+}
+
+export const useServicoTracker = (options: UseServicoTrackerOptions) => {
+  const {
+    servico,
+    ordemId,
+    funcionarioId,
+    funcionarioNome,
+    etapa,
+    onSubatividadeToggle,
+    onServicoStatusChange,
+    onSubatividadeSelecionadaToggle
+  } = options;
+
+  const [isShowingDetails, setIsShowingDetails] = useState(false);
   const { toast } = useToast();
+  
+  // Timer functionality integration
+  const timer = useOrdemTimer({
+    ordemId,
+    etapa,
+    tipoServico: servico.tipo,
+    isEtapaConcluida: servico.concluido
+  });
 
-  useEffect(() => {
-    if (servico) {
-      // Determine status based on servico properties
-      if (servico.concluido) {
-        setStatus('completed');
-      } else if (servico.funcionarioId) {
-        setStatus('in-progress');
-      } else {
-        setStatus('pending');
-      }
+  const toggleDetails = () => {
+    setIsShowingDetails(prev => !prev);
+  };
 
-      // Set responsible person if available
-      if (servico.funcionarioNome) {
-        setResponsavel(servico.funcionarioNome);
-      }
+  // Determine if the current user has permission to modify this service
+  const temPermissao = servico.funcionarioId === null || 
+                      servico.funcionarioId === funcionarioId || 
+                      !servico.funcionarioId;
+
+  const handleSubatividadeToggle = (subatividadeId: string, checked: boolean) => {
+    if (!temPermissao) {
+      toast({
+        title: "Permissão negada",
+        description: "Você não tem permissão para modificar este serviço."
+      });
+      return;
     }
-  }, [servico]);
 
-  const handleAtribuir = (funcionarioId: string, funcionarioNome: string) => {
-    if (!servico) return;
-    
-    // Update servico with assigned employee
-    const updatedServico = {
-      ...servico,
-      funcionarioId,
-      funcionarioNome
-    };
-
-    // Here you would typically update the database
-    // For now, just update local state
-    setResponsavel(funcionarioNome);
-    setStatus('in-progress');
-    
-    toast({
-      title: "Funcionário atribuído",
-      description: `${funcionarioNome} foi atribuído a este serviço.`
-    });
-    
-    return updatedServico;
+    if (onSubatividadeToggle) {
+      onSubatividadeToggle(subatividadeId, checked);
+    }
   };
 
-  const handleConcluir = () => {
-    if (!servico) return;
-    
-    // Mark servico as completed
-    const updatedServico = {
-      ...servico,
-      concluido: true,
-      dataConclusao: new Date()
-    };
+  const handleServicoConcluidoToggle = (checked: boolean) => {
+    if (!temPermissao) {
+      toast({
+        title: "Permissão negada",
+        description: "Você não tem permissão para modificar este serviço."
+      });
+      return;
+    }
 
-    // Update local state
-    setStatus('completed');
-    
-    toast({
-      title: "Serviço concluído",
-      description: "Este serviço foi marcado como concluído."
-    });
-    
-    return updatedServico;
+    if (onServicoStatusChange) {
+      onServicoStatusChange(checked, funcionarioId, funcionarioNome);
+    }
+
+    // If service is being completed and timer is running, stop it
+    if (checked && (timer.isRunning || timer.isPaused)) {
+      timer.handleFinish();
+    }
   };
 
-  const handleReabrir = () => {
-    if (!servico) return;
-    
-    // Reopen servico
-    const updatedServico = {
-      ...servico,
-      concluido: false,
-      dataConclusao: undefined
-    };
-
-    // Update local state
-    setStatus('in-progress');
-    
-    toast({
-      title: "Serviço reaberto",
-      description: "Este serviço foi reaberto."
-    });
-    
-    return updatedServico;
+  const handleSubatividadeSelecionadaToggle = (subatividadeId: string, checked: boolean) => {
+    if (onSubatividadeSelecionadaToggle) {
+      onSubatividadeSelecionadaToggle(subatividadeId, checked);
+    }
   };
 
   return {
-    status,
-    responsavel,
-    handleAtribuir,
-    handleConcluir,
-    handleReabrir
+    isShowingDetails,
+    toggleDetails,
+    handleSubatividadeToggle,
+    handleServicoConcluidoToggle,
+    handleSubatividadeSelecionadaToggle,
+    temPermissao,
+    // Export timer functionality
+    timer
   };
 };

@@ -5,6 +5,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Check, RotateCcw } from "lucide-react";
 import { Servico, SubAtividade } from "@/types/ordens";
+import TimerControls from "../TimerControls";
+import { UseOrdemTimerResult } from "@/hooks/timer/types";
 
 interface ServicoDetailsProps {
   servico: Servico;
@@ -12,6 +14,7 @@ interface ServicoDetailsProps {
   onServicoConcluidoToggle: (checked: boolean) => void;
   onSubatividadeSelecionadaToggle?: (subatividadeId: string, checked: boolean) => void;
   temPermissao: boolean;
+  timer?: UseOrdemTimerResult;
 }
 
 export default function ServicoDetails({
@@ -19,69 +22,29 @@ export default function ServicoDetails({
   onSubatividadeToggle,
   onServicoConcluidoToggle,
   onSubatividadeSelecionadaToggle,
-  temPermissao
+  temPermissao,
+  timer
 }: ServicoDetailsProps) {
-  // Renderiza as subatividades se existirem
   return (
-<<<<<<< HEAD
-    <>
-      {descricao && (
-        <div className="mb-4">
-          <h4 className="text-sm font-medium mb-2">Descrição</h4>
-          <p className="text-sm text-muted-foreground">{descricao}</p>
-        </div>
-      )}
-
-      {subatividades.length > 0 && (
-        <div role="group" aria-labelledby="subatividades-heading">
-          <h4 id="subatividades-heading" className="text-sm font-medium mb-2">
-            Subatividades
-          </h4>
-          <div className="space-y-2">
-            {subatividades.map((subatividade) => {
-              const checkboxId = `subatividade-${subatividade.id}`;
-              return (
-                <div 
-                  key={subatividade.id} 
-                  className="flex items-center justify-between py-1"
-                >
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id={checkboxId}
-                      checked={subatividade.concluida}
-                      onCheckedChange={(checked) => handleToggle(subatividade.id, checked === true)}
-                      disabled={!temPermissao}
-                      className="data-[state=checked]:bg-green-600"
-                      aria-label={subatividade.nome}
-                      aria-describedby={subatividade.tempoEstimado ? `tempo-${subatividade.id}` : undefined}
-                    />
-                    <Label
-                      htmlFor={checkboxId}
-                      className={cn(
-                        "text-sm cursor-pointer select-none",
-                        subatividade.concluida ? "text-muted-foreground line-through" : ""
-                      )}
-                    >
-                      {subatividade.nome}
-                    </Label>
-                  </div>
-                  {subatividade.tempoEstimado && (
-                    <span 
-                      id={`tempo-${subatividade.id}`}
-                      className="text-xs text-muted-foreground"
-                    >
-                      {subatividade.tempoEstimado} {subatividade.tempoEstimado === 1 ? 'hora' : 'horas'}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-=======
     <div className="space-y-4">
       <div>
         <h3 className="text-sm font-medium mb-1">Descrição</h3>
         <p className="text-sm text-gray-600">{servico.descricao || "Nenhuma descrição disponível."}</p>
       </div>
+      
+      {timer && (
+        <div className="my-3">
+          <TimerControls
+            isRunning={timer.isRunning}
+            isPaused={timer.isPaused}
+            usarCronometro={timer.usarCronometro}
+            onStart={timer.handleStart}
+            onPause={timer.handlePause}
+            onResume={timer.handleResume}
+            onFinish={timer.handleFinish}
+          />
+        </div>
+      )}
       
       {servico.subatividades && servico.subatividades.length > 0 && (
         <div>
@@ -105,7 +68,6 @@ export default function ServicoDetails({
                 </label>
               </div>
             ))}
->>>>>>> a1f68bc14c670b1a31786cb6cff3b3ccd738ca92
           </div>
         </div>
       )}

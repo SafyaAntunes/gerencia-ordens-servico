@@ -9,6 +9,7 @@ import { Check, RotateCcw, User, ChevronDown, ChevronUp } from 'lucide-react';
 import ServicoHeader from './ServicoHeader';
 import ServicoDetails from './ServicoDetails';
 import { ServicoTrackerProps } from './hooks/types/servicoTrackerTypes';
+import { formatTime } from '@/utils/timerUtils';
 
 export function ServicoTracker({
   servico,
@@ -27,7 +28,8 @@ export function ServicoTracker({
     handleSubatividadeToggle,
     handleServicoConcluidoToggle,
     handleSubatividadeSelecionadaToggle,
-    temPermissao
+    temPermissao,
+    timer
   } = useServicoTracker({
     servico,
     ordemId,
@@ -49,9 +51,13 @@ export function ServicoTracker({
   // Determine service status
   const servicoStatus = servico.concluido 
     ? 'concluido' 
-    : servico.funcionarioId 
+    : timer.isRunning && !timer.isPaused 
       ? 'em_andamento' 
-      : 'nao_iniciado';
+      : timer.isPaused 
+        ? 'pausado'
+        : servico.funcionarioId 
+          ? 'em_andamento' 
+          : 'nao_iniciado';
 
   return (
     <Card className="mb-4">
@@ -66,6 +72,7 @@ export function ServicoTracker({
           concluido={servico.concluido}
           isOpen={isShowingDetails}
           onToggleOpen={toggleDetails}
+          displayTime={timer.displayTime}
         />
       </CardHeader>
 
@@ -77,6 +84,7 @@ export function ServicoTracker({
             onServicoConcluidoToggle={handleServicoConcluidoToggle}
             onSubatividadeSelecionadaToggle={handleSubatividadeSelecionadaToggle}
             temPermissao={temPermissao}
+            timer={timer}
           />
         </CardContent>
       )}
