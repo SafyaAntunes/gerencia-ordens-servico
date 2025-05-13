@@ -1,6 +1,5 @@
 
-
-import { useState } from "react";
+import { useState, memo, useCallback } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SubAtividade, TipoServico } from "@/types/ordens";
 import { cn } from "@/lib/utils";
@@ -11,21 +10,24 @@ interface ServicoSubatividadesProps {
   onChange: (subatividades: SubAtividade[]) => void;
 }
 
-export const ServicoSubatividades = ({ 
+// Component is now memoized to prevent unnecessary re-renders
+export const ServicoSubatividades = memo(({ 
   tipoServico, 
   subatividades, 
   onChange 
 }: ServicoSubatividadesProps) => {
   const [isPartiallyChecked, setIsPartiallyChecked] = useState(false);
-  const toggleAll = (check: boolean) => {
+  
+  // Use useCallback to memoize functions
+  const toggleAll = useCallback((check: boolean) => {
     const updated = subatividades.map(sub => ({
       ...sub,
       selecionada: check
     }));
     onChange(updated);
-  };
+  }, [subatividades, onChange]);
 
-  const handleChange = (id: string, checked: boolean) => {
+  const handleChange = useCallback((id: string, checked: boolean) => {
     const updated = subatividades.map(sub => {
       if (sub.id === id) {
         return {
@@ -36,7 +38,7 @@ export const ServicoSubatividades = ({
       return sub;
     });
     onChange(updated);
-  };
+  }, [subatividades, onChange]);
 
   const totalCount = subatividades.length;
   const completedCount = subatividades.filter(sub => sub.selecionada).length;
@@ -74,4 +76,7 @@ export const ServicoSubatividades = ({
       </div>
     </div>
   );
-};
+});
+
+// Add display name for better debugging
+ServicoSubatividades.displayName = "ServicoSubatividades";

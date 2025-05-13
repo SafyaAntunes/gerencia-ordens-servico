@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Camera } from "lucide-react";
@@ -17,6 +17,7 @@ import {
   ServicoTipoSelector 
 } from "./components";
 import { formSchema, FormValues, OrdemFormProps } from "./types";
+import { SubAtividade, TipoServico } from "@/types/ordens";
 
 export const OrdemForm = ({ 
   onSubmit, 
@@ -65,7 +66,12 @@ export const OrdemForm = ({
     handleEtapaTempoPrecoChange 
   } = useOrdemFormData(servicosTipos, defaultValues, defaultFotosEntrada, defaultFotosSaida);
   
-  const handleFormSubmit = (values: FormValues) => {
+  // Memoize the subatividades change handler
+  const memoizedSubatividadesChange = useCallback((tipo: TipoServico, subatividades: SubAtividade[]) => {
+    handleSubatividadesChange(tipo, subatividades);
+  }, [handleSubatividadesChange]);
+  
+  const handleFormSubmit = useCallback((values: FormValues) => {
     const formData = {
       ...values,
       servicosDescricoes,
@@ -76,7 +82,19 @@ export const OrdemForm = ({
     };
     
     onSubmit(formData);
-  };
+  }, [
+    servicosDescricoes, 
+    servicosSubatividades, 
+    etapasTempoPreco, 
+    fotosEntrada, 
+    fotosSaida, 
+    onSubmit
+  ]);
+  
+  // Memoize the cliente change handler
+  const handleClienteChange = useCallback((clienteId: string) => {
+    setSelectedClienteId(clienteId);
+  }, []);
 
   return (
     <Form {...form}>
@@ -102,7 +120,7 @@ export const OrdemForm = ({
               form={form} 
               clientes={clientes} 
               isLoadingClientes={isLoadingClientes} 
-              onClienteChange={setSelectedClienteId} 
+              onClienteChange={handleClienteChange} 
             />
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -124,7 +142,7 @@ export const OrdemForm = ({
             <ServicoTipoSelector 
               form={form} 
               servicosSubatividades={servicosSubatividades} 
-              onSubatividadesChange={handleSubatividadesChange}
+              onSubatividadesChange={memoizedSubatividadesChange}
             />
           </TabsContent>
           

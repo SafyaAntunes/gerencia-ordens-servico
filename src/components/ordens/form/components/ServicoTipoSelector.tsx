@@ -1,4 +1,5 @@
 
+import { memo, useCallback } from "react";
 import { FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SubAtividade, TipoServico } from "@/types/ordens";
@@ -13,11 +14,20 @@ interface ServicoTipoSelectorProps {
   onSubatividadesChange: (tipo: TipoServico, subatividades: SubAtividade[]) => void;
 }
 
-export const ServicoTipoSelector = ({ 
+// Memoize the component to prevent unnecessary re-renders
+export const ServicoTipoSelector = memo(({ 
   form, 
   servicosSubatividades,
   onSubatividadesChange 
 }: ServicoTipoSelectorProps) => {
+  
+  // Use useCallback to memoize handleSubatividadeChange for each tipo
+  const getMemoizedChangeHandler = useCallback((tipo: TipoServico) => {
+    return (subatividades: SubAtividade[]) => {
+      onSubatividadesChange(tipo, subatividades);
+    };
+  }, [onSubatividadesChange]);
+  
   return (
     <div>
       <FormLabel className="text-base">Serviços a serem realizados</FormLabel>
@@ -57,7 +67,7 @@ export const ServicoTipoSelector = ({
                       <ServicoSubatividades
                         tipoServico={tipo.value}
                         subatividades={servicosSubatividades[tipo.value] || []}
-                        onChange={(subatividades) => onSubatividadesChange(tipo.value, subatividades)}
+                        onChange={getMemoizedChangeHandler(tipo.value)}
                       />
                     </div>
                   )}
@@ -69,4 +79,6 @@ export const ServicoTipoSelector = ({
       </div>
     </div>
   );
-};
+});
+
+ServicoTipoSelector.displayName = "ServicoTipoSelector";

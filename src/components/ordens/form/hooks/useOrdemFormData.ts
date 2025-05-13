@@ -1,8 +1,8 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { SubAtividade, TipoServico, EtapaOS, TipoAtividade } from "@/types/ordens";
 import { getSubatividades, getSubatividadesByTipo } from "@/services/subatividadeService";
 import { FormValues } from "../types";
+import { isEqual } from "lodash";
 
 export const useOrdemFormData = (
   servicosTipos: string[],
@@ -28,6 +28,10 @@ export const useOrdemFormData = (
     montagem: {precoHora: 0, tempoEstimado: 0},
     dinamometro: {precoHora: 0, tempoEstimado: 0}
   });
+  
+  // Keep track of previously loaded service types to prevent unnecessary rerenders
+  const [previousServiceTypes, setPreviousServiceTypes] = useState<string[]>([]);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   // Process default fotos
   useEffect(() => {
@@ -56,23 +60,36 @@ export const useOrdemFormData = (
     processDefaultFotos();
   }, [defaultFotosEntrada, defaultFotosSaida]);
 
-  // Load default values
+  // Load default values only once on initialization
   useEffect(() => {
+    if (hasInitialized) return;
+    
     if (defaultValues?.servicosSubatividades) {
-      setServicosSubatividades(defaultValues.servicosSubatividades);
+      setServicosSubatividades(prev => {
+        if (isEqual(prev, defaultValues.servicosSubatividades)) return prev;
+        return defaultValues.servicosSubatividades ?? {};
+      });
     }
     
     if (defaultValues?.servicosDescricoes) {
-      setServicosDescricoes(defaultValues.servicosDescricoes);
+      setServicosDescricoes(prev => {
+        if (isEqual(prev, defaultValues.servicosDescricoes)) return prev;
+        return defaultValues.servicosDescricoes ?? {};
+      });
     }
     
     if (defaultValues?.etapasTempoPreco) {
-      setEtapasTempoPreco(prev => ({
-        ...prev,
-        ...defaultValues.etapasTempoPreco as any
-      }));
+      setEtapasTempoPreco(prev => {
+        if (isEqual(prev, defaultValues.etapasTempoPreco)) return prev;
+        return {
+          ...prev,
+          ...defaultValues.etapasTempoPreco as any
+        };
+      });
     }
-  }, [defaultValues?.servicosSubatividades, defaultValues?.servicosDescricoes, defaultValues?.etapasTempoPreco]);
+    
+    setHasInitialized(true);
+  }, [defaultValues?.servicosSubatividades, defaultValues?.servicosDescricoes, defaultValues?.etapasTempoPreco, hasInitialized]);
 
   // Fetch etapas configuration
   useEffect(() => {
@@ -101,10 +118,15 @@ export const useOrdemFormData = (
           
           // Guarde as subatividades para referência
           if (etapasData[tipo]) {
-            setEtapasConfig(prev => ({
-              ...prev,
-              [tipo]: etapasData[tipo]
-            }));
+            setEtapasConfig(prev => {
+              // Only update if there's a change
+              if (isEqual(prev[tipo], etapasData[tipo])) return prev;
+              
+              return {
+                ...prev,
+                [tipo]: etapasData[tipo]
+              };
+            });
           }
         });
       } catch (error) {
@@ -117,12 +139,27 @@ export const useOrdemFormData = (
     fetchEtapasConfig();
   }, []);
 
-  // Load subatividades for each service type
+  // Load subatividades for each service type - with optimizations
   useEffect(() => {
+    // Check if service types actually changed to avoid unnecessary loads
+    if (isEqual(servicosTipos.sort(), previousServiceTypes.sort())) return;
+    
+    setPreviousServiceTypes([...servicosTipos]);
+    
+    // Track pending async operations
+    let isMounted = true;
+    const pendingOperations: Record<string, boolean> = {};
+    
     const loadSubatividades = async (tipo: TipoServico) => {
+      // Skip if we've already started loading this type
+      if (pendingOperations[tipo]) return;
+      pendingOperations[tipo] = true;
+      
       try {
-        // Always fetch all available subactivities for this service type
         const subatividadesList = await getSubatividadesByTipo(tipo);
+        
+        // Only update state if component is still mounted
+        if (!isMounted) return;
 
         setServicosSubatividades(prev => {
           // Get existing subatividades from current state
@@ -144,6 +181,12 @@ export const useOrdemFormData = (
             };
           });
           
+          // Compare with previous state - only update if there's a real change
+          const currentSubatividades = prev[tipo] || [];
+          if (isEqual(currentSubatividades, updatedSubatividades)) {
+            return prev;
+          }
+          
           return {
             ...prev,
             [tipo]: updatedSubatividades
@@ -151,10 +194,14 @@ export const useOrdemFormData = (
         });
       } catch (error) {
         console.error(`Erro ao carregar subatividades para ${tipo}:`, error);
-        setServicosSubatividades(prev => ({
-          ...prev,
-          [tipo]: []
-        }));
+        if (isMounted) {
+          setServicosSubatividades(prev => ({
+            ...prev,
+            [tipo]: []
+          }));
+        }
+      } finally {
+        pendingOperations[tipo] = false;
       }
     };
 
@@ -164,49 +211,81 @@ export const useOrdemFormData = (
     });
 
     // Remover subatividades de tipos que não estão mais selecionados
-    Object.keys(servicosSubatividades).forEach((tipo) => {
-      if (!servicosTipos.includes(tipo)) {
-        setServicosSubatividades(prev => {
-          const newState = { ...prev };
+    setServicosSubatividades(prev => {
+      const newState = { ...prev };
+      Object.keys(newState).forEach((tipo) => {
+        if (!servicosTipos.includes(tipo)) {
           delete newState[tipo];
-          return newState;
-        });
-      }
+        }
+      });
+      return newState;
     });
-  }, [servicosTipos, defaultValues?.servicosSubatividades]);
+    
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMounted = false;
+    };
+  }, [servicosTipos, defaultValues?.servicosSubatividades, previousServiceTypes]);
 
-  const handleServicoDescricaoChange = (tipo: string, descricao: string) => {
-    setServicosDescricoes(prev => ({
-      ...prev,
-      [tipo]: descricao
-    }));
-  };
+  // Memoized callbacks to prevent unnecessary re-renders
+  const handleServicoDescricaoChange = useCallback((tipo: string, descricao: string) => {
+    setServicosDescricoes(prev => {
+      if (prev[tipo] === descricao) return prev;
+      return {
+        ...prev,
+        [tipo]: descricao
+      };
+    });
+  }, []);
   
-  const handleSubatividadesChange = (tipo: TipoServico, subatividades: SubAtividade[]) => {
-    setServicosSubatividades(prev => ({
-      ...prev,
-      [tipo]: subatividades
-    }));
-  };
+  const handleSubatividadesChange = useCallback((tipo: TipoServico, subatividades: SubAtividade[]) => {
+    setServicosSubatividades(prev => {
+      // Skip update if no actual changes to prevent re-renders
+      if (isEqual(prev[tipo], subatividades)) return prev;
+      
+      return {
+        ...prev,
+        [tipo]: subatividades
+      };
+    });
+  }, []);
   
-  const handleEtapaTempoPrecoChange = (etapa: EtapaOS, field: 'precoHora' | 'tempoEstimado', value: number) => {
-    setEtapasTempoPreco(prev => ({
-      ...prev,
-      [etapa]: {
-        ...prev[etapa],
-        [field]: value
-      }
-    }));
-  };
+  const handleEtapaTempoPrecoChange = useCallback((etapa: EtapaOS, field: 'precoHora' | 'tempoEstimado', value: number) => {
+    setEtapasTempoPreco(prev => {
+      // Skip update if no actual changes
+      if (prev[etapa]?.[field] === value) return prev;
+      
+      return {
+        ...prev,
+        [etapa]: {
+          ...prev[etapa],
+          [field]: value
+        }
+      };
+    });
+  }, []);
 
-  return {
+  // Use memoized values for outputs that don't need to change on every render
+  const memoizedState = useMemo(() => ({
     servicosDescricoes,
-    servicosSubatividades,
+    servicosSubatividades, 
     fotosEntrada,
     fotosSaida,
     etapasConfig,
     isLoadingEtapas,
     etapasTempoPreco,
+  }), [
+    servicosDescricoes,
+    servicosSubatividades,
+    fotosEntrada, 
+    fotosSaida,
+    etapasConfig,
+    isLoadingEtapas,
+    etapasTempoPreco
+  ]);
+
+  return {
+    ...memoizedState,
     setFotosEntrada,
     setFotosSaida,
     handleServicoDescricaoChange,
