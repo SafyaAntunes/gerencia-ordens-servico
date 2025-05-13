@@ -285,6 +285,7 @@ export default function OrdemForm({
     const fetchAllSubatividades = async () => {
       const result: Record<string, SubAtividade[]> = {};
 
+<<<<<<< HEAD
       await Promise.all(
         tiposList.map(async (tipo) => {
           try {
@@ -311,6 +312,56 @@ export default function OrdemForm({
 
     fetchAllSubatividades();
   }, [servicosTipos, defaultValues?.id]);
+=======
+        setServicosSubatividades(prev => {
+          // Obtenha as subatividades salvas para este tipo (se existirem)
+          const salvas = prev[tipo] || defaultValues?.servicosSubatividades?.[tipo] || [];
+          
+          // Mescle as subatividades novas com as existentes, mantendo o estado de seleção das existentes
+          const atualizadas = (subatividadesList || []).map(novaSubatividade => {
+            // Procure se esta subatividade já existe nas salvas
+            const existente = salvas.find(s => s.id === novaSubatividade.id);
+            
+            // Se existe, mantenha o estado de 'selecionada'
+            // Se não existe, adicione como não selecionada
+            return {
+              ...novaSubatividade,
+              selecionada: existente ? existente.selecionada : false,
+              concluida: existente ? existente.concluida : false
+            };
+          });
+          
+          return {
+            ...prev,
+            [tipo]: atualizadas
+          };
+        });
+      } catch (error) {
+        console.error(`Erro ao carregar subatividades para ${tipo}:`, error);
+        setServicosSubatividades(prev => ({
+          ...prev,
+          [tipo]: []
+        }));
+      }
+    };
+
+    tiposList.forEach((tipo) => {
+      // Sempre carregue as subatividades para garantir que temos a lista completa
+      loadSubatividades(tipo as TipoServico);
+    });
+
+    // Remover subatividades de tipos que não estão mais selecionados
+    Object.keys(servicosSubatividades).forEach((tipo) => {
+      if (!tiposList.includes(tipo)) {
+        setServicosSubatividades(prev => {
+          const newState = { ...prev };
+          delete newState[tipo];
+          return newState;
+        });
+      }
+    });
+  }, [servicosTipos]);
+>>>>>>> a1f68bc14c670b1a31786cb6cff3b3ccd738ca92
   
   const handleServicoDescricaoChange = (tipo: string, descricao: string) => {
     setServicosDescricoes(prev => ({

@@ -1,26 +1,14 @@
 
-import { useState } from "react";
-import { Servico, EtapaOS } from "@/types/ordens";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
-import { CheckCircle2, Clock, User } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { useServicoTracker } from "./hooks";
-import ServicoHeader from "./ServicoHeader";
-import ServicoDetails from "./ServicoDetails";
-import ServicoControls from "./ServicoControls";
-
-interface ServicoTrackerProps {
-  servico: Servico;
-  ordemId: string;
-  funcionarioId: string;
-  funcionarioNome?: string;
-  etapa: EtapaOS;
-  onSubatividadeToggle?: (subatividadeId: string, checked: boolean) => void;
-  onServicoStatusChange?: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
-  onSubatividadeSelecionadaToggle?: (subatividadeId: string, checked: boolean) => void;
-}
+import { useState, useEffect } from 'react';
+import { Servico, EtapaOS } from '@/types/ordens';
+import { useServicoTracker } from './hooks/useServicoTracker';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Check, RotateCcw, User, ChevronDown, ChevronUp } from 'lucide-react';
+import ServicoHeader from './ServicoHeader';
+import ServicoDetails from './ServicoDetails';
+import { ServicoTrackerProps } from './hooks/types/servicoTrackerTypes';
 
 export function ServicoTracker({
   servico,
@@ -30,7 +18,8 @@ export function ServicoTracker({
   etapa,
   onSubatividadeToggle,
   onServicoStatusChange,
-  onSubatividadeSelecionadaToggle
+  onSubatividadeSelecionadaToggle,
+  onServicoUpdate
 }: ServicoTrackerProps) {
   const {
     isShowingDetails,
@@ -50,52 +39,47 @@ export function ServicoTracker({
     onSubatividadeSelecionadaToggle
   });
 
-  const subatividadesSelecionadas = servico.subatividades?.filter(s => s.selecionada)?.length || 0;
+  // Calculate progress
   const totalSubatividades = servico.subatividades?.length || 0;
-  const subatividadesConcluidas = servico.subatividades?.filter(s => s.concluida)?.length || 0;
+  const completedSubatividades = servico.subatividades?.filter(sub => sub.concluida).length || 0;
   const progressPercentage = totalSubatividades > 0 
-    ? Math.round((subatividadesConcluidas / totalSubatividades) * 100) 
+    ? Math.round((completedSubatividades / totalSubatividades) * 100) 
     : 0;
 
+  // Determine service status
+  const servicoStatus = servico.concluido 
+    ? 'concluido' 
+    : servico.funcionarioId 
+      ? 'em_andamento' 
+      : 'nao_iniciado';
+
   return (
-    <Card>
-      <CardHeader className="p-4 pb-0">
-        <ServicoHeader 
-          tipo={servico.tipo} 
+    <Card className="mb-4">
+      <CardHeader className="pb-2">
+        <ServicoHeader
+          tipo={servico.tipo}
+          servicoStatus={servicoStatus}
+          progressPercentage={progressPercentage}
+          completedSubatividades={completedSubatividades}
+          totalSubatividades={totalSubatividades}
+          funcionarioNome={servico.funcionarioNome}
           concluido={servico.concluido}
           isOpen={isShowingDetails}
           onToggleOpen={toggleDetails}
-          progressPercentage={progressPercentage}
-          completedSubatividades={subatividadesConcluidas}
-          totalSubatividades={totalSubatividades}
-          funcionarioNome={servico.funcionarioNome}
         />
       </CardHeader>
-      
+
       {isShowingDetails && (
-        <CardContent className="p-4 pt-2">
+        <CardContent>
           <ServicoDetails
-            descricao={servico.descricao}
-            subatividades={servico.subatividades || []}
-            temPermissao={temPermissao}
-            onSubatividadeToggle={handleSubatividadeToggle}
-          />
-          
-          <ServicoControls
-            temPermissao={temPermissao}
-            subatividadesConcluidas={subatividadesConcluidas}
-            subatividadesSelecionadas={subatividadesSelecionadas}
-            totalSubatividades={totalSubatividades}
             servico={servico}
-            todasSubatividadesConcluidas={subatividadesConcluidas === totalSubatividades && totalSubatividades > 0}
+            onSubatividadeToggle={handleSubatividadeToggle}
             onServicoConcluidoToggle={handleServicoConcluidoToggle}
-            concluido={servico.concluido}
+            onSubatividadeSelecionadaToggle={handleSubatividadeSelecionadaToggle}
+            temPermissao={temPermissao}
           />
         </CardContent>
       )}
     </Card>
   );
 }
-
-// Export as default as well for compatibility
-export default ServicoTracker;
