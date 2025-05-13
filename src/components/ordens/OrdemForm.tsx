@@ -287,18 +287,23 @@ export default function OrdemForm({
         const subatividadesList = await getSubatividadesByTipo(tipo);
 
         setServicosSubatividades(prev => {
-          // Se já existe, não sobrescreva!
-          if (prev[tipo] && prev[tipo].length > 0) return prev;
-
-          // Priorize o estado local (prev), depois o defaultValues
+          // Obtenha as subatividades salvas para este tipo (se existirem)
           const salvas = prev[tipo] || defaultValues?.servicosSubatividades?.[tipo] || [];
-          const atualizadas = (subatividadesList || []).map(sub => {
-            const salva = salvas.find(s => s.id === sub.id);
+          
+          // Mescle as subatividades novas com as existentes, mantendo o estado de seleção das existentes
+          const atualizadas = (subatividadesList || []).map(novaSubatividade => {
+            // Procure se esta subatividade já existe nas salvas
+            const existente = salvas.find(s => s.id === novaSubatividade.id);
+            
+            // Se existe, mantenha o estado de 'selecionada'
+            // Se não existe, adicione como não selecionada
             return {
-              ...sub,
-              selecionada: salva ? salva.selecionada : false
+              ...novaSubatividade,
+              selecionada: existente ? existente.selecionada : false,
+              concluida: existente ? existente.concluida : false
             };
           });
+          
           return {
             ...prev,
             [tipo]: atualizadas
@@ -314,9 +319,8 @@ export default function OrdemForm({
     };
 
     tiposList.forEach((tipo) => {
-      if (!servicosSubatividades[tipo] || servicosSubatividades[tipo].length === 0) {
-        loadSubatividades(tipo as TipoServico);
-      }
+      // Sempre carregue as subatividades para garantir que temos a lista completa
+      loadSubatividades(tipo as TipoServico);
     });
 
     // Remover subatividades de tipos que não estão mais selecionados
