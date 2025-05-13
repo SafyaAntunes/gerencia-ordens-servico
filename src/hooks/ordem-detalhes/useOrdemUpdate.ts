@@ -36,32 +36,25 @@ export const useOrdemUpdate = (
         return newServicosTipos.map(tipo => {
           const existingServico = servicosMap[tipo];
           
-          // Get the updated subactividades from the form values
+          // Get the updated subatividades from the form values
           const formSubatividades = values.servicosSubatividades?.[tipo] || [];
           
           // Process subatividades - preserve existing status for those that were already present
-          let processedSubatividades = [];
-          
-          if (existingServico && existingServico.subatividades) {
-            // For each subatividade in the form submission
-            processedSubatividades = formSubatividades.map(formSub => {
-              // Find if this subatividade existed before
-              const existingSub = existingServico.subatividades?.find(s => s.id === formSub.id);
-              
-              // If the subatividade existed, preserve its 'concluida' status
-              // Otherwise, use the value from the form (which will be false for new selections)
+          let processedSubatividades = formSubatividades.map(formSub => {
+            // Find if this subatividade existed before
+            const existingSub = existingServico?.subatividades?.find(s => s.id === formSub.id);
+            
+            // Only include subatividades that are marked as selected
+            if (formSub.selecionada) {
               return {
                 ...formSub,
+                // If the subatividade existed, preserve its 'concluida' status
+                // Otherwise, set it to false for new selections
                 concluida: existingSub ? existingSub.concluida : false
               };
-            });
-          } else {
-            // If this is a new service type, initialize all subatividades as not completed
-            processedSubatividades = formSubatividades.map(sub => ({
-              ...sub,
-              concluida: false
-            }));
-          }
+            }
+            return null;
+          }).filter(Boolean); // Remove null entries (unselected subatividades)
           
           return {
             tipo,

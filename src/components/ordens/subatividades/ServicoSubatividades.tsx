@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SubAtividade, TipoServico } from "@/types/ordens";
@@ -39,7 +40,7 @@ export const ServicoSubatividades = ({
       >
         <h4 className="text-sm font-medium">Subatividades</h4>
         <div className="text-xs text-muted-foreground">
-          {completedCount} / {totalCount} selecionadas
+          {completedCount} / {totalCount} disponíveis
         </div>
       </div>
       

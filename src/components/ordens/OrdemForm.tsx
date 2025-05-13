@@ -282,15 +282,17 @@ export default function OrdemForm({
 
     const loadSubatividades = async (tipo: TipoServico) => {
       try {
+        // Always fetch all available subactivities for this service type
         const subatividadesList = await getSubatividadesByTipo(tipo);
 
         setServicosSubatividades(prev => {
-          // Always get the complete list of subatividades from the API
+          // Get existing subatividades from current state
           const existingSubatividades = prev[tipo] || [];
+          // Get default values from form initialization (if editing an order)
           const defaultSubatividades = defaultValues?.servicosSubatividades?.[tipo] || [];
           
-          // Combine existing and newly fetched subatividades
-          const atualizadas = (subatividadesList || []).map(sub => {
+          // Create a combined list of all subactivities, preserving states from existing selections
+          const updatedSubatividades = (subatividadesList || []).map(sub => {
             // Look for this subatividade in existing or default values
             const existingItem = existingSubatividades.find(s => s.id === sub.id);
             const defaultItem = defaultSubatividades.find(s => s.id === sub.id);
@@ -305,7 +307,7 @@ export default function OrdemForm({
           
           return {
             ...prev,
-            [tipo]: atualizadas
+            [tipo]: updatedSubatividades
           };
         });
       } catch (error) {
