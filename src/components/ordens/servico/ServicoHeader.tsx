@@ -4,13 +4,13 @@ import { formatTime } from "@/utils/timerUtils";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Clock, ChevronDown, ChevronUp } from "lucide-react";
-import { ServicoStatus } from "./hooks/types/servicoTrackerTypes";
+import { ServicoStatus, ServicoStatusType } from "./hooks/types/servicoTrackerTypes";
 import { Button } from "@/components/ui/button";
 
 interface ServicoHeaderProps {
   tipo: TipoServico;
   displayTime?: string | number;
-  servicoStatus?: ServicoStatus;
+  servicoStatus?: ServicoStatusType;
   progressPercentage?: number;
   completedSubatividades?: number;
   totalSubatividades?: number;

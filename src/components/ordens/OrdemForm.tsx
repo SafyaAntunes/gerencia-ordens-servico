@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -288,23 +287,18 @@ export default function OrdemForm({
         const subatividadesList = await getSubatividadesByTipo(tipo);
 
         setServicosSubatividades(prev => {
-          // Obtenha as subatividades salvas para este tipo (se existirem)
+          // Se já existe, não sobrescreva!
+          if (prev[tipo] && prev[tipo].length > 0) return prev;
+
+          // Priorize o estado local (prev), depois o defaultValues
           const salvas = prev[tipo] || defaultValues?.servicosSubatividades?.[tipo] || [];
-          
-          // Mescle as subatividades novas com as existentes, mantendo o estado de seleção das existentes
-          const atualizadas = (subatividadesList || []).map(novaSubatividade => {
-            // Procure se esta subatividade já existe nas salvas
-            const existente = salvas.find(s => s.id === novaSubatividade.id);
-            
-            // Se existe, mantenha o estado de 'selecionada'
-            // Se não existe, adicione como não selecionada
+          const atualizadas = (subatividadesList || []).map(sub => {
+            const salva = salvas.find(s => s.id === sub.id);
             return {
-              ...novaSubatividade,
-              selecionada: existente ? existente.selecionada : false,
-              concluida: existente ? existente.concluida : false
+              ...sub,
+              selecionada: salva ? salva.selecionada : false
             };
           });
-          
           return {
             ...prev,
             [tipo]: atualizadas
@@ -320,8 +314,9 @@ export default function OrdemForm({
     };
 
     tiposList.forEach((tipo) => {
-      // Sempre carregue as subatividades para garantir que temos a lista completa
-      loadSubatividades(tipo as TipoServico);
+      if (!servicosSubatividades[tipo] || servicosSubatividades[tipo].length === 0) {
+        loadSubatividades(tipo as TipoServico);
+      }
     });
 
     // Remover subatividades de tipos que não estão mais selecionados
@@ -343,27 +338,19 @@ export default function OrdemForm({
     }));
   };
   
-  const handleSubatividadesChange = (tipo: TipoServico, subatividadesAtualizadas: SubAtividade[]) => {
-    setServicosSubatividades(prev => {
-      // Pega todas as subatividades possíveis (do estado atual)
-      const todas = prev[tipo] || [];
-      // Cria um map para lookup rápido
-      const atualizadasMap = new Map(subatividadesAtualizadas.map(s => [s.id, s.selecionada]));
-      // Atualiza o status de seleção das subatividades conforme o array recebido
-      const novas = todas.map(sub => ({
-        ...sub,
-        selecionada: atualizadasMap.has(sub.id) ? atualizadasMap.get(sub.id) : sub.selecionada
-      }));
-      return {
-        ...prev,
-        [tipo]: novas
-      };
-    });
-
-    // Callback de seleção (mantém igual)
+  const handleSubatividadesChange = (tipo: TipoServico, subatividades: SubAtividade[]) => {
+    console.log("handleSubatividadesChange", tipo, subatividades);
+    setServicosSubatividades(prev => ({
+      ...prev,
+      [tipo]: subatividades
+    }));
+    
+    // Se a função de callback para seleção de subatividades existir, chame-a para cada subatividade alterada
     if (onSubatividadeSelecionadaToggle) {
       const prevSubs = servicosSubatividades[tipo] || [];
-      subatividadesAtualizadas.forEach(newSub => {
+      
+      // Compara subatividades anteriores com as novas para identificar mudanças na seleção
+      subatividades.forEach(newSub => {
         const oldSub = prevSubs.find(s => s.id === newSub.id);
         if (oldSub && oldSub.selecionada !== newSub.selecionada) {
           onSubatividadeSelecionadaToggle(tipo, newSub.id, newSub.selecionada);

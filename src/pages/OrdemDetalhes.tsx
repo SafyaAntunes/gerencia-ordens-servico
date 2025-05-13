@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { LogoutProps } from "@/types/props";
@@ -10,7 +11,7 @@ import { DeleteOrdemDialog } from "@/components/ordens/detalhes/DeleteOrdemDialo
 import { LoadingOrdem } from "@/components/ordens/detalhes/LoadingOrdem";
 import { NotFoundOrdem } from "@/components/ordens/detalhes/NotFoundOrdem";
 import { OrdemHeaderCustom } from "@/components/ordens/detalhes/OrdemHeaderCustom";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Cliente } from "@/types/clientes";
@@ -63,31 +64,6 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
       fetchClientes();
     }
   }, [isEditando]);
-
-  // Memoize defaultValues para evitar ciclos de re-renderização
-  const defaultValues = useMemo(() => {
-    if (!ordem) return undefined;
-    return {
-      id: ordem.id,
-      nome: ordem.nome,
-      clienteId: ordem.cliente?.id || "",
-      motorId: ordem.motorId || "",
-      dataAbertura: ordem.dataAbertura ? new Date(ordem.dataAbertura) : new Date(),
-      dataPrevistaEntrega: ordem.dataPrevistaEntrega ? new Date(ordem.dataPrevistaEntrega) : new Date(),
-      prioridade: ordem.prioridade || "media",
-      servicosTipos: ordem.servicos?.map(s => s.tipo) || [],
-      servicosDescricoes: ordem.servicos?.reduce((acc, s) => {
-        acc[s.tipo] = s.descricao;
-        return acc;
-      }, {} as Record<string, string>) || {},
-      servicosSubatividades: ordem.servicos?.reduce((acc, s) => {
-        if (s.subatividades) {
-          acc[s.tipo] = s.subatividades;
-        }
-        return acc;
-      }, {} as Record<string, SubAtividade[]>) || {}
-    };
-  }, [ordem]);
 
   if (isLoading) {
     return (
@@ -194,11 +170,30 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
         />
       </div>
 
-      {isEditando && defaultValues ? (
+      {isEditando ? (
         <OrdemForm 
           onSubmit={handleSubmit}
           isLoading={isSubmitting}
-          defaultValues={defaultValues}
+          defaultValues={{
+            id: ordem.id,
+            nome: ordem.nome,
+            clienteId: ordem.cliente?.id || "",
+            motorId: ordem.motorId || "",
+            dataAbertura: ordem.dataAbertura ? new Date(ordem.dataAbertura) : new Date(),
+            dataPrevistaEntrega: ordem.dataPrevistaEntrega ? new Date(ordem.dataPrevistaEntrega) : new Date(),
+            prioridade: ordem.prioridade || "media",
+            servicosTipos: ordem.servicos?.map(s => s.tipo) || [],
+            servicosDescricoes: ordem.servicos?.reduce((acc, s) => {
+              acc[s.tipo] = s.descricao;
+              return acc;
+            }, {} as Record<string, string>) || {},
+            servicosSubatividades: ordem.servicos?.reduce((acc, s) => {
+              if (s.subatividades) {
+                acc[s.tipo] = s.subatividades;
+              }
+              return acc;
+            }, {} as Record<string, SubAtividade[]>) || {}
+          }}
           defaultFotosEntrada={ordem?.fotosEntrada || []}
           defaultFotosSaida={ordem?.fotosSaida || []}
           onCancel={() => setIsEditando(false)}

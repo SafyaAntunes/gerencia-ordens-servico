@@ -1,12 +1,35 @@
 
-import { ServicoStatus } from "../types/servicoTrackerTypes";
+import { ServicoStatusType } from "../types/servicoTrackerTypes";
 import { TipoServico } from "@/types/ordens";
 
-/**
- * Converte o tipo de serviço para um nome mais amigável
- */
-export const getTipoServicoNome = (tipo: TipoServico): string => {
-  const nomes: Record<TipoServico, string> = {
+export const formatTimeDisplay = (seconds: number): string => {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  
+  return [h, m, s]
+    .map(v => v < 10 ? `0${v}` : `${v}`)
+    .join(':');
+};
+
+export const getServicoStatus = (
+  isRunning: boolean,
+  isPaused: boolean,
+  concluido: boolean
+): ServicoStatusType => {
+  if (concluido) {
+    return "concluido";
+  } else if (isRunning) {
+    return "em_andamento";
+  } else if (isPaused) {
+    return "pausado";
+  } else {
+    return "nao_iniciado";
+  }
+};
+
+export const formatTipoServico = (tipo: TipoServico): string => {
+  const labels: Record<TipoServico, string> = {
     bloco: "Bloco",
     biela: "Biela",
     cabecote: "Cabeçote",
@@ -19,19 +42,5 @@ export const getTipoServicoNome = (tipo: TipoServico): string => {
     inspecao_final: "Inspeção Final"
   };
   
-  return nomes[tipo] || tipo;
-};
-
-/**
- * Converte o status do serviço para um nome mais amigável
- */
-export const getServicoStatusNome = (status: ServicoStatus): string => {
-  const nomes: Record<ServicoStatus, string> = {
-    nao_iniciado: "Não iniciado",
-    em_andamento: "Em andamento",
-    concluido: "Concluído",
-    pausado: "Pausado"
-  };
-  
-  return nomes[status] || status;
+  return labels[tipo] || tipo;
 };

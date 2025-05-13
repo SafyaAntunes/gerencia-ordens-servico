@@ -19,30 +19,17 @@ export default function EtapaTrackerInfo({
   onSubatividadeToggle
 }: EtapaTrackerInfoProps) {
   const [subatividades, setSubatividades] = useState<SubAtividade[]>([]);
-  const [localSubatividades, setLocalSubatividades] = useState<SubAtividade[]>([]);
   
   useEffect(() => {
     if (servico.atividadesRelacionadas?.[etapa]) {
-      const subs = servico.atividadesRelacionadas[etapa] || [];
-      setSubatividades(subs);
-      setLocalSubatividades(subs);
+      setSubatividades(servico.atividadesRelacionadas[etapa] || []);
     } else {
       setSubatividades([]);
-      setLocalSubatividades([]);
     }
   }, [servico, etapa]);
   
   const handleToggle = (subId: string, checked: boolean) => {
     console.log("Toggle subatividade in EtapaTrackerInfo:", subId, checked);
-    
-    // Update local state first for immediate UI feedback
-    setLocalSubatividades(prev => 
-      prev.map(sub => 
-        sub.id === subId ? { ...sub, concluida: checked } : sub
-      )
-    );
-    
-    // Then call the parent callback
     if (onSubatividadeToggle) {
       onSubatividadeToggle(subId, checked);
     }
@@ -57,7 +44,7 @@ export default function EtapaTrackerInfo({
     }
   };
   
-  if (localSubatividades.length === 0) {
+  if (subatividades.length === 0) {
     return (
       <div className="p-4 border rounded-md mt-2 mb-4">
         <p className="text-sm text-muted-foreground text-center">
@@ -72,12 +59,12 @@ export default function EtapaTrackerInfo({
       <div className="flex items-center justify-between mb-3">
         <h4 className="text-sm font-medium">{getEtapaNome(etapa)}</h4>
         <Badge variant="outline" className="text-xs">
-          {localSubatividades.filter(s => s.concluida).length}/{localSubatividades.length}
+          {subatividades.filter(s => s.concluida).length}/{subatividades.length}
         </Badge>
       </div>
       
       <div className="space-y-2">
-        {localSubatividades.map((sub) => (
+        {subatividades.map((sub) => (
           <div key={sub.id} className="flex items-center space-x-2">
             <Checkbox
               id={`check-etapa-${etapa}-${sub.id}`}
