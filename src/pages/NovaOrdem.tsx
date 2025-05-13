@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -143,23 +142,18 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
       // Calcular tempo total em milissegundos
       const tempoTotalEstimadoMS = tempoTotalEstimadoHoras * 60 * 60 * 1000; // horas para ms
       
-      // Filtra apenas as subatividades selecionadas para cada tipo de serviço
       const formattedServicoSubatividades: Record<string, SubAtividade[]> = {};
       
       if (values.servicosSubatividades) {
         Object.entries(values.servicosSubatividades).forEach(([tipo, subatividades]) => {
-          // Filtrar apenas subatividades selecionadas
-          formattedServicoSubatividades[tipo] = (subatividades as SubAtividade[])
-            .filter(sub => sub.selecionada)
-            .map(sub => ({
-              ...sub,
-              nome: toTitleCase(sub.nome)
-            }));
+          formattedServicoSubatividades[tipo] = (subatividades as SubAtividade[]).map(sub => ({
+            ...sub,
+            nome: toTitleCase(sub.nome)
+          }));
         });
       }
       
       // Preparar as atividades específicas para cada serviço
-      // Filtrar também as atividades específicas, mantendo apenas as selecionadas
       const formattedAtividadesEspecificas: Record<string, Record<string, SubAtividade[]>> = {};
       
       if (values.atividadesEspecificas) {
@@ -167,29 +161,24 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
           formattedAtividadesEspecificas[servicoTipo] = {};
           
           Object.entries(atividades).forEach(([tipoAtividade, subatividades]) => {
-            // Filtrar apenas subatividades selecionadas dentro das atividades específicas
-            formattedAtividadesEspecificas[servicoTipo][tipoAtividade] = (subatividades as SubAtividade[])
-              .filter(sub => sub.selecionada)
-              .map(sub => ({
-                ...sub,
-                nome: toTitleCase(sub.nome),
-                servicoTipo: servicoTipo as TipoServico
-              }));
+            formattedAtividadesEspecificas[servicoTipo][tipoAtividade] = (subatividades as SubAtividade[]).map(sub => ({
+              ...sub,
+              nome: toTitleCase(sub.nome),
+              servicoTipo: servicoTipo as TipoServico
+            }));
           });
         });
       }
       
-      // Criar os serviços apenas com subatividades selecionadas
       const servicos = (values.servicosTipos || []).map((tipo: TipoServico) => {
         const servicoObj: any = {
           tipo,
           descricao: values.servicosDescricoes?.[tipo] || "",
           concluido: false,
-          // Usar as subatividades filtradas (apenas as selecionadas)
           subatividades: formattedServicoSubatividades[tipo] || []
         };
         
-        // Adicionar atividades específicas filtradas para este serviço, se existirem
+        // Adicionar atividades específicas para este serviço, se existirem
         if (formattedAtividadesEspecificas[tipo]) {
           servicoObj.atividadesRelacionadas = formattedAtividadesEspecificas[tipo];
         }
@@ -249,8 +238,12 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         dataPrevistaEntrega,
         prioridade: values.prioridade as Prioridade,
         status: "orcamento",
-        // Usar os serviços já filtrados com apenas subatividades selecionadas
-        servicos,
+        servicos: values.servicosTipos.map((tipo: TipoServico) => ({
+          tipo,
+          descricao: values.servicosDescricoes?.[tipo] || "",
+          concluido: false,
+          subatividades: values.servicosSubatividades?.[tipo] || []
+        })),
         etapasAndamento,
         tempoRegistros: [],
         fotosEntrada: fotosEntradaUrls,

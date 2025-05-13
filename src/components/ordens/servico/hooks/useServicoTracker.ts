@@ -32,8 +32,8 @@ export function useServicoTracker({
   const { funcionario } = useAuth();
   
   const temPermissao = funcionario?.id === funcionarioId || 
-    funcionario?.cargo === 'admin' || 
-    funcionario?.cargo === 'supervisor';
+    funcionario?.tipo === 'admin' || 
+    funcionario?.tipo === 'supervisor';
   
   const toggleDetails = () => {
     setIsShowingDetails(!isShowingDetails);

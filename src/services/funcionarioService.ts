@@ -257,11 +257,3 @@ export const getOrdensByFuncionarioEspecialidades = async (especialidades: strin
     return [];
   }
 };
-
-// Add this function to prepare funcionarioId
-export const prepareFuncionarioId = (funcionarioId?: string): string | undefined => {
-  if (!funcionarioId) return undefined;
-  
-  // Remove any invalid characters that might cause issues with Firebase IDs
-  return funcionarioId.replace(/[.#$[\]/]/g, '_');
-};
