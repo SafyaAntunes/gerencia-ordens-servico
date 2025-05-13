@@ -57,81 +57,94 @@ export const useServicosState = (
       pendingOperations[tipo] = true;
       
       try {
+        console.log(`Fetching subatividades from database for ${tipo}...`);
         const subatividadesList = await getSubatividadesByTipo(tipo);
+        console.log(`Received from database for ${tipo}:`, subatividadesList);
         
         // Only update state if component is still mounted
         if (!isMounted) return;
 
         setServicosSubatividades(prev => {
-          // Get existing subatividades from current state
-          const existingSubatividades = prev[tipo] || [];
-          // Get default values from form initialization (if editing an order)
-          const defaultSubatividades = defaultValues?.servicosSubatividades?.[tipo] || [];
+          // First priority: Existing subatividades from edit mode
+          const existingSubatividades = defaultValues?.servicosSubatividades?.[tipo] || [];
           
-          // If we got an empty list from the API but have defaultSubatividades from the hook,
-          // use those as a fallback
-          let availableSubatividades = subatividadesList;
-          if ((!subatividadesList || subatividadesList.length === 0) && defaultSubatividades[tipo]) {
-            // Convert string array to SubAtividade array
-            availableSubatividades = defaultSubatividades[tipo].map(nome => ({
+          // Second priority: Currently selected subatividades (in form)
+          const currentSubatividades = prev[tipo] || [];
+          
+          // Third priority: Subatividades from database
+          let dbSubatividades: SubAtividade[] = [];
+          if (subatividadesList && subatividadesList.length > 0) {
+            dbSubatividades = subatividadesList.map(sub => ({
+              ...sub,
+              selecionada: true, // Default to selected for new items
+              concluida: false
+            }));
+            console.log(`Using database subatividades for ${tipo}:`, dbSubatividades);
+          }
+          
+          // Fourth priority: Default subatividades from hook
+          let defaultSubs: SubAtividade[] = [];
+          if (defaultSubatividades && defaultSubatividades[tipo]) {
+            defaultSubs = defaultSubatividades[tipo].map(nome => ({
               id: nome,
               nome: nome,
               selecionada: true,
               concluida: false
             }));
+            console.log(`Fallback default subatividades for ${tipo}:`, defaultSubs);
           }
           
-          // Create a combined list of all subactivities, preserving states from existing selections
-          const updatedSubatividades = (availableSubatividades || []).map(sub => {
-            // Look for this subatividade in existing or default values
-            const existingItem = existingSubatividades.find(s => s.id === sub.id);
-            const defaultItem = defaultSubatividades.find(s => s.id === sub.id);
-            
-            // Prioritize: 1. Current state, 2. Default values, 3. New values
-            return {
-              ...sub,
-              selecionada: existingItem?.selecionada ?? defaultItem?.selecionada ?? false,
-              concluida: existingItem?.concluida ?? defaultItem?.concluida ?? false
-            };
-          });
+          // Decide which set of subatividades to use, with proper priority
+          let finalSubatividades: SubAtividade[] = [];
           
-          // Compare with previous state - only update if there's a real change
-          const currentSubatividades = prev[tipo] || [];
-          if (isEqual(currentSubatividades, updatedSubatividades)) {
+          // If we're editing an existing ordem with this service type
+          if (existingSubatividades.length > 0) {
+            console.log(`Using existing subatividades from edit mode for ${tipo}`);
+            finalSubatividades = [...existingSubatividades];
+          } 
+          // If we have current selections for this type in the form
+          else if (currentSubatividades.length > 0) {
+            console.log(`Using current form subatividades for ${tipo}`);
+            finalSubatividades = [...currentSubatividades];
+          }
+          // If we got subatividades from the database
+          else if (dbSubatividades.length > 0) {
+            console.log(`Using database subatividades for ${tipo}`);
+            finalSubatividades = [...dbSubatividades];
+          }
+          // Fallback to default subatividades
+          else if (defaultSubs.length > 0) {
+            console.log(`Using default fallback subatividades for ${tipo}`);
+            finalSubatividades = [...defaultSubs];
+          }
+          
+          // If nothing has changed, return previous state
+          if (isEqual(currentSubatividades, finalSubatividades)) {
             return prev;
           }
           
-          // If we received nothing from the API, check for existing service data
-          if (!availableSubatividades || availableSubatividades.length === 0) {
-            // If we don't have any subatividades for this tipo but have existing ones in the form data,
-            // keep those existing ones
-            if (defaultSubatividades && defaultValues?.servicosSubatividades?.[tipo]?.length > 0) {
-              return {
-                ...prev,
-                [tipo]: defaultValues.servicosSubatividades[tipo]
-              };
-            }
-          }
-          
+          console.log(`Final subatividades for ${tipo}:`, finalSubatividades);
           return {
             ...prev,
-            [tipo]: updatedSubatividades
+            [tipo]: finalSubatividades
           };
         });
       } catch (error) {
         console.error(`Erro ao carregar subatividades para ${tipo}:`, error);
         
-        // If there was an error fetching from API but we have default subatividades for this type,
-        // use those instead of showing an empty list
-        if (defaultSubatividades && defaultSubatividades[tipo as TipoServico]) {
+        // If there was an error fetching from API but we have subatividades for this type in edit mode,
+        // keep those instead of showing an empty list
+        if (defaultValues?.servicosSubatividades?.[tipo]?.length > 0) {
+          console.log(`Error occurred, but using existing subatividades from edit mode for ${tipo}`);
+          setServicosSubatividades(prev => ({
+            ...prev,
+            [tipo]: defaultValues.servicosSubatividades![tipo]
+          }));
+        } 
+        // If we have default subatividades for this type, use those as fallback
+        else if (defaultSubatividades && defaultSubatividades[tipo as TipoServico]) {
+          console.log(`Error occurred, using default fallback subatividades for ${tipo}`);
           setServicosSubatividades(prev => {
-            // If we already have subatividades for this type (from editing an existing order),
-            // keep those instead of overwriting with defaults
-            if (prev[tipo] && prev[tipo].length > 0) {
-              return prev;
-            }
-            
-            // Otherwise use the defaults from the hook as a fallback
             const defaultSubs = defaultSubatividades[tipo as TipoServico].map(nome => ({
               id: nome,
               nome,

@@ -1,3 +1,4 @@
+
 import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, setDoc, deleteDoc, query, where, writeBatch } from 'firebase/firestore';
 import { SubAtividade, TipoServico, TipoAtividade } from '@/types/ordens';
@@ -120,9 +121,13 @@ export async function saveSubatividades(subatividadesMap: Partial<Record<TipoSer
 // Obter subatividades por tipo de serviço
 export async function getSubatividadesByTipo(tipoServico: TipoServico | TipoAtividade): Promise<SubAtividade[]> {
   try {
+    console.log(`[getSubatividadesByTipo] Buscando subatividades para tipo: ${tipoServico}`);
+    
     const subatividadesRef = collection(db, 'subatividades');
     const q = query(subatividadesRef, where('tipoServico', '==', tipoServico));
     const snapshot = await getDocs(q);
+    
+    console.log(`[getSubatividadesByTipo] Encontrados ${snapshot.size} documentos para ${tipoServico}`);
     
     const subatividades: SubAtividade[] = [];
     snapshot.forEach((doc) => {
@@ -138,6 +143,7 @@ export async function getSubatividadesByTipo(tipoServico: TipoServico | TipoAtiv
       });
     });
     
+    console.log(`[getSubatividadesByTipo] Retornando ${subatividades.length} subatividades para ${tipoServico}:`, subatividades);
     return subatividades;
   } catch (error) {
     console.error(`Erro ao buscar subatividades do tipo ${tipoServico}:`, error);

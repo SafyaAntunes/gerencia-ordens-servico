@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { db } from "@/lib/firebase";
 import { doc, updateDoc, Timestamp, getDoc } from "firebase/firestore";
@@ -35,11 +34,16 @@ export const useOrdemUpdate = (
           return acc;
         }, {});
         
+        console.log("Current servicos:", currentServicos);
+        console.log("New servicos tipos:", newServicosTipos);
+        
         return newServicosTipos.map(tipo => {
           const existingServico = servicosMap[tipo];
+          console.log(`Processing tipo: ${tipo}, exists: ${!!existingServico}`);
           
           // Get the updated subatividades from the form values
           const formSubatividades = values.servicosSubatividades?.[tipo] || [];
+          console.log(`Form subatividades for ${tipo}:`, formSubatividades);
           
           // If this is a new service type (not in the existing order)
           const isNewServiceType = !existingServico;
@@ -51,17 +55,23 @@ export const useOrdemUpdate = (
               // Find if this subatividade existed before
               const existingSub = existingServico?.subatividades?.find(s => s.id === formSub.id);
               
+              // If the subatividade existed, preserve its 'concluida' status
+              // Otherwise, set it to false for new selections
+              const preservedStatus = existingSub ? existingSub.concluida : false;
+              console.log(`Subatividade ${formSub.nome}: preserving status = ${preservedStatus}`);
+              
               return {
                 ...formSub,
-                // If the subatividade existed, preserve its 'concluida' status
-                // Otherwise, set it to false for new selections
-                concluida: existingSub ? existingSub.concluida : false
+                concluida: preservedStatus
               };
             });
+          
+          console.log(`Processed subatividades for ${tipo}:`, processedSubatividades);
           
           // If this is not a new service type AND we don't have any processed subatividades,
           // but we have existing subatividades, preserve those
           if (!isNewServiceType && processedSubatividades.length === 0 && existingServico?.subatividades?.length > 0) {
+            console.log(`No processed subatividades, preserving existing for ${tipo}`);
             processedSubatividades = [...existingServico.subatividades];
           }
           

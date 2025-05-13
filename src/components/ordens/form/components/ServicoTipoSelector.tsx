@@ -27,6 +27,7 @@ export const ServicoTipoSelector = memo(({
   // Use useCallback to memoize handleSubatividadeChange for each tipo
   const getMemoizedChangeHandler = useCallback((tipo: TipoServico) => {
     return (subatividades: SubAtividade[]) => {
+      console.log(`Subatividades changed for ${tipo}:`, subatividades);
       onSubatividadesChange(tipo, subatividades);
     };
   }, [onSubatividadesChange]);
@@ -41,6 +42,7 @@ export const ServicoTipoSelector = memo(({
       if ((!servicosSubatividades[tipo] || servicosSubatividades[tipo].length === 0) && 
           defaultSubatividades && defaultSubatividades[tipo as TipoServico]) {
         
+        console.log(`No subatividades found for ${tipo}, creating defaults`);
         const defaultSubs = defaultSubatividades[tipo as TipoServico].map(nome => ({
           id: nome,
           nome,
@@ -49,6 +51,8 @@ export const ServicoTipoSelector = memo(({
         }));
         
         onSubatividadesChange(tipo as TipoServico, defaultSubs);
+      } else {
+        console.log(`Subatividades for ${tipo} already exist:`, servicosSubatividades[tipo]?.length || 0);
       }
     });
   }, [form, servicosSubatividades, defaultSubatividades, onSubatividadesChange]);
