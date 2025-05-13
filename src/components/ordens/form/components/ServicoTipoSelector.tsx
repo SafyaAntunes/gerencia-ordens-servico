@@ -1,5 +1,5 @@
 
-import { memo, useCallback, useEffect } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SubAtividade, TipoServico } from "@/types/ordens";
@@ -8,6 +8,8 @@ import { tiposServico } from "../types";
 import { UseFormReturn } from "react-hook-form";
 import { FormValues } from "../types";
 import { useServicoSubatividades } from "@/hooks/useServicoSubatividades";
+import { getAllSubatividades } from "@/services/subatividadeService";
+import { toast } from "sonner";
 
 interface ServicoTipoSelectorProps {
   form: UseFormReturn<FormValues>;
@@ -23,11 +25,45 @@ export const ServicoTipoSelector = memo(({
 }: ServicoTipoSelectorProps) => {
   // Get default subatividades for fallback
   const { defaultSubatividades } = useServicoSubatividades();
+  const [hasCheckedDB, setHasCheckedDB] = useState(false);
+  
+  // Verificar subatividades no banco ao montar o componente
+  useEffect(() => {
+    if (!hasCheckedDB) {
+      const checkDBSubatividades = async () => {
+        try {
+          console.log("🔍 [ServicoTipoSelector] Verificando subatividades no banco de dados...");
+          const allSubs = await getAllSubatividades();
+          console.log("🔍 [ServicoTipoSelector] Total de subatividades no banco:", allSubs.length);
+          
+          // Agrupar por tipo
+          const byType: Record<string, string[]> = {};
+          allSubs.forEach(sub => {
+            if (!byType[sub.tipoServico]) {
+              byType[sub.tipoServico] = [];
+            }
+            byType[sub.tipoServico].push(sub.nome);
+          });
+          
+          // Mostrar informações de subatividades por tipo
+          Object.entries(byType).forEach(([tipo, nomes]) => {
+            console.log(`🔍 [ServicoTipoSelector] Tipo ${tipo}: ${nomes.join(', ')}`);
+          });
+          
+          setHasCheckedDB(true);
+        } catch (error) {
+          console.error("❌ [ServicoTipoSelector] Erro ao verificar subatividades:", error);
+        }
+      };
+      
+      checkDBSubatividades();
+    }
+  }, [hasCheckedDB]);
   
   // Use useCallback to memoize handleSubatividadeChange for each tipo
   const getMemoizedChangeHandler = useCallback((tipo: TipoServico) => {
     return (subatividades: SubAtividade[]) => {
-      console.log(`Subatividades changed for ${tipo}:`, subatividades);
+      console.log(`[ServicoTipoSelector] Subatividades alteradas para ${tipo}:`, subatividades);
       onSubatividadesChange(tipo, subatividades);
     };
   }, [onSubatividadesChange]);
@@ -42,7 +78,7 @@ export const ServicoTipoSelector = memo(({
       if ((!servicosSubatividades[tipo] || servicosSubatividades[tipo].length === 0) && 
           defaultSubatividades && defaultSubatividades[tipo as TipoServico]) {
         
-        console.log(`No subatividades found for ${tipo}, creating defaults`);
+        console.log(`[ServicoTipoSelector] Nenhuma subatividade encontrada para ${tipo}, criando padrões`);
         const defaultSubs = defaultSubatividades[tipo as TipoServico].map(nome => ({
           id: nome,
           nome,
@@ -52,7 +88,8 @@ export const ServicoTipoSelector = memo(({
         
         onSubatividadesChange(tipo as TipoServico, defaultSubs);
       } else {
-        console.log(`Subatividades for ${tipo} already exist:`, servicosSubatividades[tipo]?.length || 0);
+        console.log(`[ServicoTipoSelector] Subatividades para ${tipo} já existem:`, 
+          servicosSubatividades[tipo]?.length || 0);
       }
     });
   }, [form, servicosSubatividades, defaultSubatividades, onSubatividadesChange]);
@@ -84,6 +121,13 @@ export const ServicoTipoSelector = memo(({
                             ? [...(field.value || []), tipo.value]
                             : field.value?.filter((value) => value !== tipo.value) || [];
                           field.onChange(updatedValue);
+                          
+                          // Log para depuração quando um serviço é selecionado/deselecionado
+                          if (checked) {
+                            console.log(`[ServicoTipoSelector] Serviço ${tipo.value} selecionado`);
+                          } else {
+                            console.log(`[ServicoTipoSelector] Serviço ${tipo.value} deselecionado`);
+                          }
                         }}
                       />
                     </FormControl>

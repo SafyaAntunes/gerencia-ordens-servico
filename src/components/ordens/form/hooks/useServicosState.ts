@@ -1,9 +1,11 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { SubAtividade, TipoServico } from "@/types/ordens";
-import { getSubatividadesByTipo } from "@/services/subatividadeService";
+import { getSubatividadesByTipo, getAllSubatividades } from "@/services/subatividadeService";
 import { isEqual } from "lodash";
 import { FormValues } from "../types";
 import { useServicoSubatividades } from "@/hooks/useServicoSubatividades";
+import { toast } from "sonner";
 
 export const useServicosState = (
   servicosTipos: string[], 
@@ -15,9 +17,44 @@ export const useServicosState = (
   // Keep track of previously loaded service types to prevent unnecessary rerenders
   const [previousServiceTypes, setPreviousServiceTypes] = useState<string[]>([]);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [debugInfoLoaded, setDebugInfoLoaded] = useState(false);
 
   // Get default subatividades from the hook to use as fallback
   const { defaultSubatividades } = useServicoSubatividades();
+
+  // Carregar diagnóstico inicial - apenas uma vez
+  useEffect(() => {
+    if (!debugInfoLoaded) {
+      const loadDebugInfo = async () => {
+        try {
+          console.log("🔍 [DIAGNÓSTICO] Carregando todas as subatividades do banco para verificação...");
+          const allSubs = await getAllSubatividades();
+          console.log("🔍 [DIAGNÓSTICO] Total de subatividades no banco:", allSubs.length);
+          console.log("🔍 [DIAGNÓSTICO] Subatividades por tipo:");
+          
+          // Agrupar por tipo para visualizar melhor
+          const grouped = allSubs.reduce((acc, item) => {
+            if (!acc[item.tipoServico]) {
+              acc[item.tipoServico] = [];
+            }
+            acc[item.tipoServico].push(item);
+            return acc;
+          }, {} as Record<string, any[]>);
+          
+          Object.entries(grouped).forEach(([tipo, items]) => {
+            console.log(`   - ${tipo}: ${items.length} itens`);
+            console.log(`     - Exemplos: ${items.map(i => i.nome).join(', ').substring(0, 100)}...`);
+          });
+          
+          setDebugInfoLoaded(true);
+        } catch (error) {
+          console.error("🔍 [DIAGNÓSTICO] Erro ao carregar informações de diagnóstico:", error);
+        }
+      };
+      
+      loadDebugInfo();
+    }
+  }, [debugInfoLoaded]);
 
   // Load default values only once on initialization
   useEffect(() => {
@@ -45,6 +82,9 @@ export const useServicosState = (
     // Check if service types actually changed to avoid unnecessary loads
     if (isEqual(servicosTipos.sort(), previousServiceTypes.sort())) return;
     
+    console.log("🔄 [useServicosState] Tipos de serviço mudaram:", servicosTipos);
+    console.log("🔄 [useServicosState] Tipos anteriores:", previousServiceTypes);
+    
     setPreviousServiceTypes([...servicosTipos]);
     
     // Track pending async operations
@@ -53,13 +93,32 @@ export const useServicosState = (
     
     const loadSubatividades = async (tipo: TipoServico) => {
       // Skip if we've already started loading this type
-      if (pendingOperations[tipo]) return;
+      if (pendingOperations[tipo]) {
+        console.log(`⏭️ [loadSubatividades] Já está carregando subatividades para ${tipo}, pulando...`);
+        return;
+      }
       pendingOperations[tipo] = true;
       
       try {
-        console.log(`Fetching subatividades from database for ${tipo}...`);
+        console.log(`🔍 [loadSubatividades] Buscando subatividades do banco para ${tipo}...`);
+        
+        // Buscar todas as subatividades primeiro para verificar
+        const allSubs = await getAllSubatividades();
+        const tipoSubs = allSubs.filter(s => s.tipoServico === tipo);
+        console.log(`🔍 [loadSubatividades] Encontradas ${tipoSubs.length} subatividades para ${tipo} no banco (verificação inicial)`);
+        
+        // Buscar as subatividades específicas do tipo
         const subatividadesList = await getSubatividadesByTipo(tipo);
-        console.log(`Received from database for ${tipo}:`, subatividadesList);
+        console.log(`🔍 [loadSubatividades] Recebidas do banco para ${tipo}:`, subatividadesList);
+        
+        // Se tiver subatividades no banco por verificação inicial, mas a consulta retornou vazio,
+        // temos um problema na consulta
+        if (tipoSubs.length > 0 && subatividadesList.length === 0) {
+          console.warn(`⚠️ [loadSubatividades] AVISO: Inconsistência detectada! Verificação inicial encontrou ${tipoSubs.length} subatividades para ${tipo}, mas a consulta retornou lista vazia.`);
+          
+          // Mostrar notificação para o usuário
+          toast.warning(`Inconsistência detectada nas subatividades de ${tipo}. Verifique o console para mais detalhes.`);
+        }
         
         // Only update state if component is still mounted
         if (!isMounted) return;
@@ -79,7 +138,9 @@ export const useServicosState = (
               selecionada: true, // Default to selected for new items
               concluida: false
             }));
-            console.log(`Using database subatividades for ${tipo}:`, dbSubatividades);
+            console.log(`✅ [loadSubatividades] Usando subatividades do banco para ${tipo}:`, dbSubatividades);
+          } else {
+            console.log(`❌ [loadSubatividades] Nenhuma subatividade encontrada no banco para ${tipo}`);
           }
           
           // Fourth priority: Default subatividades from hook
@@ -91,7 +152,7 @@ export const useServicosState = (
               selecionada: true,
               concluida: false
             }));
-            console.log(`Fallback default subatividades for ${tipo}:`, defaultSubs);
+            console.log(`📋 [loadSubatividades] Subatividades padrão para ${tipo}:`, defaultSubs);
           }
           
           // Decide which set of subatividades to use, with proper priority
@@ -99,43 +160,44 @@ export const useServicosState = (
           
           // If we're editing an existing ordem with this service type
           if (existingSubatividades.length > 0) {
-            console.log(`Using existing subatividades from edit mode for ${tipo}`);
+            console.log(`🔄 [loadSubatividades] Usando subatividades existentes do modo de edição para ${tipo}`);
             finalSubatividades = [...existingSubatividades];
           } 
           // If we have current selections for this type in the form
           else if (currentSubatividades.length > 0) {
-            console.log(`Using current form subatividades for ${tipo}`);
+            console.log(`🔄 [loadSubatividades] Usando subatividades atuais do formulário para ${tipo}`);
             finalSubatividades = [...currentSubatividades];
           }
           // If we got subatividades from the database
           else if (dbSubatividades.length > 0) {
-            console.log(`Using database subatividades for ${tipo}`);
+            console.log(`🔄 [loadSubatividades] Usando subatividades do banco para ${tipo}`);
             finalSubatividades = [...dbSubatividades];
           }
           // Fallback to default subatividades
           else if (defaultSubs.length > 0) {
-            console.log(`Using default fallback subatividades for ${tipo}`);
+            console.log(`🔄 [loadSubatividades] Usando subatividades padrão de fallback para ${tipo}`);
             finalSubatividades = [...defaultSubs];
           }
           
           // If nothing has changed, return previous state
           if (isEqual(currentSubatividades, finalSubatividades)) {
+            console.log(`⏭️ [loadSubatividades] Nenhuma mudança nas subatividades para ${tipo}, mantendo estado atual`);
             return prev;
           }
           
-          console.log(`Final subatividades for ${tipo}:`, finalSubatividades);
+          console.log(`✅ [loadSubatividades] Subatividades finais para ${tipo}:`, finalSubatividades);
           return {
             ...prev,
             [tipo]: finalSubatividades
           };
         });
       } catch (error) {
-        console.error(`Erro ao carregar subatividades para ${tipo}:`, error);
+        console.error(`❌ [loadSubatividades] Erro ao carregar subatividades para ${tipo}:`, error);
         
         // If there was an error fetching from API but we have subatividades for this type in edit mode,
         // keep those instead of showing an empty list
         if (defaultValues?.servicosSubatividades?.[tipo]?.length > 0) {
-          console.log(`Error occurred, but using existing subatividades from edit mode for ${tipo}`);
+          console.log(`🔄 [loadSubatividades] Ocorreu um erro, mas usando subatividades existentes do modo de edição para ${tipo}`);
           setServicosSubatividades(prev => ({
             ...prev,
             [tipo]: defaultValues.servicosSubatividades![tipo]
@@ -143,7 +205,7 @@ export const useServicosState = (
         } 
         // If we have default subatividades for this type, use those as fallback
         else if (defaultSubatividades && defaultSubatividades[tipo as TipoServico]) {
-          console.log(`Error occurred, using default fallback subatividades for ${tipo}`);
+          console.log(`🔄 [loadSubatividades] Ocorreu um erro, usando subatividades padrão de fallback para ${tipo}`);
           setServicosSubatividades(prev => {
             const defaultSubs = defaultSubatividades[tipo as TipoServico].map(nome => ({
               id: nome,
