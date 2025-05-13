@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -282,37 +283,10 @@ export default function OrdemForm({
   useEffect(() => {
     const tiposList = servicosTipos;
 
-    const fetchAllSubatividades = async () => {
-      const result: Record<string, SubAtividade[]> = {};
+    const loadSubatividades = async (tipo: TipoServico) => {
+      try {
+        const subatividadesList = await getSubatividadesByTipo(tipo);
 
-<<<<<<< HEAD
-      await Promise.all(
-        tiposList.map(async (tipo) => {
-          try {
-            const subatividadesList = await getSubatividadesByTipo(tipo as TipoServico);
-            const doRol = subatividadesList || [];
-            const salvas = defaultValues?.servicosSubatividades?.[tipo] || [];
-            const todas = [...doRol, ...salvas.filter(salva => !doRol.some(sub => sub.id === salva.id))];
-            const atualizadas = todas.map(sub => {
-              const salva = salvas.find(s => s.id === sub.id);
-              return {
-                ...sub,
-                selecionada: salva ? salva.selecionada : false
-              };
-            });
-            result[tipo] = atualizadas;
-          } catch {
-            result[tipo] = [];
-          }
-        })
-      );
-
-      setServicosSubatividades(result);
-    };
-
-    fetchAllSubatividades();
-  }, [servicosTipos, defaultValues?.id]);
-=======
         setServicosSubatividades(prev => {
           // Obtenha as subatividades salvas para este tipo (se existirem)
           const salvas = prev[tipo] || defaultValues?.servicosSubatividades?.[tipo] || [];
@@ -361,7 +335,6 @@ export default function OrdemForm({
       }
     });
   }, [servicosTipos]);
->>>>>>> a1f68bc14c670b1a31786cb6cff3b3ccd738ca92
   
   const handleServicoDescricaoChange = (tipo: string, descricao: string) => {
     setServicosDescricoes(prev => ({
