@@ -1,4 +1,4 @@
 
-import { ServicoTracker as RefactoredServicoTracker } from "./servico";
+import { ServicoTracker } from "./servico";
 
-export default RefactoredServicoTracker;
+export default ServicoTracker;
