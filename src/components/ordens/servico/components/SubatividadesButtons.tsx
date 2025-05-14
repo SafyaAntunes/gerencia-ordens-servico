@@ -10,7 +10,7 @@ interface SubatividadesButtonsProps {
   canAddSubatividades: boolean;
   temPermissao: boolean;
   servicoConcluido: boolean;
-  servicoTipo: TipoServico; // Tipado corretamente como TipoServico
+  servicoTipo: TipoServico;
   isAddDialogOpen: boolean;
   setIsAddDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
   isSelectDialogOpen: boolean;
@@ -84,12 +84,14 @@ export const SubatividadesButtons: React.FC<SubatividadesButtonsProps> = ({
       
       <AddSubatividadeDialog 
         isOpen={isAddDialogOpen}
-        onOpenChange={setIsAddDialogOpen}
+        setIsOpen={setIsAddDialogOpen}
         novaSubatividade={novaSubatividade}
+        setNovaSubatividade={setNovaSubatividade}
         tempoEstimado={tempoEstimado}
-        onNovaSubatividadeChange={setNovaSubatividade}
-        onTempoEstimadoChange={setTempoEstimado}
-        onAddSubatividade={handleAddCustomSubatividade}
+        setTempoEstimado={setTempoEstimado}
+        handleAddCustomSubatividade={handleAddCustomSubatividade}
+        isAddingSubatividades={isAddingSubatividades}
+        servicoTipo={servicoTipo}
       />
       
       <SelectSubatividadesDialog

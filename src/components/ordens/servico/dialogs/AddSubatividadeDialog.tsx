@@ -14,37 +14,78 @@ import {
 import { TipoServico } from "@/types/ordens";
 
 interface AddSubatividadeDialogProps {
-  servicoTipo: TipoServico;
+  servicoTipo?: TipoServico;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
-  isAddingSubatividades: boolean;
+  onOpenChange?: (open: boolean) => void; // Added this prop to match what's being passed
+  isAddingSubatividades?: boolean;
   novaSubatividade: string;
-  setNovaSubatividade: (value: string) => void;
+  setNovaSubatividade?: (value: string) => void;
+  onNovaSubatividadeChange?: (value: string) => void; // Added this prop to match what's being passed
   tempoEstimado: number;
-  setTempoEstimado: (value: number) => void;
-  handleAddCustomSubatividade: () => void;
+  setTempoEstimado?: (value: number) => void;
+  onTempoEstimadoChange?: (value: number) => void; // Added this prop to match what's being passed
+  handleAddCustomSubatividade?: () => void;
+  onAddSubatividade?: () => Promise<void>; // Added this prop to match what's being passed
 }
 
 export function AddSubatividadeDialog({
   servicoTipo,
   isOpen,
   setIsOpen,
+  onOpenChange,
   isAddingSubatividades,
   novaSubatividade,
   setNovaSubatividade,
+  onNovaSubatividadeChange,
   tempoEstimado,
   setTempoEstimado,
-  handleAddCustomSubatividade
+  onTempoEstimadoChange,
+  handleAddCustomSubatividade,
+  onAddSubatividade
 }: AddSubatividadeDialogProps) {
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
+  // Handle both prop patterns for backward compatibility
+  const handleOpenChange = (open: boolean) => {
+    if (onOpenChange) {
+      onOpenChange(open);
+    } else if (setIsOpen) {
+      setIsOpen(open);
+    }
+  };
+
+  const handleNovaSubatividadeChange = (value: string) => {
+    if (onNovaSubatividadeChange) {
+      onNovaSubatividadeChange(value);
+    } else if (setNovaSubatividade) {
+      setNovaSubatividade(value);
+    }
+  };
+
+  const handleTempoEstimadoChange = (value: number) => {
+    if (onTempoEstimadoChange) {
+      onTempoEstimadoChange(value);
+    } else if (setTempoEstimado) {
+      setTempoEstimado(value);
+    }
+  };
+
+  const handleAdd = () => {
+    if (onAddSubatividade) {
+      onAddSubatividade();
+    } else if (handleAddCustomSubatividade) {
       handleAddCustomSubatividade();
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleAdd();
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Adicionar nova subatividade</DialogTitle>
@@ -61,7 +102,7 @@ export function AddSubatividadeDialog({
             <Input
               id="nome"
               value={novaSubatividade}
-              onChange={(e) => setNovaSubatividade(e.target.value)}
+              onChange={(e) => handleNovaSubatividadeChange(e.target.value)}
               onKeyDown={handleKeyDown}
               className="col-span-3"
               autoFocus
@@ -78,7 +119,7 @@ export function AddSubatividadeDialog({
               min="0.5"
               step="0.5"
               value={tempoEstimado}
-              onChange={(e) => setTempoEstimado(parseFloat(e.target.value) || 1)}
+              onChange={(e) => handleTempoEstimadoChange(parseFloat(e.target.value) || 1)}
               className="col-span-3"
             />
           </div>
@@ -88,14 +129,14 @@ export function AddSubatividadeDialog({
           <Button 
             type="button" 
             variant="outline" 
-            onClick={() => setIsOpen(false)}
+            onClick={() => handleOpenChange(false)}
             disabled={isAddingSubatividades}
           >
             Cancelar
           </Button>
           <Button 
             type="submit" 
-            onClick={handleAddCustomSubatividade}
+            onClick={handleAdd}
             disabled={!novaSubatividade.trim() || isAddingSubatividades}
           >
             {isAddingSubatividades ? "Adicionando..." : "Adicionar"}
