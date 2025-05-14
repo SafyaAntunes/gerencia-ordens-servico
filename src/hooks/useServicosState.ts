@@ -21,8 +21,8 @@ export const useServicosState = (
   // Get default subatividades from the hook to use as fallback only
   const { defaultSubatividades } = useServicoSubatividades();
 
-  // Use the refactored hooks
-  const { debugInfoLoaded } = useServicosDebug();
+  // Use the refactored hooks with component name
+  const { debugInfoLoaded } = useServicosDebug("useServicosState");
   const { loadingSources, trackSource, getSourceTrackerObject, logSourceSummary } = useServicosSourceTracking();
   const { hasInitialized, loadSubatividades } = useSubatividadesLoader({
     defaultValues,
