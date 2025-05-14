@@ -1,35 +1,26 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { getFuncionarios } from "@/services/funcionarioService";
-import { Servico, SubAtividade, TipoServico, EtapaOS, OrdemServico } from "@/types/ordens";
+import { Servico, SubAtividade, TipoServico, EtapaOS } from "@/types/ordens";
 import { Funcionario } from "@/types/funcionarios";
 import { useAuth } from "@/hooks/useAuth";
-import { ServicoTrackerProps, UseServicoTrackerResult, ServicoStatus, PausaRegistro } from "./types/servicoTrackerTypes";
+import { UseServicoTrackerProps, UseServicoTrackerResult, ServicoStatus, PausaRegistro } from "./types/servicoTrackerTypes";
 import { useOrdemTimer } from "@/hooks/useOrdemTimer";
 import { getServicoStatus } from "./utils/servicoTrackerUtils";
 import { formatTime } from "@/utils/timerUtils";
 
 export function useServicoTracker({
   servico,
-  ordem,
-  onUpdate,
-  // Legacy props support
-  ordemId: legacyOrdemId,
-  funcionarioId: legacyFuncionarioId,
-  funcionarioNome: legacyFuncionarioNome,
-  etapa: legacyEtapa,
+  ordemId,
+  funcionarioId,
+  funcionarioNome,
+  etapa,
   onServicoStatusChange,
   onSubatividadeToggle
-}: ServicoTrackerProps): UseServicoTrackerResult {
+}: UseServicoTrackerProps): UseServicoTrackerResult {
   const { funcionario, canEditOrder } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
-  
-  // Determine the actual ordemId and functionarioId to use
-  const ordemId = ordem?.id || legacyOrdemId || '';
-  const funcionarioId = legacyFuncionarioId || '';
-  const funcionarioNome = legacyFuncionarioNome || '';
-  const etapa = legacyEtapa || 'retifica' as EtapaOS;
   
   const temPermissao = canEditOrder(ordemId);
   
@@ -58,13 +49,13 @@ export function useServicoTracker({
     isEtapaConcluida: servico.concluido
   });
 
-  // Format the numeric displayTime to a string using the formatTime utility
-  const displayTime = formatTime(timerDisplayTime);
+  // Use the timer display time directly 
+  const displayTime = timerDisplayTime;
 
   // Convert timer pausas to PausaRegistro format
   const pausas: PausaRegistro[] = timerPausas.map(p => ({
-    inicio: p.inicio,
-    fim: p.fim,
+    iniciado: p.inicio,
+    finalizado: p.fim,
     motivo: p.motivo
   }));
   
@@ -127,15 +118,15 @@ export function useServicoTracker({
     }
     
     if (onServicoStatusChange) {
-      // Usar o ID e nome do funcionário atribuído, não do logado
-      onServicoStatusChange(true, funcionarioId, funcionarioNome);
+      // Usar o ID do funcionário atual
+      onServicoStatusChange(true, funcionario?.id, funcionario?.nome);
     }
   };
 
   // Dummy implementations to match interface
   const [responsavelSelecionadoId, setResponsavelSelecionadoId] = useState(funcionarioId || '');
   const [isSavingResponsavel, setIsSavingResponsavel] = useState(false);
-  const lastSavedResponsavelId = funcionarioId || ''; // Using empty string as fallback
+  const lastSavedResponsavelId = funcionarioId ? String(funcionarioId) : '';
   const lastSavedResponsavelNome = funcionarioNome || '';
 
   const handleSaveResponsavel = async () => {
@@ -187,7 +178,7 @@ export function useServicoTracker({
     state: {
       isRunning,
       isPaused,
-      time: displayTime, // Now using the formatted displayTime string
+      time: 0,
       concluido: servico.concluido,
       status: servicoStatus,
       pausas,

@@ -1,81 +1,55 @@
 
-import { Servico, TipoServico, EtapaOS, OrdemServico } from "@/types/ordens";
-import { ServicoTracker } from "../servico";
-import { useCallback, useEffect } from "react";
+import { Servico, TipoServico, EtapaOS } from "@/types/ordens";
+import { ServicoTracker } from "@/components/ordens/servico";
 
 interface EtapaServicosProps {
-  ordem: OrdemServico;
   servicos: Servico[];
-  etapa: EtapaOS;
-  funcionarioId?: string;
+  ordemId: string;
+  funcionarioId: string;
   funcionarioNome?: string;
-  servicoTipo?: TipoServico;
-  onServicoStatusChange?: (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
+  etapa: EtapaOS;
   onSubatividadeToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
+  onServicoStatusChange?: (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
   onSubatividadeSelecionadaToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
-  onOrdemUpdate?: (ordemAtualizada: OrdemServico) => void;
 }
 
-export function EtapaServicos({
-  ordem,
+export default function EtapaServicos({
   servicos,
+  ordemId,
+  funcionarioId,
+  funcionarioNome,
   etapa,
-  funcionarioId = '',
-  funcionarioNome = '',
-  servicoTipo,
-  onServicoStatusChange,
   onSubatividadeToggle,
-  onSubatividadeSelecionadaToggle,
-  onOrdemUpdate
+  onServicoStatusChange,
+  onSubatividadeSelecionadaToggle
 }: EtapaServicosProps) {
-  // Debug logs to track data flow
-  useEffect(() => {
-    console.log("EtapaServicos - servicos recebidos:", servicos);
-    console.log("EtapaServicos - tem callback onOrdemUpdate:", !!onOrdemUpdate);
-  }, [servicos, onOrdemUpdate]);
-
-  // Handler to propagate ordem updates to parent component
-  const handleOrdemUpdate = useCallback((ordemAtualizada: OrdemServico) => {
-    console.log("EtapaServicos - handleOrdemUpdate:", ordemAtualizada);
-    if (onOrdemUpdate) {
-      onOrdemUpdate(ordemAtualizada);
-    }
-  }, [onOrdemUpdate]);
-
   if (servicos.length === 0) {
-    return (
-      <div className="p-4 border rounded text-center text-muted-foreground">
-        Nenhum serviço disponível para esta etapa
-      </div>
-    );
+    return null;
   }
-
+  
   return (
     <div className="space-y-4">
-      {servicos.map((servico) => (
+      {servicos.map((servico, i) => (
         <ServicoTracker
-          key={servico.tipo}
+          key={`${servico.tipo}-${i}`}
           servico={servico}
-          ordem={ordem}
-          onUpdate={handleOrdemUpdate}
-          // Legacy props support
-          ordemId={ordem.id}
-          etapa={etapa}
+          ordemId={ordemId}
           funcionarioId={funcionarioId}
           funcionarioNome={funcionarioNome}
+          etapa={etapa}
+          onSubatividadeToggle={
+            onSubatividadeToggle ? 
+              (subId, checked) => onSubatividadeToggle(servico.tipo, subId, checked) : 
+              undefined
+          }
           onServicoStatusChange={
             onServicoStatusChange ? 
               (concluido, funcId, funcNome) => onServicoStatusChange(servico.tipo, concluido, funcId, funcNome) : 
               undefined
           }
-          onSubatividadeToggle={
-            onSubatividadeToggle ? 
-              (subatividadeId, checked) => onSubatividadeToggle(servico.tipo, subatividadeId, checked) : 
-              undefined
-          }
           onSubatividadeSelecionadaToggle={
             onSubatividadeSelecionadaToggle ? 
-              (subatividadeId, checked) => onSubatividadeSelecionadaToggle(servico.tipo, subatividadeId, checked) : 
+              (subId, checked) => onSubatividadeSelecionadaToggle(servico.tipo, subId, checked) : 
               undefined
           }
         />

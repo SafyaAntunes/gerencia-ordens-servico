@@ -1,7 +1,6 @@
 import { db } from '@/lib/firebase';
-import { collection, getDocs, doc, setDoc, deleteDoc, query, where, writeBatch, QuerySnapshot } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, deleteDoc, query, where, writeBatch } from 'firebase/firestore';
 import { SubAtividade, TipoServico, TipoAtividade } from '@/types/ordens';
-import { toast } from 'sonner';
 
 // Obter todas as subatividades agrupadas por tipo de serviço
 export async function getSubatividades(): Promise<Record<TipoServico | TipoAtividade, SubAtividade[]>> {
@@ -22,8 +21,6 @@ export async function getSubatividades(): Promise<Record<TipoServico | TipoAtivi
       inspecao_final: [],
     };
     
-    console.log(`[getSubatividades] Encontradas ${snapshot.size} subatividades no total`);
-    
     snapshot.forEach((doc) => {
       const data = doc.data();
       const tipoServico = data.tipoServico as TipoServico | TipoAtividade;
@@ -39,11 +36,6 @@ export async function getSubatividades(): Promise<Record<TipoServico | TipoAtivi
       if (result[tipoServico]) {
         result[tipoServico].push(subatividade);
       }
-    });
-    
-    // Log de depuração para mostrar quantas subatividades foram encontradas para cada tipo
-    Object.entries(result).forEach(([tipo, subs]) => {
-      console.log(`[getSubatividades] Tipo: ${tipo}, Quantidade: ${subs.length}`);
     });
     
     return result;
@@ -103,15 +95,6 @@ export async function saveSubatividades(subatividadesMap: Partial<Record<TipoSer
       }
     });
     
-    // Log de depuração para verificar o que está sendo salvo
-    console.log("[saveSubatividades] Salvando subatividades:");
-    Object.entries(completeMap).forEach(([tipo, subs]) => {
-      console.log(`   - Tipo: ${tipo}, Quantidade: ${subs.length}`);
-      if (subs.length > 0) {
-        console.log(`     - Exemplo: ${subs[0].nome}`);
-      }
-    });
-    
     // Adicionar as novas subatividades
     Object.entries(completeMap).forEach(([tipoServico, subatividades]) => {
       subatividades.forEach((subatividade) => {
@@ -128,10 +111,8 @@ export async function saveSubatividades(subatividadesMap: Partial<Record<TipoSer
     
     await batch.commit();
     console.log("Subatividades atualizadas com sucesso!");
-    toast.success("Subatividades salvas com sucesso!");
   } catch (error) {
     console.error('Erro ao salvar subatividades:', error);
-    toast.error("Erro ao salvar subatividades!");
     throw error;
   }
 }
@@ -139,45 +120,13 @@ export async function saveSubatividades(subatividadesMap: Partial<Record<TipoSer
 // Obter subatividades por tipo de serviço
 export async function getSubatividadesByTipo(tipoServico: TipoServico | TipoAtividade): Promise<SubAtividade[]> {
   try {
-    console.log(`[getSubatividadesByTipo] Buscando subatividades para tipo: ${tipoServico}`);
-    
     const subatividadesRef = collection(db, 'subatividades');
     const q = query(subatividadesRef, where('tipoServico', '==', tipoServico));
-    
-    // Log da query para depuração
-    console.log(`[getSubatividadesByTipo] Query criada: ${q}`);
-    
-    // Executar a consulta
     const snapshot = await getDocs(q);
     
-    // Log detalhado do snapshot para depuração
-    console.log(`[getSubatividadesByTipo] Encontrados ${snapshot.size} documentos para ${tipoServico}`);
-    const snapshotEmpty = snapshot.empty;
-    console.log(`[getSubatividadesByTipo] Snapshot está vazio? ${snapshotEmpty ? 'Sim' : 'Não'}`);
-    
-    // Log completo de todos os documentos no Firestore para depuração
-    console.log("[getSubatividadesByTipo] Buscando todos os documentos da coleção para verificação:");
-    const allDocsSnapshot = await getDocs(collection(db, 'subatividades'));
-    console.log(`[getSubatividadesByTipo] Total de documentos na coleção: ${allDocsSnapshot.size}`);
-    
-    // Adicionar logs para cada documento encontrado
-    const allDocs: Record<string, any>[] = [];
-    allDocsSnapshot.forEach((doc) => {
-      const data = doc.data();
-      allDocs.push({
-        id: doc.id,
-        tipoServico: data.tipoServico,
-        nome: data.nome
-      });
-    });
-    console.log("[getSubatividadesByTipo] Todos os documentos:", allDocs);
-    
-    // Recuperar e mapear os documentos do snapshot original
     const subatividades: SubAtividade[] = [];
     snapshot.forEach((doc) => {
       const data = doc.data();
-      console.log(`[getSubatividadesByTipo] Documento encontrado: ${doc.id}`, data);
-      
       subatividades.push({
         id: data.id,
         nome: data.nome,
@@ -188,12 +137,6 @@ export async function getSubatividadesByTipo(tipoServico: TipoServico | TipoAtiv
         descricao: data.descricao || '',
       });
     });
-    
-    console.log(`[getSubatividadesByTipo] Retornando ${subatividades.length} subatividades para ${tipoServico}:`, subatividades);
-    
-    if (subatividades.length === 0) {
-      console.log(`[getSubatividadesByTipo] AVISO: Nenhuma subatividade encontrada para ${tipoServico}!`);
-    }
     
     return subatividades;
   } catch (error) {
@@ -230,105 +173,8 @@ export async function deleteAllSubatividades(): Promise<void> {
     // Commitar as alterações
     await batch.commit();
     console.log("Todas as subatividades foram removidas com sucesso!");
-    toast.success("Todas as subatividades foram removidas com sucesso!");
   } catch (error) {
     console.error('Erro ao deletar todas as subatividades:', error);
-    toast.error("Erro ao deletar todas as subatividades!");
     throw error;
-  }
-}
-
-// Função adicional para diagnóstico - busca todas as subatividades
-export async function getAllSubatividades(): Promise<{id: string, tipoServico: string, nome: string}[]> {
-  try {
-    const subatividadesRef = collection(db, 'subatividades');
-    const snapshot = await getDocs(subatividadesRef);
-    
-    const result: {id: string, tipoServico: string, nome: string}[] = [];
-    
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      result.push({
-        id: doc.id,
-        tipoServico: data.tipoServico,
-        nome: data.nome
-      });
-    });
-    
-    return result;
-  } catch (error) {
-    console.error('Erro ao buscar todas as subatividades:', error);
-    throw error;
-  }
-}
-
-/**
- * Busca presets de subatividades para um tipo de serviço
- * Esta função é utilizada para obter as subatividades disponíveis ao adicionar a um serviço
- */
-export async function fetchSubatividadesPreset(): Promise<Array<{
-  tipo: TipoServico,
-  subatividades?: SubAtividade[]
-}>> {
-  try {
-    console.log("[fetchSubatividadesPreset] Buscando presets de subatividades");
-    
-    // Buscar todas as subatividades da coleção
-    const subatividadesRef = collection(db, 'subatividades');
-    const snapshot = await getDocs(subatividadesRef);
-    
-    // Mapeamento para organizar as subatividades por tipo
-    const subatividadesPorTipo = new Map<TipoServico, SubAtividade[]>();
-    
-    // Inicializar o mapa com arrays vazios para cada tipo de serviço
-    const tiposServico: TipoServico[] = [
-      'bloco', 'biela', 'cabecote', 'virabrequim', 
-      'eixo_comando', 'montagem', 'dinamometro'
-    ];
-    
-    tiposServico.forEach(tipo => {
-      subatividadesPorTipo.set(tipo, []);
-    });
-    
-    // Preencher o mapa com as subatividades encontradas
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      const tipoServico = data.tipoServico as TipoServico;
-      
-      // Verificar se é um tipo de serviço (não uma atividade como lavagem ou inspeção)
-      if (tiposServico.includes(tipoServico)) {
-        if (!subatividadesPorTipo.has(tipoServico)) {
-          subatividadesPorTipo.set(tipoServico, []);
-        }
-        
-        subatividadesPorTipo.get(tipoServico)?.push({
-          id: data.id,
-          nome: data.nome,
-          selecionada: false,
-          concluida: false,
-          tempoEstimado: data.tempoEstimado || 1,
-          servicoTipo: tipoServico,
-          descricao: data.descricao || ''
-        });
-      }
-    });
-    
-    // Converter o mapa para o formato esperado pelo componente
-    const result = Array.from(subatividadesPorTipo.entries()).map(([tipo, subatividades]) => ({
-      tipo,
-      subatividades
-    }));
-    
-    console.log(`[fetchSubatividadesPreset] Encontrados ${result.length} tipos de serviço com subatividades`);
-    result.forEach(item => {
-      console.log(`- ${item.tipo}: ${item.subatividades?.length || 0} subatividades`);
-    });
-    
-    return result;
-    
-  } catch (error) {
-    console.error("Erro ao buscar presets de subatividades:", error);
-    toast.error("Erro ao carregar subatividades disponíveis");
-    return [];
   }
 }

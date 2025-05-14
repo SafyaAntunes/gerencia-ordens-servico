@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { EtapaOS, Servico, TipoServico } from "@/types/ordens";
@@ -313,7 +312,21 @@ export default function EtapaCard({
       
       <EtapaProgress servicos={servicos} />
       
-     
+      {etapaComCronometro && (
+        <EtapaTimerSection
+          ordemId={ordemId}
+          funcionarioId={funcionarioId}
+          funcionarioNome={funcionarioNome}
+          etapa={etapa}
+          tipoServico={servicoTipo}
+          isEtapaConcluida={isEtapaConcluida()}
+          onEtapaConcluida={handleEtapaConcluida}
+          onMarcarConcluido={handleMarcarConcluido}
+          onTimerStart={handleTimerStart}
+          onCustomStart={handleCustomTimerStart}
+          onSaveResponsavel={handleSaveResponsavel}
+        />
+      )}
       
       <EtapaServiceList
         servicos={servicos}

@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
+import { useState } from "react";
 
 interface CustomSubatividadesFormProps {
   customSubatividade: string;
@@ -80,6 +81,3 @@ export function CustomSubatividadesForm({
     </div>
   );
 }
-
-// Also add a default export to maintain compatibility with code that might be importing it as default
-export default CustomSubatividadesForm;

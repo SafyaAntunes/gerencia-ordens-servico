@@ -18,27 +18,6 @@ interface ProgressoSummaryCardProps {
   formatarTempo: (ms: number) => string;
 }
 
-// Helper function to safely format dates
-const formatarData = (data: Date | string | number | undefined) => {
-  if (!data) return "Não definido";
-  
-  try {
-    // Ensure we have a valid date object
-    const dataObj = data instanceof Date ? data : new Date(data);
-    
-    // Check if the date is valid
-    if (isNaN(dataObj.getTime())) {
-      console.warn("Data inválida:", data);
-      return "Data inválida";
-    }
-    
-    return format(dataObj, "dd/MM/yyyy", { locale: ptBR });
-  } catch (error) {
-    console.error("Erro ao formatar data:", error, data);
-    return "Erro na data";
-  }
-};
-
 export function ProgressoSummaryCard({
   ordem,
   progressoTotal,
@@ -54,7 +33,7 @@ export function ProgressoSummaryCard({
       <CardHeader>
         <CardTitle>Progresso Geral da OS #{ordem.id.slice(-5)}</CardTitle>
         <CardDescription>
-          Ordem aberta há {diasEmAndamento} dias - {formatarData(ordem.dataAbertura)}
+          Ordem aberta há {diasEmAndamento} dias - {format(new Date(ordem.dataAbertura), "dd/MM/yyyy", { locale: ptBR })}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

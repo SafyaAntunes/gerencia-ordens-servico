@@ -3,7 +3,7 @@ export { default as AtribuirFuncionarioDialog } from './AtribuirFuncionarioDialo
 export { default as EtapaStatus } from './EtapaStatus';
 export { default as EtapaProgresso } from './EtapaProgresso';
 export { default as EtapaConcluiButton } from './EtapaConcluiButton';
-export { EtapaServicos } from './EtapaServicos';
+export { default as EtapaServicos } from './EtapaServicos';
 export { default as EtapaCard } from './EtapaCard';
 export { default as EtapaTimer } from './EtapaTimer';
 export { default as TimerPausas } from './TimerPausas';

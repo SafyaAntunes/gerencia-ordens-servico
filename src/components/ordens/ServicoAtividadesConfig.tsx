@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { TipoServico, SubAtividade, TipoAtividade } from "@/types/ordens";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -7,11 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useServicoSubatividades } from "@/hooks/useServicoSubatividades";
-import { useTrackingSubatividades } from "@/hooks/ordens/useTrackingSubatividades";
 
 interface ServicoAtividadesConfigProps {
   servicoTipo: TipoServico;
-  atividadeTipo: TipoAtividade | "Subatividades";
+  atividadeTipo: TipoAtividade;
   subatividades: SubAtividade[];
   onChange: (subatividades: SubAtividade[]) => void;
 }
@@ -22,53 +21,24 @@ export default function ServicoAtividadesConfig({
   subatividades,
   onChange
 }: ServicoAtividadesConfigProps) {
-  const [localSubatividades, setLocalSubatividades] = useState<SubAtividade[]>([]);
+  const [localSubatividades, setLocalSubatividades] = useState<SubAtividade[]>(subatividades || []);
   const [tempoEstimado, setTempoEstimado] = useState<Record<string, number>>({});
   const { defaultAtividadesEspecificas } = useServicoSubatividades();
-  const { logSubatividadesState } = useTrackingSubatividades();
-  
-  // Usar useRef para evitar comparações desnecessárias e loops infinitos
-  const prevSubatividadesRef = useRef<SubAtividade[]>([]);
   
   useEffect(() => {
-    // Verificar se as subatividades realmente mudaram antes de atualizar o estado
-    if (JSON.stringify(prevSubatividadesRef.current) === JSON.stringify(subatividades)) {
-      console.log(`[ServicoAtividadesConfig] Ignorando atualização redundante para ${servicoTipo}`);
-      return;
-    }
-    
-    // Atualizar a referência com os novos valores
-    prevSubatividadesRef.current = subatividades;
-    
-    // Log de debug para visualizar o estado das subatividades recebidas
-    console.log(`[ServicoAtividadesConfig] Recebendo subatividades para ${servicoTipo}:`, 
-      subatividades.map(s => ({ id: s.id, nome: s.nome, selecionada: s.selecionada })));
-    
-    logSubatividadesState("ServicoAtividadesConfig-recebidas", servicoTipo.toString());
-    
-    // CORREÇÃO: Preservar o estado 'selecionada' de cada subatividade, sem forçar TRUE
-    const processedSubs = (subatividades || []).map(sub => ({
-      ...sub,
-      selecionada: sub.selecionada !== undefined ? sub.selecionada : false // Definir como false por padrão
-    }));
-    
-    logSubatividadesState("ServicoAtividadesConfig-processadas", servicoTipo.toString());
-    
-    setLocalSubatividades(processedSubs);
+    setLocalSubatividades(subatividades || []);
     
     // Inicializar tempos estimados
     const tempos: Record<string, number> = {};
-    processedSubs.forEach(sub => {
+    subatividades?.forEach(sub => {
       if (sub.tempoEstimado) {
         tempos[sub.id] = sub.tempoEstimado;
       }
     });
     setTempoEstimado(tempos);
-  }, [subatividades, servicoTipo, logSubatividadesState]);
+  }, [subatividades]);
   
   const handleToggleSubatividade = (id: string, checked: boolean) => {
-    console.log(`[ServicoAtividadesConfig] Alterando seleção da subatividade ${id} para ${checked}`);
-    
     const atualizarSubatividades = (subs: SubAtividade[]) => 
       subs.map(sub => {
         if (sub.id === id) {
@@ -78,8 +48,6 @@ export default function ServicoAtividadesConfig({
       });
     
     const novasSubatividades = atualizarSubatividades(localSubatividades);
-    logSubatividadesState("ServicoAtividadesConfig-toggle", servicoTipo.toString());
-    
     setLocalSubatividades(novasSubatividades);
     onChange(novasSubatividades);
   };
@@ -105,13 +73,7 @@ export default function ServicoAtividadesConfig({
     onChange(novasSubatividades);
   };
   
-  const formatActivityType = (tipo: TipoAtividade | "Subatividades"): string => {
-    // Handle "Subatividades" as a special case
-    if (tipo === "Subatividades") {
-      return "Subatividades";
-    }
-    
-    // Handle standard TipoAtividade values
+  const formatActivityType = (tipo: TipoAtividade): string => {
     switch(tipo) {
       case 'lavagem': return 'Lavagem';
       case 'inspecao_inicial': return 'Inspeção Inicial';
@@ -136,19 +98,11 @@ export default function ServicoAtividadesConfig({
     }
   };
   
-  const getCardTitle = () => {
-    if (atividadeTipo === "Subatividades") {
-      return `Subatividades - ${formatServiceType(servicoTipo)}`;
-    } else {
-      return `${formatActivityType(atividadeTipo)} - ${formatServiceType(servicoTipo)}`;
-    }
-  };
-  
   return (
     <Card className="mb-4">
       <CardHeader>
         <CardTitle className="text-lg">
-          {getCardTitle()}
+          {formatActivityType(atividadeTipo)} - {formatServiceType(servicoTipo)}
         </CardTitle>
       </CardHeader>
       <CardContent>

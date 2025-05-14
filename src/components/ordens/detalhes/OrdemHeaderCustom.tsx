@@ -25,12 +25,6 @@ export const OrdemHeaderCustom: React.FC<OrdemHeaderCustomProps> = ({
   onDeleteClick,
   ordem
 }) => {
-  // Add console log to debug when edit button is clicked
-  const handleEditClick = () => {
-    console.log("Edit button clicked");
-    onEditClick();
-  };
-  
   return (
     <div className="border rounded-lg p-4 bg-card">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -51,7 +45,7 @@ export const OrdemHeaderCustom: React.FC<OrdemHeaderCustomProps> = ({
               <Button
                 variant="outline"
                 className="flex items-center gap-2"
-                onClick={handleEditClick}
+                onClick={onEditClick}
                 size="sm"
               >
                 <Edit className="h-4 w-4" />

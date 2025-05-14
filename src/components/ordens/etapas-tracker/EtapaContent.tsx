@@ -1,189 +1,102 @@
 
-import { useState, useEffect, useCallback } from "react";
-import { OrdemServico, EtapaOS, TipoServico } from "@/types/ordens";
-import { useEtapaOperations } from "../etapa/hooks/useEtapaOperations";
-import EtapaCard from "../etapa/EtapaCard";
-import InspecaoServicosSelector from "./InspecaoServicosSelector";
+import { EtapaOS, Servico, TipoServico } from "@/types/ordens";
+import { Card } from "@/components/ui/card";
 import { EmptyServices } from "./EmptyServices";
-import { etapaNomeFormatado } from "@/utils/etapaNomes";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { toast } from "sonner";
+import EtapaCard from "@/components/ordens/etapa/EtapaCard";
+import { etapaNomes } from "@/utils/etapaNomes";
 
 interface EtapaContentProps {
-  ordem: OrdemServico;
+  ordemId: string;
   etapa: EtapaOS;
-  activeServico?: TipoServico;
-  onOrdemUpdate: (ordemAtualizada: OrdemServico) => void;
-  onFuncionariosChange?: (etapa: EtapaOS, funcionariosIds: string[], funcionariosNomes: string[], servicoTipo?: TipoServico) => void;
+  etapaInfo?: any;
+  servicos: Servico[];
+  servicoTipo?: TipoServico;
+  onSubatividadeToggle: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
+  onServicoStatusChange: (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
+  onEtapaStatusChange: (etapa: EtapaOS, concluida: boolean, funcionarioId?: string, funcionarioNome?: string, servicoTipo?: TipoServico) => void;
+  onSubatividadeSelecionadaToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
+  onFuncionariosChange?: (etapa: EtapaOS, funcionariosIds: string[], funcionariosNomes: string[], servicoTipo?: string) => void;
 }
 
 export default function EtapaContent({
-  ordem,
+  ordemId,
   etapa,
-  activeServico,
-  onOrdemUpdate,
+  etapaInfo,
+  servicos,
+  servicoTipo,
+  onSubatividadeToggle,
+  onServicoStatusChange,
+  onEtapaStatusChange,
+  onSubatividadeSelecionadaToggle,
   onFuncionariosChange
 }: EtapaContentProps) {
-  const [selectedService, setSelectedService] = useState<TipoServico | undefined>(activeServico);
-  const [isReloading, setIsReloading] = useState(false);
-  const [localOrdem, setLocalOrdem] = useState<OrdemServico>(ordem);
+  const etapaKey = servicoTipo ? `${etapa}_${servicoTipo}` : etapa;
+  const etapaInfoEspecifica = etapaInfo ? 
+    (servicoTipo ? etapaInfo[`${etapa}_${servicoTipo}`] : etapaInfo[etapa]) : 
+    undefined;
   
-  // Log ordem updates for debugging
-  useEffect(() => {
-    console.log("EtapaContent - ordem atualizada:", {
-      id: ordem.id,
-      servicosCount: ordem.servicos.length,
-      status: ordem.status
-    });
-    setLocalOrdem(ordem);
-  }, [ordem]);
+  console.log("EtapaContent - Recebendo serviços:", { etapa, servicoTipo, servicosRecebidos: servicos.map(s => s.tipo) });
   
-  const {
-    getServicosEtapa,
-    getEtapaInfo,
-    handleSubatividadeToggle,
-    handleServicoStatusChange,
-    handleEtapaStatusChange,
-    handleSubatividadeSelecionadaToggle
-  } = useEtapaOperations({
-    ordem: localOrdem,
-    onUpdate: onOrdemUpdate,
+  // Filtrar serviços com base na etapa atual
+  const servicosFiltrados = servicos.filter(servico => {
+    // Para etapa de inspeção, já estamos recebendo os serviços filtrados pelo servicoTipo
+    if ((etapa === "inspecao_inicial" || etapa === "inspecao_final") && servicoTipo) {
+      console.log("Filtro de inspeção:", servico.tipo, servicoTipo, servico.tipo === servicoTipo);
+      return servico.tipo === servicoTipo;
+    }
+    
+    // Para a etapa de lavagem, mostrar somente os serviços de lavagem
+    if (etapa === "lavagem") {
+      console.log("Filtro de lavagem:", servico.tipo, servico.tipo === "lavagem");
+      return servico.tipo === "lavagem";
+    }
+    
+    // Para a etapa de retifica, considerar os serviços específicos de retifica
+    if (etapa === "retifica") {
+      const isRetifica = ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(servico.tipo);
+      console.log("Filtro de retifica:", servico.tipo, isRetifica);
+      return isRetifica;
+    }
+    
+    // Para outras etapas, mostrar serviços do mesmo tipo da etapa
+    console.log("Filtro padrão:", servico.tipo, etapa, servico.tipo === etapa);
+    return servico.tipo === etapa;
   });
   
-  // Function to reload fresh ordem data from Firebase
-  const reloadOrdemData = useCallback(async () => {
-    if (!ordem.id) return;
-    
-    setIsReloading(true);
-    console.log("EtapaContent - Recarregando dados da ordem do Firebase:", ordem.id);
-    
-    try {
-      const ordemRef = doc(db, "ordens_servico", ordem.id);
-      const ordemSnap = await getDoc(ordemRef);
-      
-      if (ordemSnap.exists()) {
-        const ordemData = { ...ordemSnap.data(), id: ordemSnap.id } as OrdemServico;
-        console.log("EtapaContent - Dados atualizados da ordem:", ordemData);
-        
-        // Update local state
-        setLocalOrdem(ordemData);
-        
-        // Notify parent component
-        onOrdemUpdate(ordemData);
-        
-        toast.success("Dados atualizados com sucesso", {
-          duration: 2000,
-          position: "bottom-right"
-        });
-      } else {
-        console.log("EtapaContent - Ordem não encontrada no Firebase");
-        toast.error("Não foi possível encontrar a ordem");
-      }
-    } catch (error) {
-      console.error("EtapaContent - Erro ao recarregar dados da ordem:", error);
-      toast.error("Erro ao atualizar dados");
-    } finally {
-      setIsReloading(false);
-    }
-  }, [ordem.id, onOrdemUpdate]);
+  console.log("EtapaContent - Após filtro, mostrando serviços:", servicosFiltrados.map(s => s.tipo));
   
-  // Handle ordem updates from child components
-  const handleLocalOrdemUpdate = useCallback((ordemAtualizada: OrdemServico) => {
-    console.log("EtapaContent - handleLocalOrdemUpdate:", ordemAtualizada);
-    setLocalOrdem(ordemAtualizada);
-    onOrdemUpdate(ordemAtualizada);
-    
-    // Schedule a reload after a short delay to ensure Firebase data is up to date
-    setTimeout(reloadOrdemData, 500);
-  }, [onOrdemUpdate, reloadOrdemData]);
-  
-  // Get services for the current etapa
-  const servicosEtapa = getServicosEtapa(etapa, selectedService);
-  
-  // Determine which services to display based on the etapa
-  const getServicosFiltrados = () => {
-    if (etapa !== "inspecao_inicial" && etapa !== "inspecao_final") {
-      return servicosEtapa;
-    }
-    
-    if (selectedService) {
-      return servicosEtapa.filter(s => s.tipo === selectedService);
-    }
-    
-    return [];
-  };
-  
-  // Check if this is an inspection etapa that requires selecting a service
-  const isInspecaoEtapa = etapa === "inspecao_inicial" || etapa === "inspecao_final";
-  const servicosFiltrados = getServicosFiltrados();
-  const servicosTipo = [...new Set(servicosEtapa.map(s => s.tipo))] as TipoServico[];
-  
-  console.log(`EtapaContent - Serviços disponíveis para seleção (${etapa}):`, servicosTipo);
-  console.log(`EtapaContent - Serviço selecionado atual:`, selectedService);
-  console.log(`EtapaContent - Serviços filtrados para exibição:`, servicosFiltrados);
-  
-  if (servicosEtapa.length === 0) {
+  if (servicosFiltrados.length === 0) {
+    console.log("EtapaContent - Nenhum serviço encontrado para a etapa:", etapa);
     return <EmptyServices etapa={etapa} />;
   }
-  
-  if (isInspecaoEtapa && !selectedService) {
-    return (
-      <InspecaoServicosSelector
-        servicosTipo={servicosTipo}
-        onSelect={setSelectedService}
-        etapa={etapa as "inspecao_inicial" | "inspecao_final"}
-      />
-    );
-  }
-  
-  const etapaInfo = getEtapaInfo(etapa, selectedService);
-  const etapaNome = etapaNomeFormatado[etapa] || etapa;
-  
+
+  const getNomeEtapa = (etapa: EtapaOS, servicoTipo?: TipoServico): string => {
+    let nome = etapaNomes[etapa] || etapa.replace('_', ' ');
+    
+    if ((etapa === "inspecao_inicial" || etapa === "inspecao_final") && servicoTipo) {
+      const servicoNome = servicoTipo.replace('_', ' ');
+      nome += ` - ${servicoNome.charAt(0).toUpperCase() + servicoNome.slice(1)}`;
+    }
+    
+    return nome;
+  };
+
   return (
-    <div className="mt-4">
-      {isReloading && (
-        <div className="mb-4 p-2 bg-amber-50 border border-amber-200 rounded text-amber-800 text-center">
-          Atualizando dados da ordem...
-        </div>
-      )}
-      
-      {isInspecaoEtapa && (
-        <InspecaoServicosSelector
-          servicosTipo={servicosTipo}
-          selectedServicoTipo={selectedService}
-          onServicoTipoSelect={setSelectedService}
-          etapa={etapa as "inspecao_inicial" | "inspecao_final"}
-        />
-      )}
-      
+    <div className="space-y-4">
       <EtapaCard
-        ordem={localOrdem}
-        ordemId={localOrdem.id}
+        ordemId={ordemId}
         etapa={etapa}
-        etapaNome={etapaNome}
-        funcionarioId=""
+        etapaNome={getNomeEtapa(etapa, servicoTipo)}
+        funcionarioId={etapaInfoEspecifica?.funcionarioId || ""}
+        funcionarioNome={etapaInfoEspecifica?.funcionarioNome || ""}
         servicos={servicosFiltrados}
-        etapaInfo={etapaInfo}
-        servicoTipo={selectedService}
-        onSubatividadeToggle={(tipo, subId, checked) => handleSubatividadeToggle(tipo, subId, checked)}
-        onServicoStatusChange={(tipo, concluido, funcId, funcNome) => handleServicoStatusChange(tipo, concluido, funcId, funcNome)}
-        onEtapaStatusChange={(etapa, concluida, funcId, funcNome, servicoTipo) => handleEtapaStatusChange(etapa, concluida, funcId, funcNome, servicoTipo)}
-        onSubatividadeSelecionadaToggle={(tipo, subId, checked) => handleSubatividadeSelecionadaToggle(tipo, subId, checked)}
+        etapaInfo={etapaInfoEspecifica}
+        servicoTipo={servicoTipo}
+        onSubatividadeToggle={onSubatividadeToggle}
+        onServicoStatusChange={onServicoStatusChange}
+        onEtapaStatusChange={onEtapaStatusChange}
         onFuncionariosChange={onFuncionariosChange}
-        onOrdemUpdate={handleLocalOrdemUpdate}
       />
-      
-      {/* Manual refresh button */}
-      <div className="mt-4 flex justify-end">
-        <button
-          className="text-sm text-muted-foreground hover:text-primary flex items-center"
-          onClick={reloadOrdemData}
-          disabled={isReloading}
-        >
-          <span className="mr-1">{isReloading ? "Recarregando..." : "Recarregar dados"}</span>
-        </button>
-      </div>
     </div>
   );
 }

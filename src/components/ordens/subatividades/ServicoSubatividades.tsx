@@ -1,63 +1,24 @@
 
-import { memo, useEffect, useRef } from "react";
-import { SubAtividade, TipoServico } from "@/types/ordens";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { useTrackingSubatividades } from "@/hooks/ordens/useTrackingSubatividades";
+import { SubAtividade, TipoServico } from "@/types/ordens";
 
 interface ServicoSubatividadesProps {
-  tipoServico: TipoServico | string;
+  tipoServico: TipoServico;
   subatividades: SubAtividade[];
   onChange: (subatividades: SubAtividade[]) => void;
+  disabled?: boolean;
 }
 
-// Usar memo para evitar re-renderizações desnecessárias
-export const ServicoSubatividades = memo(({
+export const ServicoSubatividades = ({
   tipoServico,
   subatividades,
   onChange,
+  disabled = false
 }: ServicoSubatividadesProps) => {
-  // Obter a função logSubatividadesState do hook
-  const { logSubatividadesState } = useTrackingSubatividades();
-  const prevSubatividadesRef = useRef<SubAtividade[]>([]);
-
-  useEffect(() => {
-    // Verificar se as subatividades realmente mudaram antes de processar
-    if (JSON.stringify(prevSubatividadesRef.current) === JSON.stringify(subatividades)) {
-      console.log(`[ServicoSubatividades] Ignorando atualização redundante para ${tipoServico}`);
-      return;
-    }
-
-    // Atualizar a referência com os novos valores
-    prevSubatividadesRef.current = subatividades;
-    
-    // Log das subatividades recebidas
-    console.log(`[ServicoSubatividades] Recebido para ${tipoServico}:`, 
-      subatividades.map(s => ({ id: s.id, nome: s.nome, selecionada: s.selecionada })));
-    
-    logSubatividadesState("ServicoSubatividades-recebidas", tipoServico.toString());
-    
-    // NUNCA definir selecionada como true por padrão, preservar o estado existente
-    const processedSubs = subatividades.map(sub => ({
-      ...sub,
-      // Se já tiver definição de selecionada, manter. Caso contrário, definir como false
-      selecionada: sub.selecionada !== undefined ? sub.selecionada : false
-    }));
-    
-    // Se houver diferenças, atualizar
-    if (JSON.stringify(processedSubs) !== JSON.stringify(subatividades)) {
-      console.log(`[ServicoSubatividades] Corrigindo subatividades para ${tipoServico}:`, 
-        processedSubs.map(s => ({ id: s.id, nome: s.nome, selecionada: s.selecionada })));
-      
-      onChange(processedSubs);
-    }
-  }, [tipoServico, subatividades, onChange, logSubatividadesState]);
+  const [expanded, setExpanded] = useState(true);
   
-  const handleToggleSubatividade = (id: string, checked: boolean) => {
-    console.log(`[ServicoSubatividades] Toggle ${id} para ${checked}`);
-    
+  const handleToggle = (id: string, checked: boolean) => {
     const updatedSubatividades = subatividades.map(sub => {
       if (sub.id === id) {
         return { ...sub, selecionada: checked };
@@ -65,67 +26,45 @@ export const ServicoSubatividades = memo(({
       return sub;
     });
     
-    logSubatividadesState("ServicoSubatividades-toggle", tipoServico.toString());
     onChange(updatedSubatividades);
   };
   
-  const handleTempoEstimadoChange = (id: string, value: number) => {
-    const updatedSubatividades = subatividades.map(sub => {
-      if (sub.id === id) {
-        return { ...sub, tempoEstimado: value };
-      }
-      return sub;
-    });
-    
-    onChange(updatedSubatividades);
-  };
+  const completedCount = subatividades.filter(sub => sub.selecionada).length;
+  const totalCount = subatividades.length;
   
   return (
-    <Card className="mb-4">
-      <CardHeader className="py-2">
-        <CardTitle className="text-sm">Subatividades</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
+    <div className="ml-6 mt-2 bg-slate-50 rounded-md p-3">
+      <div 
+        className="flex justify-between items-center cursor-pointer"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <h4 className="text-sm font-medium">Subatividades</h4>
+        <div className="text-xs text-muted-foreground">
+          {completedCount} / {totalCount} selecionadas
+        </div>
+      </div>
+      
+      {expanded && (
+        <div className="mt-2 space-y-2">
           {subatividades.map((sub) => (
-            <div key={sub.id} className="flex flex-col">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id={`subatividade-${sub.id}`}
-                  checked={sub.selecionada}
-                  onCheckedChange={(checked) => 
-                    handleToggleSubatividade(sub.id, checked === true)
-                  }
-                />
-                <Label htmlFor={`subatividade-${sub.id}`} className="text-sm">
-                  {sub.nome}
-                </Label>
-              </div>
-              
-              {sub.selecionada && (
-                <div className="mt-2 ml-7">
-                  <Label htmlFor={`tempo-${sub.id}`} className="text-xs">
-                    Tempo estimado (horas)
-                  </Label>
-                  <Input
-                    id={`tempo-${sub.id}`}
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    value={sub.tempoEstimado || 0}
-                    onChange={(e) => 
-                      handleTempoEstimadoChange(sub.id, parseFloat(e.target.value) || 0)
-                    }
-                    className="h-8 text-sm w-24"
-                  />
-                </div>
-              )}
+            <div key={sub.id} className="flex items-center space-x-2">
+              <Checkbox
+                id={`subatividade-${sub.id}`}
+                checked={sub.selecionada}
+                onCheckedChange={(checked) => handleToggle(sub.id, !!checked)}
+                disabled={disabled}
+                className="data-[state=checked]:bg-green-600"
+              />
+              <label
+                htmlFor={`subatividade-${sub.id}`}
+                className="text-xs cursor-pointer select-none"
+              >
+                {sub.nome}
+              </label>
             </div>
           ))}
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
-});
-
-ServicoSubatividades.displayName = "ServicoSubatividades";
+}

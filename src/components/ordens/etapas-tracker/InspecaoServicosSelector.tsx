@@ -1,92 +1,55 @@
 
-import { TipoServico, EtapaOS } from "@/types/ordens";
+import React from "react";
+import { EtapaOS, TipoServico } from "@/types/ordens";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { tipoServicoLabel } from "@/utils/etapaNomes"; 
-import { useState, useEffect } from "react";
 
 interface InspecaoServicosSelectorProps {
+  etapa: EtapaOS;
   servicosTipo: TipoServico[];
   selectedServicoTipo?: TipoServico;
-  onSelect?: (tipo: TipoServico) => void;
-  onServicoTipoSelect?: (tipo: TipoServico) => void;
-  etapa: "inspecao_inicial" | "inspecao_final";
+  onServicoTipoSelect: (tipo: TipoServico) => void;
 }
 
 export default function InspecaoServicosSelector({
+  etapa,
   servicosTipo,
   selectedServicoTipo,
-  onSelect,
-  onServicoTipoSelect,
-  etapa
+  onServicoTipoSelect
 }: InspecaoServicosSelectorProps) {
-  const [selectedType, setSelectedType] = useState<TipoServico | undefined>(selectedServicoTipo);
+  const etapaLabel = etapa === 'inspecao_inicial' ? 'Inspeção Inicial' : 'Inspeção Final';
   
-  // Atualizar o estado interno quando a prop mudar
-  useEffect(() => {
-    if (selectedServicoTipo !== selectedType) {
-      setSelectedType(selectedServicoTipo);
-    }
-  }, [selectedServicoTipo]);
-  
-  const handleSelect = (tipo: TipoServico) => {
-    console.log(`InspecaoServicosSelector - Serviço selecionado: ${tipo}`);
-    setSelectedType(tipo);
+  const getServicoLabel = (tipo: TipoServico) => {
+    const labels: Record<string, string> = {
+      bloco: "Bloco",
+      biela: "Biela",
+      cabecote: "Cabeçote",
+      virabrequim: "Virabrequim",
+      eixo_comando: "Eixo de Comando"
+    };
     
-    // Chamar o callback apropriado
-    if (onSelect) {
-      onSelect(tipo);
-    } else if (onServicoTipoSelect) {
-      onServicoTipoSelect(tipo);
-    }
+    return labels[tipo] || tipo;
   };
 
-  const etapaNome = etapa === "inspecao_inicial" ? "Inspeção Inicial" : "Inspeção Final";
-  
-  // MODIFICADO: Filtrar serviços para inspeção
-  // Se a etapa for inspeção inicial ou final, incluir os serviços principais mais o próprio serviço de inspeção
-  const servicosValidos = etapa === "inspecao_inicial" || etapa === "inspecao_final"
-    ? servicosTipo.filter(tipo => 
-        // Incluir o próprio tipo de inspeção na lista de serviços válidos
-        tipo === etapa || 
-        // E também incluir os serviços regulares (excluindo lavagem e outros tipos de inspeção)
-        (tipo !== "lavagem" && 
-         tipo !== "inspecao_inicial" && 
-         tipo !== "inspecao_final"))
-    : servicosTipo.filter(tipo => 
-        tipo !== "lavagem" && 
-        tipo !== "inspecao_inicial" && 
-        tipo !== "inspecao_final");
-  
-  console.log(`InspecaoServicosSelector - Serviços disponíveis para ${etapa}:`, servicosValidos);
-  
   return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-semibold mb-2">{etapaNome} - Selecione um serviço</h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          Escolha o tipo de serviço que você deseja inspecionar
-        </p>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-        {servicosValidos.map((tipo) => (
-          <Button
-            key={tipo}
-            variant={selectedType === tipo ? "default" : "outline"}
-            size="sm"
-            onClick={() => handleSelect(tipo)}
-            className="justify-start"
-          >
-            {tipoServicoLabel[tipo] || tipo}
-          </Button>
-        ))}
-      </div>
-      
-      {servicosValidos.length === 0 && (
-        <div className="p-4 border rounded text-center text-muted-foreground">
-          Nenhum serviço disponível para inspeção
+    <Card className="mb-6">
+      <CardContent className="pt-6">
+        <h3 className="text-lg font-medium mb-4">Selecione o tipo de serviço para {etapaLabel}</h3>
+        
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          {servicosTipo.map((tipo) => (
+            <Button
+              key={tipo}
+              variant={selectedServicoTipo === tipo ? "default" : "outline"}
+              size="sm"
+              className="w-full"
+              onClick={() => onServicoTipoSelect(tipo)}
+            >
+              {getServicoLabel(tipo)}
+            </Button>
+          ))}
         </div>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   );
 }

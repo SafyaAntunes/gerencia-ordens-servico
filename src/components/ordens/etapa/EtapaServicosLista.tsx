@@ -1,7 +1,6 @@
 
 import { ServicoTracker } from "../servico";
-import { EtapaOS, Servico, TipoServico, OrdemServico } from "@/types/ordens";
-import { useState, useCallback } from "react";
+import { EtapaOS, Servico, TipoServico } from "@/types/ordens";
 
 interface EtapaServicosListaProps {
   servicos: Servico[];
@@ -26,30 +25,16 @@ export default function EtapaServicosLista({
     return null;
   }
   
-  // Create a proper ordem object to pass to ServicoTracker
-  const [ordemLocal, setOrdemLocal] = useState<OrdemServico>({ 
-    id: ordemId, 
-    servicos: servicos 
-  } as OrdemServico);
-  
-  // Create a proper onUpdate handler that updates the local state
-  const handleOrdemUpdate = useCallback((ordemAtualizada: OrdemServico) => {
-    console.log("EtapaServicosLista - handleOrdemUpdate:", ordemAtualizada);
-    setOrdemLocal(ordemAtualizada);
-  }, []);
-  
   return (
     <div className="space-y-4">
       {servicos.map((servico, i) => (
         <ServicoTracker
           key={`${servico.tipo}-${i}`}
           servico={servico}
-          ordem={ordemLocal}
-          onUpdate={handleOrdemUpdate}
-          ordemId={ordemId}  // Legacy prop
-          funcionarioId={funcionarioId}  // Legacy prop
-          funcionarioNome={funcionarioNome}  // Legacy prop
-          etapa={etapa}  // Legacy prop
+          ordemId={ordemId}
+          funcionarioId={funcionarioId}
+          funcionarioNome={funcionarioNome}
+          etapa={etapa}
           onSubatividadeToggle={
             onSubatividadeToggle ? 
               (subId, checked) => onSubatividadeToggle(servico.tipo, subId, checked) : 

@@ -1,9 +1,6 @@
 
 import { OrdemServico, StatusOS } from "@/types/ordens";
 
-// Define the SetOrdemFunction type that was missing
-export type SetOrdemFunction = React.Dispatch<React.SetStateAction<OrdemServico | null>>;
-
 export interface UseOrdemDetalhesResult {
   ordem: OrdemServico | null;
   isLoading: boolean;
@@ -15,7 +12,10 @@ export interface UseOrdemDetalhesResult {
   setIsEditando: (editing: boolean) => void;
   setDeleteDialogOpen: (open: boolean) => void;
   handleOrdemUpdate: (ordemAtualizada: OrdemServico) => void;
-  handleSubmit: (data: any) => void;
-  handleDelete: () => void;
-  handleStatusChange: (status: StatusOS) => void;
+  handleSubmit: (values: any) => Promise<void>;
+  handleDelete: () => Promise<void>;
+  handleStatusChange: (newStatus: StatusOS) => Promise<void>;
 }
+
+// Define the type for setOrdem function
+export type SetOrdemFunction = (ordem: OrdemServico | null | ((prev: OrdemServico | null) => OrdemServico | null)) => void;

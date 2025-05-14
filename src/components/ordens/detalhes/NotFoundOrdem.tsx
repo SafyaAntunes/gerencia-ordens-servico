@@ -3,11 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { FileX } from "lucide-react";
 
-interface NotFoundOrdemProps {
-  id?: string;
-}
-
-export function NotFoundOrdem({ id }: NotFoundOrdemProps) {
+export function NotFoundOrdem() {
   const navigate = useNavigate();
   
   return (
@@ -15,9 +11,7 @@ export function NotFoundOrdem({ id }: NotFoundOrdemProps) {
       <div className="text-center">
         <FileX className="h-16 w-16 text-gray-400 mx-auto mb-4" />
         <h2 className="text-2xl font-semibold mb-2">Ordem não encontrada</h2>
-        <p className="text-gray-500 mb-6">
-          {id ? `A ordem de serviço ${id} não existe ou foi removida` : 'A ordem de serviço que você está procurando não existe ou foi removida'}
-        </p>
+        <p className="text-gray-500 mb-6">A ordem de serviço que você está procurando não existe ou foi removida</p>
         <Button 
           onClick={() => navigate("/ordens")}
           className="bg-blue-500 hover:bg-blue-600"

@@ -52,6 +52,84 @@ import { getSubatividades, getSubatividadesByTipo } from "@/services/subatividad
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
+const SUBATIVIDADES: Record<TipoServico, string[]> = {
+  bloco: [
+    'RETÍFICA DE CILINDRO',
+    'ENCAMISAR',
+    'BRUNIR',
+    'RETIFICAR MANCAL',
+    'LAVAGEM QUÍMICA',
+    'RETIFICA DE FAZE',
+    'SERVIÇO DE SOLDA',
+    'MEDIR MANCAL',
+    'EXTRAIR PRISIONEIRO',
+    'RETÍFICA DE ROSCA'
+  ],
+  cabecote: [
+    'DESCARBONIZAR',
+    'SERVIÇO DE SOLDA',
+    'RETÍFICA FACE',
+    'MUDAR GUIA',
+    'MUDAR SEDE',
+    'RETÍFICA DE SEDE',
+    'RETÍFICA DE VÁLVULAS',
+    'ESMERILHAR',
+    'CALIBRAR VÁLVULAS',
+    'DESMONTAR',
+    'MONTAR VÁLVULAR',
+    'FACE LATERAL',
+    'EXTRAIR PRISIONEIRO',
+    'RECUPERAR ROSCA',
+    'RETÍFICA MANCAL DE COMANDO',
+    'TESTE DE TRINCA',
+    'TESTADO',
+    'TESTAR MOLAS'
+  ],
+  virabrequim: [
+    'RETÍFICA BB-BC',
+    'POLIR',
+    'DESEMPENAR',
+    'TESTE DE TRINCA'
+  ],
+  eixo_comando: [
+    'RETIFICAR',
+    'POLIR'
+  ],
+  biela: [
+    'RETIFICA BUCHA DE BIELA',
+    'RETIFICA DE AÇO DE BIELA',
+    'MUDAR PISTÃO',
+    'MEDIR AÇO DE BIELA'
+  ],
+  montagem: [
+    'TOTAL',
+    'PARCIAL',
+    'IN-LOCO'
+  ],
+  dinamometro: [
+    'POTÊNCIA',
+    'TORQUE',
+    'CONSUMO'
+  ],
+  lavagem: [
+    'PREPARAÇÃO',
+    'LAVAGEM QUÍMICA',
+    'LAVAGEM MANUAL',
+    'SECAGEM'
+  ],
+  inspecao_inicial: [
+    'VERIFICAÇÃO VISUAL',
+    'MEDIÇÃO DE COMPONENTES',
+    'IDENTIFICAÇÃO DE DEFEITOS',
+    'REGISTRO FOTOGRÁFICO'
+  ],
+  inspecao_final: [
+    'VERIFICAÇÃO DE MONTAGEM',
+    'TESTES DE QUALIDADE',
+    'VALIDAÇÃO FINAL',
+    'RELATÓRIO DE ENTREGA'
+  ]
+};
 
 // Mapeamento de etapas para ícones e nomes amigáveis
 const ETAPAS_CONFIG = {
@@ -168,8 +246,6 @@ export default function OrdemForm({
     },
   });
   
-  const servicosTipos = form.watch("servicosTipos") || [];
-  
   useEffect(() => {
     const fetchEtapasConfig = async () => {
       setIsLoadingEtapas(true);
@@ -278,53 +354,60 @@ export default function OrdemForm({
   }, [defaultValues?.servicosSubatividades, defaultValues?.servicosDescricoes, defaultValues?.etapasTempoPreco]);
   
   useEffect(() => {
-    const tiposList = servicosTipos;
-
+    const tiposList = form.watch("servicosTipos") || [];
+    
     const loadSubatividades = async (tipo: TipoServico) => {
       try {
-        // Always fetch all available subactivities for this service type
+        // Carregar subatividades do banco de dados
         const subatividadesList = await getSubatividadesByTipo(tipo);
-
-        setServicosSubatividades(prev => {
-          // Get existing subatividades from current state
-          const existingSubatividades = prev[tipo] || [];
-          // Get default values from form initialization (if editing an order)
-          const defaultSubatividades = defaultValues?.servicosSubatividades?.[tipo] || [];
-          
-          // Create a combined list of all subactivities, preserving states from existing selections
-          const updatedSubatividades = (subatividadesList || []).map(sub => {
-            // Look for this subatividade in existing or default values
-            const existingItem = existingSubatividades.find(s => s.id === sub.id);
-            const defaultItem = defaultSubatividades.find(s => s.id === sub.id);
-            
-            // Prioritize: 1. Current state, 2. Default values, 3. New values
-            return {
-              ...sub,
-              selecionada: existingItem?.selecionada ?? defaultItem?.selecionada ?? false,
-              concluida: existingItem?.concluida ?? defaultItem?.concluida ?? false
-            };
-          });
-          
-          return {
+        if (subatividadesList && subatividadesList.length > 0) {
+          // Use as subatividades do banco de dados
+          setServicosSubatividades(prev => ({
             ...prev,
-            [tipo]: updatedSubatividades
-          };
-        });
+            [tipo]: subatividadesList.map(sub => ({
+              ...sub,
+              selecionada: false
+            }))
+          }));
+        } else {
+          // Se não houver subatividades no banco, use os padrões como fallback
+          const defaultSubs = SUBATIVIDADES[tipo] || [];
+          const defaultSubatividades = defaultSubs.map(nome => ({
+            id: uuidv4(),
+            nome,
+            selecionada: false
+          }));
+          
+          setServicosSubatividades(prev => ({
+            ...prev,
+            [tipo]: defaultSubatividades
+          }));
+        }
       } catch (error) {
         console.error(`Erro ao carregar subatividades para ${tipo}:`, error);
+        // Em caso de erro, ainda use os padrões
+        const defaultSubs = SUBATIVIDADES[tipo] || [];
+        const defaultSubatividades = defaultSubs.map(nome => ({
+          id: uuidv4(),
+          nome,
+          selecionada: false
+        }));
+        
         setServicosSubatividades(prev => ({
           ...prev,
-          [tipo]: []
+          [tipo]: defaultSubatividades
         }));
       }
     };
-
-    // Always load subatividades for all selected service types
+    
+    // Para cada tipo de serviço selecionado
     tiposList.forEach((tipo) => {
-      loadSubatividades(tipo as TipoServico);
+      if (!servicosSubatividades[tipo]) {
+        loadSubatividades(tipo as TipoServico);
+      }
     });
-
-    // Remover subatividades de tipos que não estão mais selecionados
+    
+    // Remover tipos não selecionados
     Object.keys(servicosSubatividades).forEach((tipo) => {
       if (!tiposList.includes(tipo)) {
         setServicosSubatividades(prev => {
@@ -334,7 +417,7 @@ export default function OrdemForm({
         });
       }
     });
-  }, [servicosTipos]);
+  }, [form.watch("servicosTipos")]);
   
   const handleServicoDescricaoChange = (tipo: string, descricao: string) => {
     setServicosDescricoes(prev => ({
@@ -344,7 +427,6 @@ export default function OrdemForm({
   };
   
   const handleSubatividadesChange = (tipo: TipoServico, subatividades: SubAtividade[]) => {
-    console.log("handleSubatividadesChange", tipo, subatividades);
     setServicosSubatividades(prev => ({
       ...prev,
       [tipo]: subatividades
@@ -695,46 +777,77 @@ export default function OrdemForm({
               </FormDescription>
               
               <div className="rounded-md border border-border p-4 space-y-4">
-                {tiposServico.map((tipo) => (
-                  <FormField
-                    key={tipo.value}
-                    control={form.control}
-                    name="servicosTipos"
-                    render={({ field }) => {
-                      const checked = field.value?.includes(tipo.value);
-
-                      return (
-                        <FormItem key={tipo.value} className="flex flex-col space-y-3 my-4">
-                          <div className="flex items-start space-x-3 space-y-0">
-                            <FormControl>
-                              <Checkbox
-                                checked={checked}
-                                onCheckedChange={(checked) => {
-                                  const updatedValue = checked
-                                    ? [...(field.value || []), tipo.value]
-                                    : field.value?.filter((value) => value !== tipo.value) || [];
-                                  field.onChange(updatedValue);
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="font-normal">{tipo.label}</FormLabel>
-                          </div>
-
-                          {/* Renderiza as subatividades se o serviço estiver selecionado */}
-                          {checked && (
-                            <div>
-                              <ServicoSubatividades
-                                tipoServico={tipo.value}
-                                subatividades={servicosSubatividades[tipo.value] || []}
-                                onChange={(subatividades) => handleSubatividadesChange(tipo.value, subatividades)}
-                              />
-                            </div>
-                          )}
-                        </FormItem>
-                      );
-                    }}
-                  />
-                ))}
+                <FormField
+                  control={form.control}
+                  name="servicosTipos"
+                  render={() => (
+                    <FormItem>
+                      <div className="mb-4">
+                        {tiposServico.map((tipo) => (
+                          <FormField
+                            key={tipo.value}
+                            control={form.control}
+                            name="servicosTipos"
+                            render={({ field }) => {
+                              return (
+                                <FormItem
+                                  key={tipo.value}
+                                  className="flex flex-col space-y-3 my-4"
+                                >
+                                  <div className="flex items-start space-x-3 space-y-0">
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value?.includes(tipo.value)}
+                                        onCheckedChange={(checked) => {
+                                          const updatedValue = checked
+                                            ? [...(field.value || []), tipo.value]
+                                            : field.value?.filter(
+                                                (value) => value !== tipo.value
+                                              ) || [];
+                                          field.onChange(updatedValue);
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <div className="space-y-1 leading-none">
+                                      <FormLabel className="text-sm font-normal">
+                                        {tipo.label}
+                                      </FormLabel>
+                                    </div>
+                                  </div>
+                                  
+                                  {field.value?.includes(tipo.value) && (
+                                    <>
+                                      <div className="ml-6">
+                                        <Textarea
+                                          placeholder={`Descreva o serviço de ${tipo.label.toLowerCase()}...`}
+                                          value={servicosDescricoes[tipo.value] || ""}
+                                          onChange={(e) => 
+                                            handleServicoDescricaoChange(tipo.value, e.target.value)
+                                          }
+                                          className="resize-none"
+                                        />
+                                      </div>
+                                      
+                                      {servicosSubatividades[tipo.value] && (
+                                        <ServicoSubatividades
+                                          tipoServico={tipo.value}
+                                          subatividades={servicosSubatividades[tipo.value]}
+                                          onChange={(subatividades) => 
+                                            handleSubatividadesChange(tipo.value, subatividades)
+                                          }
+                                        />
+                                      )}
+                                    </>
+                                  )}
+                                </FormItem>
+                              );
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </FormItem>
+                  )}
+                />
               </div>
             </div>
           </TabsContent>
