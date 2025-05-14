@@ -1,5 +1,5 @@
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Camera } from "lucide-react";
@@ -34,6 +34,31 @@ export const OrdemForm = ({
 }: OrdemFormProps) => {
   const [activeTab, setActiveTab] = useState("dados");
   const [selectedClienteId, setSelectedClienteId] = useState<string>(defaultValues?.clienteId || "");
+  
+  // Depuração: Verificar os valores iniciais de subatividades
+  useEffect(() => {
+    if (defaultValues?.servicosSubatividades) {
+      console.log("🔍 [OrdemForm] Inicializando com subatividades:", defaultValues.servicosSubatividades);
+      
+      // Verificar se as subatividades foram passadas corretamente
+      Object.entries(defaultValues.servicosSubatividades).forEach(([tipo, subs]) => {
+        console.log(`🔍 [OrdemForm] Tipo ${tipo}:`, 
+          Array.isArray(subs) ? `${subs.length} subatividades` : "formato inválido");
+        
+        if (Array.isArray(subs) && subs.length > 0) {
+          console.log(`🔍 [OrdemForm] Amostra de subatividades para ${tipo}:`, 
+            subs.slice(0, 2).map(s => ({
+              id: s.id,
+              nome: s.nome,
+              selecionada: s.selecionada
+            }))
+          );
+        }
+      });
+    } else {
+      console.log("⚠️ [OrdemForm] Sem subatividades iniciais");
+    }
+  }, [defaultValues?.servicosSubatividades]);
   
   // Initialize form with schema validation
   const form = useForm<FormValues>({

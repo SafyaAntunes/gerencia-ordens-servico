@@ -31,7 +31,8 @@ export function OrdemFormWrapper({
   console.log("[OrdemFormWrapper] Subatividades preparadas para edição:", 
     Object.entries(subatividadesPreparadas).map(([tipo, subs]) => ({
       tipo,
-      subs: subs.map(s => ({ id: s.id, nome: s.nome, selecionada: s.selecionada }))
+      quantidade: Array.isArray(subs) ? subs.length : 0,
+      subs: Array.isArray(subs) ? subs.map(s => ({ id: s.id, nome: s.nome, selecionada: s.selecionada })) : []
     }))
   );
 

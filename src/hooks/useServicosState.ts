@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { SubAtividade, TipoServico } from "@/types/ordens";
 import { isEqual } from "lodash";
@@ -38,7 +39,7 @@ export const useServicosState = (
       const processedSubatividades: Record<string, SubAtividade[]> = {};
       
       Object.entries(defaultValues.servicosSubatividades).forEach(([tipo, subatividades]) => {
-        if (subatividades && subatividades.length > 0) {
+        if (subatividades && Array.isArray(subatividades) && subatividades.length > 0) {
           // Ensure all subatividades have the correct states
           processedSubatividades[tipo] = subatividades.map(sub => ({
             ...sub,
@@ -95,6 +96,7 @@ export const useServicosState = (
       );
       
       if (result && isMounted) {
+        console.log(`✅ [useServicosState] Atualizando subatividades para ${tipo} após carregamento:`, result);
         setServicosSubatividades(prev => ({
           ...prev,
           [tipo]: result

@@ -84,14 +84,20 @@ export const ServicoTipoSelector = memo(({
     servicosTipos.forEach(tipo => {
       // MELHORIA: Verificar subatividades existentes com log detalhado
       const existingSubatividades = servicosSubatividades[tipo];
-      console.log(`[ServicoTipoSelector] Verificando subatividades para ${tipo}:`, 
-        existingSubatividades?.map(sub => ({ 
-          id: sub.id, 
-          nome: sub.nome, 
-          selecionada: sub.selecionada !== undefined ? sub.selecionada : true,
-          concluida: sub.concluida 
-        }))
-      );
+      
+      // Verificação detalhada de subatividades existentes
+      if (existingSubatividades) {
+        console.log(`[ServicoTipoSelector] Verificando subatividades para ${tipo}:`, 
+          existingSubatividades.map(sub => ({ 
+            id: sub.id, 
+            nome: sub.nome, 
+            selecionada: sub.selecionada !== undefined ? sub.selecionada : true,
+            concluida: sub.concluida 
+          }))
+        );
+      } else {
+        console.log(`[ServicoTipoSelector] Nenhuma subatividade encontrada para ${tipo}`);
+      }
       
       // If there are no subatividades for this service type but we have defaults, 
       // create basic subatividades from the defaults
@@ -162,14 +168,18 @@ export const ServicoTipoSelector = memo(({
               // Verificar se existem subatividades salvas para este serviço
               if (checked) {
                 const existingSubatividades = servicosSubatividades[tipo.value];
-                console.log(`[ServicoTipoSelector] Subatividades existentes para ${tipo.value}:`, 
-                  existingSubatividades?.map(sub => ({ 
-                    id: sub.id, 
-                    nome: sub.nome, 
-                    selecionada: sub.selecionada !== undefined ? sub.selecionada : true,
-                    concluida: sub.concluida 
-                  }))
-                );
+                if (existingSubatividades) {
+                  console.log(`[ServicoTipoSelector] Subatividades existentes para ${tipo.value}:`, 
+                    existingSubatividades.map(sub => ({ 
+                      id: sub.id, 
+                      nome: sub.nome, 
+                      selecionada: sub.selecionada !== undefined ? sub.selecionada : true,
+                      concluida: sub.concluida 
+                    }))
+                  );
+                } else {
+                  console.log(`[ServicoTipoSelector] Nenhuma subatividade encontrada para ${tipo.value}`);
+                }
               }
 
               return (
