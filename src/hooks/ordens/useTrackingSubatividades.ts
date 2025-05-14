@@ -1,36 +1,22 @@
 
-import { SubAtividade } from "@/types/ordens";
-import { useState, useCallback } from "react";
+import { useState, useEffect } from 'react';
+import { SubAtividade } from '@/types/ordens';
 
+/**
+ * Hook para rastrear e fazer debug do estado das subatividades
+ */
 export const useTrackingSubatividades = () => {
-  const [subatividadesLog, setSubatividadesLog] = useState<Record<string, any[]>>({});
-  
-  const logSubatividadesState = useCallback((
-    context: string,
-    tipoServico: string,
-    subatividades?: SubAtividade[]
-  ) => {
-    if (!subatividades) {
-      console.log(`[${context}] ${tipoServico}: Nenhuma subatividade`);
-      return;
-    }
+  // Função para fazer log do estado das subatividades
+  const logSubatividadesState = (servicoTipo: string, subatividades: SubAtividade[]) => {
+    console.log(`[useTrackingSubatividades] Estado das subatividades para ${servicoTipo}:`, 
+      subatividades.map(sub => ({
+        id: sub.id,
+        nome: sub.nome,
+        selecionada: sub.selecionada,
+        concluida: sub.concluida
+      }))
+    );
+  };
 
-    const stats = {
-      total: subatividades.length,
-      selecionadas: subatividades.filter(s => s.selecionada === true).length,
-      naoSelecionadas: subatividades.filter(s => s.selecionada === false).length,
-      indefinidas: subatividades.filter(s => s.selecionada === undefined).length,
-      concluidas: subatividades.filter(s => s.concluida).length
-    };
-
-    console.log(`[${context}] ${tipoServico} tem ${subatividades.length} subatividades:`);
-    console.log(`[${context}] Estatísticas para ${tipoServico}:`, stats);
-    
-    setSubatividadesLog(prev => ({
-      ...prev,
-      [tipoServico]: [...(prev[tipoServico] || []), { context, stats, timestamp: new Date() }]
-    }));
-  }, []);
-  
-  return { logSubatividadesState, subatividadesLog };
+  return { logSubatividadesState };
 };

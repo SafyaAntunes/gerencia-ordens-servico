@@ -1,151 +1,61 @@
 
-import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Servico, EtapaOS } from "@/types/ordens";
-import { cn } from "@/lib/utils";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import React, { useState, useEffect } from 'react';
+import { useServicoTracker } from './hooks/useServicoTracker';
+import { ServicoHeader } from './ServicoHeader';
+import { ServicoDetails } from './ServicoDetails';
+import { ServicoControls } from './ServicoControls';
+import { OrdemServico, Servico } from '@/types/ordens';
 
-import { useServicoTracker } from "./hooks/useServicoTracker";
-import ServicoHeader from "./ServicoHeader";
-import ServicoDetails from "./ServicoDetails";
-import ServicoControls from "./ServicoControls";
-import TimerPausas from "../etapa/TimerPausas";
-import { EtapaResponsavelManager } from "../etapa/EtapaResponsavelManager";
-
-interface ServicoTrackerProps {
+export interface ServicoTrackerProps {
+  ordem: OrdemServico;
   servico: Servico;
-  ordemId?: string;
-  funcionarioId?: string;
-  funcionarioNome?: string;
-  onSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
-  onServicoStatusChange: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
-  onSubatividadeSelecionadaToggle?: (subatividadeId: string, checked: boolean) => void;
-  className?: string;
-  etapa?: EtapaOS | string;
+  onUpdate?: (ordem: OrdemServico) => void;
 }
 
-export default function ServicoTracker({
-  servico,
-  ordemId = "",
-  funcionarioId = "",
-  funcionarioNome,
-  onSubatividadeToggle,
-  onServicoStatusChange,
-  className,
-  etapa,
-}: ServicoTrackerProps) {
+function ServicoTracker({ ordem, servico, onUpdate }: ServicoTrackerProps) {
   const {
-    isOpen,
-    setIsOpen,
-    temPermissao,
-    isRunning,
-    isPaused,
-    displayTime,
+    isTimerRunning,
+    timerDisplay,
     servicoStatus,
-    progressPercentage,
-    completedSubatividades,
-    totalSubatividades,
-    tempoTotalEstimado,
-    subatividadesFiltradas,
-    handleLoadFuncionarios,
-    handleSubatividadeToggle,
-    handleStartClick,
-    handlePause,
-    handleResume,
-    handleFinish,
-    handleMarcarConcluido,
-    pausas,
-  } = useServicoTracker({
-    servico,
-    ordemId,
-    funcionarioId,
-    funcionarioNome,
-    etapa: etapa as EtapaOS,
-    onServicoStatusChange,
-    onSubatividadeToggle
-  });
-
-  // Load funcionarios if needed (when the component mounts)
-  useEffect(() => {
-    handleLoadFuncionarios();
-  }, [handleLoadFuncionarios]);
-
-  // Verifica se todas subatividades selecionadas estão concluídas
-  const todasSubatividadesConcluidas = subatividadesFiltradas.length === 0 || 
-    (subatividadesFiltradas.length > 0 && subatividadesFiltradas.every(sub => sub.concluida));
-
-  // Convert pausas for TimerPausas component format if needed
-  const formattedPausas = pausas.map(p => ({
-    inicio: p.iniciado,
-    fim: p.finalizado,
-    motivo: p.motivo
-  }));
+    canStart,
+    canPause,
+    canResume,
+    canComplete,
+    startServico,
+    pauseServico,
+    resumeServico,
+    completeServico,
+    atribuirFuncionario,
+    isDialogOpen,
+    setIsDialogOpen
+  } = useServicoTracker(ordem, servico, onUpdate);
 
   return (
-    <Card className={cn("w-full", className)}>
-      {/* Adicionar o gerenciador de responsável para manter o status do funcionário atualizado */}
-      {funcionarioId && etapa && (
-        <EtapaResponsavelManager
-          ordemId={ordemId}
-          etapa={etapa as EtapaOS}
-          servicoTipo={servico.tipo}
-          funcionarioId={funcionarioId}
-          funcionarioNome={funcionarioNome}
-          isEtapaConcluida={servico.concluido}
-        />
-      )}
+    <div className="border rounded-lg p-4 mb-4">
+      <ServicoHeader 
+        servico={servico} 
+        status={servicoStatus}
+      />
       
-      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CollapsibleTrigger asChild>
-          <CardContent className="pt-6">
-            <ServicoHeader 
-              tipo={servico.tipo}
-              displayTime={displayTime}
-              servicoStatus={servicoStatus}
-              progressPercentage={Number(progressPercentage)}
-              completedSubatividades={completedSubatividades}
-              totalSubatividades={totalSubatividades}
-              tempoTotalEstimado={tempoTotalEstimado}
-              funcionarioNome={servico.concluido ? servico.funcionarioNome : undefined}
-              concluido={servico.concluido}
-              temPermissao={temPermissao}
-              isOpen={isOpen}
-              onToggleOpen={() => setIsOpen(!isOpen)}
-            />
-          </CardContent>
-        </CollapsibleTrigger>
-
-        <CollapsibleContent>
-          <CardContent className="pt-0">
-            <ServicoDetails 
-              descricao={servico.descricao}
-              subatividades={subatividadesFiltradas}
-              temPermissao={temPermissao}
-              onSubatividadeToggle={handleSubatividadeToggle}
-            />
-            
-            {/* Mostrar pausas mesmo quando o serviço está concluído */}
-            {pausas && pausas.length > 0 && (
-              <div className="py-2">
-                <TimerPausas pausas={formattedPausas} />
-              </div>
-            )}
-            
-            <ServicoControls 
-              isRunning={isRunning}
-              isPaused={isPaused}
-              temPermissao={temPermissao}
-              concluido={servico.concluido}
-              todasSubatividadesConcluidas={todasSubatividadesConcluidas}
-              onStartClick={handleStartClick}
-              onPauseClick={handlePause}
-              onResumeClick={handleResume}
-              onFinishClick={handleFinish}
-              onMarcarConcluido={handleMarcarConcluido}
-            />
-          </CardContent>
-        </CollapsibleContent>
-      </Collapsible>
-    </Card>
+      <ServicoDetails 
+        servico={servico} 
+        timerDisplay={timerDisplay}
+        onAtribuirFuncionario={() => setIsDialogOpen(true)}
+      />
+      
+      <ServicoControls 
+        isTimerRunning={isTimerRunning}
+        canStart={canStart}
+        canPause={canPause}
+        canResume={canResume}
+        canComplete={canComplete}
+        onStart={startServico}
+        onPause={pauseServico}
+        onResume={resumeServico}
+        onComplete={completeServico}
+      />
+    </div>
   );
 }
+
+export default ServicoTracker;

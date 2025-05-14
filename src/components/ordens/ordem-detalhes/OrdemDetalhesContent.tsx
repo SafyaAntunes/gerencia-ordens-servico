@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Cliente } from "@/types/clientes";
-import { OrdemServico, StatusOS } from "@/types/ordens";
+import { OrdemServico, StatusOS, SubAtividade } from "@/types/ordens";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
@@ -10,12 +10,13 @@ import { loadOrderFormData } from "@/services/ordemService";
 import { getAllSubatividades } from "@/services/subatividadeService";
 import { OrdemDetailsTabs } from "./OrdemDetailsTabs";
 import { OrdemFormWrapper } from "./OrdemFormWrapper";
-import { BackButton } from "./BackButton";
+import { BackButton } from "../detalhes/BackButton";
 import { useOrdemDetalhes } from "@/hooks/useOrdemDetalhes";
 import { DeleteOrdemDialog } from "@/components/ordens/detalhes/DeleteOrdemDialog";
 import { NotFoundOrdem } from "@/components/ordens/detalhes/NotFoundOrdem";
 import { OrdemHeaderCustom } from "@/components/ordens/detalhes/OrdemHeaderCustom";
 import { useTrackingSubatividades } from "@/hooks/ordens/useTrackingSubatividades";
+import { useServicoSubatividades } from "@/hooks/useServicoSubatividades";
 
 interface OrdemDetalhesContentProps {
   id?: string;
@@ -24,6 +25,9 @@ interface OrdemDetalhesContentProps {
 
 export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps) {
   const navigate = useNavigate();
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [isLoadingClientes, setIsLoadingClientes] = useState(false);
+  
   const {
     ordem,
     isLoading,
@@ -42,6 +46,60 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
   } = useOrdemDetalhes(id);
 
   const { logSubatividadesState } = useTrackingSubatividades();
+  
+  // Carrega dados de clientes e outros para o formulário de edição
+  useEffect(() => {
+    const fetchFormData = async () => {
+      if (isEditando) {
+        setIsLoadingClientes(true);
+        try {
+          const data = await loadOrderFormData();
+          setClientes(data.clientes);
+        } catch (error) {
+          console.error("Erro ao carregar dados do formulário:", error);
+          toast.error("Erro ao carregar dados necessários para edição");
+        } finally {
+          setIsLoadingClientes(false);
+        }
+      }
+    };
+    
+    fetchFormData();
+  }, [isEditando]);
+
+  // Função para preparar subatividades para edição
+  const prepareSubatividadesForEdit = () => {
+    if (!ordem || !ordem.servicos) return {};
+    
+    // Criação de um objeto para mapear tipos de serviço para suas subatividades
+    const result: Record<string, SubAtividade[]> = {};
+    
+    // Para cada serviço na ordem, adicione suas subatividades ao objeto resultado
+    ordem.servicos.forEach(servico => {
+      if (servico.subatividades && Array.isArray(servico.subatividades)) {
+        // Garantir que todas as subatividades tenham a propriedade selecionada definida
+        result[servico.tipo] = servico.subatividades.map(sub => ({
+          ...sub,
+          selecionada: true // Para edição, todas as subatividades existentes são consideradas selecionadas
+        }));
+        
+        console.log(`[OrdemDetalhesContent] Preparadas ${result[servico.tipo].length} subatividades para o serviço ${servico.tipo}`);
+      } else {
+        result[servico.tipo] = [];
+        console.log(`[OrdemDetalhesContent] Nenhuma subatividade encontrada para o serviço ${servico.tipo}`);
+      }
+    });
+    
+    return result;
+  };
+
+  // Função para alternar o estado de uma subatividade
+  const handleSubatividadeToggle = (servicoTipo: string, subId: string, checked: boolean) => {
+    console.log(`[OrdemDetalhesContent] Alternando subatividade: ${subId} para ${checked ? "selecionada" : "não selecionada"}`);
+    
+    // Esta função seria implementada se precisássemos manipular o estado das subatividades durante a edição,
+    // mas como estamos usando o OrdemFormWrapper que já gerencia isso internamente, não precisamos implementar aqui
+  };
 
   useEffect(() => {
     if (id && !isLoading && !ordem) {
@@ -62,7 +120,14 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
   }
 
   const handleVoltar = () => {
-    navigate(-1);
+    if (isEditando) {
+      // Se estiver editando, pergunte antes de cancelar
+      if (confirm("Deseja cancelar a edição? As alterações não salvas serão perdidas.")) {
+        setIsEditando(false);
+      }
+    } else {
+      navigate(-1);
+    }
   };
 
   return (
@@ -76,15 +141,30 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
         ordem={ordem}
       />
       
-      <div className="mt-4">
-        <OrdemDetailsTabs
-          ordem={ordem}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          onStatusChange={handleStatusChange}
-          onOrdemUpdate={handleOrdemUpdate}
-        />
-      </div>
+      {isEditando ? (
+        <div className="mt-6">
+          <OrdemFormWrapper
+            ordem={ordem}
+            onSubmit={handleSubmit}
+            isSubmitting={isSubmitting}
+            onCancel={() => setIsEditando(false)}
+            onSubatividadeToggle={handleSubatividadeToggle}
+            prepareSubatividadesForEdit={prepareSubatividadesForEdit}
+            clientes={clientes}
+            isLoadingClientes={isLoadingClientes}
+          />
+        </div>
+      ) : (
+        <div className="mt-4">
+          <OrdemDetailsTabs
+            ordem={ordem}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            onStatusChange={handleStatusChange}
+            onOrdemUpdate={handleOrdemUpdate}
+          />
+        </div>
+      )}
       
       <div className="mt-6 flex justify-between">
         <BackButton onClick={handleVoltar} />
@@ -101,7 +181,11 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
             </Button>
             <Button
               type="button"
-              onClick={handleSubmit}
+              onClick={() => {
+                document.querySelector('form')?.dispatchEvent(
+                  new Event('submit', { bubbles: true, cancelable: true })
+                );
+              }}
               disabled={isSubmitting}
             >
               Salvar
