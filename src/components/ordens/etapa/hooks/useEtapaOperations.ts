@@ -12,9 +12,14 @@ export function useEtapaOperations({ ordem, onUpdate }: UseEtapaOperationsProps)
   const getServicosEtapa = (etapa: EtapaOS, tipoServico?: TipoServico): Servico[] => {
     const result: Servico[] = [];
     
+    // Log para debugging da função
+    console.log(`getServicosEtapa - Buscando serviços para etapa: ${etapa}, tipoServico: ${tipoServico || 'todos'}`);
+    console.log(`getServicosEtapa - Total de serviços na ordem: ${ordem.servicos.length}`);
+    
     ordem.servicos.forEach(servico => {
       let servicoEtapa: EtapaOS | undefined;
       
+      // Mapeamento de tipo de serviço para etapa
       if (servico.tipo === 'lavagem') {
         servicoEtapa = 'lavagem';
       } else if (servico.tipo === 'inspecao_inicial') {
@@ -29,18 +34,33 @@ export function useEtapaOperations({ ordem, onUpdate }: UseEtapaOperationsProps)
         servicoEtapa = 'dinamometro';
       }
       
-      if (servicoEtapa === etapa) {
-        // Filter by tipoServico if specified (for inspection stages)
-        if ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final') && tipoServico) {
+      // Lógica específica para serviços de inspeção
+      if (etapa === 'inspecao_inicial' || etapa === 'inspecao_final') {
+        // Caso 1: Se estamos procurando um serviço específico (ex: bloco) para inspeção
+        if (tipoServico && tipoServico !== etapa) {
+          // Adicionar apenas se o tipo corresponder ao solicitado
           if (servico.tipo === tipoServico) {
+            console.log(`getServicosEtapa - Adicionando serviço ${servico.tipo} para inspeção específica`);
             result.push(servico);
           }
-        } else {
-          result.push(servico);
         }
+        // Caso 2: Se estamos procurando o próprio serviço de inspeção
+        else if (tipoServico === etapa || !tipoServico) {
+          // Adicionar o serviço de inspeção propriamente dito
+          if (servico.tipo === etapa) {
+            console.log(`getServicosEtapa - Adicionando serviço de inspeção ${servico.tipo}`);
+            result.push(servico);
+          }
+        }
+      }
+      // Lógica padrão para outras etapas (não inspeção)
+      else if (servicoEtapa === etapa) {
+        console.log(`getServicosEtapa - Adicionando serviço ${servico.tipo} para etapa ${etapa}`);
+        result.push(servico);
       }
     });
     
+    console.log(`getServicosEtapa - Total de serviços encontrados para ${etapa}: ${result.length}`);
     return result;
   };
   
@@ -128,6 +148,8 @@ export function useEtapaOperations({ ordem, onUpdate }: UseEtapaOperationsProps)
   
   // Handle subatividade selecionada toggle
   const handleSubatividadeSelecionadaToggle = (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => {
+    console.log(`handleSubatividadeSelecionadaToggle - Alterando seleção de subatividade: ${subatividadeId}, valor: ${checked}`);
+    
     const servicosAtualizados = ordem.servicos.map(servico => {
       if (servico.tipo === servicoTipo && servico.subatividades) {
         const subatividadesAtualizadas = servico.subatividades.map(sub => {

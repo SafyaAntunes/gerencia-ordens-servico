@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -55,7 +54,7 @@ export const useSubatividadeOperations = (ordem?: OrdemServico, onOrdemUpdate?: 
             subatividades: subatividadesPadrao.map((nome, index) => ({
               id: `default-${servicoTipo}-${index}`,
               nome,
-              selecionada: false,
+              selecionada: true, // Marcar como selecionada por padrão
               concluida: false,
               tempoEstimado: 1,
               servicoTipo
@@ -64,15 +63,38 @@ export const useSubatividadeOperations = (ordem?: OrdemServico, onOrdemUpdate?: 
           
           console.log(`Adicionados presets padrão para ${servicoTipo}:`, 
                      presetsData.find(p => p.tipo === servicoTipo)?.subatividades);
+        } else {
+          // Garantir que as subatividades dos presets existentes estejam marcadas como selecionadas
+          presetsData = presetsData.map(preset => {
+            if (preset.tipo === servicoTipo && preset.subatividades) {
+              return {
+                ...preset,
+                subatividades: preset.subatividades.map(sub => ({
+                  ...sub, 
+                  selecionada: true // Garantir que todas estão marcadas como selecionadas
+                }))
+              };
+            }
+            return preset;
+          });
         }
       }
       
       // Encontrar o serviço a ser atualizado
-      const servicoExistente = ordemData.servicos.find(s => s.tipo === servicoTipo);
+      let servicoExistente = ordemData.servicos.find(s => s.tipo === servicoTipo);
       
+      // Se o serviço não existir, vamos criá-lo (especialmente útil para serviços de inspeção)
       if (!servicoExistente) {
-        console.error(`Serviço ${servicoTipo} não encontrado na ordem`, ordemData.servicos);
-        throw new Error(`Serviço ${servicoTipo} não encontrado na ordem`);
+        console.log(`Serviço ${servicoTipo} não encontrado na ordem, criando um novo serviço`);
+        servicoExistente = {
+          tipo: servicoTipo,
+          descricao: `Serviço de ${servicoTipo.replace('_', ' ')}`,
+          concluido: false,
+          subatividades: []
+        };
+        
+        // Adicionar o novo serviço à ordem
+        ordemData.servicos.push(servicoExistente);
       }
       
       // Inicializar array de subatividades se não existir
@@ -168,6 +190,11 @@ export const useSubatividadeOperations = (ordem?: OrdemServico, onOrdemUpdate?: 
       ];
       
       console.log("Subatividades finais:", finalSubatividades.length);
+      console.log("Detalhes das subatividades finais:", finalSubatividades.map(s => ({
+        id: s.id.substr(0, 8),
+        nome: s.nome,
+        selecionada: s.selecionada
+      })));
       
       // Criar serviço atualizado
       const servicoAtualizado = {
@@ -175,10 +202,15 @@ export const useSubatividadeOperations = (ordem?: OrdemServico, onOrdemUpdate?: 
         subatividades: finalSubatividades
       };
       
+      // Encontrar o índice do serviço na ordem
+      // Se o serviço foi criado agora, ele já está no final do array
+      const servicoIndex = ordemData.servicos.findIndex(s => s.tipo === servicoTipo);
+      
       // Atualizar array de serviços
-      const servicosAtualizados = ordemData.servicos.map(s => 
-        s.tipo === servicoTipo ? servicoAtualizado : s
-      );
+      const servicosAtualizados = [...ordemData.servicos];
+      if (servicoIndex !== -1) {
+        servicosAtualizados[servicoIndex] = servicoAtualizado;
+      }
       
       // Criar objeto de atualização
       const updateData = {
@@ -237,11 +269,20 @@ export const useSubatividadeOperations = (ordem?: OrdemServico, onOrdemUpdate?: 
       const ordemData = ordemSnapshot.data() as OrdemServico;
       
       // Encontrar o serviço a ser atualizado
-      const servicoExistente = ordemData.servicos.find(s => s.tipo === servicoTipo);
+      let servicoExistente = ordemData.servicos.find(s => s.tipo === servicoTipo);
       
+      // Se o serviço não existir, vamos criá-lo (especialmente útil para serviços de inspeção)
       if (!servicoExistente) {
-        console.error(`Serviço ${servicoTipo} não encontrado na ordem`, ordemData.servicos);
-        throw new Error(`Serviço ${servicoTipo} não encontrado na ordem`);
+        console.log(`Serviço ${servicoTipo} não encontrado na ordem, criando um novo serviço`);
+        servicoExistente = {
+          tipo: servicoTipo,
+          descricao: `Serviço de ${servicoTipo.replace('_', ' ')}`,
+          concluido: false,
+          subatividades: []
+        };
+        
+        // Adicionar o novo serviço à ordem
+        ordemData.servicos.push(servicoExistente);
       }
       
       // Inicializar array de subatividades se não existir
@@ -271,10 +312,17 @@ export const useSubatividadeOperations = (ordem?: OrdemServico, onOrdemUpdate?: 
         subatividades: subatividadesAtualizadas
       };
       
+      // Encontrar o índice do serviço na ordem
+      // Se o serviço foi criado agora, ele já está no final do array
+      const servicoIndex = ordemData.servicos.findIndex(s => s.tipo === servicoTipo);
+      
       // Atualizar array de serviços
-      const servicosAtualizados = ordemData.servicos.map(s => 
-        s.tipo === servicoTipo ? servicoAtualizado : s
-      );
+      const servicosAtualizados = [...ordemData.servicos];
+      if (servicoIndex !== -1) {
+        servicosAtualizados[servicoIndex] = servicoAtualizado;
+      } else {
+        servicosAtualizados.push(servicoAtualizado);
+      }
       
       // Criar objeto de atualização
       const updateData = {
@@ -335,9 +383,31 @@ function getDefaultSubatividades(servicoTipo: TipoServico): string[] {
     case 'lavagem':
       return ["Preparação", "Lavagem química", "Lavagem externa", "Secagem"];
     case 'inspecao_inicial':
-      return ["Verificação de trincas", "Medição de componentes", "Verificação dimensional", "Análise de desgaste", "Inspeção visual"];
+      return [
+        "Verificação de trincas", 
+        "Medição de componentes", 
+        "Verificação dimensional", 
+        "Análise de desgaste", 
+        "Inspeção visual",
+        "Análise de folgas",
+        "Verificação de corrosão",
+        "Detecção de vazamentos",
+        "Avaliação de danos internos",
+        "Registro fotográfico"
+      ];
     case 'inspecao_final':
-      return ["Verificação visual", "Teste de qualidade", "Conformidade com especificações", "Checklist final", "Aprovação técnica"];
+      return [
+        "Verificação visual", 
+        "Teste de qualidade", 
+        "Conformidade com especificações", 
+        "Checklist final", 
+        "Aprovação técnica",
+        "Verificação de montagem",
+        "Teste de pressão",
+        "Verificação de torque",
+        "Relatório final",
+        "Aprovação para entrega"
+      ];
     default:
       return ["Preparação", "Execução", "Finalização"];
   }

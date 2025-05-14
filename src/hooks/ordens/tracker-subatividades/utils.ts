@@ -36,6 +36,7 @@ export const filtrarSubatividadesSelecionadas = (
   subatividades: SubAtividade[] | undefined
 ): SubAtividade[] => {
   if (!subatividades || subatividades.length === 0) {
+    console.log("filtrarSubatividadesSelecionadas - Nenhuma subatividade disponível");
     return [];
   }
   
@@ -44,12 +45,18 @@ export const filtrarSubatividadesSelecionadas = (
   
   // Se não houver nenhuma selecionada, retornar todas para exibição
   if (!temSubatividadesSelecionadas) {
-    console.log("Nenhuma subatividade selecionada, exibindo todas para seleção");
-    return subatividades;
+    console.log(`filtrarSubatividadesSelecionadas - Nenhuma subatividade selecionada, exibindo todas ${subatividades.length}`);
+    return [...subatividades]; // Retorna uma cópia do array para evitar mutações acidentais
   }
   
   // Caso contrário, filtrar apenas as selecionadas
   const selecionadas = subatividades.filter(sub => sub.selecionada);
-  console.log(`Filtrando subatividades: ${selecionadas.length} de ${subatividades.length} selecionadas`);
+  console.log(`filtrarSubatividadesSelecionadas - Filtrando subatividades: ${selecionadas.length} de ${subatividades.length} selecionadas`);
+  
+  // Log detalhado das subatividades filtradas para depuração
+  selecionadas.forEach(sub => {
+    console.log(`  - Subatividade selecionada: ${sub.id.substr(0, 8)} - ${sub.nome} (concluída: ${sub.concluida})`);
+  });
+  
   return selecionadas;
 };

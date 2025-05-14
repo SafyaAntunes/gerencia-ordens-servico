@@ -42,12 +42,20 @@ export default function InspecaoServicosSelector({
 
   const etapaNome = etapa === "inspecao_inicial" ? "Inspeção Inicial" : "Inspeção Final";
   
-  // Filtrar serviços que não são de inspeção ou lavagem
-  const servicosValidos = servicosTipo.filter(tipo => 
-    tipo !== "lavagem" && 
-    tipo !== "inspecao_inicial" && 
-    tipo !== "inspecao_final"
-  );
+  // MODIFICADO: Filtrar serviços para inspeção
+  // Se a etapa for inspeção inicial ou final, incluir os serviços principais mais o próprio serviço de inspeção
+  const servicosValidos = etapa === "inspecao_inicial" || etapa === "inspecao_final"
+    ? servicosTipo.filter(tipo => 
+        // Incluir o próprio tipo de inspeção na lista de serviços válidos
+        tipo === etapa || 
+        // E também incluir os serviços regulares (excluindo lavagem e outros tipos de inspeção)
+        (tipo !== "lavagem" && 
+         tipo !== "inspecao_inicial" && 
+         tipo !== "inspecao_final"))
+    : servicosTipo.filter(tipo => 
+        tipo !== "lavagem" && 
+        tipo !== "inspecao_inicial" && 
+        tipo !== "inspecao_final");
   
   console.log(`InspecaoServicosSelector - Serviços disponíveis para ${etapa}:`, servicosValidos);
   
