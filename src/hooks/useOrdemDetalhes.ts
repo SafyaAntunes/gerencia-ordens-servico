@@ -6,6 +6,7 @@ import { useOrdemStatus } from "./ordem-detalhes/useOrdemStatus";
 import { useOrdemUpdate } from "./ordem-detalhes/useOrdemUpdate";
 import { useOrdemDelete } from "./ordem-detalhes/useOrdemDelete";
 import { UseOrdemDetalhesResult } from "./ordem-detalhes/types";
+import { getDocumentWithCache, clearCache } from "@/services/cacheService";
 
 export const useOrdemDetalhes = (id: string | undefined): UseOrdemDetalhesResult & { canEditThisOrder: boolean } => {
   const [activeTab, setActiveTab] = useState<string>("detalhes");
@@ -43,6 +44,16 @@ export const useOrdemDetalhes = (id: string | undefined): UseOrdemDetalhesResult
   
   // Check if the current user can edit this order
   const canEditThisOrder = ordem ? canEditOrder(ordem.id) : false;
+  
+  // Limpar cache ao desmontar o componente
+  useEffect(() => {
+    return () => {
+      // Limpar somente o cache desta ordem específica ao desmontar
+      if (id) {
+        clearCache(`ordens_servico/${id}`, 'document');
+      }
+    };
+  }, [id]);
 
   return {
     ordem,
