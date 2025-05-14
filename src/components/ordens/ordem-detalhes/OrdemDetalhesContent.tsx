@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Cliente } from "@/types/clientes";
@@ -113,22 +114,23 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
         // Log detalhado para cada serviço e suas subatividades
         console.log(`[OrdemDetalhes] Serviço ${servico.tipo} tem ${servico.subatividades.length} subatividades.`);
         
-        // Importante: Preservar explicitamente o estado 'selecionada' de cada subatividade
+        // MELHORIA: Garantir que todas as subatividades tenham o estado 'selecionada' explicitamente definido
+        // Assumimos que se uma subatividade está na ordem, ela foi selecionada (true por padrão)
         servicosSubatividades[servico.tipo] = servico.subatividades.map(sub => {
           // Log individual para entender o estado de cada subatividade
-          console.log(`[OrdemDetalhes] Subatividade ${sub.nome}: selecionada=${sub.selecionada !== undefined ? sub.selecionada : true}`);
+          console.log(`[OrdemDetalhes] Subatividade ${sub.nome}: selecionada=${sub.selecionada !== undefined ? sub.selecionada : true}, concluida=${sub.concluida}`);
           
           return {
             ...sub,
-            // GARANTE que o valor selecionada seja explicitamente definido
-            // Se selecionada não estiver definido ou for undefined, define como true
-            selecionada: sub.selecionada !== undefined ? sub.selecionada : true
+            // IMPORTANTE: Garantir que todas as subatividades estejam marcadas como selecionadas
+            // Se a subatividade está na ordem, ela foi selecionada anteriormente
+            selecionada: true
           };
         });
         
         // Log das subatividades preparadas para este serviço
         console.log(`[OrdemDetalhes] Subatividades preparadas para ${servico.tipo}:`, 
-          servicosSubatividades[servico.tipo].map(s => ({id: s.id, nome: s.nome, selecionada: s.selecionada}))
+          servicosSubatividades[servico.tipo].map(s => ({id: s.id, nome: s.nome, selecionada: s.selecionada, concluida: s.concluida}))
         );
       }
     });
@@ -137,7 +139,8 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
       Object.entries(servicosSubatividades).map(([tipo, subs]) => ({
         tipo, 
         total: subs.length,
-        selecionadas: subs.filter(s => s.selecionada).length
+        selecionadas: subs.filter(s => s.selecionada).length,
+        concluidas: subs.filter(s => s.concluida).length
       }))
     );
     return servicosSubatividades;

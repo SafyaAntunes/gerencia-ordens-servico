@@ -29,13 +29,24 @@ export default function ServicoAtividadesConfig({
     // Log de debug para visualizar o estado das subatividades recebidas
     console.log(`[ServicoAtividadesConfig] Recebendo subatividades para ${servicoTipo}:`, subatividades);
     console.log(`[ServicoAtividadesConfig] Estado de seleção das subatividades:`, 
-      subatividades?.map(sub => ({ id: sub.id, nome: sub.nome, selecionada: sub.selecionada })));
+      subatividades?.map(sub => ({ 
+        id: sub.id, 
+        nome: sub.nome, 
+        selecionada: sub.selecionada !== undefined ? sub.selecionada : true,
+        concluida: sub.concluida 
+      })));
     
-    setLocalSubatividades(subatividades || []);
+    // MELHORIA: Garantir que o estado 'selecionada' seja preservado ou definido como verdadeiro por padrão
+    const processedSubs = (subatividades || []).map(sub => ({
+      ...sub,
+      selecionada: sub.selecionada !== undefined ? sub.selecionada : true
+    }));
+    
+    setLocalSubatividades(processedSubs);
     
     // Inicializar tempos estimados
     const tempos: Record<string, number> = {};
-    subatividades?.forEach(sub => {
+    processedSubs.forEach(sub => {
       if (sub.tempoEstimado) {
         tempos[sub.id] = sub.tempoEstimado;
       }

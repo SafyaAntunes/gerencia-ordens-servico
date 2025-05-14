@@ -30,32 +30,41 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
       subatividades.map(sub => ({
         id: sub.id,
         nome: sub.nome,
-        selecionada: sub.selecionada
+        selecionada: sub.selecionada,
+        concluida: sub.concluida
       }))
     );
   }, []);
   
-  // Priorizar subatividades fornecidas via props (da edição)
+  // MELHORIA: Prioritizar e preservar o estado 'selecionada' das subatividades recebidas via props
   useEffect(() => {
     if (subatividades && subatividades.length > 0) {
       console.log(`[ServicoSubatividades] Usando subatividades das props para ${tipoServico}:`, 
-        subatividades.map(s => ({id: s.id, nome: s.nome, selecionada: s.selecionada}))
+        subatividades.map(s => ({
+          id: s.id, 
+          nome: s.nome, 
+          selecionada: s.selecionada !== undefined ? s.selecionada : true,
+          concluida: s.concluida
+        }))
       );
       
-      // Garantir que estados importantes como 'selecionada' estejam preservados exatamente como vieram
-      // Log para depuração - verificar o estado 'selecionada' antes de processamento
-      console.log(`[ServicoSubatividades] Estado 'selecionada' das subatividades recebidas:`, 
-          subatividades.map(sub => ({ id: sub.id, nome: sub.nome, selecionada: sub.selecionada })));
-      
+      // IMPORTANTE: Garantir que todas as subatividades tenham o estado 'selecionada' definido corretamente
       const processedSubs = subatividades.map(sub => ({
         ...sub,
-        // IMPORTANTE: Preservar o valor de selecionada exatamente como veio das props
-        selecionada: sub.selecionada
+        // Todas as subatividades que vêm do formulário de edição devem ser consideradas selecionadas
+        // a menos que explicitamente marcadas como não selecionadas
+        selecionada: sub.selecionada !== undefined ? sub.selecionada : true
       }));
       
       // Log para depuração - verificar o estado 'selecionada' após processamento
       console.log(`[ServicoSubatividades] Estado 'selecionada' após processamento:`, 
-          processedSubs.map(sub => ({ id: sub.id, nome: sub.nome, selecionada: sub.selecionada })));
+        processedSubs.map(sub => ({ 
+          id: sub.id, 
+          nome: sub.nome, 
+          selecionada: sub.selecionada,
+          concluida: sub.concluida
+        }))
+      );
       
       setLocalSubatividades(processedSubs);
       setDataSource("props");
@@ -120,14 +129,31 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
   useEffect(() => {
     if (subatividades && subatividades.length > 0) {
       console.log(`[ServicoSubatividades] Atualizando subatividades para ${tipoServico} a partir das props:`, 
-        subatividades.map(sub => ({ id: sub.id, nome: sub.nome, selecionada: sub.selecionada })));
-      setLocalSubatividades(subatividades);
+        subatividades.map(sub => ({ 
+          id: sub.id, 
+          nome: sub.nome, 
+          selecionada: sub.selecionada !== undefined ? sub.selecionada : true,
+          concluida: sub.concluida 
+        })));
+      
+      // MELHORIA: Garantir que o estado 'selecionada' seja preservado ou definido como verdadeiro por padrão
+      const updatedSubs = subatividades.map(sub => ({
+        ...sub,
+        selecionada: sub.selecionada !== undefined ? sub.selecionada : true
+      }));
+      
+      setLocalSubatividades(updatedSubs);
     }
   }, [subatividades, tipoServico]);
   
   const handleSubatividadesChange = (updatedSubatividades: SubAtividade[]) => {
     console.log(`[ServicoSubatividades] Alterações em subatividades para ${tipoServico}:`, 
-      updatedSubatividades.map(sub => ({ id: sub.id, nome: sub.nome, selecionada: sub.selecionada })));
+      updatedSubatividades.map(sub => ({ 
+        id: sub.id, 
+        nome: sub.nome, 
+        selecionada: sub.selecionada,
+        concluida: sub.concluida
+      })));
     setLocalSubatividades(updatedSubatividades);
     onChange(updatedSubatividades);
   };

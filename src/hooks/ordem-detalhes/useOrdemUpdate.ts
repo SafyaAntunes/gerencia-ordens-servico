@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { db } from "@/lib/firebase";
 import { doc, updateDoc, Timestamp, getDoc } from "firebase/firestore";
@@ -26,6 +27,9 @@ export const useOrdemUpdate = (
         return;
       }
       
+      console.log("[useOrdemUpdate] Valores recebidos do formulário:", values);
+      console.log("[useOrdemUpdate] Subatividades recebidas:", values.servicosSubatividades);
+      
       // Enhanced function to properly preserve existing subactivities and add new ones
       const preserveExistingSubactivities = (currentServicos = [], newServicosTipos = []) => {
         // Create a map of existing services for quick lookup
@@ -44,7 +48,12 @@ export const useOrdemUpdate = (
           // Get the updated subatividades from the form values
           const formSubatividades = values.servicosSubatividades?.[tipo] || [];
           console.log(`[useOrdemUpdate] Form subatividades for ${tipo}:`, 
-            formSubatividades.map(s => ({id: s.id, nome: s.nome, selecionada: s.selecionada}))
+            formSubatividades.map(s => ({
+              id: s.id, 
+              nome: s.nome, 
+              selecionada: s.selecionada !== undefined ? s.selecionada : true,
+              concluida: s.concluida
+            }))
           );
           
           // If this is a new service type (not in the existing order)
@@ -53,7 +62,7 @@ export const useOrdemUpdate = (
           // Process subatividades - preserve existing status for those that were already present
           // IMPORTANTE: Filtrar apenas subatividades marcadas como selecionadas no formulário
           let processedSubatividades = formSubatividades
-            .filter(formSub => formSub.selecionada) // Only include selected subatividades
+            .filter(formSub => formSub.selecionada === true) // Only include selected subatividades
             .map(formSub => {
               // Find if this subatividade existed before
               const existingSub = existingServico?.subatividades?.find(s => s.id === formSub.id);
@@ -61,7 +70,7 @@ export const useOrdemUpdate = (
               // If the subatividade existed, preserve its 'concluida' status
               // Otherwise, set it to false for new selections
               const preservedStatus = existingSub ? existingSub.concluida : false;
-              console.log(`[useOrdemUpdate] Subatividade ${formSub.nome}: preserving status = ${preservedStatus}, selecionada = ${formSub.selecionada}`);
+              console.log(`[useOrdemUpdate] Subatividade ${formSub.nome}: preserving status = ${preservedStatus}, selecionada = true`);
               
               return {
                 ...formSub,
@@ -71,14 +80,22 @@ export const useOrdemUpdate = (
             });
           
           console.log(`[useOrdemUpdate] Processed subatividades for ${tipo}:`, 
-            processedSubatividades.map(s => ({id: s.id, nome: s.nome, selecionada: s.selecionada}))
+            processedSubatividades.map(s => ({
+              id: s.id, 
+              nome: s.nome, 
+              selecionada: s.selecionada,
+              concluida: s.concluida
+            }))
           );
           
           // If this is not a new service type AND we don't have any processed subatividades,
           // but we have existing subatividades, preserve those
           if (!isNewServiceType && processedSubatividades.length === 0 && existingServico?.subatividades?.length > 0) {
             console.log(`[useOrdemUpdate] No processed subatividades, preserving existing for ${tipo}`);
-            processedSubatividades = [...existingServico.subatividades];
+            processedSubatividades = [...existingServico.subatividades].map(sub => ({
+              ...sub,
+              selecionada: true // Garantir que todas estão marcadas como selecionadas
+            }));
           }
           
           // Build the servico object

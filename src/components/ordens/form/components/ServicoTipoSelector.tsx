@@ -67,7 +67,12 @@ export const ServicoTipoSelector = memo(({
   const getMemoizedChangeHandler = useCallback((tipo: TipoServico) => {
     return (subatividades: SubAtividade[]) => {
       console.log(`[ServicoTipoSelector] Subatividades alteradas para ${tipo}:`, 
-        subatividades.map(sub => ({ id: sub.id, nome: sub.nome, selecionada: sub.selecionada })));
+        subatividades.map(sub => ({ 
+          id: sub.id, 
+          nome: sub.nome, 
+          selecionada: sub.selecionada !== undefined ? sub.selecionada : true,
+          concluida: sub.concluida 
+        })));
       onSubatividadesChange(tipo, subatividades);
     };
   }, [onSubatividadesChange]);
@@ -77,8 +82,16 @@ export const ServicoTipoSelector = memo(({
     const servicosTipos = form.getValues("servicosTipos") || [];
     
     servicosTipos.forEach(tipo => {
-      // Check if we already have subatividades for this service type
+      // MELHORIA: Verificar subatividades existentes com log detalhado
       const existingSubatividades = servicosSubatividades[tipo];
+      console.log(`[ServicoTipoSelector] Verificando subatividades para ${tipo}:`, 
+        existingSubatividades?.map(sub => ({ 
+          id: sub.id, 
+          nome: sub.nome, 
+          selecionada: sub.selecionada !== undefined ? sub.selecionada : true,
+          concluida: sub.concluida 
+        }))
+      );
       
       // If there are no subatividades for this service type but we have defaults, 
       // create basic subatividades from the defaults
@@ -89,15 +102,24 @@ export const ServicoTipoSelector = memo(({
         const defaultSubs = defaultSubatividades[tipo as TipoServico].map(nome => ({
           id: nome,
           nome,
-          selecionada: true, // Explicitamente definir como selecionada
+          selecionada: true,
           concluida: false,
         }));
         
         onSubatividadesChange(tipo as TipoServico, defaultSubs);
-      } else {
-        console.log(`[ServicoTipoSelector] Subatividades para ${tipo} já existem:`, 
-          existingSubatividades?.length || 0, 
-          existingSubatividades?.map(sub => ({ id: sub.id, nome: sub.nome, selecionada: sub.selecionada })));
+      } else if (existingSubatividades) {
+        // MELHORIA: Garantir que todas as subatividades existentes tenham o estado 'selecionada' definido
+        const processedSubs = existingSubatividades.map(sub => ({
+          ...sub,
+          selecionada: sub.selecionada !== undefined ? sub.selecionada : true
+        }));
+        
+        if (JSON.stringify(processedSubs) !== JSON.stringify(existingSubatividades)) {
+          console.log(`[ServicoTipoSelector] Atualizando subatividades para ${tipo} para garantir estado 'selecionada'`);
+          onSubatividadesChange(tipo as TipoServico, processedSubs);
+        } else {
+          console.log(`[ServicoTipoSelector] Subatividades para ${tipo} já têm estado 'selecionada' correto`);
+        }
       }
     });
   }, [form, servicosSubatividades, defaultSubatividades, onSubatividadesChange]);
@@ -141,7 +163,12 @@ export const ServicoTipoSelector = memo(({
               if (checked) {
                 const existingSubatividades = servicosSubatividades[tipo.value];
                 console.log(`[ServicoTipoSelector] Subatividades existentes para ${tipo.value}:`, 
-                  existingSubatividades?.map(sub => ({ id: sub.id, nome: sub.nome, selecionada: sub.selecionada }))
+                  existingSubatividades?.map(sub => ({ 
+                    id: sub.id, 
+                    nome: sub.nome, 
+                    selecionada: sub.selecionada !== undefined ? sub.selecionada : true,
+                    concluida: sub.concluida 
+                  }))
                 );
               }
 
