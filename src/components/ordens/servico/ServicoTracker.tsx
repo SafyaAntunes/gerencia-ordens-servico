@@ -11,7 +11,6 @@ import { useTrackerSubatividades } from '@/hooks/ordens/useTrackerSubatividades'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { SubAtividade } from '@/types/ordens';
 import { SelectSubatividadesDialog } from '../subatividades/SelectSubatividadesDialog';
 
 function ServicoTracker({ 
@@ -37,7 +36,6 @@ function ServicoTracker({
   // Hook para adicionar subatividades
   const { 
     isAddingSubatividades,
-    addDefaultSubatividades,
     addSelectedSubatividades,
     addCustomSubatividade
   } = useTrackerSubatividades({ 
