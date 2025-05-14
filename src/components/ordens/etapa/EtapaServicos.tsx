@@ -1,10 +1,10 @@
 
-import { Servico, TipoServico, EtapaOS } from "@/types/ordens";
+import { Servico, TipoServico, EtapaOS, OrdemServico } from "@/types/ordens";
 import { ServicoTracker } from "@/components/ordens/servico";
 
 interface EtapaServicosProps {
   servicos: Servico[];
-  ordemId: string;
+  ordem: OrdemServico;
   funcionarioId: string;
   funcionarioNome?: string;
   etapa: EtapaOS;
@@ -15,7 +15,7 @@ interface EtapaServicosProps {
 
 export default function EtapaServicos({
   servicos,
-  ordemId,
+  ordem,
   funcionarioId,
   funcionarioNome,
   etapa,
@@ -27,20 +27,16 @@ export default function EtapaServicos({
     return null;
   }
   
-  // Create a dummy ordem object to pass to ServicoTracker
-  const dummyOrdem = { id: ordemId } as any;
-  
   return (
     <div className="space-y-4">
       {servicos.map((servico, i) => (
         <ServicoTracker
           key={`${servico.tipo}-${i}`}
           servico={servico}
-          ordem={dummyOrdem}
-          ordemId={ordemId}  // Legacy prop
-          funcionarioId={funcionarioId}  // Legacy prop
-          funcionarioNome={funcionarioNome}  // Legacy prop
-          etapa={etapa}  // Legacy prop
+          ordem={ordem}
+          funcionarioId={funcionarioId}
+          funcionarioNome={funcionarioNome}
+          etapa={etapa}
           onSubatividadeToggle={
             onSubatividadeToggle ? 
               (subId, checked) => onSubatividadeToggle(servico.tipo, subId, checked) : 

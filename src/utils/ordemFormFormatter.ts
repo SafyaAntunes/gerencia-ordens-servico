@@ -1,6 +1,5 @@
-
 import { FormValues } from "@/components/ordens/form/types";
-import { OrdemServico, StatusOS } from "@/types/ordens";
+import { OrdemServico, StatusOS, TipoServico, Cliente, Servico } from "@/types/ordens";
 
 /**
  * Formata os dados da ordem para o formato do formulário
@@ -40,27 +39,33 @@ export const formatFormDataFromOrdem = (ordem: OrdemServico): FormValues => {
  * Formata os dados do formulário para o formato da ordem
  */
 export const formatOrdemFromFormData = (formData: FormValues, ordemExistente?: OrdemServico): OrdemServico => {
-  // Construir objeto de serviços
+  // Construir objeto de serviços preservando subatividades existentes
   const servicos = (formData.servicosTipos || []).map(tipo => {
-    const servicoExistente = ordemExistente?.servicos.find(s => s.tipo === tipo) || {};
+    const servicoExistente = ordemExistente?.servicos.find(s => s.tipo === tipo as TipoServico);
     
     return {
-      tipo,
+      tipo: tipo as TipoServico,
       descricao: formData.servicosDescricoes?.[tipo] || "",
-      concluido: servicoExistente.concluido || false,
-      // Não vamos mais incluir subatividades aqui, elas serão gerenciadas pelo tracker
-      // subatividades: formData.servicosSubatividades?.[tipo] || [],
-      funcionarioId: servicoExistente.funcionarioId,
-      funcionarioNome: servicoExistente.funcionarioNome,
-      dataConclusao: servicoExistente.dataConclusao
-    };
+      concluido: servicoExistente?.concluido || false,
+      subatividades: servicoExistente?.subatividades || [],
+      funcionarioId: servicoExistente?.funcionarioId || undefined,
+      funcionarioNome: servicoExistente?.funcionarioNome || undefined,
+      dataConclusao: servicoExistente?.dataConclusao
+    } as Servico;
   });
 
   // Construir objeto de ordem
+  const cliente: Cliente = ordemExistente?.cliente || {
+    id: formData.clienteId,
+    nome: "",
+    telefone: "",
+    email: ""
+  };
+
   const ordemAtualizada: OrdemServico = {
     id: formData.id || ordemExistente?.id || "",
     nome: formData.nome,
-    cliente: ordemExistente?.cliente || { id: formData.clienteId, nome: "" },
+    cliente,
     motorId: formData.motorId,
     dataAbertura: formData.dataAbertura,
     dataPrevistaEntrega: formData.dataPrevistaEntrega,
