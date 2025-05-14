@@ -1,66 +1,38 @@
 
-import { useState, useEffect } from 'react';
-import { SubAtividade, TipoServico } from '@/types/ordens';
-import { useTrackingSubatividades } from './useTrackingSubatividades';
+import { useState } from "react";
+import { TipoServico, SubAtividade } from "@/types/ordens";
 
-/**
- * Hook para rastrear a origem das subatividades em diferentes componentes
- * Isso ajudará a identificar onde estão ocorrendo problemas
- */
-export function useServicosSourceTracking() {
+export const useServicosSourceTracking = () => {
   const [loadingSources, setLoadingSources] = useState<Record<string, string>>({});
   const [subatividadesOrigins, setSubatividadesOrigins] = useState<Record<string, string>>({});
-  const { logSubatividadesState } = useTrackingSubatividades();
-  
-  // Track the source of subatividades being loaded
-  const trackSource = (
-    servicoTipo: TipoServico, 
-    source: string
-  ) => {
-    // Registrar fonte de carregamento
-    setLoadingSources(prev => ({
-      ...prev,
-      [servicoTipo]: source
-    }));
-    
-    console.log(`[useServicosSourceTracking] Origem das subatividades para ${servicoTipo}: ${source}`);
-  };
-  
-  // Track subatividades with their origin
+
   const trackSubatividadesOrigin = (
-    servicoTipo: TipoServico, 
-    subatividades: SubAtividade[] | undefined,
+    servicoTipo: TipoServico,
+    subatividades: SubAtividade[],
     source: string
   ) => {
-    if (!subatividades) return;
-    
-    // Registrar origem das subatividades
     setSubatividadesOrigins(prev => ({
       ...prev,
       [servicoTipo]: source
     }));
-    
-    // Registrar fonte de carregamento
+  };
+
+  // These methods are required by the existing code
+  const trackSource = (tipo: TipoServico, source: string) => {
     setLoadingSources(prev => ({
       ...prev,
-      [servicoTipo]: source
+      [tipo]: source
     }));
-    
-    // Debug do estado das subatividades nesta origem
-    logSubatividadesState(`Origin: ${source}`, servicoTipo, subatividades);
   };
-  
-  // Get a new object to track sources
+
   const getSourceTrackerObject = () => {
-    return {};
+    return { ...subatividadesOrigins };
   };
-  
-  // Log a summary of tracked sources
-  const logSourceSummary = (sourceTracker: Record<string, string>) => {
-    console.log("[useServicosSourceTracking] Resumo das origens:", sourceTracker);
-    console.log("[useServicosSourceTracking] Estado atual:", loadingSources);
+
+  const logSourceSummary = () => {
+    console.log("[useServicosSourceTracking] Source summary:", subatividadesOrigins);
   };
-  
+
   return {
     loadingSources,
     subatividadesOrigins,
@@ -69,4 +41,4 @@ export function useServicosSourceTracking() {
     getSourceTrackerObject,
     logSourceSummary
   };
-}
+};

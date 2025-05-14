@@ -6,7 +6,7 @@ import { SubAtividade } from "@/types/ordens";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import { loadOrderFormData } from "@/services/ordemService";
+import { loadOrderFormData, getSubatividadesByTipo } from "@/services/ordemService";
 import { OrdemDetailsTabs } from "./OrdemDetailsTabs";
 import { OrdemFormWrapper } from "./OrdemFormWrapper";
 import { BackButton } from "./BackButton";
@@ -16,6 +16,7 @@ import { LoadingOrdem } from "@/components/ordens/detalhes/LoadingOrdem";
 import { NotFoundOrdem } from "@/components/ordens/detalhes/NotFoundOrdem";
 import { OrdemHeaderCustom } from "@/components/ordens/detalhes/OrdemHeaderCustom";
 import { useTrackingSubatividades } from "@/hooks/ordens/useTrackingSubatividades";
+import { getAllSubatividades } from "@/services/subatividadeService";
 
 interface OrdemDetalhesContentProps {
   id?: string;
@@ -27,6 +28,7 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [isLoadingClientes, setIsLoadingClientes] = useState(false);
   const { logSubatividadesState } = useTrackingSubatividades();
+  const [allAvailableSubatividades, setAllAvailableSubatividades] = useState<Record<string, SubAtividade[]>>({});
   
   const {
     ordem,
@@ -61,7 +63,45 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
         }
       };
       
+      // Pré-carregar todas as subatividades disponíveis
+      const loadAllAvailableSubatividades = async () => {
+        try {
+          console.log("[OrdemDetalhes] Carregando todas as subatividades disponíveis");
+          
+          // Primeiro, obter todas as subatividades para ter uma visão completa
+          const allSubs = await getAllSubatividades();
+          console.log("[OrdemDetalhes] Total de subatividades encontradas:", allSubs.length);
+          
+          // Agrupar por tipo
+          const subsByType: Record<string, SubAtividade[]> = {};
+          allSubs.forEach(sub => {
+            if (!subsByType[sub.tipoServico]) {
+              subsByType[sub.tipoServico] = [];
+            }
+            
+            // Adicionar com selecionada=false por padrão
+            subsByType[sub.tipoServico].push({
+              ...sub,
+              selecionada: false,
+              concluida: false
+            });
+          });
+          
+          setAllAvailableSubatividades(subsByType);
+          console.log("[OrdemDetalhes] Subatividades agrupadas por tipo:", 
+            Object.entries(subsByType).map(([tipo, subs]) => ({ 
+              tipo, 
+              quantidade: subs.length 
+            }))
+          );
+        } catch (error) {
+          console.error("Erro ao carregar todas as subatividades:", error);
+          toast.error("Erro ao carregar subatividades");
+        }
+      };
+      
       fetchClientes();
+      loadAllAvailableSubatividades();
     }
   }, [isEditando]);
 
@@ -104,34 +144,85 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
     handleOrdemUpdate(ordemAtualizada);
   };
 
-  // CORREÇÃO: Preparar as subatividades para o formulário de edição, preservando CORRETAMENTE o estado 'selecionada'
+  // CORREÇÃO: Preparar as subatividades para o formulário de edição, carregando TODAS disponíveis
   const prepareSubatividadesForEdit = () => {
     if (!ordem || !ordem.servicos) return {};
     
     console.log("[OrdemDetalhes] Preparando subatividades para o modo de edição");
     
     const servicosSubatividades: Record<string, SubAtividade[]> = {};
+    
     ordem.servicos.forEach(servico => {
+      const tipoServico = servico.tipo;
+      // Obter todas as subatividades que já carregamos anteriormente deste tipo
+      const allAvailableForType = allAvailableSubatividades[tipoServico] || [];
+      
+      // Se temos subatividades existentes na ordem
       if (servico.subatividades && servico.subatividades.length > 0) {
-        // Log detalhado para cada serviço e suas subatividades
-        console.log(`[OrdemDetalhes] Serviço ${servico.tipo} tem ${servico.subatividades.length} subatividades.`);
+        console.log(`[OrdemDetalhes] Serviço ${tipoServico} tem ${servico.subatividades.length} subatividades.`);
         
-        // CORREÇÃO CRÍTICA: Todas as subatividades devem ter selecionada=true por padrão
-        // já que elas já estão associadas à ordem
-        servicosSubatividades[servico.tipo] = servico.subatividades.map(sub => {
-          // Log individual para entender o estado de cada subatividade
+        // Map para rastreamento rápido de IDs existentes
+        const existingSubIds = new Set();
+        
+        // Primeiro, adicionar todas as subatividades que já estão na ordem
+        const existingSubatividades = servico.subatividades.map(sub => {
           console.log(`[OrdemDetalhes] Subatividade ${sub.nome}: selecionada=${sub.selecionada}, concluida=${sub.concluida}`);
+          existingSubIds.add(sub.id);
           
           return {
             ...sub,
-            // IMPORTANTE: Definir EXPLICITAMENTE como true, já que estas subatividades
-            // já foram escolhidas para esta ordem
+            // Definir explicitamente como TRUE para subatividades já na ordem
             selecionada: true
           };
         });
         
+        // Segundo, adicionar todas as demais subatividades disponíveis (não selecionadas)
+        const additionalSubatividades = allAvailableForType
+          .filter(sub => !existingSubIds.has(sub.id))
+          .map(sub => ({
+            ...sub,
+            selecionada: false, // Novas subatividades vêm desmarcadas
+            concluida: false
+          }));
+        
+        // Combinar as existentes (selecionadas) com as adicionais (não selecionadas)
+        servicosSubatividades[tipoServico] = [
+          ...existingSubatividades,
+          ...additionalSubatividades
+        ];
+        
+        console.log(`[OrdemDetalhes] ${tipoServico} tem ${servicosSubatividades[tipoServico].length} subatividades:`);
+        console.log(`[OrdemDetalhes] Detalhes:`, 
+          servicosSubatividades[tipoServico].map(s => ({
+            id: s.id,
+            nome: s.nome,
+            selecionada: s.selecionada,
+            concluida: s.concluida
+          }))
+        );
+        
         // Usar nosso hook de debug para logar detalhadamente o estado após processamento
-        logSubatividadesState("OrdemDetalhes", servico.tipo, servicosSubatividades[servico.tipo]);
+        logSubatividadesState("OrdemDetalhes", tipoServico, servicosSubatividades[tipoServico]);
+        
+        // Estatísticas para depuração
+        const stats = {
+          total: servicosSubatividades[tipoServico].length,
+          selecionadas: servicosSubatividades[tipoServico].filter(s => s.selecionada === true).length,
+          naoSelecionadas: servicosSubatividades[tipoServico].filter(s => s.selecionada === false).length,
+          indefinidas: servicosSubatividades[tipoServico].filter(s => s.selecionada === undefined).length,
+          concluidas: servicosSubatividades[tipoServico].filter(s => s.concluida).length
+        };
+        console.log(`[OrdemDetalhes] Estatísticas para ${tipoServico}:`, stats);
+      }
+      // Caso não tenha subatividades, usar as disponíveis carregadas
+      else if (allAvailableForType.length > 0) {
+        servicosSubatividades[tipoServico] = allAvailableForType.map(sub => ({
+          ...sub,
+          selecionada: false, // Todas não selecionadas
+          concluida: false
+        }));
+        
+        console.log(`[OrdemDetalhes] Serviço ${tipoServico} não tinha subatividades, adicionando ${allAvailableForType.length} disponíveis como não selecionadas`);
       }
     });
     

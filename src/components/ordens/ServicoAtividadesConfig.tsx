@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { TipoServico, SubAtividade, TipoAtividade } from "@/types/ordens";
 import { Button } from "@/components/ui/button";
@@ -44,11 +43,10 @@ export default function ServicoAtividadesConfig({
     console.log(`[ServicoAtividadesConfig] Recebendo subatividades para ${servicoTipo}:`, subatividades);
     logSubatividadesState("ServicoAtividadesConfig-recebidas", servicoTipo, subatividades);
     
-    // CORREÇÃO CRÍTICA: Preservar o estado 'selecionada' de cada subatividade
-    // IMPORTANTE: Definir como default TRUE, não FALSE
+    // CORREÇÃO: Preservar o estado 'selecionada' de cada subatividade, sem forçar TRUE
     const processedSubs = (subatividades || []).map(sub => ({
       ...sub,
-      selecionada: sub.selecionada !== undefined ? sub.selecionada : true
+      selecionada: sub.selecionada !== undefined ? sub.selecionada : false // Alterado para false por padrão
     }));
     
     logSubatividadesState("ServicoAtividadesConfig-processadas", servicoTipo, processedSubs);

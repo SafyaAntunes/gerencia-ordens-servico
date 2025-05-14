@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { SubAtividade, TipoServico } from "@/types/ordens";
 import { getSubatividadesByTipo } from "@/services/subatividadeService";
@@ -42,6 +43,7 @@ export const useSubatividadesLoader = ({
     }
     
     // HIGHEST PRIORITY: If we have saved subatividades from edit mode, use those
+    // IMPORTANTE: Na edição, precisamos obter TODAS as subatividades disponíveis
     if (defaultValues?.servicosSubatividades?.[tipo]?.length > 0) {
       console.log(
         `✅ [loadSubatividades] PRIORIDADE MÁXIMA: Usando subatividades SALVAS da ordem para ${tipo}`,
@@ -49,16 +51,44 @@ export const useSubatividadesLoader = ({
       );
 
       // Ensure all subatividades have the correct states
+      // CORREÇÃO: Preservar o estado 'selecionada' existente, não forçar como true
       const savedSubatividades = defaultValues.servicosSubatividades[tipo].map((sub) => ({
         ...sub,
-        // Preserve the 'selecionada' state or set as true if it doesn't exist
-        selecionada: sub.selecionada !== undefined ? sub.selecionada : true,
+        // Preserve the existing 'selecionada' state, don't force it to true
+        selecionada: sub.selecionada !== undefined ? sub.selecionada : false,
         // Preserve the 'concluida' state or set as false if it doesn't exist
         concluida: sub.concluida ?? false,
       }));
 
       sourceTracker[tipo] = 'edição';
       trackSource(tipo, 'edição');
+      
+      // CORREÇÃO: Buscar todas as subatividades disponíveis e adicionar
+      // as que não estão na lista salva como não selecionadas
+      try {
+        const allDbSubatividades = await getSubatividadesByTipo(tipo);
+        if (allDbSubatividades && allDbSubatividades.length > 0) {
+          // Mapear IDs existentes para facilitar comparação
+          const existingIds = new Set(savedSubatividades.map(s => s.id));
+          
+          // Adicionar as subatividades do banco que não existem na lista salva
+          const additionalSubatividades = allDbSubatividades
+            .filter(dbSub => !existingIds.has(dbSub.id))
+            .map(dbSub => ({
+              ...dbSub,
+              selecionada: false, // Novas subatividades vêm desmarcadas
+              concluida: false
+            }));
+          
+          if (additionalSubatividades.length > 0) {
+            console.log(`✅ [loadSubatividades] Adicionando ${additionalSubatividades.length} novas subatividades do banco para ${tipo}`);
+            return [...savedSubatividades, ...additionalSubatividades];
+          }
+        }
+      } catch (error) {
+        console.error(`❌ [loadSubatividades] Erro ao buscar subatividades adicionais do banco para ${tipo}:`, error);
+      }
+      
       return savedSubatividades;
     }
     
@@ -84,9 +114,10 @@ export const useSubatividadesLoader = ({
       console.log(`🔍 [loadSubatividades] Recebidas do banco para ${tipo}:`, dbSubatividades?.length || 0);
       
       if (dbSubatividades && dbSubatividades.length > 0) {
+        // CORREÇÃO: Definir selecionada como false por padrão
         const formattedSubs = dbSubatividades.map((sub) => ({
           ...sub,
-          selecionada: true,
+          selecionada: false, // Por padrão, novas subatividades vêm desmarcadas
           concluida: false,
         }));
         
@@ -98,10 +129,11 @@ export const useSubatividadesLoader = ({
       
       // LOW PRIORITY: Use default values only as a last resort
       if (defaultSubatividades && defaultSubatividades[tipo]) {
+        // CORREÇÃO: Definir selecionada como false por padrão
         const defaultSubs = defaultSubatividades[tipo].map((nome) => ({
           id: nome,
           nome: nome,
-          selecionada: true,
+          selecionada: false, // Por padrão, novas subatividades vêm desmarcadas
           concluida: false,
         }));
         
@@ -138,7 +170,7 @@ export const useSubatividadesLoader = ({
         const defaultSubs = defaultSubatividades[tipo].map((nome) => ({
           id: nome,
           nome,
-          selecionada: true,
+          selecionada: false, // Alterado para false por padrão
           concluida: false,
         }));
         

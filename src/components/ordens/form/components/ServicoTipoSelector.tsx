@@ -1,4 +1,3 @@
-
 import { memo, useCallback, useEffect, useState } from "react";
 import { FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -70,7 +69,7 @@ export const ServicoTipoSelector = memo(({
         subatividades.map(sub => ({ 
           id: sub.id, 
           nome: sub.nome, 
-          selecionada: sub.selecionada !== undefined ? sub.selecionada : true,
+          selecionada: sub.selecionada !== undefined ? sub.selecionada : false, // Alterado para false
           concluida: sub.concluida 
         })));
       onSubatividadesChange(tipo, subatividades);
@@ -91,7 +90,7 @@ export const ServicoTipoSelector = memo(({
           existingSubatividades.map(sub => ({ 
             id: sub.id, 
             nome: sub.nome, 
-            selecionada: sub.selecionada !== undefined ? sub.selecionada : true,
+            selecionada: sub.selecionada !== undefined ? sub.selecionada : false, // Alterado para false
             concluida: sub.concluida 
           }))
         );
@@ -108,7 +107,7 @@ export const ServicoTipoSelector = memo(({
         const defaultSubs = defaultSubatividades[tipo as TipoServico].map(nome => ({
           id: nome,
           nome,
-          selecionada: true,
+          selecionada: false, // Alterado para false
           concluida: false,
         }));
         
@@ -117,7 +116,7 @@ export const ServicoTipoSelector = memo(({
         // MELHORIA: Garantir que todas as subatividades existentes tenham o estado 'selecionada' definido
         const processedSubs = existingSubatividades.map(sub => ({
           ...sub,
-          selecionada: sub.selecionada !== undefined ? sub.selecionada : true
+          selecionada: sub.selecionada !== undefined ? sub.selecionada : false // Alterado para false
         }));
         
         if (JSON.stringify(processedSubs) !== JSON.stringify(existingSubatividades)) {
@@ -173,7 +172,7 @@ export const ServicoTipoSelector = memo(({
                     existingSubatividades.map(sub => ({ 
                       id: sub.id, 
                       nome: sub.nome, 
-                      selecionada: sub.selecionada !== undefined ? sub.selecionada : true,
+                      selecionada: sub.selecionada !== undefined ? sub.selecionada : false, // Alterado para false
                       concluida: sub.concluida 
                     }))
                   );
