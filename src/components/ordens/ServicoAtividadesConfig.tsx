@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { TipoServico, SubAtividade, TipoAtividade } from "@/types/ordens";
 import { Button } from "@/components/ui/button";
@@ -40,13 +41,15 @@ export default function ServicoAtividadesConfig({
     prevSubatividadesRef.current = subatividades;
     
     // Log de debug para visualizar o estado das subatividades recebidas
-    console.log(`[ServicoAtividadesConfig] Recebendo subatividades para ${servicoTipo}:`, subatividades);
+    console.log(`[ServicoAtividadesConfig] Recebendo subatividades para ${servicoTipo}:`, 
+      subatividades.map(s => ({ id: s.id, nome: s.nome, selecionada: s.selecionada })));
+    
     logSubatividadesState("ServicoAtividadesConfig-recebidas", servicoTipo.toString());
     
     // CORREÇÃO: Preservar o estado 'selecionada' de cada subatividade, sem forçar TRUE
     const processedSubs = (subatividades || []).map(sub => ({
       ...sub,
-      selecionada: sub.selecionada !== undefined ? sub.selecionada : false // Alterado para false por padrão
+      selecionada: sub.selecionada !== undefined ? sub.selecionada : false // Definir como false por padrão
     }));
     
     logSubatividadesState("ServicoAtividadesConfig-processadas", servicoTipo.toString());

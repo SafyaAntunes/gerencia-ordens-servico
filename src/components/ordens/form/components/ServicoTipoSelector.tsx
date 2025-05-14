@@ -99,26 +99,29 @@ export const ServicoTipoSelector = memo(({
         console.log(`[ServicoTipoSelector] Nenhuma subatividade encontrada para ${tipo}`);
       }
       
-      // If there are no subatividades for this service type but we have defaults, 
-      // create basic subatividades from the defaults
+      // Se não há subatividades para este tipo de serviço, mas temos padrões, 
+      // criar subatividades básicas a partir dos padrões - TODAS DESMARCADAS POR PADRÃO
       if ((!existingSubatividades || existingSubatividades.length === 0) && 
           defaultSubatividades && defaultSubatividades[tipo as TipoServico]) {
         
-        console.log(`[ServicoTipoSelector] Nenhuma subatividade encontrada para ${tipo}, criando padrões`);
-        // CORREÇÃO: Inicializar todas as subatividades com selecionada = false
+        console.log(`[ServicoTipoSelector] Nenhuma subatividade encontrada para ${tipo}, criando padrões DESMARCADOS`);
         const defaultSubs = defaultSubatividades[tipo as TipoServico].map(nome => ({
           id: nome,
           nome,
-          selecionada: false, // Corrigido para garantir que subatividades novas sempre começam desmarcadas
+          selecionada: false, // Garantir que subatividades novas sempre começam desmarcadas
           concluida: false,
         }));
         
         onSubatividadesChange(tipo as TipoServico, defaultSubs);
       } else if (existingSubatividades) {
         // MELHORIA: Garantir que todas as subatividades existentes tenham o estado 'selecionada' definido corretamente
+        // Se estamos em modo de edição, preservar a seleção, caso contrário, definir como false
+        const isFromEditing = loadingSources[tipo] === "edição";
+        
         const processedSubs = existingSubatividades.map(sub => ({
           ...sub,
-          selecionada: sub.selecionada !== undefined ? sub.selecionada : false // Garantir que selecionada seja false por padrão
+          // Se for de edição, preservar o estado atual, senão forçar como false
+          selecionada: isFromEditing ? sub.selecionada : false
         }));
         
         if (JSON.stringify(processedSubs) !== JSON.stringify(existingSubatividades)) {
@@ -129,7 +132,7 @@ export const ServicoTipoSelector = memo(({
         }
       }
     });
-  }, [form, servicosSubatividades, defaultSubatividades, onSubatividadesChange]);
+  }, [form, servicosSubatividades, defaultSubatividades, onSubatividadesChange, loadingSources]);
 
   const getSourceBadge = (tipo: string) => {
     const source = loadingSources[tipo];
@@ -174,7 +177,7 @@ export const ServicoTipoSelector = memo(({
                     existingSubatividades.map(sub => ({ 
                       id: sub.id, 
                       nome: sub.nome, 
-                      selecionada: sub.selecionada !== undefined ? sub.selecionada : false, // Alterado para false
+                      selecionada: sub.selecionada !== undefined ? sub.selecionada : false,
                       concluida: sub.concluida 
                     }))
                   );

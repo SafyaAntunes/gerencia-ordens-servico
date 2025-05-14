@@ -33,19 +33,23 @@ export const ServicoSubatividades = memo(({
     prevSubatividadesRef.current = subatividades;
     
     // Log das subatividades recebidas
-    console.log(`[ServicoSubatividades] Recebido para ${tipoServico}:`, subatividades);
+    console.log(`[ServicoSubatividades] Recebido para ${tipoServico}:`, 
+      subatividades.map(s => ({ id: s.id, nome: s.nome, selecionada: s.selecionada })));
+    
     logSubatividadesState("ServicoSubatividades-recebidas", tipoServico.toString());
     
     // Corrigir qualquer inconsistência no estado 'selecionada'
     // CORREÇÃO: NÃO definir selecionada como true por padrão, preservar o estado existente
     const processedSubs = subatividades.map(sub => ({
       ...sub,
-      selecionada: sub.selecionada !== undefined ? sub.selecionada : false // Alterado para false por padrão
+      selecionada: sub.selecionada !== undefined ? sub.selecionada : false // Definir false por padrão
     }));
     
     // Se houver diferenças, atualizar
     if (JSON.stringify(processedSubs) !== JSON.stringify(subatividades)) {
-      console.log(`[ServicoSubatividades] Corrigindo subatividades para ${tipoServico}:`, processedSubs);
+      console.log(`[ServicoSubatividades] Corrigindo subatividades para ${tipoServico}:`, 
+        processedSubs.map(s => ({ id: s.id, nome: s.nome, selecionada: s.selecionada })));
+      
       onChange(processedSubs);
     }
   }, [tipoServico, subatividades, onChange, logSubatividadesState]);
