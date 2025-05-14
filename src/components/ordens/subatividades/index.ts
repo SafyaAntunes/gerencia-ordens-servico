@@ -1,5 +1,6 @@
 
-export * from "./ServicoSubatividades";
-export * from "./CustomSubatividadesList";
-export * from "./CustomSubatividadesForm";
-export * from "./PresetSubatividades";
+import SubatividadesForm from "./SubatividadesForm";
+import ServicoSubatividades from "./ServicoSubatividades";
+
+export { SubatividadesForm, ServicoSubatividades };
+export { ServicoSubatividades as ServicoSubatividades };

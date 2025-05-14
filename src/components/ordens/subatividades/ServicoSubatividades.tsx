@@ -1,82 +1,125 @@
 
-import { useState, memo, useCallback } from "react";
-import { Checkbox } from "@/components/ui/checkbox";
+import React, { useEffect, useState } from "react";
 import { SubAtividade, TipoServico } from "@/types/ordens";
-import { cn } from "@/lib/utils";
+import { useServicoSubatividades } from "@/hooks/useServicoSubatividades";
+import ServicoAtividadesConfig from "@/components/ordens/ServicoAtividadesConfig";
+import { getSubatividadesByTipo } from "@/services/subatividadeService";
+import { toast } from "sonner";
 
 interface ServicoSubatividadesProps {
   tipoServico: TipoServico;
   subatividades: SubAtividade[];
   onChange: (subatividades: SubAtividade[]) => void;
+  atividadeTipo?: string;
 }
 
-// Component is now memoized to prevent unnecessary re-renders
-export const ServicoSubatividades = memo(({ 
-  tipoServico, 
-  subatividades, 
-  onChange 
-}: ServicoSubatividadesProps) => {
-  const [isPartiallyChecked, setIsPartiallyChecked] = useState(false);
+const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
+  tipoServico,
+  subatividades = [],
+  onChange,
+  atividadeTipo = "default"
+}) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [localSubatividades, setLocalSubatividades] = useState<SubAtividade[]>(subatividades);
+  const { defaultSubatividades } = useServicoSubatividades();
+  const [dataSource, setDataSource] = useState<"banco" | "default" | "props">("props");
   
-  // Use useCallback to memoize functions
-  const toggleAll = useCallback((check: boolean) => {
-    const updated = subatividades.map(sub => ({
-      ...sub,
-      selecionada: check
-    }));
-    onChange(updated);
-  }, [subatividades, onChange]);
-
-  const handleChange = useCallback((id: string, checked: boolean) => {
-    const updated = subatividades.map(sub => {
-      if (sub.id === id) {
-        return {
-          ...sub,
-          selecionada: checked
-        };
+  // Load subatividades from database if none provided
+  useEffect(() => {
+    // Skip if we already have subatividades from props
+    if (subatividades && subatividades.length > 0) {
+      console.log(`[ServicoSubatividades] Usando subatividades das props para ${tipoServico}:`, subatividades);
+      setLocalSubatividades(subatividades);
+      setDataSource("props");
+      return;
+    }
+    
+    const loadFromDatabase = async () => {
+      setIsLoading(true);
+      try {
+        console.log(`[ServicoSubatividades] Buscando subatividades do banco para ${tipoServico}...`);
+        const dbSubatividades = await getSubatividadesByTipo(tipoServico);
+        
+        if (dbSubatividades && dbSubatividades.length > 0) {
+          console.log(`[ServicoSubatividades] Encontradas ${dbSubatividades.length} subatividades no banco para ${tipoServico}:`, dbSubatividades);
+          // Mapear para garantir que todas tenham o estado selecionada e concluída
+          const mappedSubs = dbSubatividades.map(sub => ({
+            ...sub,
+            selecionada: sub.selecionada ?? true,
+            concluida: sub.concluida ?? false
+          }));
+          setLocalSubatividades(mappedSubs);
+          setDataSource("banco");
+          onChange(mappedSubs);
+        } else {
+          console.log(`[ServicoSubatividades] Nenhuma subatividade encontrada no banco para ${tipoServico}, usando padrões`);
+          // Usar padrões apenas se não tiver subatividades no banco de dados
+          const defaultSubs = defaultSubatividades[tipoServico]?.map(nome => ({
+            id: nome,
+            nome,
+            selecionada: true,
+            concluida: false
+          })) || [];
+          
+          setLocalSubatividades(defaultSubs);
+          setDataSource("default");
+          onChange(defaultSubs);
+        }
+      } catch (error) {
+        console.error(`[ServicoSubatividades] Erro ao carregar subatividades para ${tipoServico}:`, error);
+        toast.error(`Erro ao carregar subatividades para ${tipoServico}`);
+        
+        // Fallback to defaults on error
+        const defaultSubs = defaultSubatividades[tipoServico]?.map(nome => ({
+          id: nome,
+          nome,
+          selecionada: true,
+          concluida: false
+        })) || [];
+        
+        setLocalSubatividades(defaultSubs);
+        setDataSource("default");
+        onChange(defaultSubs);
+      } finally {
+        setIsLoading(false);
       }
-      return sub;
-    });
-    onChange(updated);
-  }, [subatividades, onChange]);
-
-  const totalCount = subatividades.length;
-  const completedCount = subatividades.filter(sub => sub.selecionada).length;
+    };
+    
+    loadFromDatabase();
+  }, [tipoServico, onChange, defaultSubatividades]);
   
+  // Update local state and notify parent when subatividades change from props
+  useEffect(() => {
+    if (subatividades && subatividades.length > 0) {
+      setLocalSubatividades(subatividades);
+    }
+  }, [subatividades]);
+  
+  const handleSubatividadesChange = (updatedSubatividades: SubAtividade[]) => {
+    setLocalSubatividades(updatedSubatividades);
+    onChange(updatedSubatividades);
+  };
+
+  if (isLoading) {
+    return <div className="text-sm text-muted-foreground py-2">Carregando subatividades...</div>;
+  }
+
   return (
-    <div className="border rounded-md p-3 bg-muted/20">
-      <div 
-        className="flex justify-between items-center mb-2"
-      >
-        <h4 className="text-sm font-medium">Subatividades</h4>
-        <div className="text-xs text-muted-foreground">
-          {completedCount} / {totalCount} disponíveis
+    <div>
+      {dataSource === "default" && (
+        <div className="text-sm text-amber-600 mb-2">
+          ⚠️ Usando subatividades padrão. As configurações não foram encontradas no banco de dados.
         </div>
-      </div>
+      )}
       
-      <div className="space-y-1">
-        {subatividades.map((subatividade) => (
-          <div key={subatividade.id} className="flex items-center space-x-2">
-            <Checkbox
-              id={`${tipoServico}-${subatividade.id}`}
-              checked={subatividade.selecionada}
-              onCheckedChange={(checked) => handleChange(subatividade.id, !!checked)}
-            />
-            <label
-              htmlFor={`${tipoServico}-${subatividade.id}`}
-              className={cn(
-                "text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
-                subatividade.selecionada && subatividade.concluida && "line-through text-muted-foreground"
-              )}
-            >
-              {subatividade.nome}
-            </label>
-          </div>
-        ))}
-      </div>
+      <ServicoAtividadesConfig
+        servicoTipo={tipoServico}
+        atividadeTipo={atividadeTipo as any}
+        subatividades={localSubatividades}
+        onChange={handleSubatividadesChange}
+      />
     </div>
   );
-});
+};
 
-// Add display name for better debugging
-ServicoSubatividades.displayName = "ServicoSubatividades";
+export default ServicoSubatividades;

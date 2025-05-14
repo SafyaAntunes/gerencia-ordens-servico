@@ -2,6 +2,7 @@
 import { memo, useCallback, useEffect, useState } from "react";
 import { FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { SubAtividade, TipoServico } from "@/types/ordens";
 import { ServicoSubatividades } from "@/components/ordens/subatividades";
 import { tiposServico } from "../types";
@@ -15,13 +16,15 @@ interface ServicoTipoSelectorProps {
   form: UseFormReturn<FormValues>;
   servicosSubatividades: Record<string, SubAtividade[]>;
   onSubatividadesChange: (tipo: TipoServico, subatividades: SubAtividade[]) => void;
+  loadingSources?: Record<string, string>;
 }
 
 // Memoize the component to prevent unnecessary re-renders
 export const ServicoTipoSelector = memo(({ 
   form, 
   servicosSubatividades,
-  onSubatividadesChange 
+  onSubatividadesChange,
+  loadingSources = {} 
 }: ServicoTipoSelectorProps) => {
   // Get default subatividades for fallback
   const { defaultSubatividades } = useServicoSubatividades();
@@ -93,6 +96,22 @@ export const ServicoTipoSelector = memo(({
       }
     });
   }, [form, servicosSubatividades, defaultSubatividades, onSubatividadesChange]);
+
+  const getSourceBadge = (tipo: string) => {
+    const source = loadingSources[tipo];
+    
+    if (!source) return null;
+    
+    if (source.includes("banco")) {
+      return <Badge variant="outline" className="ml-2 bg-green-50">Configuração</Badge>;
+    } else if (source.includes("edição")) {
+      return <Badge variant="outline" className="ml-2 bg-blue-50">Salvo</Badge>;
+    } else if (source.includes("padrão")) {
+      return <Badge variant="outline" className="ml-2 bg-amber-50">Padrão</Badge>;
+    }
+    
+    return null;
+  };
   
   return (
     <div>
@@ -112,7 +131,7 @@ export const ServicoTipoSelector = memo(({
 
               return (
                 <FormItem key={tipo.value} className="flex flex-col space-y-3 my-4">
-                  <div className="flex items-start space-x-3 space-y-0">
+                  <div className="flex items-center space-x-3 space-y-0">
                     <FormControl>
                       <Checkbox
                         checked={checked}
@@ -131,7 +150,10 @@ export const ServicoTipoSelector = memo(({
                         }}
                       />
                     </FormControl>
-                    <FormLabel className="font-normal">{tipo.label}</FormLabel>
+                    <div className="flex items-center">
+                      <FormLabel className="font-normal">{tipo.label}</FormLabel>
+                      {checked && getSourceBadge(tipo.value)}
+                    </div>
                   </div>
 
                   {/* Renderiza as subatividades se o serviço estiver selecionado */}

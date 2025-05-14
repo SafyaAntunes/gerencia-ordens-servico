@@ -1,65 +1,71 @@
 
-import { useMemo } from "react";
-import { UseOrdemFormDataProps, UseOrdemFormDataReturn } from "./types/ordemFormDataTypes";
+import { useState, useEffect, useCallback } from "react";
+import { SubAtividade, TipoServico, EtapaOS } from "@/types/ordens";
+import { FormValues } from "../types";
+import { useServicosState } from "./useServicosState";
 import { useFotosHandler } from "./useFotosHandler";
 import { useEtapasConfig } from "./useEtapasConfig";
-import { useServicosState } from "./useServicosState";
+
+export interface UseOrdemFormDataProps {
+  servicosTipos: string[];
+  defaultValues?: Partial<FormValues>;
+  defaultFotosEntrada?: any[];
+  defaultFotosSaida?: any[];
+}
+
+export interface UseOrdemFormDataReturn {
+  servicosDescricoes: Record<string, string>;
+  servicosSubatividades: Record<string, SubAtividade[]>;
+  loadingSources: Record<string, string>;
+  fotosEntrada: File[];
+  fotosSaida: File[];
+  etapasTempoPreco: Record<string, { precoHora?: number; tempoEstimado?: number }>;
+  setFotosEntrada: (fotos: File[]) => void;
+  setFotosSaida: (fotos: File[]) => void;
+  handleServicoDescricaoChange: (tipo: string, descricao: string) => void;
+  handleSubatividadesChange: (tipo: TipoServico, subatividades: SubAtividade[]) => void;
+  handleEtapaTempoPrecoChange: (etapa: EtapaOS, field: 'precoHora' | 'tempoEstimado', value: number) => void;
+}
 
 export const useOrdemFormData = ({
   servicosTipos,
   defaultValues,
   defaultFotosEntrada = [],
-  defaultFotosSaida = []
+  defaultFotosSaida = [],
 }: UseOrdemFormDataProps): UseOrdemFormDataReturn => {
-  // Handlers for fotos
-  const { 
-    fotosEntrada, 
-    fotosSaida, 
-    setFotosEntrada, 
-    setFotosSaida 
-  } = useFotosHandler(defaultFotosEntrada, defaultFotosSaida);
-
-  // Handlers for etapas config and tempo/preco
-  const { 
-    etapasConfig, 
-    isLoadingEtapas, 
-    etapasTempoPreco, 
-    handleEtapaTempoPrecoChange 
-  } = useEtapasConfig(defaultValues?.etapasTempoPreco);
-
-  // Handlers for servicos state
+  // Use the existing hooks for servicos, fotos, and etapas
   const {
     servicosDescricoes,
     servicosSubatividades,
+    loadingSources,
     handleServicoDescricaoChange,
-    handleSubatividadesChange
+    handleSubatividadesChange,
   } = useServicosState(servicosTipos, defaultValues);
-
-  // Use memoized values for outputs that don't need to change on every render
-  const memoizedState = useMemo(() => ({
-    servicosDescricoes,
-    servicosSubatividades, 
+  
+  const {
     fotosEntrada,
     fotosSaida,
-    etapasConfig,
-    isLoadingEtapas,
+    setFotosEntrada,
+    setFotosSaida,
+  } = useFotosHandler(defaultFotosEntrada, defaultFotosSaida);
+  
+  const {
     etapasTempoPreco,
-  }), [
+    handleEtapaTempoPrecoChange,
+  } = useEtapasConfig(defaultValues?.etapasTempoPreco);
+  
+  // Return all the data and handlers
+  return {
     servicosDescricoes,
     servicosSubatividades,
-    fotosEntrada, 
+    loadingSources,
+    fotosEntrada,
     fotosSaida,
-    etapasConfig,
-    isLoadingEtapas,
-    etapasTempoPreco
-  ]);
-
-  return {
-    ...memoizedState,
+    etapasTempoPreco,
     setFotosEntrada,
     setFotosSaida,
     handleServicoDescricaoChange,
     handleSubatividadesChange,
-    handleEtapaTempoPrecoChange
+    handleEtapaTempoPrecoChange,
   };
 };

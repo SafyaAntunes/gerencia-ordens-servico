@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { SubAtividade, TipoServico } from "@/types/ordens";
 import { getSubatividadesByTipo, getAllSubatividades } from "@/services/subatividadeService";
@@ -18,8 +17,9 @@ export const useServicosState = (
   const [previousServiceTypes, setPreviousServiceTypes] = useState<string[]>([]);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [debugInfoLoaded, setDebugInfoLoaded] = useState(false);
+  const [loadingSources, setLoadingSources] = useState<Record<string, string>>({});
 
-  // Get default subatividades from the hook to use as fallback
+  // Get default subatividades from the hook to use as fallback only
   const { defaultSubatividades } = useServicoSubatividades();
 
   // Carregar diagnóstico inicial - apenas uma vez
@@ -43,7 +43,9 @@ export const useServicosState = (
           
           Object.entries(grouped).forEach(([tipo, items]) => {
             console.log(`   - ${tipo}: ${items.length} itens`);
-            console.log(`     - Exemplos: ${items.map(i => i.nome).join(', ').substring(0, 100)}...`);
+            if (items.length > 0) {
+              console.log(`     - Exemplos: ${items.map(i => i.nome).join(', ').substring(0, 100)}...`);
+            }
           });
           
           setDebugInfoLoaded(true);
@@ -61,6 +63,7 @@ export const useServicosState = (
     if (hasInitialized) return;
     
     if (defaultValues?.servicosSubatividades) {
+      console.log("📝 [useServicosState] Inicializando com subatividades do defaultValues:", defaultValues.servicosSubatividades);
       setServicosSubatividades(prev => {
         if (isEqual(prev, defaultValues.servicosSubatividades)) return prev;
         return defaultValues.servicosSubatividades ?? {};
@@ -77,10 +80,12 @@ export const useServicosState = (
     setHasInitialized(true);
   }, [defaultValues?.servicosSubatividades, defaultValues?.servicosDescricoes, hasInitialized]);
 
-  // Load subatividades for each service type - with optimizations
+  // Load subatividades for each service type - with optimizations and clear source tracking
   useEffect(() => {
     // Check if service types actually changed to avoid unnecessary loads
-    if (isEqual(servicosTipos.sort(), previousServiceTypes.sort())) return;
+    if (isEqual(servicosTipos.sort(), previousServiceTypes.sort()) && hasInitialized) {
+      return;
+    }
     
     console.log("🔄 [useServicosState] Tipos de serviço mudaram:", servicosTipos);
     console.log("🔄 [useServicosState] Tipos anteriores:", previousServiceTypes);
@@ -90,6 +95,7 @@ export const useServicosState = (
     // Track pending async operations
     let isMounted = true;
     const pendingOperations: Record<string, boolean> = {};
+    const sourceTracker: Record<string, string> = {};
     
     const loadSubatividades = async (tipo: TipoServico) => {
       // Skip if we've already started loading this type
@@ -102,128 +108,106 @@ export const useServicosState = (
       try {
         console.log(`🔍 [loadSubatividades] Buscando subatividades do banco para ${tipo}...`);
         
-        // Buscar todas as subatividades primeiro para verificar
-        const allSubs = await getAllSubatividades();
-        const tipoSubs = allSubs.filter(s => s.tipoServico === tipo);
-        console.log(`🔍 [loadSubatividades] Encontradas ${tipoSubs.length} subatividades para ${tipo} no banco (verificação inicial)`);
-        
-        // Buscar as subatividades específicas do tipo
-        const subatividadesList = await getSubatividadesByTipo(tipo);
-        console.log(`🔍 [loadSubatividades] Recebidas do banco para ${tipo}:`, subatividadesList);
-        
-        // Se tiver subatividades no banco por verificação inicial, mas a consulta retornou vazio,
-        // temos um problema na consulta
-        if (tipoSubs.length > 0 && subatividadesList.length === 0) {
-          console.warn(`⚠️ [loadSubatividades] AVISO: Inconsistência detectada! Verificação inicial encontrou ${tipoSubs.length} subatividades para ${tipo}, mas a consulta retornou lista vazia.`);
-          
-          // Mostrar notificação para o usuário
-          toast.warning(`Inconsistência detectada nas subatividades de ${tipo}. Verifique o console para mais detalhes.`);
+        // PRIORIDADE 1: Subatividades existentes no modo de edição (defaultValues)
+        const existingSubatividades = defaultValues?.servicosSubatividades?.[tipo] || [];
+        if (existingSubatividades.length > 0) {
+          console.log(`✅ [loadSubatividades] USANDO SUBATIVIDADES DO MODO DE EDIÇÃO para ${tipo}:`, existingSubatividades);
+          setServicosSubatividades(prev => ({
+            ...prev,
+            [tipo]: existingSubatividades
+          }));
+          sourceTracker[tipo] = "edição";
+          setLoadingSources(prev => ({...prev, [tipo]: "edição"}));
+          return;
         }
         
-        // Only update state if component is still mounted
-        if (!isMounted) return;
-
-        setServicosSubatividades(prev => {
-          // First priority: Existing subatividades from edit mode
-          const existingSubatividades = defaultValues?.servicosSubatividades?.[tipo] || [];
+        // PRIORIDADE 2: Buscar subatividades do banco de dados
+        console.log(`🔍 [loadSubatividades] Buscando subatividades do banco para ${tipo}...`);
+        const dbSubatividades = await getSubatividadesByTipo(tipo);
+        console.log(`🔍 [loadSubatividades] Recebidas do banco para ${tipo}:`, dbSubatividades);
+        
+        if (dbSubatividades && dbSubatividades.length > 0) {
+          const formattedSubs = dbSubatividades.map(sub => ({
+            ...sub,
+            selecionada: true,
+            concluida: false
+          }));
           
-          // Second priority: Currently selected subatividades (in form)
-          const currentSubatividades = prev[tipo] || [];
-          
-          // Third priority: Subatividades from database
-          let dbSubatividades: SubAtividade[] = [];
-          if (subatividadesList && subatividadesList.length > 0) {
-            dbSubatividades = subatividadesList.map(sub => ({
-              ...sub,
-              selecionada: true, // Default to selected for new items
-              concluida: false
-            }));
-            console.log(`✅ [loadSubatividades] Usando subatividades do banco para ${tipo}:`, dbSubatividades);
-          } else {
-            console.log(`❌ [loadSubatividades] Nenhuma subatividade encontrada no banco para ${tipo}`);
-          }
-          
-          // Fourth priority: Default subatividades from hook
-          let defaultSubs: SubAtividade[] = [];
-          if (defaultSubatividades && defaultSubatividades[tipo]) {
-            defaultSubs = defaultSubatividades[tipo].map(nome => ({
-              id: nome,
-              nome: nome,
-              selecionada: true,
-              concluida: false
-            }));
-            console.log(`📋 [loadSubatividades] Subatividades padrão para ${tipo}:`, defaultSubs);
-          }
-          
-          // Decide which set of subatividades to use, with proper priority
-          let finalSubatividades: SubAtividade[] = [];
-          
-          // If we're editing an existing ordem with this service type
-          if (existingSubatividades.length > 0) {
-            console.log(`🔄 [loadSubatividades] Usando subatividades existentes do modo de edição para ${tipo}`);
-            finalSubatividades = [...existingSubatividades];
-          } 
-          // If we have current selections for this type in the form
-          else if (currentSubatividades.length > 0) {
-            console.log(`🔄 [loadSubatividades] Usando subatividades atuais do formulário para ${tipo}`);
-            finalSubatividades = [...currentSubatividades];
-          }
-          // If we got subatividades from the database
-          else if (dbSubatividades.length > 0) {
-            console.log(`🔄 [loadSubatividades] Usando subatividades do banco para ${tipo}`);
-            finalSubatividades = [...dbSubatividades];
-          }
-          // Fallback to default subatividades
-          else if (defaultSubs.length > 0) {
-            console.log(`🔄 [loadSubatividades] Usando subatividades padrão de fallback para ${tipo}`);
-            finalSubatividades = [...defaultSubs];
-          }
-          
-          // If nothing has changed, return previous state
-          if (isEqual(currentSubatividades, finalSubatividades)) {
-            console.log(`⏭️ [loadSubatividades] Nenhuma mudança nas subatividades para ${tipo}, mantendo estado atual`);
-            return prev;
-          }
-          
-          console.log(`✅ [loadSubatividades] Subatividades finais para ${tipo}:`, finalSubatividades);
-          return {
+          console.log(`✅ [loadSubatividades] USANDO SUBATIVIDADES DO BANCO para ${tipo}:`, formattedSubs);
+          setServicosSubatividades(prev => ({
             ...prev,
-            [tipo]: finalSubatividades
-          };
-        });
+            [tipo]: formattedSubs
+          }));
+          sourceTracker[tipo] = "banco";
+          setLoadingSources(prev => ({...prev, [tipo]: "banco"}));
+          return;
+        }
+        
+        // PRIORIDADE 3 (FALLBACK): Usar os valores padrão codificados
+        if (defaultSubatividades && defaultSubatividades[tipo]) {
+          const defaultSubs = defaultSubatividades[tipo].map(nome => ({
+            id: nome,
+            nome: nome,
+            selecionada: true,
+            concluida: false
+          }));
+          
+          console.log(`⚠️ [loadSubatividades] USANDO SUBATIVIDADES PADRÃO (fallback) para ${tipo}:`, defaultSubs);
+          toast.warning(`Subatividades de configuração não encontradas para ${tipo}. Usando valores padrão.`);
+          
+          setServicosSubatividades(prev => ({
+            ...prev,
+            [tipo]: defaultSubs
+          }));
+          sourceTracker[tipo] = "padrão";
+          setLoadingSources(prev => ({...prev, [tipo]: "padrão"}));
+        } else {
+          console.log(`❌ [loadSubatividades] Nenhuma subatividade disponível para ${tipo}`);
+          setServicosSubatividades(prev => ({
+            ...prev,
+            [tipo]: []
+          }));
+          sourceTracker[tipo] = "vazio";
+          setLoadingSources(prev => ({...prev, [tipo]: "vazio"}));
+        }
+        
       } catch (error) {
         console.error(`❌ [loadSubatividades] Erro ao carregar subatividades para ${tipo}:`, error);
+        toast.error(`Erro ao carregar subatividades para ${tipo}`);
         
-        // If there was an error fetching from API but we have subatividades for this type in edit mode,
-        // keep those instead of showing an empty list
+        // Se tivermos valores do modo de edição, use-os apesar do erro
         if (defaultValues?.servicosSubatividades?.[tipo]?.length > 0) {
-          console.log(`🔄 [loadSubatividades] Ocorreu um erro, mas usando subatividades existentes do modo de edição para ${tipo}`);
+          console.log(`🔄 [loadSubatividades] Apesar do erro, usando subatividades do modo de edição para ${tipo}`);
           setServicosSubatividades(prev => ({
             ...prev,
             [tipo]: defaultValues.servicosSubatividades![tipo]
           }));
+          sourceTracker[tipo] = "edição (recuperação de erro)";
+          setLoadingSources(prev => ({...prev, [tipo]: "edição (recuperação de erro)"}));
         } 
-        // If we have default subatividades for this type, use those as fallback
+        // Caso contrário, use os padrões como última opção
         else if (defaultSubatividades && defaultSubatividades[tipo as TipoServico]) {
-          console.log(`🔄 [loadSubatividades] Ocorreu um erro, usando subatividades padrão de fallback para ${tipo}`);
-          setServicosSubatividades(prev => {
-            const defaultSubs = defaultSubatividades[tipo as TipoServico].map(nome => ({
-              id: nome,
-              nome,
-              selecionada: true,
-              concluida: false,
-            }));
-            
-            return {
-              ...prev,
-              [tipo]: defaultSubs
-            };
-          });
+          console.log(`🔄 [loadSubatividades] Usando padrões como último recurso para ${tipo}`);
+          const defaultSubs = defaultSubatividades[tipo as TipoServico].map(nome => ({
+            id: nome,
+            nome,
+            selecionada: true,
+            concluida: false,
+          }));
+          
+          setServicosSubatividades(prev => ({
+            ...prev,
+            [tipo]: defaultSubs
+          }));
+          sourceTracker[tipo] = "padrão (recuperação de erro)";
+          setLoadingSources(prev => ({...prev, [tipo]: "padrão (recuperação de erro)"}));
         } else {
           setServicosSubatividades(prev => ({
             ...prev,
             [tipo]: []
           }));
+          sourceTracker[tipo] = "vazio (erro)";
+          setLoadingSources(prev => ({...prev, [tipo]: "vazio (erro)"}));
         }
       } finally {
         pendingOperations[tipo] = false;
@@ -246,11 +230,16 @@ export const useServicosState = (
       return newState;
     });
     
+    // Log sources after all loads are complete
+    setTimeout(() => {
+      console.log("📊 [useServicosState] Origem das subatividades carregadas:", sourceTracker);
+    }, 1000);
+    
     // Cleanup function to prevent state updates after unmount
     return () => {
       isMounted = false;
     };
-  }, [servicosTipos, defaultValues?.servicosSubatividades, previousServiceTypes, defaultSubatividades]);
+  }, [servicosTipos, defaultValues?.servicosSubatividades, previousServiceTypes, defaultSubatividades, hasInitialized]);
 
   const handleServicoDescricaoChange = useCallback((tipo: string, descricao: string) => {
     setServicosDescricoes(prev => {
@@ -263,6 +252,7 @@ export const useServicosState = (
   }, []);
   
   const handleSubatividadesChange = useCallback((tipo: TipoServico, subatividades: SubAtividade[]) => {
+    console.log(`[handleSubatividadesChange] Atualizando subatividades para ${tipo}:`, subatividades);
     setServicosSubatividades(prev => {
       // Skip update if no actual changes to prevent re-renders
       if (isEqual(prev[tipo], subatividades)) return prev;
@@ -277,6 +267,7 @@ export const useServicosState = (
   return {
     servicosDescricoes,
     servicosSubatividades,
+    loadingSources,
     handleServicoDescricaoChange,
     handleSubatividadesChange
   };

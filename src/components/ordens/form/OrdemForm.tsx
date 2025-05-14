@@ -60,6 +60,7 @@ export const OrdemForm = ({
   const { 
     servicosDescricoes, 
     servicosSubatividades, 
+    loadingSources,
     fotosEntrada, 
     fotosSaida, 
     etapasTempoPreco, 
@@ -156,6 +157,7 @@ export const OrdemForm = ({
               form={form} 
               servicosSubatividades={servicosSubatividades} 
               onSubatividadesChange={memoizedSubatividadesChange}
+              loadingSources={loadingSources}
             />
           </TabsContent>
           
