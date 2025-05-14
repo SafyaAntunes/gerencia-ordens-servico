@@ -11,7 +11,7 @@ import { useTrackingSubatividades } from "@/hooks/ordens/useTrackingSubatividade
 
 interface ServicoAtividadesConfigProps {
   servicoTipo: TipoServico;
-  atividadeTipo: TipoAtividade | "Subatividades"; // Update to accept both TipoAtividade and "Subatividades"
+  atividadeTipo: TipoAtividade | "Subatividades";
   subatividades: SubAtividade[];
   onChange: (subatividades: SubAtividade[]) => void;
 }

@@ -24,10 +24,32 @@ export const useTrackingSubatividades = () => {
     });
   }, []);
 
+  // Adicionar função para logging de estado de subatividades
+  const logSubatividadesState = useCallback((source: string, servicoTipo?: string) => {
+    if (servicoTipo) {
+      console.log(`[${source}] Estado de subatividades para ${servicoTipo}:`, 
+        subatividades[servicoTipo]?.map(sub => ({
+          id: sub.id,
+          nome: sub.nome,
+          selecionada: sub.selecionada
+        })) || 'Nenhuma subatividade'
+      );
+    } else {
+      console.log(`[${source}] Estado geral de subatividades:`, 
+        Object.entries(subatividades).map(([tipo, subs]) => ({
+          tipo,
+          quantidade: subs.length,
+          selecionadas: subs.filter(s => s.selecionada).length
+        }))
+      );
+    }
+  }, [subatividades]);
+
   return {
     subatividades,
     setSubatividades,
     prepareSubatividadesForEdit,
-    onSubatividadeToggle
+    onSubatividadeToggle,
+    logSubatividadesState
   };
 };

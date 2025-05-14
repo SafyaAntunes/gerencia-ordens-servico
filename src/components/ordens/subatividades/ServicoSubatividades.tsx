@@ -19,6 +19,7 @@ export const ServicoSubatividades = memo(({
   subatividades,
   onChange,
 }: ServicoSubatividadesProps) => {
+  // Obter a função logSubatividadesState do hook
   const { logSubatividadesState } = useTrackingSubatividades();
   const prevSubatividadesRef = useRef<SubAtividade[]>([]);
 
