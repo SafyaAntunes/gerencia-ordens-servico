@@ -42,10 +42,13 @@ export const atualizarOrdemNoEstado = (
  * Se nenhuma estiver selecionada, mostra todas as subatividades para facilitar a seleção.
  */
 export const filtrarSubatividadesSelecionadas = (subatividades?: SubAtividade[]): SubAtividade[] => {
-  if (!subatividades) return [];
+  if (!subatividades || subatividades.length === 0) {
+    console.log("Nenhuma subatividade encontrada");
+    return [];
+  }
   
   // Verificar se existem subatividades selecionadas
-  const existemSelecionadas = subatividades.some(sub => sub.selecionada);
+  const existemSelecionadas = subatividades.some(sub => sub.selecionada === true);
   
   // Se nenhuma estiver selecionada, retornar todas para permitir seleção
   if (!existemSelecionadas) {
@@ -54,7 +57,7 @@ export const filtrarSubatividadesSelecionadas = (subatividades?: SubAtividade[])
   }
   
   // Caso contrário, filtrar apenas as selecionadas
-  const filtradas = subatividades.filter(sub => sub.selecionada);
+  const filtradas = subatividades.filter(sub => sub.selecionada === true);
   console.log(`Filtrando subatividades: ${filtradas.length} de ${subatividades.length} selecionadas`);
   return filtradas;
 };

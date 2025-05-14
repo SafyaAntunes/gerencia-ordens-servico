@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -72,13 +71,11 @@ export const useSubatividadeOperations = (ordem?: OrdemServico, onOrdemUpdate?: 
         
         // Verificar se a subatividade já existe
         if (subatividadesExistentes.has(subId)) {
-          console.log(`Subatividade ${subId} já existe, ignorando`);
+          console.log(`Subatividade ${subId} já existe, atualizando`);
           
-          // Atualizar flag selecionada para true se não estiver
+          // Atualizar flag selecionada para true
           const existingSubatividade = subatividadesExistentes.get(subId);
-          if (!existingSubatividade.selecionada) {
-            existingSubatividade.selecionada = true;
-          }
+          existingSubatividade.selecionada = true;
           continue;
         }
         
@@ -105,7 +102,6 @@ export const useSubatividadeOperations = (ordem?: OrdemServico, onOrdemUpdate?: 
           });
         } else {
           // Se não encontrou pelo ID, pode ser um ID padrão (default-*)
-          // Verificar se é um ID padrão que contém o nome da subatividade
           if (subId.startsWith('default-')) {
             // Extrair nome da subatividade do ID (se possível)
             const parts = subId.split('-');
@@ -118,7 +114,7 @@ export const useSubatividadeOperations = (ordem?: OrdemServico, onOrdemUpdate?: 
                 novasSubatividades.push({
                   id: uuidv4(), // Gerar novo ID único
                   nome: nome,
-                  selecionada: true,
+                  selecionada: true, // Garantir que subatividades adicionadas sejam selecionadas
                   concluida: false,
                   tempoEstimado: 1,
                   servicoTipo: servicoTipo
@@ -293,7 +289,7 @@ export const useSubatividadeOperations = (ordem?: OrdemServico, onOrdemUpdate?: 
   };
 };
 
-// Função auxiliar para obter subatividades padrão por tipo de serviço (copiada da SelectSubatividadesDialog)
+// Função auxiliar para obter subatividades padrão por tipo de serviço
 function getDefaultSubatividades(servicoTipo: TipoServico): string[] {
   switch (servicoTipo) {
     case 'bloco':

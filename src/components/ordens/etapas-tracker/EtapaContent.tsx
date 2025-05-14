@@ -119,6 +119,10 @@ export default function EtapaContent({
   const servicosFiltrados = getServicosFiltrados();
   const servicosTipo = [...new Set(servicosEtapa.map(s => s.tipo))] as TipoServico[];
   
+  console.log(`EtapaContent - Serviços disponíveis para seleção (${etapa}):`, servicosTipo);
+  console.log(`EtapaContent - Serviço selecionado atual:`, selectedService);
+  console.log(`EtapaContent - Serviços filtrados para exibição:`, servicosFiltrados);
+  
   if (servicosEtapa.length === 0) {
     return <EmptyServices etapa={etapa} />;
   }
@@ -128,7 +132,7 @@ export default function EtapaContent({
       <InspecaoServicosSelector
         servicosTipo={servicosTipo}
         onSelect={setSelectedService}
-        etapa={etapa}
+        etapa={etapa as "inspecao_inicial" | "inspecao_final"}
       />
     );
   }
@@ -149,7 +153,7 @@ export default function EtapaContent({
           servicosTipo={servicosTipo}
           selectedServicoTipo={selectedService}
           onServicoTipoSelect={setSelectedService}
-          etapa={etapa}
+          etapa={etapa as "inspecao_inicial" | "inspecao_final"}
         />
       )}
       

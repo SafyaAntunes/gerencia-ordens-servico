@@ -1,80 +1,107 @@
 
-import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription,
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter 
+} from "@/components/ui/dialog";
+import { TipoServico } from "@/types/ordens";
 
 interface AddSubatividadeDialogProps {
+  servicoTipo: TipoServico;
   isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
+  setIsOpen: (open: boolean) => void;
+  isAddingSubatividades: boolean;
   novaSubatividade: string;
+  setNovaSubatividade: (value: string) => void;
   tempoEstimado: number;
-  onNovaSubatividadeChange: (value: string) => void;
-  onTempoEstimadoChange: (value: number) => void;
-  onAddSubatividade: () => void;
+  setTempoEstimado: (value: number) => void;
+  handleAddCustomSubatividade: () => void;
 }
 
-export const AddSubatividadeDialog: React.FC<AddSubatividadeDialogProps> = ({
+export function AddSubatividadeDialog({
+  servicoTipo,
   isOpen,
-  onOpenChange,
+  setIsOpen,
+  isAddingSubatividades,
   novaSubatividade,
+  setNovaSubatividade,
   tempoEstimado,
-  onNovaSubatividadeChange,
-  onTempoEstimadoChange,
-  onAddSubatividade
-}) => {
+  setTempoEstimado,
+  handleAddCustomSubatividade
+}: AddSubatividadeDialogProps) {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleAddCustomSubatividade();
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        <Button 
-          variant="outline" 
-          size="sm"
-          className="flex items-center gap-1"
-        >
-          <Plus className="h-4 w-4" /> 
-          Nova Subatividade
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Adicionar Subatividade</DialogTitle>
+          <DialogTitle>Adicionar nova subatividade</DialogTitle>
           <DialogDescription>
-            Crie uma nova subatividade personalizada para este serviço.
+            Adicione uma subatividade personalizada para o serviço
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="nome-subatividade">Nome da Subatividade</Label>
+        
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="nome" className="text-right">
+              Nome
+            </Label>
             <Input
-              id="nome-subatividade"
+              id="nome"
               value={novaSubatividade}
-              onChange={(e) => onNovaSubatividadeChange(e.target.value)}
-              placeholder="Digite o nome da subatividade"
+              onChange={(e) => setNovaSubatividade(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="col-span-3"
+              autoFocus
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="tempo-estimado">Tempo Estimado (horas)</Label>
+          
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="tempo" className="text-right">
+              Tempo (horas)
+            </Label>
             <Input
-              id="tempo-estimado"
+              id="tempo"
               type="number"
               min="0.5"
               step="0.5"
               value={tempoEstimado}
-              onChange={(e) => onTempoEstimadoChange(parseFloat(e.target.value) || 0)}
+              onChange={(e) => setTempoEstimado(parseFloat(e.target.value) || 1)}
+              className="col-span-3"
             />
           </div>
         </div>
+        
         <DialogFooter>
           <Button 
-            onClick={onAddSubatividade}
-            disabled={!novaSubatividade.trim()}
+            type="button" 
+            variant="outline" 
+            onClick={() => setIsOpen(false)}
+            disabled={isAddingSubatividades}
           >
-            Adicionar
+            Cancelar
+          </Button>
+          <Button 
+            type="submit" 
+            onClick={handleAddCustomSubatividade}
+            disabled={!novaSubatividade.trim() || isAddingSubatividades}
+          >
+            {isAddingSubatividades ? "Adicionando..." : "Adicionar"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-};
+}
