@@ -27,9 +27,6 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [isLoadingClientes, setIsLoadingClientes] = useState(false);
   
-  // Force a local editMode state to ensure we have control over it
-  const [editMode, setEditMode] = useState(false);
-  
   const {
     ordem,
     isLoading,
@@ -49,30 +46,10 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
 
   const { logSubatividadesState } = useTrackingSubatividades();
   
-  console.log("OrdemDetalhesContent render - isEditando:", isEditando);
-  console.log("OrdemDetalhesContent render - local editMode:", editMode);
-  
-  // Keep the local state and hook state in sync
-  useEffect(() => {
-    if (editMode !== isEditando) {
-      console.log("Synchronizing edit states - setting hook state to:", editMode);
-      setIsEditando(editMode);
-    }
-  }, [editMode, setIsEditando]);
-  
-  // Sync in the other direction as well
-  useEffect(() => {
-    if (isEditando !== editMode) {
-      console.log("Synchronizing edit states - setting local state to:", isEditando);
-      setEditMode(isEditando);
-    }
-  }, [isEditando]);
-  
   // Carrega dados de clientes e outros para o formulário de edição
   useEffect(() => {
     const fetchFormData = async () => {
-      if (editMode) {
-        console.log("Fetching form data for editing");
+      if (isEditando) {
         setIsLoadingClientes(true);
         try {
           const data = await loadOrderFormData();
@@ -87,7 +64,7 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
     };
     
     fetchFormData();
-  }, [editMode]);
+  }, [isEditando]);
 
   // Função para preparar subatividades para edição
   const prepareSubatividadesForEdit = () => {
@@ -122,6 +99,9 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
   // Função para alternar o estado de uma subatividade
   const handleSubatividadeToggle = (servicoTipo: string, subId: string, checked: boolean) => {
     console.log(`[OrdemDetalhesContent] Alternando subatividade: ${subId} para ${checked ? "selecionada" : "não selecionada"}`);
+    
+    // Esta função seria implementada se precisássemos manipular o estado das subatividades durante a edição,
+    // mas como estamos usando o OrdemFormWrapper que já gerencia isso internamente, não precisamos implementar aqui
   };
 
   useEffect(() => {
@@ -142,22 +122,12 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
     return <div>Nenhuma ordem selecionada.</div>;
   }
 
-  const handleEditClick = () => {
-    console.log("Edit button clicked in OrdemDetalhesContent");
-    // Use the local state directly for immediate UI feedback
-    setEditMode(true);
-  };
-
-  const handleCancelEdit = () => {
-    if (confirm("Deseja cancelar a edição? As alterações não salvas serão perdidas.")) {
-      console.log("Cancelling edit mode");
-      setEditMode(false);
-    }
-  };
-
   const handleVoltar = () => {
-    if (editMode) {
-      handleCancelEdit();
+    if (isEditando) {
+      // Se estiver editando, pergunte antes de cancelar
+      if (confirm("Deseja cancelar a edição? As alterações não salvas serão perdidas.")) {
+        setIsEditando(false);
+      }
     } else {
       navigate(-1);
     }
@@ -165,24 +135,22 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
 
   return (
     <div>
-      {!editMode && (
-        <OrdemHeaderCustom
-          id={ordem.id}
-          nome={ordem.nome}
-          canEdit={canEditThisOrder}
-          onEditClick={handleEditClick}
-          onDeleteClick={() => setDeleteDialogOpen(true)}
-          ordem={ordem}
-        />
-      )}
+      <OrdemHeaderCustom
+        id={ordem.id}
+        nome={ordem.nome}
+        canEdit={canEditThisOrder}
+        onEditClick={() => setIsEditando(true)}
+        onDeleteClick={() => setDeleteDialogOpen(true)}
+        ordem={ordem}
+      />
       
-      {editMode ? (
+      {isEditando ? (
         <div className="mt-6">
           <OrdemFormWrapper
             ordem={ordem}
             onSubmit={handleSubmit}
             isSubmitting={isSubmitting}
-            onCancel={handleCancelEdit}
+            onCancel={() => setIsEditando(false)}
             onSubatividadeToggle={handleSubatividadeToggle}
             prepareSubatividadesForEdit={prepareSubatividadesForEdit}
             clientes={clientes}
@@ -204,12 +172,12 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
       <div className="mt-6 flex justify-between">
         <BackButton onClick={handleVoltar} />
         
-        {editMode && (
+        {isEditando && (
           <div className="space-x-2">
             <Button
               type="button"
               variant="secondary"
-              onClick={handleCancelEdit}
+              onClick={() => setIsEditando(false)}
               disabled={isSubmitting}
             >
               Cancelar

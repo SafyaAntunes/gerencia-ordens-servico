@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrdemFetch } from "./ordem-detalhes/useOrdemFetch";
 import { useOrdemStatus } from "./ordem-detalhes/useOrdemStatus";
@@ -11,11 +11,6 @@ export const useOrdemDetalhes = (id: string | undefined): UseOrdemDetalhesResult
   const [activeTab, setActiveTab] = useState<string>("detalhes");
   const [isEditando, setIsEditando] = useState(false);
   const { funcionario, canEditOrder } = useAuth();
-  
-  // Debug log for editing state
-  useEffect(() => {
-    console.log("useOrdemDetalhes - isEditando state changed:", isEditando);
-  }, [isEditando]);
   
   // Fetch ordem data
   const { ordem, setOrdem, isLoading, fetchMotorDetails } = useOrdemFetch(id);

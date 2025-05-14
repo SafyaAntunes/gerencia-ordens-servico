@@ -59,8 +59,8 @@ export function useServicoTracker({
     isEtapaConcluida: servico.concluido
   });
 
-  // Format the numeric displayTime to a string using the formatTime utility
-  const displayTime = formatTime(timerDisplayTime);
+  // Use the timer display time directly 
+  const displayTime = timerDisplayTime;
 
   // Convert timer pausas to PausaRegistro format
   const pausas: PausaRegistro[] = timerPausas.map(p => ({
@@ -188,7 +188,7 @@ export function useServicoTracker({
     state: {
       isRunning,
       isPaused,
-      time: displayTime, // Now using the formatted displayTime string
+      time: displayTime, // Fix: Using string 'displayTime' instead of number
       concluido: servico.concluido,
       status: servicoStatus,
       pausas,
