@@ -2,8 +2,7 @@
 import { TipoServico, EtapaOS } from "@/types/ordens";
 import { Button } from "@/components/ui/button";
 import { tipoServicoLabel } from "@/utils/etapaNomes"; 
-import { useState } from "react";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 
 interface InspecaoServicosSelectorProps {
   servicosTipo: TipoServico[];
@@ -30,6 +29,7 @@ export default function InspecaoServicosSelector({
   }, [selectedServicoTipo]);
   
   const handleSelect = (tipo: TipoServico) => {
+    console.log(`InspecaoServicosSelector - Serviço selecionado: ${tipo}`);
     setSelectedType(tipo);
     
     // Chamar o callback apropriado
@@ -42,6 +42,15 @@ export default function InspecaoServicosSelector({
 
   const etapaNome = etapa === "inspecao_inicial" ? "Inspeção Inicial" : "Inspeção Final";
   
+  // Filtrar serviços que não são de inspeção ou lavagem
+  const servicosValidos = servicosTipo.filter(tipo => 
+    tipo !== "lavagem" && 
+    tipo !== "inspecao_inicial" && 
+    tipo !== "inspecao_final"
+  );
+  
+  console.log(`InspecaoServicosSelector - Serviços disponíveis para ${etapa}:`, servicosValidos);
+  
   return (
     <div className="space-y-4">
       <div>
@@ -52,10 +61,7 @@ export default function InspecaoServicosSelector({
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-        {servicosTipo.filter(tipo => tipo !== "lavagem" && 
-                                     tipo !== "inspecao_inicial" && 
-                                     tipo !== "inspecao_final")
-                     .map((tipo) => (
+        {servicosValidos.map((tipo) => (
           <Button
             key={tipo}
             variant={selectedType === tipo ? "default" : "outline"}
@@ -67,6 +73,12 @@ export default function InspecaoServicosSelector({
           </Button>
         ))}
       </div>
+      
+      {servicosValidos.length === 0 && (
+        <div className="p-4 border rounded text-center text-muted-foreground">
+          Nenhum serviço disponível para inspeção
+        </div>
+      )}
     </div>
   );
 }

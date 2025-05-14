@@ -1,6 +1,7 @@
 
-import { Servico, TipoServico, EtapaOS } from "@/types/ordens";
 import { ServicoTracker } from "../servico";
+import { Servico, TipoServico, EtapaOS, OrdemServico } from "@/types/ordens";
+import { useState, useCallback } from "react";
 
 interface EtapaServiceListProps {
   servicos: Servico[];
@@ -8,8 +9,10 @@ interface EtapaServiceListProps {
   funcionarioId: string;
   funcionarioNome?: string;
   etapa: EtapaOS;
+  ordem?: OrdemServico;
   onSubatividadeToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
   onServicoStatusChange?: (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
+  onOrdemUpdate?: (ordemAtualizada: OrdemServico) => void;
 }
 
 export default function EtapaServiceList({
@@ -18,26 +21,48 @@ export default function EtapaServiceList({
   funcionarioId,
   funcionarioNome,
   etapa,
+  ordem,
   onSubatividadeToggle,
-  onServicoStatusChange
+  onServicoStatusChange,
+  onOrdemUpdate
 }: EtapaServiceListProps) {
   if (servicos.length === 0) {
     return null;
   }
   
+  // Create a proper ordem object to pass to ServicoTracker if none is provided
+  const [ordemLocal, setOrdemLocal] = useState<OrdemServico>(() => {
+    return ordem || { id: ordemId, servicos: servicos } as OrdemServico;
+  });
+  
+  // Create a proper onUpdate handler that updates the local state
+  const handleOrdemUpdate = useCallback((ordemAtualizada: OrdemServico) => {
+    console.log("EtapaServiceList - handleOrdemUpdate:", ordemAtualizada);
+    
+    // Update local state
+    setOrdemLocal(ordemAtualizada);
+    
+    // Pass up to parent if available
+    if (onOrdemUpdate) {
+      onOrdemUpdate(ordemAtualizada);
+    }
+  }, [onOrdemUpdate]);
+  
   return (
     <div className="space-y-4">
-      {servicos.map((servico) => (
+      {servicos.map((servico, i) => (
         <ServicoTracker
-          key={servico.tipo}
+          key={`${servico.tipo}-${i}`}
           servico={servico}
-          ordemId={ordemId}
-          funcionarioId={funcionarioId}
-          funcionarioNome={funcionarioNome}
-          etapa={etapa}
+          ordem={ordemLocal}
+          onUpdate={handleOrdemUpdate}
+          ordemId={ordemId}  // Legacy prop
+          funcionarioId={funcionarioId}  // Legacy prop
+          funcionarioNome={funcionarioNome}  // Legacy prop
+          etapa={etapa}  // Legacy prop
           onSubatividadeToggle={
             onSubatividadeToggle ? 
-              (subatividadeId, checked) => onSubatividadeToggle(servico.tipo, subatividadeId, checked) : 
+              (subId, checked) => onSubatividadeToggle(servico.tipo, subId, checked) : 
               undefined
           }
           onServicoStatusChange={

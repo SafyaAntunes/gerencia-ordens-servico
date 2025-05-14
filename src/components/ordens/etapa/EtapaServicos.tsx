@@ -42,6 +42,14 @@ export function EtapaServicos({
     }
   }, [onOrdemUpdate]);
 
+  if (servicos.length === 0) {
+    return (
+      <div className="p-4 border rounded text-center text-muted-foreground">
+        Nenhum serviço disponível para esta etapa
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {servicos.map((servico) => (

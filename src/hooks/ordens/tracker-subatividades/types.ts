@@ -1,5 +1,5 @@
 
-import { SubAtividade, TipoServico, OrdemServico } from '@/types/ordens';
+import { OrdemServico, TipoServico } from "@/types/ordens";
 
 export interface UseTrackerSubatividadesProps {
   ordem?: OrdemServico;
@@ -8,6 +8,6 @@ export interface UseTrackerSubatividadesProps {
 
 export interface UseTrackerSubatividadesResult {
   isAddingSubatividades: boolean;
-  addSelectedSubatividades: (servicoTipo: TipoServico, subatividadesNomes: string[]) => Promise<OrdemServico | void>;
-  addCustomSubatividade: (servicoTipo: TipoServico, nome: string, tempoEstimado?: number) => Promise<SubAtividade | void>;
+  addSelectedSubatividades: (servicoTipo: TipoServico, subatividadesIds: string[]) => Promise<void>;
+  addCustomSubatividade: (servicoTipo: TipoServico, nome: string, tempoEstimado?: number) => Promise<void>;
 }
