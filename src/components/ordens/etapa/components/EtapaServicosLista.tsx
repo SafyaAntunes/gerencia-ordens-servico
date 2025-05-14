@@ -1,6 +1,6 @@
 
-import { ServicoTracker } from "../../servico";
-import { EtapaOS, Servico, TipoServico } from "@/types/ordens";
+import { ServicoTracker } from "../../../servico";
+import { EtapaOS, Servico, TipoServico, OrdemServico } from "@/types/ordens";
 
 interface EtapaServicosListaProps {
   servicos: Servico[];
@@ -26,7 +26,7 @@ export default function EtapaServicosLista({
   }
   
   // Create a dummy ordem object to pass to ServicoTracker
-  const dummyOrdem = { id: ordemId } as any;
+  const dummyOrdem: OrdemServico = { id: ordemId } as OrdemServico;
   
   return (
     <div className="space-y-4">

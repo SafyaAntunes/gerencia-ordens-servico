@@ -64,8 +64,8 @@ export function useServicoTracker({
 
   // Convert timer pausas to PausaRegistro format
   const pausas: PausaRegistro[] = timerPausas.map(p => ({
-    iniciado: p.inicio,
-    finalizado: p.fim,
+    inicio: p.inicio,
+    fim: p.fim,
     motivo: p.motivo
   }));
   
@@ -136,7 +136,7 @@ export function useServicoTracker({
   // Dummy implementations to match interface
   const [responsavelSelecionadoId, setResponsavelSelecionadoId] = useState(funcionarioId || '');
   const [isSavingResponsavel, setIsSavingResponsavel] = useState(false);
-  const lastSavedResponsavelId = funcionarioId ? String(funcionarioId) : '';
+  const lastSavedResponsavelId = funcionarioId ? funcionarioId : ''; // Changed from String(funcionarioId) to fix type mismatch
   const lastSavedResponsavelNome = funcionarioNome || '';
 
   const handleSaveResponsavel = async () => {

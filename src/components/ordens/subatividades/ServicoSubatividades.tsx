@@ -34,7 +34,7 @@ export const ServicoSubatividades = memo(({
     
     // Log das subatividades recebidas
     console.log(`[ServicoSubatividades] Recebido para ${tipoServico}:`, subatividades);
-    logSubatividadesState("ServicoSubatividades-recebidas", tipoServico);
+    logSubatividadesState("ServicoSubatividades-recebidas", tipoServico as string);
     
     // Corrigir qualquer inconsistência no estado 'selecionada'
     // CORREÇÃO: NÃO definir selecionada como true por padrão, preservar o estado existente
@@ -60,7 +60,7 @@ export const ServicoSubatividades = memo(({
       return sub;
     });
     
-    logSubatividadesState("ServicoSubatividades-toggle", tipoServico);
+    logSubatividadesState("ServicoSubatividades-toggle", tipoServico as string);
     onChange(updatedSubatividades);
   };
   

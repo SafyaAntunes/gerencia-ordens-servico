@@ -25,6 +25,9 @@ export interface PausaRegistro {
   inicio: number;
   fim?: number;
   motivo?: string;
+  // Aliases for backward compatibility
+  iniciado?: number;
+  finalizado?: number;
 }
 
 export interface UseServicoTrackerResult {
@@ -83,4 +86,10 @@ export interface UseServicoTrackerResult {
 
 export interface UseServicoTrackerProps extends ServicoTrackerProps {
   // Any additional props specific to the hook
+  ordemId?: string;
+  funcionarioId?: string;
+  funcionarioNome?: string;
+  etapa?: EtapaOS;
+  onServicoStatusChange?: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
+  onSubatividadeToggle?: (subatividadeId: string, checked: boolean) => void;
 }
