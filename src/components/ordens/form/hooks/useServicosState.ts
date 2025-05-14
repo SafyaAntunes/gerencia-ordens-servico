@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { SubAtividade, TipoServico } from "@/types/ordens";
 import { isEqual } from "lodash";

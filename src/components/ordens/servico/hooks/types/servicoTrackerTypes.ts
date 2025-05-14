@@ -1,7 +1,13 @@
 
-import { OrdemServico, Servico, SubAtividade, EtapaOS, PausaRegistro } from "@/types/ordens";
+import { OrdemServico, Servico, SubAtividade, EtapaOS } from "@/types/ordens";
 
 export type ServicoStatus = 'nao_iniciado' | 'em_andamento' | 'pausado' | 'concluido';
+
+export interface PausaRegistro {
+  inicio: number;
+  fim?: number;
+  motivo?: string;
+}
 
 export interface UseServicoTrackerProps {
   servico: Servico;
