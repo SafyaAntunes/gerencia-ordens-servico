@@ -1,26 +1,13 @@
 
-import { SubAtividade, TipoServico, EtapaOS, OrdemServico } from "@/types/ordens";
+import { OrdemServico, TipoServico } from "@/types/ordens";
 
-export interface SubatividadeToggleParams {
-  servicoTipo: TipoServico;
-  subatividadeId: string;
-  checked: boolean;
+export interface UseTrackerSubatividadesProps {
+  ordem?: OrdemServico;
+  onOrdemUpdate?: (ordemAtualizada: OrdemServico) => void;
 }
 
-export interface TrackerSubatividadesProps {
-  ordem: OrdemServico;
-  onOrdemUpdate: (ordemAtualizada: OrdemServico) => void;
-}
-
-export interface TrackerResponse {
-  success: boolean;
-  message: string;
-}
-
-export interface EtapaStatusUpdateParams {
-  etapa: EtapaOS;
-  concluida: boolean;
-  funcionarioId?: string;
-  funcionarioNome?: string;
-  servicoTipo?: TipoServico;
+export interface UseTrackerSubatividadesResult {
+  isAddingSubatividades: boolean;
+  addSelectedSubatividades: (servicoTipo: TipoServico, subatividadesIds: string[]) => Promise<void>;
+  addCustomSubatividade: (servicoTipo: TipoServico, nome: string, tempoEstimado?: number) => Promise<void>;
 }
