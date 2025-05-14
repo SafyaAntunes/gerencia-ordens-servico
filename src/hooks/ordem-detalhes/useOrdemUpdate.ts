@@ -34,21 +34,24 @@ export const useOrdemUpdate = (
           return acc;
         }, {});
         
-        console.log("Current servicos:", currentServicos);
-        console.log("New servicos tipos:", newServicosTipos);
+        console.log("[useOrdemUpdate] Current servicos:", currentServicos);
+        console.log("[useOrdemUpdate] New servicos tipos:", newServicosTipos);
         
         return newServicosTipos.map(tipo => {
           const existingServico = servicosMap[tipo];
-          console.log(`Processing tipo: ${tipo}, exists: ${!!existingServico}`);
+          console.log(`[useOrdemUpdate] Processing tipo: ${tipo}, exists: ${!!existingServico}`);
           
           // Get the updated subatividades from the form values
           const formSubatividades = values.servicosSubatividades?.[tipo] || [];
-          console.log(`Form subatividades for ${tipo}:`, formSubatividades);
+          console.log(`[useOrdemUpdate] Form subatividades for ${tipo}:`, 
+            formSubatividades.map(s => ({id: s.id, nome: s.nome, selecionada: s.selecionada}))
+          );
           
           // If this is a new service type (not in the existing order)
           const isNewServiceType = !existingServico;
           
           // Process subatividades - preserve existing status for those that were already present
+          // IMPORTANTE: Filtrar apenas subatividades marcadas como selecionadas no formulário
           let processedSubatividades = formSubatividades
             .filter(formSub => formSub.selecionada) // Only include selected subatividades
             .map(formSub => {
@@ -58,20 +61,23 @@ export const useOrdemUpdate = (
               // If the subatividade existed, preserve its 'concluida' status
               // Otherwise, set it to false for new selections
               const preservedStatus = existingSub ? existingSub.concluida : false;
-              console.log(`Subatividade ${formSub.nome}: preserving status = ${preservedStatus}`);
+              console.log(`[useOrdemUpdate] Subatividade ${formSub.nome}: preserving status = ${preservedStatus}, selecionada = ${formSub.selecionada}`);
               
               return {
                 ...formSub,
-                concluida: preservedStatus
+                concluida: preservedStatus,
+                selecionada: true // Garante que todas as subatividades processadas estão marcadas como selecionadas
               };
             });
           
-          console.log(`Processed subatividades for ${tipo}:`, processedSubatividades);
+          console.log(`[useOrdemUpdate] Processed subatividades for ${tipo}:`, 
+            processedSubatividades.map(s => ({id: s.id, nome: s.nome, selecionada: s.selecionada}))
+          );
           
           // If this is not a new service type AND we don't have any processed subatividades,
           // but we have existing subatividades, preserve those
           if (!isNewServiceType && processedSubatividades.length === 0 && existingServico?.subatividades?.length > 0) {
-            console.log(`No processed subatividades, preserving existing for ${tipo}`);
+            console.log(`[useOrdemUpdate] No processed subatividades, preserving existing for ${tipo}`);
             processedSubatividades = [...existingServico.subatividades];
           }
           

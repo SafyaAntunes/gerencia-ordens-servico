@@ -24,10 +24,23 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
   const { defaultSubatividades } = useServicoSubatividades();
   const [dataSource, setDataSource] = useState<"banco" | "básico" | "props">("props");
   
+  // Depuração inicial das subatividades recebidas via props
+  useEffect(() => {
+    console.log(`[ServicoSubatividades] INICIALIZAÇÃO - subatividades para ${tipoServico}:`, 
+      subatividades.map(sub => ({
+        id: sub.id,
+        nome: sub.nome,
+        selecionada: sub.selecionada
+      }))
+    );
+  }, []);
+  
   // Priorizar subatividades fornecidas via props (da edição)
   useEffect(() => {
     if (subatividades && subatividades.length > 0) {
-      console.log(`[ServicoSubatividades] Usando subatividades das props para ${tipoServico}:`, subatividades);
+      console.log(`[ServicoSubatividades] Usando subatividades das props para ${tipoServico}:`, 
+        subatividades.map(s => ({id: s.id, nome: s.nome, selecionada: s.selecionada}))
+      );
       
       // Garantir que estados importantes como 'selecionada' estejam preservados exatamente como vieram
       // Log para depuração - verificar o estado 'selecionada' antes de processamento

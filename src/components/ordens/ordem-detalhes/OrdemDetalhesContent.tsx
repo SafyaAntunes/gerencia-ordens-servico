@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Cliente } from "@/types/clientes";
@@ -113,29 +112,34 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
       if (servico.subatividades && servico.subatividades.length > 0) {
         // Log detalhado para cada serviço e suas subatividades
         console.log(`[OrdemDetalhes] Serviço ${servico.tipo} tem ${servico.subatividades.length} subatividades.`);
-        console.log(`[OrdemDetalhes] Subatividades do serviço ${servico.tipo} para edição:`, 
-          servico.subatividades.map(sub => ({ 
-            id: sub.id, 
-            nome: sub.nome, 
-            selecionada: sub.selecionada !== undefined ? sub.selecionada : true
-          }))
-        );
         
         // Importante: Preservar explicitamente o estado 'selecionada' de cada subatividade
         servicosSubatividades[servico.tipo] = servico.subatividades.map(sub => {
           // Log individual para entender o estado de cada subatividade
-          console.log(`[OrdemDetalhes] Subatividade ${sub.nome}: selecionada=${sub.selecionada !== undefined ? sub.selecionada : 'undefined'}`);
+          console.log(`[OrdemDetalhes] Subatividade ${sub.nome}: selecionada=${sub.selecionada !== undefined ? sub.selecionada : true}`);
           
           return {
             ...sub,
-            // Se selecionada já estiver definido, use esse valor, caso contrário, defina como true
+            // GARANTE que o valor selecionada seja explicitamente definido
+            // Se selecionada não estiver definido ou for undefined, define como true
             selecionada: sub.selecionada !== undefined ? sub.selecionada : true
           };
         });
+        
+        // Log das subatividades preparadas para este serviço
+        console.log(`[OrdemDetalhes] Subatividades preparadas para ${servico.tipo}:`, 
+          servicosSubatividades[servico.tipo].map(s => ({id: s.id, nome: s.nome, selecionada: s.selecionada}))
+        );
       }
     });
     
-    console.log("[OrdemDetalhes] Resultado final das subatividades preparadas:", servicosSubatividades);
+    console.log("[OrdemDetalhes] Resultado final das subatividades preparadas:", 
+      Object.entries(servicosSubatividades).map(([tipo, subs]) => ({
+        tipo, 
+        total: subs.length,
+        selecionadas: subs.filter(s => s.selecionada).length
+      }))
+    );
     return servicosSubatividades;
   };
 

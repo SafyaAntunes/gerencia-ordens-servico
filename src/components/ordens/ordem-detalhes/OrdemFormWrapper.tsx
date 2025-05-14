@@ -24,6 +24,17 @@ export function OrdemFormWrapper({
   clientes,
   isLoadingClientes
 }: OrdemFormWrapperProps) {
+  // Obter subatividades com seus estados preservados
+  const subatividadesPreparadas = prepareSubatividadesForEdit();
+  
+  // Log para depuração
+  console.log("[OrdemFormWrapper] Subatividades preparadas para edição:", 
+    Object.entries(subatividadesPreparadas).map(([tipo, subs]) => ({
+      tipo,
+      subs: subs.map(s => ({ id: s.id, nome: s.nome, selecionada: s.selecionada }))
+    }))
+  );
+
   return (
     <OrdemForm 
       onSubmit={onSubmit}
@@ -42,7 +53,7 @@ export function OrdemFormWrapper({
           return acc;
         }, {} as Record<string, string>) || {},
         // Utilizar a função preparada para obter subatividades com estado preservado
-        servicosSubatividades: prepareSubatividadesForEdit()
+        servicosSubatividades: subatividadesPreparadas
       }}
       defaultFotosEntrada={ordem?.fotosEntrada || []}
       defaultFotosSaida={ordem?.fotosSaida || []}

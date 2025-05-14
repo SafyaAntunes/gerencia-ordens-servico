@@ -89,7 +89,7 @@ export const ServicoTipoSelector = memo(({
         const defaultSubs = defaultSubatividades[tipo as TipoServico].map(nome => ({
           id: nome,
           nome,
-          selecionada: true,
+          selecionada: true, // Explicitamente definir como selecionada
           concluida: false,
         }));
         
@@ -133,6 +133,17 @@ export const ServicoTipoSelector = memo(({
             name="servicosTipos"
             render={({ field }) => {
               const checked = field.value?.includes(tipo.value);
+              
+              // Registrar quando um serviço é renderizado
+              console.log(`[ServicoTipoSelector] Renderizando serviço ${tipo.value}, checked: ${checked}`);
+              
+              // Verificar se existem subatividades salvas para este serviço
+              if (checked) {
+                const existingSubatividades = servicosSubatividades[tipo.value];
+                console.log(`[ServicoTipoSelector] Subatividades existentes para ${tipo.value}:`, 
+                  existingSubatividades?.map(sub => ({ id: sub.id, nome: sub.nome, selecionada: sub.selecionada }))
+                );
+              }
 
               return (
                 <FormItem key={tipo.value} className="flex flex-col space-y-3 my-4">
