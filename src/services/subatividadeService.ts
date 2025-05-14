@@ -1,4 +1,3 @@
-
 import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, setDoc, deleteDoc, query, where, writeBatch, QuerySnapshot } from 'firebase/firestore';
 import { SubAtividade, TipoServico, TipoAtividade } from '@/types/ordens';
@@ -260,5 +259,76 @@ export async function getAllSubatividades(): Promise<{id: string, tipoServico: s
   } catch (error) {
     console.error('Erro ao buscar todas as subatividades:', error);
     throw error;
+  }
+}
+
+/**
+ * Busca presets de subatividades para um tipo de serviço
+ * Esta função é utilizada para obter as subatividades disponíveis ao adicionar a um serviço
+ */
+export async function fetchSubatividadesPreset(): Promise<Array<{
+  tipo: TipoServico,
+  subatividades?: SubAtividade[]
+}>> {
+  try {
+    console.log("[fetchSubatividadesPreset] Buscando presets de subatividades");
+    
+    // Buscar todas as subatividades da coleção
+    const subatividadesRef = collection(db, 'subatividades');
+    const snapshot = await getDocs(subatividadesRef);
+    
+    // Mapeamento para organizar as subatividades por tipo
+    const subatividadesPorTipo = new Map<TipoServico, SubAtividade[]>();
+    
+    // Inicializar o mapa com arrays vazios para cada tipo de serviço
+    const tiposServico: TipoServico[] = [
+      'bloco', 'biela', 'cabecote', 'virabrequim', 
+      'eixo_comando', 'montagem', 'dinamometro'
+    ];
+    
+    tiposServico.forEach(tipo => {
+      subatividadesPorTipo.set(tipo, []);
+    });
+    
+    // Preencher o mapa com as subatividades encontradas
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const tipoServico = data.tipoServico as TipoServico;
+      
+      // Verificar se é um tipo de serviço (não uma atividade como lavagem ou inspeção)
+      if (tiposServico.includes(tipoServico)) {
+        if (!subatividadesPorTipo.has(tipoServico)) {
+          subatividadesPorTipo.set(tipoServico, []);
+        }
+        
+        subatividadesPorTipo.get(tipoServico)?.push({
+          id: data.id,
+          nome: data.nome,
+          selecionada: false,
+          concluida: false,
+          tempoEstimado: data.tempoEstimado || 1,
+          servicoTipo: tipoServico,
+          descricao: data.descricao || ''
+        });
+      }
+    });
+    
+    // Converter o mapa para o formato esperado pelo componente
+    const result = Array.from(subatividadesPorTipo.entries()).map(([tipo, subatividades]) => ({
+      tipo,
+      subatividades
+    }));
+    
+    console.log(`[fetchSubatividadesPreset] Encontrados ${result.length} tipos de serviço com subatividades`);
+    result.forEach(item => {
+      console.log(`- ${item.tipo}: ${item.subatividades?.length || 0} subatividades`);
+    });
+    
+    return result;
+    
+  } catch (error) {
+    console.error("Erro ao buscar presets de subatividades:", error);
+    toast.error("Erro ao carregar subatividades disponíveis");
+    return [];
   }
 }
