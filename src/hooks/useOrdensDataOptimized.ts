@@ -94,16 +94,20 @@ export const useOrdensDataOptimized = ({
             }
             
             return querySnapshot.docs.map(doc => {
-              const docData = doc.data();
+              // Type the document data correctly to avoid TypeScript errors
+              const docData = doc.data() as DocumentData;
               
-              return {
-                ...docData,
+              // Create a properly typed ordem object
+              const ordem: OrdemServico = {
+                ...docData as any, // Cast to any to avoid spread typing error
                 id: doc.id,
                 dataAbertura: docData.dataAbertura?.toDate() || new Date(),
                 dataPrevistaEntrega: docData.dataPrevistaEntrega?.toDate() || new Date(),
                 // Cálculo de progresso otimizado
                 progressoEtapas: calculateProgressoEtapas(docData)
-              } as OrdemServico;
+              };
+              
+              return ordem;
             });
           }
         );
