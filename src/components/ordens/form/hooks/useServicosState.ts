@@ -58,7 +58,7 @@ export const useServicosState = (
     }
   }, [debugInfoLoaded]);
 
-  // Load default values only once on initialization
+  // Priorizar valores de edição - carregados apenas uma vez na inicialização
   useEffect(() => {
     if (hasInitialized) return;
     
@@ -80,9 +80,9 @@ export const useServicosState = (
     setHasInitialized(true);
   }, [defaultValues?.servicosSubatividades, defaultValues?.servicosDescricoes, hasInitialized]);
 
-  // Load subatividades for each service type - with optimizations and clear source tracking
+  // Carrega subatividades para cada tipo de serviço - com otimizações
   useEffect(() => {
-    // Check if service types actually changed to avoid unnecessary loads
+    // Pular se os tipos de serviço não mudaram
     if (isEqual(servicosTipos.sort(), previousServiceTypes.sort()) && hasInitialized) {
       return;
     }
@@ -92,13 +92,13 @@ export const useServicosState = (
     
     setPreviousServiceTypes([...servicosTipos]);
     
-    // Track pending async operations
+    // Rastrear operações assíncronas pendentes
     let isMounted = true;
     const pendingOperations: Record<string, boolean> = {};
     const sourceTracker: Record<string, string> = {};
     
     const loadSubatividades = async (tipo: TipoServico) => {
-      // Skip if we've already started loading this type
+      // Pular se j�� estamos carregando este tipo
       if (pendingOperations[tipo]) {
         console.log(`⏭️ [loadSubatividades] Já está carregando subatividades para ${tipo}, pulando...`);
         return;
@@ -106,9 +106,7 @@ export const useServicosState = (
       pendingOperations[tipo] = true;
       
       try {
-        console.log(`🔍 [loadSubatividades] Buscando subatividades do banco para ${tipo}...`);
-        
-        // PRIORIDADE 1: Subatividades existentes no modo de edição (defaultValues)
+        // PRIORIDADE MAIS ALTA: Usar subatividades existentes no modo de edição
         const existingSubatividades = defaultValues?.servicosSubatividades?.[tipo] || [];
         if (existingSubatividades.length > 0) {
           console.log(`✅ [loadSubatividades] USANDO SUBATIVIDADES DO MODO DE EDIÇÃO para ${tipo}:`, existingSubatividades);
@@ -121,7 +119,7 @@ export const useServicosState = (
           return;
         }
         
-        // PRIORIDADE 2: Buscar subatividades do banco de dados
+        // SEGUNDA PRIORIDADE: Buscar subatividades do banco de dados
         console.log(`🔍 [loadSubatividades] Buscando subatividades do banco para ${tipo}...`);
         const dbSubatividades = await getSubatividadesByTipo(tipo);
         console.log(`🔍 [loadSubatividades] Recebidas do banco para ${tipo}:`, dbSubatividades);
@@ -143,7 +141,7 @@ export const useServicosState = (
           return;
         }
         
-        // PRIORIDADE 3 (FALLBACK): Usar os valores padrão codificados
+        // PRIORIDADE MAIS BAIXA: Usar valores padrão apenas como último recurso
         if (defaultSubatividades && defaultSubatividades[tipo]) {
           const defaultSubs = defaultSubatividades[tipo].map(nome => ({
             id: nome,
@@ -214,7 +212,7 @@ export const useServicosState = (
       }
     };
 
-    // Always load subatividades for all selected service types
+    // Sempre carregar subatividades para todos os tipos de serviço selecionados
     servicosTipos.forEach((tipo) => {
       loadSubatividades(tipo as TipoServico);
     });
@@ -230,12 +228,12 @@ export const useServicosState = (
       return newState;
     });
     
-    // Log sources after all loads are complete
+    // Log de origens após todas as cargas serem concluídas
     setTimeout(() => {
       console.log("📊 [useServicosState] Origem das subatividades carregadas:", sourceTracker);
     }, 1000);
     
-    // Cleanup function to prevent state updates after unmount
+    // Função de limpeza para evitar atualizações de estado após desmontar
     return () => {
       isMounted = false;
     };

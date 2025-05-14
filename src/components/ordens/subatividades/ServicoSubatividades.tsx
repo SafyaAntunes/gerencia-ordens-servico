@@ -24,9 +24,8 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
   const { defaultSubatividades } = useServicoSubatividades();
   const [dataSource, setDataSource] = useState<"banco" | "default" | "props">("props");
   
-  // Load subatividades from database if none provided
+  // Priorizar subatividades fornecidas via props (da edição)
   useEffect(() => {
-    // Skip if we already have subatividades from props
     if (subatividades && subatividades.length > 0) {
       console.log(`[ServicoSubatividades] Usando subatividades das props para ${tipoServico}:`, subatividades);
       setLocalSubatividades(subatividades);
@@ -88,7 +87,7 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
     loadFromDatabase();
   }, [tipoServico, onChange, defaultSubatividades]);
   
-  // Update local state and notify parent when subatividades change from props
+  // Update local state when subatividades change from props
   useEffect(() => {
     if (subatividades && subatividades.length > 0) {
       setLocalSubatividades(subatividades);
