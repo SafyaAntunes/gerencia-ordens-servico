@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { TipoServico, SubAtividade, TipoAtividade } from "@/types/ordens";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,7 @@ export default function ServicoAtividadesConfig({
     
     // Log de debug para visualizar o estado das subatividades recebidas
     console.log(`[ServicoAtividadesConfig] Recebendo subatividades para ${servicoTipo}:`, subatividades);
-    logSubatividadesState("ServicoAtividadesConfig-recebidas", servicoTipo, subatividades);
+    logSubatividadesState("ServicoAtividadesConfig-recebidas", servicoTipo);
     
     // CORREÇÃO: Preservar o estado 'selecionada' de cada subatividade, sem forçar TRUE
     const processedSubs = (subatividades || []).map(sub => ({
@@ -49,7 +50,7 @@ export default function ServicoAtividadesConfig({
       selecionada: sub.selecionada !== undefined ? sub.selecionada : false // Alterado para false por padrão
     }));
     
-    logSubatividadesState("ServicoAtividadesConfig-processadas", servicoTipo, processedSubs);
+    logSubatividadesState("ServicoAtividadesConfig-processadas", servicoTipo);
     
     setLocalSubatividades(processedSubs);
     
@@ -75,7 +76,7 @@ export default function ServicoAtividadesConfig({
       });
     
     const novasSubatividades = atualizarSubatividades(localSubatividades);
-    logSubatividadesState("ServicoAtividadesConfig-toggle", servicoTipo, novasSubatividades);
+    logSubatividadesState("ServicoAtividadesConfig-toggle", servicoTipo);
     
     setLocalSubatividades(novasSubatividades);
     onChange(novasSubatividades);

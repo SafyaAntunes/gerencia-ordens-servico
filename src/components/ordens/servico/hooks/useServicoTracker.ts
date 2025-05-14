@@ -1,7 +1,8 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { getFuncionarios } from "@/services/funcionarioService";
-import { Servico, SubAtividade, TipoServico, EtapaOS } from "@/types/ordens";
+import { Servico, SubAtividade, TipoServico, EtapaOS, OrdemServico } from "@/types/ordens";
 import { Funcionario } from "@/types/funcionarios";
 import { useAuth } from "@/hooks/useAuth";
 import { UseServicoTrackerProps, UseServicoTrackerResult, ServicoStatus, PausaRegistro } from "./types/servicoTrackerTypes";
@@ -11,16 +12,25 @@ import { formatTime } from "@/utils/timerUtils";
 
 export function useServicoTracker({
   servico,
-  ordemId,
-  funcionarioId,
-  funcionarioNome,
-  etapa,
+  ordem,
+  onUpdate,
+  // Legacy props support
+  ordemId: legacyOrdemId,
+  funcionarioId: legacyFuncionarioId,
+  funcionarioNome: legacyFuncionarioNome,
+  etapa: legacyEtapa,
   onServicoStatusChange,
   onSubatividadeToggle
 }: UseServicoTrackerProps): UseServicoTrackerResult {
   const { funcionario, canEditOrder } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
+  
+  // Determine the actual ordemId and functionarioId to use
+  const ordemId = ordem?.id || legacyOrdemId || '';
+  const funcionarioId = legacyFuncionarioId || '';
+  const funcionarioNome = legacyFuncionarioNome || '';
+  const etapa = legacyEtapa || 'retifica' as EtapaOS;
   
   const temPermissao = canEditOrder(ordemId);
   

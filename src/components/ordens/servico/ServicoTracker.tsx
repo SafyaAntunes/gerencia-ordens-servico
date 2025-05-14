@@ -1,59 +1,99 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useServicoTracker } from './hooks/useServicoTracker';
-import { ServicoHeader } from './ServicoHeader';
-import { ServicoDetails } from './ServicoDetails';
-import { ServicoControls } from './ServicoControls';
-import { OrdemServico, Servico } from '@/types/ordens';
+import ServicoHeader from './ServicoHeader';
+import ServicoDetails from './ServicoDetails';
+import ServicoControls from './ServicoControls';
+import { OrdemServico, Servico, EtapaOS } from '@/types/ordens';
+import { ServicoTrackerProps } from './hooks/types/servicoTrackerTypes';
 
-export interface ServicoTrackerProps {
-  ordem: OrdemServico;
-  servico: Servico;
-  onUpdate?: (ordem: OrdemServico) => void;
-}
-
-function ServicoTracker({ ordem, servico, onUpdate }: ServicoTrackerProps) {
+function ServicoTracker({ 
+  servico, 
+  ordem, 
+  onUpdate,
+  // Legacy props support
+  ordemId, 
+  funcionarioId,
+  funcionarioNome,
+  etapa,
+  onServicoStatusChange,
+  onSubatividadeToggle,
+  onSubatividadeSelecionadaToggle
+}: ServicoTrackerProps) {
+  const [isOpen, setIsOpen] = useState(true);
+  
   const {
-    isTimerRunning,
-    timerDisplay,
+    isRunning,
+    isPaused,
+    displayTime,
     servicoStatus,
-    canStart,
-    canPause,
-    canResume,
-    canComplete,
-    startServico,
-    pauseServico,
-    resumeServico,
-    completeServico,
-    atribuirFuncionario,
-    isDialogOpen,
-    setIsDialogOpen
-  } = useServicoTracker(ordem, servico, onUpdate);
+    progressPercentage,
+    completedSubatividades,
+    totalSubatividades,
+    tempoTotalEstimado,
+    subatividadesFiltradas,
+    temPermissao,
+    handleStartClick,
+    handlePause,
+    handleResume,
+    handleFinish,
+    handleMarcarConcluido,
+    handleSubatividadeToggle
+  } = useServicoTracker({ 
+    servico, 
+    ordem, 
+    onUpdate,
+    ordemId, 
+    funcionarioId,
+    funcionarioNome,
+    etapa,
+    onServicoStatusChange,
+    onSubatividadeToggle,
+    onSubatividadeSelecionadaToggle
+  });
 
   return (
     <div className="border rounded-lg p-4 mb-4">
-      <ServicoHeader 
-        servico={servico} 
-        status={servicoStatus}
+      <ServicoHeader
+        tipo={servico.tipo}
+        displayTime={displayTime}
+        servicoStatus={servicoStatus}
+        progressPercentage={progressPercentage}
+        completedSubatividades={completedSubatividades}
+        totalSubatividades={totalSubatividades}
+        tempoTotalEstimado={tempoTotalEstimado}
+        funcionarioNome={servico.funcionarioNome}
+        concluido={servico.concluido}
+        temPermissao={temPermissao}
+        isOpen={isOpen}
+        onToggleOpen={() => setIsOpen(!isOpen)}
       />
       
-      <ServicoDetails 
-        servico={servico} 
-        timerDisplay={timerDisplay}
-        onAtribuirFuncionario={() => setIsDialogOpen(true)}
-      />
-      
-      <ServicoControls 
-        isTimerRunning={isTimerRunning}
-        canStart={canStart}
-        canPause={canPause}
-        canResume={canResume}
-        canComplete={canComplete}
-        onStart={startServico}
-        onPause={pauseServico}
-        onResume={resumeServico}
-        onComplete={completeServico}
-      />
+      {isOpen && (
+        <>
+          <div className="mt-4">
+            <ServicoDetails
+              descricao={servico.descricao}
+              subatividades={subatividadesFiltradas}
+              temPermissao={temPermissao}
+              onSubatividadeToggle={handleSubatividadeToggle}
+            />
+          </div>
+          
+          <ServicoControls
+            isRunning={isRunning}
+            isPaused={isPaused}
+            temPermissao={temPermissao}
+            concluido={servico.concluido}
+            todasSubatividadesConcluidas={progressPercentage === 100}
+            onStartClick={handleStartClick}
+            onPauseClick={handlePause}
+            onResumeClick={handleResume}
+            onFinishClick={handleFinish}
+            onMarcarConcluido={handleMarcarConcluido}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -25,16 +25,20 @@ export default function EtapaServiceList({
     return null;
   }
   
+  // Create a dummy ordem object to pass to ServicoTracker
+  const dummyOrdem = { id: ordemId } as any;
+  
   return (
     <div className="space-y-4">
       {servicos.map((servico, i) => (
         <ServicoTracker
           key={`${servico.tipo}-${i}`}
           servico={servico}
-          ordemId={ordemId}
-          funcionarioId={funcionarioId}
-          funcionarioNome={funcionarioNome}
-          etapa={etapa}
+          ordem={dummyOrdem}
+          ordemId={ordemId}  // Legacy prop
+          funcionarioId={funcionarioId}  // Legacy prop
+          funcionarioNome={funcionarioNome}  // Legacy prop
+          etapa={etapa}  // Legacy prop
           onSubatividadeToggle={
             onSubatividadeToggle ? 
               (subId, checked) => onSubatividadeToggle(servico.tipo, subId, checked) : 
