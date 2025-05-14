@@ -1,4 +1,3 @@
-
 import { memo, useEffect, useRef } from "react";
 import { SubAtividade, TipoServico } from "@/types/ordens";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,7 +33,7 @@ export const ServicoSubatividades = memo(({
     
     // Log das subatividades recebidas
     console.log(`[ServicoSubatividades] Recebido para ${tipoServico}:`, subatividades);
-    logSubatividadesState("ServicoSubatividades-recebidas", tipoServico as string);
+    logSubatividadesState("ServicoSubatividades-recebidas", tipoServico.toString());
     
     // Corrigir qualquer inconsistência no estado 'selecionada'
     // CORREÇÃO: NÃO definir selecionada como true por padrão, preservar o estado existente
@@ -60,7 +59,7 @@ export const ServicoSubatividades = memo(({
       return sub;
     });
     
-    logSubatividadesState("ServicoSubatividades-toggle", tipoServico as string);
+    logSubatividadesState("ServicoSubatividades-toggle", tipoServico.toString());
     onChange(updatedSubatividades);
   };
   

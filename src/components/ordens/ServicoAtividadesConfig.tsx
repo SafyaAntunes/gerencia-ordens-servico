@@ -42,7 +42,7 @@ export default function ServicoAtividadesConfig({
     
     // Log de debug para visualizar o estado das subatividades recebidas
     console.log(`[ServicoAtividadesConfig] Recebendo subatividades para ${servicoTipo}:`, subatividades);
-    logSubatividadesState("ServicoAtividadesConfig-recebidas", servicoTipo);
+    logSubatividadesState("ServicoAtividadesConfig-recebidas", servicoTipo.toString());
     
     // CORREÇÃO: Preservar o estado 'selecionada' de cada subatividade, sem forçar TRUE
     const processedSubs = (subatividades || []).map(sub => ({
@@ -50,7 +50,7 @@ export default function ServicoAtividadesConfig({
       selecionada: sub.selecionada !== undefined ? sub.selecionada : false // Alterado para false por padrão
     }));
     
-    logSubatividadesState("ServicoAtividadesConfig-processadas", servicoTipo);
+    logSubatividadesState("ServicoAtividadesConfig-processadas", servicoTipo.toString());
     
     setLocalSubatividades(processedSubs);
     
@@ -76,7 +76,7 @@ export default function ServicoAtividadesConfig({
       });
     
     const novasSubatividades = atualizarSubatividades(localSubatividades);
-    logSubatividadesState("ServicoAtividadesConfig-toggle", servicoTipo);
+    logSubatividadesState("ServicoAtividadesConfig-toggle", servicoTipo.toString());
     
     setLocalSubatividades(novasSubatividades);
     onChange(novasSubatividades);

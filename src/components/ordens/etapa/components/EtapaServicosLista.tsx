@@ -1,5 +1,5 @@
 
-import { ServicoTracker } from "../../../servico";
+import { ServicoTracker } from "@/components/ordens/servico";
 import { EtapaOS, Servico, TipoServico, OrdemServico } from "@/types/ordens";
 
 interface EtapaServicosListaProps {

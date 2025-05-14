@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { getFuncionarios } from "@/services/funcionarioService";
@@ -136,7 +135,7 @@ export function useServicoTracker({
   // Dummy implementations to match interface
   const [responsavelSelecionadoId, setResponsavelSelecionadoId] = useState(funcionarioId || '');
   const [isSavingResponsavel, setIsSavingResponsavel] = useState(false);
-  const lastSavedResponsavelId = funcionarioId ? funcionarioId : ''; // Changed from String(funcionarioId) to fix type mismatch
+  const lastSavedResponsavelId = funcionarioId || ''; // Using empty string as fallback
   const lastSavedResponsavelNome = funcionarioNome || '';
 
   const handleSaveResponsavel = async () => {
