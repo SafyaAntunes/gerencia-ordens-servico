@@ -17,7 +17,7 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
   tipoServico,
   subatividades = [],
   onChange,
-  atividadeTipo = "Subatividades"  // Changed from "default" to "Subatividades"
+  atividadeTipo = "Subatividades"
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [localSubatividades, setLocalSubatividades] = useState<SubAtividade[]>(subatividades);
@@ -28,7 +28,15 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
   useEffect(() => {
     if (subatividades && subatividades.length > 0) {
       console.log(`[ServicoSubatividades] Usando subatividades das props para ${tipoServico}:`, subatividades);
-      setLocalSubatividades(subatividades);
+      
+      // Garantir que estados importantes como 'selecionada' estejam corretos
+      const processedSubs = subatividades.map(sub => ({
+        ...sub,
+        // IMPORTANTE: Preservar o valor de selecionada exatamente como veio das props
+        selecionada: sub.selecionada !== undefined ? sub.selecionada : true
+      }));
+      
+      setLocalSubatividades(processedSubs);
       setDataSource("props");
       return;
     }
@@ -87,7 +95,7 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
     loadFromDatabase();
   }, [tipoServico, onChange, defaultSubatividades]);
   
-  // Update local state when subatividades change from props
+  // Importante: Atualizar quando as props mudarem, mantendo seleções
   useEffect(() => {
     if (subatividades && subatividades.length > 0) {
       console.log(`[ServicoSubatividades] Atualizando subatividades para ${tipoServico} a partir das props:`, subatividades);

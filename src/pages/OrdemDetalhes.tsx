@@ -112,6 +112,36 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
     handleOrdemUpdate(ordemAtualizada);
   };
 
+  // Preparar as subatividades para o formulário de edição, preservando o estado 'selecionada'
+  const prepareSubatividadesForEdit = () => {
+    if (!ordem || !ordem.servicos) return {};
+    
+    console.log("[OrdemDetalhes] Preparando subatividades para o modo de edição");
+    
+    const servicosSubatividades: Record<string, SubAtividade[]> = {};
+    ordem.servicos.forEach(servico => {
+      if (servico.subatividades && servico.subatividades.length > 0) {
+        // Log para depuração - visualizar as subatividades antes de passar para o form
+        console.log(`[OrdemDetalhes] Subatividades do serviço ${servico.tipo} para edição:`, 
+          servico.subatividades.map(sub => ({ 
+            id: sub.id, 
+            nome: sub.nome, 
+            selecionada: sub.selecionada 
+          }))
+        );
+        
+        // Importante: Preservar explicitamente o estado 'selecionada' de cada subatividade
+        servicosSubatividades[servico.tipo] = servico.subatividades.map(sub => ({
+          ...sub,
+          // Se selecionada já estiver definido, use esse valor, caso contrário, defina como true
+          selecionada: sub.selecionada !== undefined ? sub.selecionada : true
+        }));
+      }
+    });
+    
+    return servicosSubatividades;
+  };
+
   return (
     <Layout onLogout={onLogout}>
       <div className="mb-4">
@@ -154,12 +184,8 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
               acc[s.tipo] = s.descricao;
               return acc;
             }, {} as Record<string, string>) || {},
-            servicosSubatividades: ordem.servicos?.reduce((acc, s) => {
-              if (s.subatividades) {
-                acc[s.tipo] = s.subatividades;
-              }
-              return acc;
-            }, {} as Record<string, SubAtividade[]>) || {}
+            // Utilizar a função preparada para obter subatividades com estado preservado
+            servicosSubatividades: prepareSubatividadesForEdit()
           }}
           defaultFotosEntrada={ordem?.fotosEntrada || []}
           defaultFotosSaida={ordem?.fotosSaida || []}

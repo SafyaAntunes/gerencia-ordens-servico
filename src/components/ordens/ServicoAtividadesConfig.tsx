@@ -26,6 +26,11 @@ export default function ServicoAtividadesConfig({
   const { defaultAtividadesEspecificas } = useServicoSubatividades();
   
   useEffect(() => {
+    // Log de debug para visualizar o estado das subatividades recebidas
+    console.log(`[ServicoAtividadesConfig] Recebendo subatividades para ${servicoTipo}:`, subatividades);
+    console.log(`[ServicoAtividadesConfig] Estado de seleção das subatividades:`, 
+      subatividades?.map(sub => ({ id: sub.id, nome: sub.nome, selecionada: sub.selecionada })));
+    
     setLocalSubatividades(subatividades || []);
     
     // Inicializar tempos estimados
@@ -39,6 +44,8 @@ export default function ServicoAtividadesConfig({
   }, [subatividades]);
   
   const handleToggleSubatividade = (id: string, checked: boolean) => {
+    console.log(`[ServicoAtividadesConfig] Alterando seleção da subatividade ${id} para ${checked}`);
+    
     const atualizarSubatividades = (subs: SubAtividade[]) => 
       subs.map(sub => {
         if (sub.id === id) {
@@ -75,10 +82,10 @@ export default function ServicoAtividadesConfig({
   
   const formatActivityType = (tipo: TipoAtividade): string => {
     switch(tipo) {
-      case 'lavagem': return 'Lavagem';
-      case 'inspecao_inicial': return 'Inspeção Inicial';
-      case 'inspecao_final': return 'Inspeção Final';
-      default: return tipo;
+      case 'lavagem': return 'Subatividades - Lavagem';
+      case 'inspecao_inicial': return 'Subatividades - Inspeção Inicial';
+      case 'inspecao_final': return 'Subatividades - Inspeção Final';
+      default: return `Subatividades - ${tipo}`;
     }
   };
   
