@@ -87,6 +87,27 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
     return `${horas}h${minutos > 0 ? ` ${minutos}m` : ''}`;
   };
 
+  // Helper function to safely format dates
+  const formatarData = (data: Date | string | number | undefined) => {
+    if (!data) return "Não definido";
+    
+    try {
+      // Ensure we have a valid date object
+      const dataObj = data instanceof Date ? data : new Date(data);
+      
+      // Check if the date is valid
+      if (isNaN(dataObj.getTime())) {
+        console.warn("Data inválida:", data);
+        return "Data inválida";
+      }
+      
+      return format(dataObj, "dd/MM/yyyy", { locale: ptBR });
+    } catch (error) {
+      console.error("Erro ao formatar data:", error, data);
+      return "Erro na data";
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <Card>
@@ -124,13 +145,13 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
             <div>
               <p className="text-sm text-muted-foreground">Data de Abertura</p>
               <p className="font-medium">
-                {format(new Date(ordem.dataAbertura), "dd/MM/yyyy", { locale: ptBR })}
+                {formatarData(ordem.dataAbertura)}
               </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Previsão de Entrega</p>
               <p className="font-medium">
-                {format(new Date(ordem.dataPrevistaEntrega), "dd/MM/yyyy", { locale: ptBR })}
+                {formatarData(ordem.dataPrevistaEntrega)}
               </p>
             </div>
           </div>
