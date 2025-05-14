@@ -1,206 +1,211 @@
 
-import { useState } from 'react';
-import { SubAtividade, TipoServico, OrdemServico } from '@/types/ordens';
-import { toast } from 'sonner';
-import { v4 as uuidv4 } from 'uuid';
+import { useState } from "react";
+import { db } from "@/lib/firebase";
 import { 
-  validateOrdem, 
-  createSubatividades, 
-  prepareServiceUpdate, 
-  updateOrdemWithNewServicos 
-} from './utils';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+  doc, 
+  updateDoc, 
+  getDoc, 
+  arrayUnion, 
+  collection, 
+  getDocs, 
+  query, 
+  where 
+} from "firebase/firestore";
+import { toast } from "sonner";
+import { OrdemServico, SubAtividade, TipoServico } from "@/types/ordens";
+import { v4 as uuidv4 } from "uuid";
+import { getSubatividadesByTipo } from "@/services/subatividadeService";
 
-export function useSubatividadeOperations(
+/**
+ * Hook for operations related to subatividades in tracking context
+ */
+export const useSubatividadeOperations = (
   ordem?: OrdemServico,
   onOrdemUpdate?: (ordemAtualizada: OrdemServico) => void
-) {
+) => {
   const [isAddingSubatividades, setIsAddingSubatividades] = useState(false);
-  
-  // Add multiple predefined subatividades to a service
+
+  /**
+   * Add selected subatividades to a servico
+   */
   const addSelectedSubatividades = async (
     servicoTipo: TipoServico,
     subatividadesNomes: string[]
   ): Promise<OrdemServico | void> => {
-    console.log("useTrackerSubatividades.addSelectedSubatividades - iniciando com:", {
-      servicoTipo,
-      subatividadesNomes,
-      temOrdem: !!ordem,
-      temOrdemId: ordem?.id ? true : false,
-      temCallback: !!onOrdemUpdate
-    });
-    
-    if (!validateOrdem(ordem)) {
-      return Promise.reject("Invalid ordem");
+    if (!ordem?.id) {
+      toast.error("Ordem não encontrada");
+      return;
     }
-    
-    if (subatividadesNomes.length === 0) {
-      const warning = "Nenhuma subatividade selecionada";
-      toast.warning(warning);
-      return Promise.reject(warning);
-    }
-    
-    // Check if already in process of adding
-    if (isAddingSubatividades) {
-      console.log("Já está adicionando subatividades, ignorando nova solicitação");
-      return Promise.reject("Operação em andamento");
-    }
-    
-    setIsAddingSubatividades(true);
-    
+
     try {
-      // Find the service to be updated
-      const servicoIndex = ordem.servicos.findIndex(s => s.tipo === servicoTipo);
-      
-      if (servicoIndex === -1) {
-        const error = `Serviço ${servicoTipo} não encontrado`;
-        toast.error(error);
-        return Promise.reject(error);
-      }
-      
-      // Prepare new subatividades
-      const novasSubatividades = createSubatividades(subatividadesNomes);
-      console.log("Novas subatividades a serem adicionadas:", novasSubatividades);
-      
-      // Update services with new subatividades
-      const servicosAtualizados = prepareServiceUpdate(servicoIndex, ordem.servicos, novasSubatividades);
-      
-      if (servicosAtualizados === ordem.servicos) {
-        setIsAddingSubatividades(false);
-        return Promise.resolve();
-      }
-      
-      console.log("Serviços atualizados:", servicosAtualizados);
-      
-      // Update in Firebase and get updated ordem
-      const ordemAtualizada = await updateOrdemWithNewServicos(ordem, servicosAtualizados);
-      
-      // Fetch fresh data from Firebase to ensure we have the latest state
+      setIsAddingSubatividades(true);
+      console.log(`Adicionando ${subatividadesNomes.length} subatividades ao serviço ${servicoTipo}`);
+
+      // Buscar a ordem mais recente do Firebase
       const ordemRef = doc(db, "ordens_servico", ordem.id);
       const ordemSnap = await getDoc(ordemRef);
-      let ordemFresh = ordemAtualizada;
+
+      if (!ordemSnap.exists()) {
+        toast.error("Ordem não encontrada");
+        return;
+      }
+
+      const ordemAtual = ordemSnap.data() as OrdemServico;
       
-      if (ordemSnap.exists()) {
-        ordemFresh = { ...ordemSnap.data(), id: ordemSnap.id } as OrdemServico;
-        console.log("Dados frescos da ordem obtidos do Firebase:", ordemFresh);
+      // Encontrar o serviço para adicionar as subatividades
+      const servicoIdx = ordemAtual.servicos.findIndex(s => s.tipo === servicoTipo);
+      
+      if (servicoIdx === -1) {
+        toast.error(`Serviço ${servicoTipo} não encontrado na ordem`);
+        return;
+      }
+
+      // Criar novas subatividades
+      const novasSubatividades: SubAtividade[] = subatividadesNomes.map(nome => ({
+        id: uuidv4(),
+        nome,
+        concluida: false,
+        selecionada: true,
+        tempoEstimado: 1 // Tempo padrão
+      }));
+
+      // Adicionar subatividades ao serviço
+      const servicosAtualizados = [...ordemAtual.servicos];
+      if (!servicosAtualizados[servicoIdx].subatividades) {
+        servicosAtualizados[servicoIdx].subatividades = [];
+      }
+
+      // Filtrar subatividades já existentes
+      const subatividadesExistentes = servicosAtualizados[servicoIdx].subatividades || [];
+      const subatividadesExistentesNomes = subatividadesExistentes.map(sub => sub.nome.toLowerCase());
+      
+      const subatividadesFiltradas = novasSubatividades.filter(
+        subatividade => !subatividadesExistentesNomes.includes(subatividade.nome.toLowerCase())
+      );
+
+      if (subatividadesFiltradas.length === 0) {
+        toast.info("Todas as subatividades selecionadas já existem");
+        return ordemAtual;
+      }
+
+      // Adicionar as novas subatividades
+      servicosAtualizados[servicoIdx].subatividades = [
+        ...subatividadesExistentes,
+        ...subatividadesFiltradas
+      ];
+
+      // Atualizar a ordem no Firebase
+      await updateDoc(ordemRef, { servicos: servicosAtualizados });
+      
+      console.log("Subatividades adicionadas com sucesso:", subatividadesFiltradas);
+      
+      // Buscar a ordem atualizada
+      const ordemSnapAtualizada = await getDoc(ordemRef);
+      if (ordemSnapAtualizada.exists()) {
+        const ordemAtualizada = ordemSnapAtualizada.data() as OrdemServico;
+        
+        // Notificar componente pai da atualização
+        if (onOrdemUpdate) {
+          console.log("Chamando onOrdemUpdate após adicionar subatividades");
+          onOrdemUpdate(ordemAtualizada);
+        }
+        
+        return ordemAtualizada;
       }
       
-      // Update local state through callback
-      if (onOrdemUpdate) {
-        console.log("Chamando onOrdemUpdate com ordem atualizada");
-        onOrdemUpdate(ordemFresh);
-      } else {
-        console.warn("onOrdemUpdate não está definido, não foi possível atualizar a UI");
-      }
-      
-      toast.success(`Subatividades adicionadas com sucesso para ${servicoTipo}`);
-      return Promise.resolve(ordemFresh);
+      return ordemAtual;
     } catch (error) {
       console.error("Erro ao adicionar subatividades:", error);
       toast.error("Erro ao adicionar subatividades");
-      return Promise.reject(error);
     } finally {
       setIsAddingSubatividades(false);
     }
   };
-  
-  // Add a single custom subatividade
+
+  /**
+   * Add custom subatividade to a servico
+   */
   const addCustomSubatividade = async (
     servicoTipo: TipoServico,
     nome: string,
     tempoEstimado: number = 1
   ): Promise<SubAtividade | void> => {
-    console.log("useTrackerSubatividades.addCustomSubatividade - iniciando com:", {
-      servicoTipo,
-      nome,
-      tempoEstimado,
-      temOrdem: !!ordem,
-      temOrdemId: ordem?.id ? true : false,
-      temCallback: !!onOrdemUpdate
-    });
-    
-    if (!validateOrdem(ordem)) {
-      return Promise.reject("Invalid ordem");
+    if (!nome.trim() || !ordem?.id) {
+      toast.error("Nome da subatividade ou ordem inválidos");
+      return;
     }
-    
-    if (!nome.trim()) {
-      const error = "Nome da subatividade não pode ser vazio";
-      toast.error(error);
-      return Promise.reject(error);
-    }
-    
-    // Check if already in process of adding
-    if (isAddingSubatividades) {
-      console.log("Já está adicionando subatividades, ignorando nova solicitação");
-      return Promise.reject("Operação em andamento");
-    }
-    
-    setIsAddingSubatividades(true);
-    
+
     try {
-      // Find the service to be updated
-      const servicoIndex = ordem.servicos.findIndex(s => s.tipo === servicoTipo);
-      
-      if (servicoIndex === -1) {
-        const error = `Serviço ${servicoTipo} não encontrado`;
-        toast.error(error);
-        return Promise.reject(error);
-      }
-      
-      // Create new subatividade
-      const novaSubatividade: SubAtividade = {
-        id: uuidv4(),
-        nome: nome.trim(),
-        selecionada: true,
-        concluida: false,
-        tempoEstimado
-      };
-      
-      // Create a copy of the services array for modification
-      const servicosAtualizados = [...ordem.servicos];
-      const existentes = servicosAtualizados[servicoIndex].subatividades || [];
-      
-      // Check if a subatividade with the same name already exists
-      if (existentes.some(s => s.nome.toLowerCase() === nome.trim().toLowerCase())) {
-        const error = "Já existe uma subatividade com este nome";
-        toast.error(error);
-        return Promise.reject(error);
-      }
-      
-      // Add new subatividade
-      servicosAtualizados[servicoIndex] = {
-        ...servicosAtualizados[servicoIndex],
-        subatividades: [...existentes, novaSubatividade]
-      };
-      
-      // Update in Firebase and get updated ordem
-      const ordemAtualizada = await updateOrdemWithNewServicos(ordem, servicosAtualizados);
-      
-      // Fetch fresh data from Firebase to ensure we have the latest state
+      setIsAddingSubatividades(true);
+      console.log(`Adicionando subatividade personalizada "${nome}" ao serviço ${servicoTipo}`);
+
+      // Buscar a ordem mais recente do Firebase
       const ordemRef = doc(db, "ordens_servico", ordem.id);
       const ordemSnap = await getDoc(ordemRef);
-      let ordemFresh = ordemAtualizada;
+
+      if (!ordemSnap.exists()) {
+        toast.error("Ordem não encontrada");
+        return;
+      }
+
+      const ordemAtual = ordemSnap.data() as OrdemServico;
       
-      if (ordemSnap.exists()) {
-        ordemFresh = { ...ordemSnap.data(), id: ordemSnap.id } as OrdemServico;
-        console.log("Dados frescos da ordem obtidos do Firebase após adicionar subatividade:", ordemFresh);
+      // Encontrar o serviço para adicionar as subatividades
+      const servicoIdx = ordemAtual.servicos.findIndex(s => s.tipo === servicoTipo);
+      
+      if (servicoIdx === -1) {
+        toast.error(`Serviço ${servicoTipo} não encontrado na ordem`);
+        return;
+      }
+
+      // Criar nova subatividade
+      const novaSubatividade: SubAtividade = {
+        id: uuidv4(),
+        nome,
+        concluida: false,
+        selecionada: true,
+        tempoEstimado
+      };
+
+      // Verificar se a subatividade já existe
+      const subatividadesExistentes = ordemAtual.servicos[servicoIdx].subatividades || [];
+      const jaExiste = subatividadesExistentes.some(
+        sub => sub.nome.toLowerCase() === nome.toLowerCase()
+      );
+
+      if (jaExiste) {
+        toast.info("Esta subatividade já existe");
+        return;
+      }
+
+      // Atualizar o serviço com a nova subatividade
+      const servicosAtualizados = [...ordemAtual.servicos];
+      if (!servicosAtualizados[servicoIdx].subatividades) {
+        servicosAtualizados[servicoIdx].subatividades = [];
+      }
+      servicosAtualizados[servicoIdx].subatividades.push(novaSubatividade);
+
+      // Atualizar a ordem no Firebase
+      await updateDoc(ordemRef, { servicos: servicosAtualizados });
+      
+      console.log("Subatividade personalizada adicionada com sucesso:", novaSubatividade);
+      
+      // Buscar a ordem atualizada
+      const ordemSnapAtualizada = await getDoc(ordemRef);
+      if (ordemSnapAtualizada.exists()) {
+        const ordemAtualizada = ordemSnapAtualizada.data() as OrdemServico;
+        
+        // Notificar componente pai da atualização
+        if (onOrdemUpdate) {
+          console.log("Chamando onOrdemUpdate após adicionar subatividade personalizada");
+          onOrdemUpdate(ordemAtualizada);
+        }
       }
       
-      // Update local state through callback
-      if (onOrdemUpdate) {
-        console.log("Chamando onOrdemUpdate com ordem atualizada após adicionar subatividade");
-        onOrdemUpdate(ordemFresh);
-      } else {
-        console.warn("onOrdemUpdate não está definido, não foi possível atualizar a UI");
-      }
-      
-      toast.success(`Subatividade "${nome}" adicionada com sucesso`);
-      return Promise.resolve(novaSubatividade);
+      return novaSubatividade;
     } catch (error) {
-      console.error("Erro ao adicionar subatividade:", error);
+      console.error("Erro ao adicionar subatividade personalizada:", error);
       toast.error("Erro ao adicionar subatividade");
-      return Promise.reject(error);
     } finally {
       setIsAddingSubatividades(false);
     }
@@ -211,4 +216,4 @@ export function useSubatividadeOperations(
     addSelectedSubatividades,
     addCustomSubatividade
   };
-}
+};
