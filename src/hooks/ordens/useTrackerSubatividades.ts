@@ -4,7 +4,6 @@ import { SubAtividade, TipoServico, OrdemServico } from '@/types/ordens';
 import { toast } from 'sonner';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { useServicoSubatividades } from '@/hooks/useServicoSubatividades';
 import { v4 as uuidv4 } from 'uuid';
 
 interface UseTrackerSubatividadesProps {
@@ -14,7 +13,6 @@ interface UseTrackerSubatividadesProps {
 
 export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSubatividadesProps = {}) => {
   const [isAddingSubatividades, setIsAddingSubatividades] = useState(false);
-  const { defaultSubatividades } = useServicoSubatividades();
   
   // Adicionar subatividades específicas a um serviço
   const addSelectedSubatividades = useCallback(async (
@@ -114,27 +112,6 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
     }
   }, [ordem, onOrdemUpdate]);
   
-  // Manter o método original para compatibilidade
-  const addDefaultSubatividades = useCallback(async (servicoTipo: TipoServico) => {
-    if (!ordem) {
-      toast.error("Ordem não encontrada");
-      console.error("Ordem não encontrada:", ordem);
-      return;
-    }
-    
-    // Obter todas as subatividades padrão para este tipo
-    const subatividadesPadrao = defaultSubatividades[servicoTipo] || [];
-    
-    if (subatividadesPadrao.length === 0) {
-      toast.warning(`Não há subatividades configuradas para ${servicoTipo}`);
-      return;
-    }
-    
-    // Adicionar todas as subatividades padrão
-    await addSelectedSubatividades(servicoTipo, subatividadesPadrao);
-    
-  }, [ordem, defaultSubatividades, addSelectedSubatividades]);
-  
   // Adicionar uma única subatividade personalizada
   const addCustomSubatividade = useCallback(async (
     servicoTipo: TipoServico,
@@ -215,7 +192,6 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
 
   return {
     isAddingSubatividades,
-    addDefaultSubatividades,
     addSelectedSubatividades,
     addCustomSubatividade
   };

@@ -1,10 +1,9 @@
 
 import { useState, useEffect } from "react";
-import { TipoServico } from "@/types/ordens";
+import { TipoServico, SubAtividade } from "@/types/ordens";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { useServicoSubatividades } from "@/hooks/useServicoSubatividades";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +12,8 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import { getSubatividadesByTipo } from "@/services/subatividadeService";
+import { Loader2 } from "lucide-react";
 
 interface SelectSubatividadesDialogProps {
   open: boolean;
@@ -27,24 +28,33 @@ export function SelectSubatividadesDialog({
   servicoTipo,
   onSelect,
 }: SelectSubatividadesDialogProps) {
-  const { defaultSubatividades } = useServicoSubatividades();
-  const [subatividadesDisponiveis, setSubatividadesDisponiveis] = useState<string[]>([]);
+  const [subatividadesDisponiveis, setSubatividadesDisponiveis] = useState<SubAtividade[]>([]);
   const [selecionadas, setSelecionadas] = useState<Record<string, boolean>>({});
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (open && servicoTipo) {
-      // Obter subatividades para este tipo de serviço
-      const disponiveis = defaultSubatividades[servicoTipo] || [];
-      setSubatividadesDisponiveis(disponiveis);
-      
-      // Inicializar todas como selecionadas
-      const inicial: Record<string, boolean> = {};
-      disponiveis.forEach(sub => {
-        inicial[sub] = true;
-      });
-      setSelecionadas(inicial);
+      setIsLoading(true);
+      // Buscar subatividades do banco de dados para este tipo de serviço
+      getSubatividadesByTipo(servicoTipo)
+        .then((subatividades) => {
+          console.log(`Subatividades carregadas do banco para ${servicoTipo}:`, subatividades);
+          setSubatividadesDisponiveis(subatividades);
+          
+          // Inicializar todas como selecionadas
+          const inicial: Record<string, boolean> = {};
+          subatividades.forEach(sub => {
+            inicial[sub.nome] = true;
+          });
+          setSelecionadas(inicial);
+          setIsLoading(false);
+        })
+        .catch(error => {
+          console.error("Erro ao buscar subatividades:", error);
+          setIsLoading(false);
+        });
     }
-  }, [open, servicoTipo, defaultSubatividades]);
+  }, [open, servicoTipo]);
 
   const handleToggleSubatividade = (nome: string, checked: boolean) => {
     setSelecionadas(prev => ({
@@ -56,7 +66,7 @@ export function SelectSubatividadesDialog({
   const handleSelectAll = () => {
     const todas: Record<string, boolean> = {};
     subatividadesDisponiveis.forEach(sub => {
-      todas[sub] = true;
+      todas[sub.nome] = true;
     });
     setSelecionadas(todas);
   };
@@ -64,7 +74,7 @@ export function SelectSubatividadesDialog({
   const handleDeselectAll = () => {
     const nenhuma: Record<string, boolean> = {};
     subatividadesDisponiveis.forEach(sub => {
-      nenhuma[sub] = false;
+      nenhuma[sub.nome] = false;
     });
     setSelecionadas(nenhuma);
   };
@@ -95,26 +105,41 @@ export function SelectSubatividadesDialog({
             </Button>
           </div>
           
-          <div className="max-h-60 overflow-y-auto space-y-2 border rounded-md p-3">
-            {subatividadesDisponiveis.map((subatividade) => (
-              <div key={subatividade} className="flex items-center space-x-2">
-                <Checkbox 
-                  id={`sub-${subatividade}`} 
-                  checked={selecionadas[subatividade]} 
-                  onCheckedChange={(checked) => handleToggleSubatividade(subatividade, !!checked)}
-                />
-                <Label htmlFor={`sub-${subatividade}`} className="text-sm">
-                  {subatividade}
-                </Label>
-              </div>
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="flex justify-center items-center h-40">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : subatividadesDisponiveis.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground">
+              Nenhuma subatividade configurada para este tipo de serviço.
+            </div>
+          ) : (
+            <div className="max-h-60 overflow-y-auto space-y-2 border rounded-md p-3">
+              {subatividadesDisponiveis.map((subatividade) => (
+                <div key={subatividade.id} className="flex items-center space-x-2">
+                  <Checkbox 
+                    id={`sub-${subatividade.id}`} 
+                    checked={selecionadas[subatividade.nome]} 
+                    onCheckedChange={(checked) => handleToggleSubatividade(subatividade.nome, !!checked)}
+                  />
+                  <Label htmlFor={`sub-${subatividade.id}`} className="text-sm">
+                    {subatividade.nome}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <DialogFooter>
           <DialogClose asChild>
             <Button variant="outline">Cancelar</Button>
           </DialogClose>
-          <Button onClick={handleConfirm}>Adicionar</Button>
+          <Button 
+            onClick={handleConfirm}
+            disabled={isLoading || Object.values(selecionadas).every(sel => !sel)}
+          >
+            Adicionar
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
