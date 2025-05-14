@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { useEtapaResponsavel } from "./hooks/useEtapaResponsavel";
@@ -14,6 +13,7 @@ import EtapaServicos from "./EtapaServicos";
 import EtapaTimer from "./EtapaTimer";
 import FuncionariosResponsaveis from "./components/FuncionariosResponsaveis";
 import { useEtapaPermissoes } from "./hooks/useEtapaPermissoes";
+import { EtapaResponsavelManager } from "./EtapaResponsavelManager";
 
 interface EtapaCardProps {
   ordemId: string;
@@ -170,6 +170,16 @@ export default function EtapaCard({
 
   return (
     <Card className="p-6 mb-4">
+      {/* Componente invisível para gerenciamento de status do funcionário */}
+      <EtapaResponsavelManager
+        ordemId={ordemId}
+        etapa={etapa}
+        servicoTipo={servicoTipo}
+        funcionarioId={funcionarioSelecionadoId || etapaInfo?.funcionarioId}
+        funcionarioNome={funcionarioSelecionadoNome || etapaInfo?.funcionarioNome}
+        isEtapaConcluida={!!etapaInfo?.concluido}
+      />
+      
       <EtapaStatus 
         etapaNome={etapaNome}
         status={getEtapaStatus()}
@@ -207,8 +217,6 @@ export default function EtapaCard({
           onFuncionariosChange={handleFuncionariosChangeLocal}
         />
       )}
-      
-      
       
       <EtapaServicos
         servicos={servicos}

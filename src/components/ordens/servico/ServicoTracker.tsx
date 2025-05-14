@@ -1,15 +1,15 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Servico } from "@/types/ordens";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-import { useServicoTracker } from "./hooks";
+import { useServicoTracker } from "./hooks/useServicoTracker";
 import ServicoHeader from "./ServicoHeader";
 import ServicoDetails from "./ServicoDetails";
 import ServicoControls from "./ServicoControls";
 import TimerPausas from "../etapa/TimerPausas";
+import { EtapaResponsavelManager } from "../etapa/EtapaResponsavelManager";
 
 interface ServicoTrackerProps {
   servico: Servico;
@@ -82,6 +82,18 @@ export default function ServicoTracker({
 
   return (
     <Card className={cn("w-full", className)}>
+      {/* Adicionar o gerenciador de responsável para manter o status do funcionário atualizado */}
+      {funcionarioId && etapa && (
+        <EtapaResponsavelManager
+          ordemId={ordemId}
+          etapa={etapa}
+          servicoTipo={servico.tipo}
+          funcionarioId={funcionarioId}
+          funcionarioNome={funcionarioNome}
+          isEtapaConcluida={servico.concluido}
+        />
+      )}
+      
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger asChild>
           <CardContent className="pt-6">
