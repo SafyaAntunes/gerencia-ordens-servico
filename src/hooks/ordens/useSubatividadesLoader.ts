@@ -42,10 +42,10 @@ export function useSubatividadesLoader({
       console.log(`[useSubatividadesLoader] Buscando subatividades para ${tipoServico}`);
       const resultado = await getAllSubatividades();
       
-      // Garantir que todas as subatividades tenham selecionada=false por padrão
+      // CORREÇÃO: Garantir que todas as subatividades tenham selecionada=false por padrão
       const subatividadesComDefault = resultado.map(sub => ({
         ...sub,
-        selecionada: false // Todas começam não selecionadas por padrão
+        selecionada: false // Todas começam não selecionadas por padrão, alterado de true para false
       }));
       
       console.log(`[useSubatividadesLoader] Obtidas ${subatividadesComDefault.length} subatividades para ${tipoServico}`);

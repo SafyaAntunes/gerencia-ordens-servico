@@ -1,3 +1,4 @@
+
 import { memo, useCallback, useEffect, useState } from "react";
 import { FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -69,7 +70,7 @@ export const ServicoTipoSelector = memo(({
         subatividades.map(sub => ({ 
           id: sub.id, 
           nome: sub.nome, 
-          selecionada: sub.selecionada !== undefined ? sub.selecionada : false, // Alterado para false
+          selecionada: sub.selecionada !== undefined ? sub.selecionada : false, 
           concluida: sub.concluida 
         })));
       onSubatividadesChange(tipo, subatividades);
@@ -90,7 +91,7 @@ export const ServicoTipoSelector = memo(({
           existingSubatividades.map(sub => ({ 
             id: sub.id, 
             nome: sub.nome, 
-            selecionada: sub.selecionada !== undefined ? sub.selecionada : false, // Alterado para false
+            selecionada: sub.selecionada !== undefined ? sub.selecionada : false, 
             concluida: sub.concluida 
           }))
         );
@@ -104,19 +105,20 @@ export const ServicoTipoSelector = memo(({
           defaultSubatividades && defaultSubatividades[tipo as TipoServico]) {
         
         console.log(`[ServicoTipoSelector] Nenhuma subatividade encontrada para ${tipo}, criando padrões`);
+        // CORREÇÃO: Inicializar todas as subatividades com selecionada = false
         const defaultSubs = defaultSubatividades[tipo as TipoServico].map(nome => ({
           id: nome,
           nome,
-          selecionada: false, // Alterado para false
+          selecionada: false, // Corrigido para garantir que subatividades novas sempre começam desmarcadas
           concluida: false,
         }));
         
         onSubatividadesChange(tipo as TipoServico, defaultSubs);
       } else if (existingSubatividades) {
-        // MELHORIA: Garantir que todas as subatividades existentes tenham o estado 'selecionada' definido
+        // MELHORIA: Garantir que todas as subatividades existentes tenham o estado 'selecionada' definido corretamente
         const processedSubs = existingSubatividades.map(sub => ({
           ...sub,
-          selecionada: sub.selecionada !== undefined ? sub.selecionada : false // Alterado para false
+          selecionada: sub.selecionada !== undefined ? sub.selecionada : false // Garantir que selecionada seja false por padrão
         }));
         
         if (JSON.stringify(processedSubs) !== JSON.stringify(existingSubatividades)) {

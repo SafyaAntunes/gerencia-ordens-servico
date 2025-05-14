@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { SubAtividade, TipoServico } from "@/types/ordens";
 import { isEqual } from "lodash";
@@ -40,8 +41,8 @@ export const useServicosState = (
           // Ensure all subatividades have the correct states
           processedSubatividades[tipo] = subatividades.map(sub => ({
             ...sub,
-            // Preserve the 'selected' state or set as true if it doesn't exist
-            selecionada: sub.selecionada !== undefined ? sub.selecionada : true,
+            // CORRIGIDO: Preservar o estado 'selecionada', não definir true por padrão
+            selecionada: sub.selecionada !== undefined ? sub.selecionada : false,
             // Preserve the 'completed' state or set as false if it doesn't exist
             concluida: sub.concluida ?? false
           }));
