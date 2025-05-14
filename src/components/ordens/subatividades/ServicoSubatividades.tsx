@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from "react";
-import { SubAtividade, TipoServico } from "@/types/ordens";
+import { SubAtividade, TipoServico, TipoAtividade } from "@/types/ordens";
 import { useServicoSubatividades } from "@/hooks/useServicoSubatividades";
 import ServicoAtividadesConfig from "@/components/ordens/ServicoAtividadesConfig";
 import { getSubatividadesByTipo } from "@/services/subatividadeService";
@@ -10,7 +10,7 @@ interface ServicoSubatividadesProps {
   tipoServico: TipoServico;
   subatividades: SubAtividade[];
   onChange: (subatividades: SubAtividade[]) => void;
-  atividadeTipo?: string;
+  atividadeTipo?: TipoAtividade | "Subatividades";
 }
 
 const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
@@ -133,7 +133,7 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
       
       <ServicoAtividadesConfig
         servicoTipo={tipoServico}
-        atividadeTipo={atividadeTipo as any}
+        atividadeTipo={atividadeTipo}
         subatividades={localSubatividades}
         onChange={handleSubatividadesChange}
       />

@@ -10,7 +10,7 @@ import { useServicoSubatividades } from "@/hooks/useServicoSubatividades";
 
 interface ServicoAtividadesConfigProps {
   servicoTipo: TipoServico;
-  atividadeTipo: TipoAtividade;
+  atividadeTipo: TipoAtividade | "Subatividades"; // Update to accept both TipoAtividade and "Subatividades"
   subatividades: SubAtividade[];
   onChange: (subatividades: SubAtividade[]) => void;
 }
@@ -80,12 +80,17 @@ export default function ServicoAtividadesConfig({
     onChange(novasSubatividades);
   };
   
-  const formatActivityType = (tipo: TipoAtividade): string => {
+  const formatActivityType = (tipo: TipoAtividade | "Subatividades"): string => {
+    // Handle "Subatividades" as a special case
+    if (tipo === "Subatividades") {
+      return "Subatividades";
+    }
+    
+    // Handle standard TipoAtividade values
     switch(tipo) {
       case 'lavagem': return 'Lavagem';
       case 'inspecao_inicial': return 'Inspeção Inicial';
       case 'inspecao_final': return 'Inspeção Final';
-      case 'Subatividades': return 'Subatividades';  // Return without adding prefix
       default: return tipo;
     }
   };
@@ -107,7 +112,7 @@ export default function ServicoAtividadesConfig({
   };
   
   const getCardTitle = () => {
-    if (atividadeTipo === 'Subatividades') {
+    if (atividadeTipo === "Subatividades") {
       return `Subatividades - ${formatServiceType(servicoTipo)}`;
     } else {
       return `${formatActivityType(atividadeTipo)} - ${formatServiceType(servicoTipo)}`;
