@@ -151,7 +151,7 @@ export function SelectSubatividadesDialog({
     setSelectedSubatividades({});
   }, []);
   
-  // Manipulador para aplicar seleções - MODIFICADO: agora passa IDs, não nomes
+  // Manipulador para aplicar seleções
   const handleApply = useCallback(() => {
     console.log("SelectSubatividadesDialog - Aplicando seleções:", selectedSubatividades);
     
@@ -179,7 +179,7 @@ export function SelectSubatividadesDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Selecionar Subatividades</DialogTitle>
+          <DialogTitle>Selecionar Subatividades para {servicoTipo}</DialogTitle>
           <DialogDescription>
             Escolha as subatividades que deseja adicionar a este serviço.
           </DialogDescription>
@@ -271,9 +271,9 @@ function getDefaultSubatividades(servicoTipo: TipoServico): string[] {
     case 'lavagem':
       return ["Preparação", "Lavagem química", "Lavagem externa", "Secagem"];
     case 'inspecao_inicial':
-      return ["Verificação de trincas", "Medição de componentes", "Verificação dimensional"];
+      return ["Verificação de trincas", "Medição de componentes", "Verificação dimensional", "Análise de desgaste", "Inspeção visual"];
     case 'inspecao_final':
-      return ["Verificação visual", "Teste de qualidade", "Conformidade com especificações"];
+      return ["Verificação visual", "Teste de qualidade", "Conformidade com especificações", "Checklist final", "Aprovação técnica"];
     default:
       return ["Preparação", "Execução", "Finalização"];
   }

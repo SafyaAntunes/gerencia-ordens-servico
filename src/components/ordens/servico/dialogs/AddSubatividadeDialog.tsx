@@ -1,148 +1,88 @@
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription,
-  DialogHeader, 
-  DialogTitle, 
-  DialogFooter 
-} from "@/components/ui/dialog";
-import { TipoServico } from "@/types/ordens";
+import React from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Loader2 } from 'lucide-react';
+import { TipoServico } from '@/types/ordens';
 
-interface AddSubatividadeDialogProps {
-  servicoTipo?: TipoServico;
+export interface AddSubatividadeDialogProps {
   isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
-  onOpenChange?: (open: boolean) => void; // Added this prop to match what's being passed
-  isAddingSubatividades?: boolean;
+  setIsOpen: (isOpen: boolean) => void;
   novaSubatividade: string;
-  setNovaSubatividade?: (value: string) => void;
-  onNovaSubatividadeChange?: (value: string) => void; // Added this prop to match what's being passed
+  setNovaSubatividade: React.Dispatch<React.SetStateAction<string>>;
   tempoEstimado: number;
-  setTempoEstimado?: (value: number) => void;
-  onTempoEstimadoChange?: (value: number) => void; // Added this prop to match what's being passed
-  handleAddCustomSubatividade?: () => void;
-  onAddSubatividade?: () => Promise<void>; // Added this prop to match what's being passed
+  setTempoEstimado: React.Dispatch<React.SetStateAction<number>>;
+  handleAddCustomSubatividade: () => Promise<void>;
+  isAddingSubatividades: boolean;
+  servicoTipo: TipoServico;
 }
 
-export function AddSubatividadeDialog({
-  servicoTipo,
+export const AddSubatividadeDialog: React.FC<AddSubatividadeDialogProps> = ({
   isOpen,
   setIsOpen,
-  onOpenChange,
-  isAddingSubatividades,
   novaSubatividade,
   setNovaSubatividade,
-  onNovaSubatividadeChange,
   tempoEstimado,
   setTempoEstimado,
-  onTempoEstimadoChange,
   handleAddCustomSubatividade,
-  onAddSubatividade
-}: AddSubatividadeDialogProps) {
-  // Handle both prop patterns for backward compatibility
-  const handleOpenChange = (open: boolean) => {
-    if (onOpenChange) {
-      onOpenChange(open);
-    } else if (setIsOpen) {
-      setIsOpen(open);
-    }
-  };
-
-  const handleNovaSubatividadeChange = (value: string) => {
-    if (onNovaSubatividadeChange) {
-      onNovaSubatividadeChange(value);
-    } else if (setNovaSubatividade) {
-      setNovaSubatividade(value);
-    }
-  };
-
-  const handleTempoEstimadoChange = (value: number) => {
-    if (onTempoEstimadoChange) {
-      onTempoEstimadoChange(value);
-    } else if (setTempoEstimado) {
-      setTempoEstimado(value);
-    }
-  };
-
-  const handleAdd = () => {
-    if (onAddSubatividade) {
-      onAddSubatividade();
-    } else if (handleAddCustomSubatividade) {
-      handleAddCustomSubatividade();
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleAdd();
-    }
+  isAddingSubatividades,
+  servicoTipo
+}) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await handleAddCustomSubatividade();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Adicionar nova subatividade</DialogTitle>
-          <DialogDescription>
-            Adicione uma subatividade personalizada para o serviço
-          </DialogDescription>
+          <DialogTitle>Adicionar Subatividade para {servicoTipo}</DialogTitle>
         </DialogHeader>
-        
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="nome" className="text-right">
-              Nome
-            </Label>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="nome">Nome da subatividade</Label>
             <Input
               id="nome"
               value={novaSubatividade}
-              onChange={(e) => handleNovaSubatividadeChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="col-span-3"
+              onChange={(e) => setNovaSubatividade(e.target.value)}
+              placeholder="Digite o nome da subatividade"
               autoFocus
             />
           </div>
           
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="tempo" className="text-right">
-              Tempo (horas)
-            </Label>
+          <div className="space-y-2">
+            <Label htmlFor="tempo">Tempo estimado (horas)</Label>
             <Input
               id="tempo"
               type="number"
               min="0.5"
               step="0.5"
               value={tempoEstimado}
-              onChange={(e) => handleTempoEstimadoChange(parseFloat(e.target.value) || 1)}
-              className="col-span-3"
+              onChange={(e) => setTempoEstimado(Number(e.target.value))}
             />
           </div>
-        </div>
-        
-        <DialogFooter>
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={() => handleOpenChange(false)}
-            disabled={isAddingSubatividades}
-          >
-            Cancelar
-          </Button>
-          <Button 
-            type="submit" 
-            onClick={handleAdd}
-            disabled={!novaSubatividade.trim() || isAddingSubatividades}
-          >
-            {isAddingSubatividades ? "Adicionando..." : "Adicionar"}
-          </Button>
-        </DialogFooter>
+
+          <DialogFooter className="mt-4">
+            <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isAddingSubatividades}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={novaSubatividade.trim() === '' || isAddingSubatividades}>
+              {isAddingSubatividades ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Adicionando...
+                </>
+              ) : (
+                'Adicionar'
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
-}
+};

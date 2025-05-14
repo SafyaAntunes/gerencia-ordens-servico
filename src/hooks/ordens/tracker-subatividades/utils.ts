@@ -1,79 +1,55 @@
 
-import { OrdemServico, TipoServico, SubAtividade } from "@/types/ordens";
+import { OrdemServico, SubAtividade, TipoServico } from "@/types/ordens";
 
 /**
- * Verifica se uma subatividade já existe em um serviço
- */
-export const subatividadeExisteEmServico = (
-  servico: { subatividades?: SubAtividade[] },
-  subatividadeId: string
-): boolean => {
-  if (!servico.subatividades || servico.subatividades.length === 0) {
-    return false;
-  }
-  
-  return servico.subatividades.some(sub => sub.id === subatividadeId);
-};
-
-/**
- * Atualiza o estado da ordem no componente local após adicionar/modificar subatividades
+ * Atualiza a ordem no estado com as novas informações
  */
 export const atualizarOrdemNoEstado = (
   ordem: OrdemServico,
   servicoTipo: TipoServico,
-  subatividades: SubAtividade[]
+  novasSubatividades: SubAtividade[]
 ): OrdemServico => {
-  // Cria uma cópia profunda da ordem para evitar mutações no estado
-  const ordemAtualizada = JSON.parse(JSON.stringify(ordem)) as OrdemServico;
+  if (!ordem) return ordem;
+
+  // Clone a ordem para não modificar o objeto original
+  const novaOrdem = { ...ordem };
   
-  // Encontra o serviço a ser atualizado
-  const servicoIndex = ordemAtualizada.servicos.findIndex(s => s.tipo === servicoTipo);
+  // Encontre o serviço a ser atualizado
+  const servicoIndex = novaOrdem.servicos.findIndex(s => s.tipo === servicoTipo);
   
-  if (servicoIndex >= 0) {
-    // Atualiza as subatividades do serviço
-    ordemAtualizada.servicos[servicoIndex].subatividades = subatividades;
-  }
+  if (servicoIndex === -1) return ordem; // Serviço não encontrado
   
-  return ordemAtualizada;
+  // Atualize as subatividades no serviço
+  novaOrdem.servicos[servicoIndex] = {
+    ...novaOrdem.servicos[servicoIndex],
+    subatividades: novasSubatividades
+  };
+  
+  return novaOrdem;
 };
 
 /**
- * Filtra subatividades para mostrar apenas as selecionadas.
- * Se nenhuma estiver selecionada, mostra todas as subatividades para facilitar a seleção.
+ * Filtra as subatividades para mostrar apenas as selecionadas
+ * Se nenhuma estiver selecionada, retorna todas
  */
-export const filtrarSubatividadesSelecionadas = (subatividades?: SubAtividade[]): SubAtividade[] => {
+export const filtrarSubatividadesSelecionadas = (
+  subatividades: SubAtividade[] | undefined
+): SubAtividade[] => {
   if (!subatividades || subatividades.length === 0) {
-    console.log("Nenhuma subatividade encontrada");
     return [];
   }
   
-  // Verificar se existem subatividades selecionadas
-  const existemSelecionadas = subatividades.some(sub => sub.selecionada === true);
+  // Verificar se há pelo menos uma subatividade selecionada
+  const temSubatividadesSelecionadas = subatividades.some(sub => sub.selecionada);
   
-  // Se nenhuma estiver selecionada, retornar todas para permitir seleção
-  if (!existemSelecionadas) {
-    console.log("Nenhuma subatividade selecionada, exibindo todas:", subatividades.length);
+  // Se não houver nenhuma selecionada, retornar todas para exibição
+  if (!temSubatividadesSelecionadas) {
+    console.log("Nenhuma subatividade selecionada, exibindo todas para seleção");
     return subatividades;
   }
   
   // Caso contrário, filtrar apenas as selecionadas
-  const filtradas = subatividades.filter(sub => sub.selecionada === true);
-  console.log(`Filtrando subatividades: ${filtradas.length} de ${subatividades.length} selecionadas`);
-  return filtradas;
-};
-
-/**
- * Marcar uma subatividade como selecionada
- */
-export const marcarSubatividadeSelecionada = (
-  subatividades: SubAtividade[],
-  subatividadeId: string,
-  selecionada: boolean = true
-): SubAtividade[] => {
-  return subatividades.map(sub => {
-    if (sub.id === subatividadeId) {
-      return { ...sub, selecionada };
-    }
-    return sub;
-  });
+  const selecionadas = subatividades.filter(sub => sub.selecionada);
+  console.log(`Filtrando subatividades: ${selecionadas.length} de ${subatividades.length} selecionadas`);
+  return selecionadas;
 };

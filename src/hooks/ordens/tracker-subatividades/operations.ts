@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -37,9 +38,34 @@ export const useSubatividadeOperations = (ordem?: OrdemServico, onOrdemUpdate?: 
       // Obter dados atualizados da ordem
       const ordemData = ordemSnapshot.data() as OrdemServico;
       
-      // Buscar preset de subatividades do Firestore
-      const presetsData = await fetchSubatividadesPreset();
+      // Buscar preset de subatividades do Firestore ou usar padrões
+      let presetsData = await fetchSubatividadesPreset();
       console.log("Presets de subatividades carregados:", presetsData);
+      
+      // Garantir que os presets incluam inspeção inicial e final
+      if (servicoTipo === 'inspecao_inicial' || servicoTipo === 'inspecao_final') {
+        // Verificar se já existe preset para este tipo
+        const temPresetParaTipo = presetsData.some(p => p.tipo === servicoTipo);
+        
+        // Se não existir, adicionar preset padrão
+        if (!temPresetParaTipo) {
+          const subatividadesPadrao = getDefaultSubatividades(servicoTipo);
+          presetsData.push({
+            tipo: servicoTipo,
+            subatividades: subatividadesPadrao.map((nome, index) => ({
+              id: `default-${servicoTipo}-${index}`,
+              nome,
+              selecionada: false,
+              concluida: false,
+              tempoEstimado: 1,
+              servicoTipo
+            }))
+          });
+          
+          console.log(`Adicionados presets padrão para ${servicoTipo}:`, 
+                     presetsData.find(p => p.tipo === servicoTipo)?.subatividades);
+        }
+      }
       
       // Encontrar o serviço a ser atualizado
       const servicoExistente = ordemData.servicos.find(s => s.tipo === servicoTipo);
@@ -309,9 +335,9 @@ function getDefaultSubatividades(servicoTipo: TipoServico): string[] {
     case 'lavagem':
       return ["Preparação", "Lavagem química", "Lavagem externa", "Secagem"];
     case 'inspecao_inicial':
-      return ["Verificação de trincas", "Medição de componentes", "Verificação dimensional"];
+      return ["Verificação de trincas", "Medição de componentes", "Verificação dimensional", "Análise de desgaste", "Inspeção visual"];
     case 'inspecao_final':
-      return ["Verificação visual", "Teste de qualidade", "Conformidade com especificações"];
+      return ["Verificação visual", "Teste de qualidade", "Conformidade com especificações", "Checklist final", "Aprovação técnica"];
     default:
       return ["Preparação", "Execução", "Finalização"];
   }
