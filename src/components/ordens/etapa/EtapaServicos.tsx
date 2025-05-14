@@ -32,7 +32,7 @@ export function EtapaServicos({
           key={servico.tipo}
           servico={servico}
           ordem={ordem}
-          onUpdate={(ordem) => {}}
+          onUpdate={() => {}}  // Add empty onUpdate handler
           // Legacy props support
           ordemId={ordem.id}
           etapa={etapa}

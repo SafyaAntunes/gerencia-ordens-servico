@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { useEtapaResponsavel } from "./hooks/useEtapaResponsavel";
@@ -9,7 +10,7 @@ import { Funcionario } from "@/types/funcionarios";
 import EtapaStatus from "./EtapaStatus";
 import EtapaProgresso from "./EtapaProgresso";
 import EtapaConcluiButton from "./EtapaConcluiButton";
-import EtapaServicos from "./EtapaServicos";
+import { EtapaServicos } from "./EtapaServicos";
 import EtapaTimer from "./EtapaTimer";
 import FuncionariosResponsaveis from "./components/FuncionariosResponsaveis";
 import { useEtapaPermissoes } from "./hooks/useEtapaPermissoes";

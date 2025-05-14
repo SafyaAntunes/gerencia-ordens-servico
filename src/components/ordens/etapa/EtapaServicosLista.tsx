@@ -35,6 +35,7 @@ export default function EtapaServicosLista({
           key={`${servico.tipo}-${i}`}
           servico={servico}
           ordem={dummyOrdem}
+          onUpdate={() => {}}  // Add empty onUpdate handler
           ordemId={ordemId}  // Legacy prop
           funcionarioId={funcionarioId}  // Legacy prop
           funcionarioNome={funcionarioNome}  // Legacy prop
