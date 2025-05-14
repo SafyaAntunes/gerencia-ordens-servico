@@ -1,0 +1,2 @@
+
+export { AddSubatividadeDialog } from './AddSubatividadeDialog';

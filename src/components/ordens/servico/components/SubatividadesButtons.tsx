@@ -1,0 +1,81 @@
+
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { Plus, Settings } from 'lucide-react';
+import { AddSubatividadeDialog } from '../dialogs/AddSubatividadeDialog';
+import { SelectSubatividadesDialog } from '../../subatividades/SelectSubatividadesDialog';
+
+interface SubatividadesButtonsProps {
+  canAddSubatividades: boolean;
+  temPermissao: boolean;
+  servicoConcluido: boolean;
+  servicoTipo: string;
+  isAddDialogOpen: boolean;
+  setIsAddDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  isSelectDialogOpen: boolean;
+  setIsSelectDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  novaSubatividade: string;
+  setNovaSubatividade: React.Dispatch<React.SetStateAction<string>>;
+  tempoEstimado: number;
+  setTempoEstimado: React.Dispatch<React.SetStateAction<number>>;
+  isAddingSubatividades: boolean;
+  handleAddCustomSubatividade: () => Promise<void>;
+  handleAddSelectedSubatividades: (selecionadas: string[]) => void;
+}
+
+export const SubatividadesButtons: React.FC<SubatividadesButtonsProps> = ({
+  canAddSubatividades,
+  temPermissao,
+  servicoConcluido,
+  servicoTipo,
+  isAddDialogOpen,
+  setIsAddDialogOpen,
+  isSelectDialogOpen,
+  setIsSelectDialogOpen,
+  novaSubatividade,
+  setNovaSubatividade,
+  tempoEstimado,
+  setTempoEstimado,
+  isAddingSubatividades,
+  handleAddCustomSubatividade,
+  handleAddSelectedSubatividades
+}) => {
+  if (!canAddSubatividades || !temPermissao || servicoConcluido) {
+    return null;
+  }
+
+  return (
+    <div className="mt-4 flex flex-wrap gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setIsSelectDialogOpen(true)}
+        disabled={isAddingSubatividades}
+        className="flex items-center gap-1"
+      >
+        <Settings className="h-4 w-4" /> 
+        Adicionar Subatividades Padrão
+      </Button>
+      
+      <AddSubatividadeDialog 
+        isOpen={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        novaSubatividade={novaSubatividade}
+        tempoEstimado={tempoEstimado}
+        onNovaSubatividadeChange={setNovaSubatividade}
+        onTempoEstimadoChange={setTempoEstimado}
+        onAddSubatividade={handleAddCustomSubatividade}
+      />
+      
+      <SelectSubatividadesDialog
+        open={isSelectDialogOpen}
+        onOpenChange={(open) => {
+          console.log("SubatividadesButtons - SelectSubatividadesDialog onOpenChange:", open);
+          setIsSelectDialogOpen(open);
+        }}
+        servicoTipo={servicoTipo}
+        onSelect={handleAddSelectedSubatividades}
+      />
+    </div>
+  );
+};

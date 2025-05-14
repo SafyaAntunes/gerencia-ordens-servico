@@ -1,0 +1,2 @@
+
+export { SubatividadesButtons } from './SubatividadesButtons';
