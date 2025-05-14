@@ -1,30 +1,13 @@
 
-import { useState, useEffect, useCallback } from "react";
-import { SubAtividade, TipoServico, EtapaOS } from "@/types/ordens";
+import { useState, useEffect } from "react";
+import { SubAtividade, TipoServico } from "@/types/ordens";
 import { FormValues } from "../types";
-import { useServicosState } from "./useServicosState";
-import { useFotosHandler } from "./useFotosHandler";
-import { useEtapasConfig } from "./useEtapasConfig";
 
-export interface UseOrdemFormDataProps {
+interface UseOrdemFormDataProps {
   servicosTipos: string[];
   defaultValues?: Partial<FormValues>;
   defaultFotosEntrada?: any[];
   defaultFotosSaida?: any[];
-}
-
-export interface UseOrdemFormDataReturn {
-  servicosDescricoes: Record<string, string>;
-  servicosSubatividades: Record<string, SubAtividade[]>;
-  loadingSources: Record<string, string>;
-  fotosEntrada: File[];
-  fotosSaida: File[];
-  etapasTempoPreco: Record<string, { precoHora?: number; tempoEstimado?: number }>;
-  setFotosEntrada: (fotos: File[]) => void;
-  setFotosSaida: (fotos: File[]) => void;
-  handleServicoDescricaoChange: (tipo: string, descricao: string) => void;
-  handleSubatividadesChange: (tipo: TipoServico, subatividades: SubAtividade[]) => void;
-  handleEtapaTempoPrecoChange: (etapa: EtapaOS, field: 'precoHora' | 'tempoEstimado', value: number) => void;
 }
 
 export const useOrdemFormData = ({
@@ -32,40 +15,66 @@ export const useOrdemFormData = ({
   defaultValues,
   defaultFotosEntrada = [],
   defaultFotosSaida = [],
-}: UseOrdemFormDataProps): UseOrdemFormDataReturn => {
-  // Use the existing hooks for servicos, fotos, and etapas
-  const {
-    servicosDescricoes,
-    servicosSubatividades,
-    loadingSources,
-    handleServicoDescricaoChange,
-    handleSubatividadesChange,
-  } = useServicosState(servicosTipos, defaultValues);
-  
-  const {
-    fotosEntrada,
-    fotosSaida,
-    setFotosEntrada,
-    setFotosSaida,
-  } = useFotosHandler(defaultFotosEntrada, defaultFotosSaida);
-  
-  const {
-    etapasTempoPreco,
-    handleEtapaTempoPrecoChange,
-  } = useEtapasConfig(defaultValues?.etapasTempoPreco);
-  
-  // Return all the data and handlers
+}: UseOrdemFormDataProps) => {
+  const [servicosDescricoes, setServicosDescricoes] = useState<Record<string, string>>(
+    defaultValues?.servicosDescricoes || {}
+  );
+  const [etapasTempoPreco, setEtapasTempoPreco] = useState<Record<string, any>>(
+    defaultValues?.etapasTempoPreco || {}
+  );
+  const [fotosEntrada, setFotosEntrada] = useState<any[]>(defaultFotosEntrada);
+  const [fotosSaida, setFotosSaida] = useState<any[]>(defaultFotosSaida);
+
+  // Inicializa valores padrão
+  useEffect(() => {
+    if (defaultValues?.servicosDescricoes) {
+      setServicosDescricoes(defaultValues.servicosDescricoes);
+    }
+    
+    if (defaultValues?.etapasTempoPreco) {
+      setEtapasTempoPreco(defaultValues.etapasTempoPreco);
+    }
+  }, [defaultValues]);
+
+  // Limpar descrições de serviços que não estão mais selecionados
+  useEffect(() => {
+    if (servicosTipos.length > 0) {
+      const descricoesFiltradas: Record<string, string> = {};
+      for (const tipo of servicosTipos) {
+        if (servicosDescricoes[tipo]) {
+          descricoesFiltradas[tipo] = servicosDescricoes[tipo];
+        } else {
+          descricoesFiltradas[tipo] = "";
+        }
+      }
+      setServicosDescricoes(descricoesFiltradas);
+    }
+  }, [servicosTipos]);
+
+  // Handler para atualização de descrições de serviços
+  const handleServicoDescricaoChange = (tipo: string, descricao: string) => {
+    setServicosDescricoes((prev) => ({
+      ...prev,
+      [tipo]: descricao,
+    }));
+  };
+
+  // Handler para atualização de tempo e preço
+  const handleEtapaTempoPrecoChange = (etapa: string, dados: any) => {
+    setEtapasTempoPreco((prev) => ({
+      ...prev,
+      [etapa]: dados,
+    }));
+  };
+
   return {
     servicosDescricoes,
-    servicosSubatividades,
-    loadingSources,
+    etapasTempoPreco,
     fotosEntrada,
     fotosSaida,
-    etapasTempoPreco,
     setFotosEntrada,
     setFotosSaida,
     handleServicoDescricaoChange,
-    handleSubatividadesChange,
     handleEtapaTempoPrecoChange,
   };
 };

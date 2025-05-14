@@ -1,68 +1,76 @@
 
+import React from "react";
+import { FormValues } from "@/components/ordens/form/types";
+import { OrdemForm } from "@/components/ordens/form/OrdemForm";
+import { formatFormDataFromOrdem, formatOrdemFromFormData } from "@/utils/ordemFormFormatter";
 import { OrdemServico, SubAtividade } from "@/types/ordens";
-import OrdemForm from "@/components/ordens/form";
-import { Cliente } from "@/types/clientes";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { toast } from "sonner";
 
 interface OrdemFormWrapperProps {
   ordem: OrdemServico;
   onSubmit: (data: any) => void;
-  isSubmitting: boolean;
   onCancel: () => void;
-  onSubatividadeToggle: (servicoTipo: string, subId: string, checked: boolean) => void;
-  prepareSubatividadesForEdit: () => Record<string, SubAtividade[]>;
-  clientes: Cliente[];
-  isLoadingClientes: boolean;
+  isSubmitting: boolean;
+  onSubatividadeToggle?: (tipo: string, subId: string, checked: boolean) => void;
+  prepareSubatividadesForEdit?: () => Record<string, SubAtividade[]>;
+  clientes?: any[];
+  isLoadingClientes?: boolean;
 }
 
-export function OrdemFormWrapper({
+export const OrdemFormWrapper: React.FC<OrdemFormWrapperProps> = ({
   ordem,
   onSubmit,
-  isSubmitting,
   onCancel,
-  onSubatividadeToggle,
-  prepareSubatividadesForEdit,
-  clientes,
-  isLoadingClientes
-}: OrdemFormWrapperProps) {
-  // Obter subatividades com seus estados preservados
-  const subatividadesPreparadas = prepareSubatividadesForEdit();
+  isSubmitting,
+  clientes = [],
+  isLoadingClientes = false
+}) => {
+  // Formatar dados da ordem para o formato do formulário
+  const formDataInicial = formatFormDataFromOrdem(ordem);
   
-  // Log para depuração
-  console.log("[OrdemFormWrapper] Subatividades preparadas para edição:", 
-    Object.entries(subatividadesPreparadas).map(([tipo, subs]) => ({
-      tipo,
-      quantidade: Array.isArray(subs) ? subs.length : 0,
-      subs: Array.isArray(subs) ? subs.map(s => ({ id: s.id, nome: s.nome, selecionada: s.selecionada })) : []
-    }))
-  );
+  const handleSubmit = async (formData: FormValues & { 
+    servicosDescricoes: Record<string, string>,
+    fotosEntrada?: any[],
+    fotosSaida?: any[]
+  }) => {
+    try {
+      // Formatar dados do formulário para o formato da ordem
+      const ordemAtualizada = formatOrdemFromFormData(formData, ordem);
+      
+      // Preservar as subatividades existentes
+      ordemAtualizada.servicos = ordemAtualizada.servicos.map((novoServico) => {
+        const servicoExistente = ordem.servicos.find(s => s.tipo === novoServico.tipo);
+        
+        if (servicoExistente && servicoExistente.subatividades) {
+          return {
+            ...novoServico,
+            subatividades: servicoExistente.subatividades
+          };
+        }
+        
+        return novoServico;
+      });
+      
+      // Chamar a função onSubmit com os dados atualizados
+      onSubmit(ordemAtualizada);
+    } catch (error) {
+      console.error("Erro ao processar dados do formulário:", error);
+      toast.error("Erro ao processar dados do formulário");
+    }
+  };
 
   return (
-    <OrdemForm 
-      onSubmit={onSubmit}
+    <OrdemForm
+      onSubmit={handleSubmit}
       isLoading={isSubmitting}
-      defaultValues={{
-        id: ordem.id,
-        nome: ordem.nome,
-        clienteId: ordem.cliente?.id || "",
-        motorId: ordem.motorId || "",
-        dataAbertura: ordem.dataAbertura ? new Date(ordem.dataAbertura) : new Date(),
-        dataPrevistaEntrega: ordem.dataPrevistaEntrega ? new Date(ordem.dataPrevistaEntrega) : new Date(),
-        prioridade: ordem.prioridade || "media",
-        servicosTipos: ordem.servicos?.map(s => s.tipo) || [],
-        servicosDescricoes: ordem.servicos?.reduce((acc, s) => {
-          acc[s.tipo] = s.descricao;
-          return acc;
-        }, {} as Record<string, string>) || {},
-        // Utilizar a função preparada para obter subatividades com estado preservado
-        servicosSubatividades: subatividadesPreparadas
-      }}
-      defaultFotosEntrada={ordem?.fotosEntrada || []}
-      defaultFotosSaida={ordem?.fotosSaida || []}
+      defaultValues={formDataInicial}
+      defaultFotosEntrada={ordem.fotosEntrada || []}
+      defaultFotosSaida={ordem.fotosSaida || []}
       onCancel={onCancel}
-      onSubatividadeToggle={onSubatividadeToggle}
-      isSubatividadeEditingEnabled={true}
       clientes={clientes}
       isLoadingClientes={isLoadingClientes}
     />
   );
-}
+};

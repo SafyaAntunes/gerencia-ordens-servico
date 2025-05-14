@@ -18,7 +18,6 @@ import {
 } from "./components";
 import { formSchema, FormValues, OrdemFormProps } from "./types";
 import { SubAtividade, TipoServico } from "@/types/ordens";
-import { useServicoSubatividades } from "@/hooks/useServicoSubatividades";
 
 export const OrdemForm = ({ 
   onSubmit, 
@@ -29,36 +28,9 @@ export const OrdemForm = ({
   onCancel,
   clientes = [],
   isLoadingClientes = false,
-  onSubatividadeToggle,
-  isSubatividadeEditingEnabled = false,
 }: OrdemFormProps) => {
   const [activeTab, setActiveTab] = useState("dados");
   const [selectedClienteId, setSelectedClienteId] = useState<string>(defaultValues?.clienteId || "");
-  
-  // Depuração: Verificar os valores iniciais de subatividades
-  useEffect(() => {
-    if (defaultValues?.servicosSubatividades) {
-      console.log("🔍 [OrdemForm] Inicializando com subatividades:", defaultValues.servicosSubatividades);
-      
-      // Verificar se as subatividades foram passadas corretamente
-      Object.entries(defaultValues.servicosSubatividades).forEach(([tipo, subs]) => {
-        console.log(`🔍 [OrdemForm] Tipo ${tipo}:`, 
-          Array.isArray(subs) ? `${subs.length} subatividades` : "formato inválido");
-        
-        if (Array.isArray(subs) && subs.length > 0) {
-          console.log(`🔍 [OrdemForm] Amostra de subatividades para ${tipo}:`, 
-            subs.slice(0, 2).map(s => ({
-              id: s.id,
-              nome: s.nome,
-              selecionada: s.selecionada
-            }))
-          );
-        }
-      });
-    } else {
-      console.log("⚠️ [OrdemForm] Sem subatividades iniciais");
-    }
-  }, [defaultValues?.servicosSubatividades]);
   
   // Initialize form with schema validation
   const form = useForm<FormValues>({
@@ -73,7 +45,6 @@ export const OrdemForm = ({
       prioridade: defaultValues?.prioridade || "media",
       servicosTipos: defaultValues?.servicosTipos || [],
       servicosDescricoes: defaultValues?.servicosDescricoes || {},
-      servicosSubatividades: defaultValues?.servicosSubatividades || {},
       etapasTempoPreco: defaultValues?.etapasTempoPreco || {},
     },
   });
@@ -84,15 +55,12 @@ export const OrdemForm = ({
   // Use the refactored hook for form data handling
   const { 
     servicosDescricoes, 
-    servicosSubatividades, 
-    loadingSources,
     fotosEntrada, 
     fotosSaida, 
     etapasTempoPreco, 
     setFotosEntrada, 
     setFotosSaida, 
-    handleServicoDescricaoChange, 
-    handleSubatividadesChange,
+    handleServicoDescricaoChange,
     handleEtapaTempoPrecoChange 
   } = useOrdemFormData({
     servicosTipos,
@@ -101,29 +69,20 @@ export const OrdemForm = ({
     defaultFotosSaida
   });
   
-  // Access the default subatividades
-  const { defaultSubatividades } = useServicoSubatividades();
-  
-  // Memoize the subatividades change handler
-  const memoizedSubatividadesChange = useCallback((tipo: TipoServico, subatividades: SubAtividade[]) => {
-    console.log("Changing subatividades for", tipo, subatividades);
-    handleSubatividadesChange(tipo, subatividades);
-  }, [handleSubatividadesChange]);
-  
   const handleFormSubmit = useCallback((values: FormValues) => {
     const formData = {
       ...values,
       servicosDescricoes,
-      servicosSubatividades,
       etapasTempoPreco,
       fotosEntrada,
-      fotosSaida
+      fotosSaida,
+      // Removida a inclusão de subatividades no submit do formulário
+      // Agora as subatividades serão adicionadas apenas pelo tracker
     };
     
     onSubmit(formData);
   }, [
     servicosDescricoes, 
-    servicosSubatividades, 
     etapasTempoPreco, 
     fotosEntrada, 
     fotosSaida, 
@@ -179,10 +138,9 @@ export const OrdemForm = ({
             </div>
             
             <ServicoTipoSelector 
-              form={form} 
-              servicosSubatividades={servicosSubatividades} 
-              onSubatividadesChange={memoizedSubatividadesChange}
-              loadingSources={loadingSources}
+              form={form}
+              onServicoDescricaoChange={handleServicoDescricaoChange}
+              servicosDescricoes={servicosDescricoes}
             />
           </TabsContent>
           

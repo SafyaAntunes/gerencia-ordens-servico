@@ -23,11 +23,11 @@ export function OrdemDetailsTabs({
 }: OrdemDetailTabsProps) {
   return (
     <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-      <TabsList className="w-full mb-6">
-        <TabsTrigger value="detalhes" className="flex-1">Detalhes</TabsTrigger>
-        <TabsTrigger value="tracker" className="flex-1">Tracker</TabsTrigger>
-        <TabsTrigger value="progresso" className="flex-1">Progresso</TabsTrigger>
-        <TabsTrigger value="fotos" className="flex-1">Fotos</TabsTrigger>
+      <TabsList className="w-full mb-6 grid grid-cols-4">
+        <TabsTrigger value="detalhes">Detalhes</TabsTrigger>
+        <TabsTrigger value="tracker">Tracker</TabsTrigger>
+        <TabsTrigger value="progresso">Progresso</TabsTrigger>
+        <TabsTrigger value="fotos">Fotos</TabsTrigger>
       </TabsList>
       
       <TabsContent value="detalhes">

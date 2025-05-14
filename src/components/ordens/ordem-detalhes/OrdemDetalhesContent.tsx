@@ -2,10 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useOrdemDetalhes } from '@/hooks/useOrdemDetalhes';
-import EtapasTracker from '@/components/ordens/etapas-tracker/EtapasTracker';
 import { OrdemFormWrapper } from './OrdemFormWrapper';
 import { OrdemDetailsTabs } from './OrdemDetailsTabs';
-import { OrdemHeader } from './OrdemHeader';
 import { BackButton } from './BackButton';
 import { LoadingOrdem } from '../detalhes/LoadingOrdem';
 import { NotFoundOrdem } from '../detalhes/NotFoundOrdem';
@@ -14,6 +12,8 @@ import { DeleteOrdemDialog } from '@/components/ordens/detalhes/DeleteOrdemDialo
 import OrdemActionButtons from '@/components/ordens/detalhes/OrdemActionButtons';
 import { loadOrderFormData } from '@/services/ordemService';
 import { useTrackingSubatividades } from '@/hooks/ordens/useTrackingSubatividades';
+import { Button } from '@/components/ui/button';
+import { Pencil, Trash2, FileDown } from 'lucide-react';
 
 export const OrdemDetalhesContent: React.FC<{id?: string; onLogout?: () => void}> = ({ id: propId, onLogout }) => {
   const { id: paramId } = useParams<{ id: string }>();
@@ -36,7 +36,8 @@ export const OrdemDetalhesContent: React.FC<{id?: string; onLogout?: () => void}
   // Hook para gerenciamento de subatividades
   const { 
     prepareSubatividadesForEdit, 
-    onSubatividadeToggle 
+    onSubatividadeToggle,
+    logSubatividadesState 
   } = useTrackingSubatividades();
   
   const { 
@@ -73,6 +74,11 @@ export const OrdemDetalhesContent: React.FC<{id?: string; onLogout?: () => void}
     navigate(-1);
   };
   
+  // Exportar PDF (implementação futura)
+  const handleExportPDF = () => {
+    console.log("Exportar PDF");
+  };
+  
   // Mostrar indicador de carregamento
   if (isLoading) {
     return <LoadingOrdem />;
@@ -105,42 +111,61 @@ export const OrdemDetalhesContent: React.FC<{id?: string; onLogout?: () => void}
   // Renderizar detalhes da ordem no modo de visualização
   return (
     <div className="container mx-auto px-4 py-6 animate-fade-in">
-      <BackButton onClick={handleBack} />
-      <OrdemHeaderCustom 
-        id={ordem.id}
-        nome={ordem.nome}
-        canEdit={canEditThisOrder}
-        onEditClick={() => setEditMode(true)}
-        onDeleteClick={() => setDeleteDialogOpen(true)}
-        ordem={ordem}
-      />
-      
-      <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <OrdemActionButtons 
-            ordem={ordem}
-            disabled={isSubmitting}
-          />
-          <OrdemDetailsTabs 
-            ordem={ordem}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            onStatusChange={handleStatusChange}
-            onOrdemUpdate={handleOrdemUpdate}
-          />
-        </div>
+      <div className="flex flex-col space-y-4">
+        {/* Botão voltar */}
+        <BackButton onClick={handleBack} />
         
-        <div className="lg:col-span-1">
-          <div className="sticky top-24">
-            <EtapasTracker
-              ordem={ordem}
-              onOrdemUpdate={handleOrdemUpdate}
-              onFuncionariosChange={(etapa, funcionariosIds, funcionariosNomes, servicoTipo) => {
-                console.log("Funcionários alterados:", { etapa, funcionariosIds, funcionariosNomes, servicoTipo });
-              }}
-            />
+        {/* Cabeçalho da ordem */}
+        <div className="border rounded-lg p-4 bg-white">
+          <div className="flex flex-row justify-between items-center">
+            <div>
+              <h1 className="text-xl font-bold">{ordem.nome}</h1>
+              <p className="text-sm text-muted-foreground">
+                Criada em {new Date(ordem.dataAbertura).toLocaleDateString()} • 
+                Previsão de entrega: {new Date(ordem.dataPrevistaEntrega).toLocaleDateString()}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              {canEditThisOrder && (
+                <>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setEditMode(true)}
+                    className="flex items-center gap-1"
+                  >
+                    <Pencil className="h-4 w-4" /> Editar
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={() => setDeleteDialogOpen(true)}
+                    className="flex items-center gap-1"
+                  >
+                    <Trash2 className="h-4 w-4" /> Excluir
+                  </Button>
+                </>
+              )}
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleExportPDF}
+                className="flex items-center gap-1"
+              >
+                <FileDown className="h-4 w-4" /> Exportar PDF
+              </Button>
+            </div>
           </div>
         </div>
+        
+        {/* Tabs */}
+        <OrdemDetailsTabs 
+          ordem={ordem}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          onStatusChange={handleStatusChange}
+          onOrdemUpdate={handleOrdemUpdate}
+        />
       </div>
       
       <DeleteOrdemDialog 

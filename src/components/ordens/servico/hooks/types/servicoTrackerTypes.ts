@@ -1,52 +1,27 @@
 
-import { OrdemServico, Servico, SubAtividade, TipoServico, EtapaOS } from "@/types/ordens";
-import { Funcionario } from "@/types/funcionarios";
+import { OrdemServico, Servico, SubAtividade, EtapaOS, PausaRegistro } from "@/types/ordens";
 
-export type ServicoStatus = 
-  | 'nao_iniciado'
-  | 'em_andamento'
-  | 'pausado'
-  | 'concluido';
-  
-export type PausaRegistro = {
-  inicio: number;
-  fim?: number;
-  motivo?: string;
-};
+export type ServicoStatus = 'nao_iniciado' | 'em_andamento' | 'pausado' | 'concluido';
 
-export interface ServicoTrackerProps {
+export interface UseServicoTrackerProps {
   servico: Servico;
-  ordem?: OrdemServico;
-  onUpdate?: (servico: Servico) => void;
-  // Legacy props support
-  ordemId?: string; 
+  ordem: OrdemServico;
+  onUpdate?: (ordemAtualizada: OrdemServico) => void;
+  // Legacy props
+  ordemId?: string;
   funcionarioId?: string;
   funcionarioNome?: string;
   etapa?: EtapaOS;
   onServicoStatusChange?: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
   onSubatividadeToggle?: (subatividadeId: string, checked: boolean) => void;
   onSubatividadeSelecionadaToggle?: (subatividadeId: string, checked: boolean) => void;
-}
-
-export interface UseServicoTrackerProps extends ServicoTrackerProps {}
-
-export interface ServicoTrackerState {
-  isRunning: boolean;
-  isPaused: boolean;
-  time: string; // Modificado para string para consistência com displayTime
-  concluido: boolean;
-  status: ServicoStatus;
-  pausas: PausaRegistro[];
-  progressPercentage: number;
-  tipoServico: TipoServico;
-  completedSubatividades: number;
-  totalSubatividades: number;
+  canAddSubatividades?: boolean; // Nova propriedade para controlar adição de subatividades
 }
 
 export interface UseServicoTrackerResult {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  funcionariosOptions: Funcionario[];
+  funcionariosOptions: any[];
   temPermissao: boolean;
   isRunning: boolean;
   isPaused: boolean;
@@ -58,7 +33,6 @@ export interface UseServicoTrackerResult {
   tempoTotalEstimado: number;
   subatividadesFiltradas: SubAtividade[];
   pausas: PausaRegistro[];
-  
   handleLoadFuncionarios: () => Promise<void>;
   handleSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
   handleStartClick: () => void;
@@ -67,15 +41,24 @@ export interface UseServicoTrackerResult {
   handleFinish: () => void;
   handleMarcarConcluido: () => void;
   handleReiniciarServico: () => void;
-  
   responsavelSelecionadoId: string;
   setResponsavelSelecionadoId: (id: string) => void;
   handleSaveResponsavel: () => Promise<void>;
   isSavingResponsavel: boolean;
   lastSavedResponsavelId: string;
   lastSavedResponsavelNome: string;
-
-  state: ServicoTrackerState;
+  state: {
+    isRunning: boolean;
+    isPaused: boolean;
+    time: string;
+    concluido: boolean;
+    status: ServicoStatus;
+    pausas: PausaRegistro[];
+    progressPercentage: number;
+    tipoServico: string;
+    completedSubatividades: number;
+    totalSubatividades: number;
+  };
   operations: {
     start: () => void;
     pause: (motivo?: string) => void;
@@ -87,4 +70,9 @@ export interface UseServicoTrackerResult {
   registerPausa: (motivo?: string) => void;
   finalizarPausa: () => void;
   handleAssign: () => void;
+  addSubatividade?: (subatividade: SubAtividade) => void; // Novo método para adicionar subatividade
+}
+
+export interface ServicoTrackerProps extends UseServicoTrackerProps {
+  // Quaisquer props adicionais específicas do componente
 }
