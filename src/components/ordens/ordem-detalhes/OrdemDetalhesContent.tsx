@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Cliente } from "@/types/clientes";
@@ -77,13 +76,17 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
     // Para cada serviço na ordem, adicione suas subatividades ao objeto resultado
     ordem.servicos.forEach(servico => {
       if (servico.subatividades && Array.isArray(servico.subatividades)) {
-        // Garantir que todas as subatividades tenham a propriedade selecionada definida
+        // Garantir que todas as subatividades mantenham seu estado original
+        // em vez de automaticamente marcá-las como selecionadas
         result[servico.tipo] = servico.subatividades.map(sub => ({
           ...sub,
-          selecionada: true // Para edição, todas as subatividades existentes são consideradas selecionadas
+          // Manter o estado selecionada como está, sem forçar para true
+          selecionada: sub.selecionada !== undefined ? sub.selecionada : false
         }));
         
         console.log(`[OrdemDetalhesContent] Preparadas ${result[servico.tipo].length} subatividades para o serviço ${servico.tipo}`);
+        console.log(`[OrdemDetalhesContent] Estado das subatividades: `, 
+          result[servico.tipo].map(s => ({ id: s.id, nome: s.nome, selecionada: s.selecionada })));
       } else {
         result[servico.tipo] = [];
         console.log(`[OrdemDetalhesContent] Nenhuma subatividade encontrada para o serviço ${servico.tipo}`);
