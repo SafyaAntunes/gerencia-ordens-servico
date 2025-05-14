@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Cliente } from "@/types/clientes";
@@ -6,7 +5,8 @@ import { SubAtividade } from "@/types/ordens";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import { loadOrderFormData, getSubatividadesByTipo } from "@/services/ordemService";
+import { loadOrderFormData } from "@/services/ordemService";
+import { getAllSubatividades } from "@/services/subatividadeService";
 import { OrdemDetailsTabs } from "./OrdemDetailsTabs";
 import { OrdemFormWrapper } from "./OrdemFormWrapper";
 import { BackButton } from "./BackButton";
@@ -16,7 +16,6 @@ import { LoadingOrdem } from "@/components/ordens/detalhes/LoadingOrdem";
 import { NotFoundOrdem } from "@/components/ordens/detalhes/NotFoundOrdem";
 import { OrdemHeaderCustom } from "@/components/ordens/detalhes/OrdemHeaderCustom";
 import { useTrackingSubatividades } from "@/hooks/ordens/useTrackingSubatividades";
-import { getAllSubatividades } from "@/services/subatividadeService";
 
 interface OrdemDetalhesContentProps {
   id?: string;

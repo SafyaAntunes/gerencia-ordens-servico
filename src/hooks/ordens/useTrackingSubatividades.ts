@@ -1,36 +1,20 @@
 
-import { useEffect } from 'react';
-import { SubAtividade } from '@/types/ordens';
+import { SubAtividade } from "@/types/ordens";
+import { useState, useCallback } from "react";
 
-/**
- * Hook para ajudar no debug de problemas com subatividades
- * Este hook vai rastrear e logar informações sobre subatividades em pontos críticos
- */
-export function useTrackingSubatividades() {
-  /**
-   * Função para logar o estado de subatividades
-   */
-  const logSubatividadesState = (
-    context: string, 
-    tipo: string,
-    subatividades: SubAtividade[] | undefined
+export const useTrackingSubatividades = () => {
+  const [subatividadesLog, setSubatividadesLog] = useState<Record<string, any[]>>({});
+  
+  const logSubatividadesState = useCallback((
+    context: string,
+    tipoServico: string,
+    subatividades?: SubAtividade[]
   ) => {
     if (!subatividades) {
-      console.log(`[${context}] Sem subatividades para ${tipo}`);
+      console.log(`[${context}] ${tipoServico}: Nenhuma subatividade`);
       return;
     }
-    
-    console.log(`[${context}] ${tipo} tem ${subatividades.length} subatividades:`);
-    console.log(`[${context}] Detalhes:`, 
-      subatividades.map(sub => ({
-        id: sub.id,
-        nome: sub.nome,
-        selecionada: sub.selecionada !== undefined ? sub.selecionada : '(undefined)',
-        concluida: sub.concluida
-      }))
-    );
-    
-    // Estatísticas
+
     const stats = {
       total: subatividades.length,
       selecionadas: subatividades.filter(s => s.selecionada === true).length,
@@ -38,11 +22,15 @@ export function useTrackingSubatividades() {
       indefinidas: subatividades.filter(s => s.selecionada === undefined).length,
       concluidas: subatividades.filter(s => s.concluida).length
     };
-    
-    console.log(`[${context}] Estatísticas para ${tipo}:`, stats);
-  }
 
-  return {
-    logSubatividadesState
-  };
-}
+    console.log(`[${context}] ${tipoServico} tem ${subatividades.length} subatividades:`);
+    console.log(`[${context}] Estatísticas para ${tipoServico}:`, stats);
+    
+    setSubatividadesLog(prev => ({
+      ...prev,
+      [tipoServico]: [...(prev[tipoServico] || []), { context, stats, timestamp: new Date() }]
+    }));
+  }, []);
+  
+  return { logSubatividadesState, subatividadesLog };
+};

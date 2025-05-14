@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { SubAtividade, TipoServico } from "@/types/ordens";
 import { isEqual } from "lodash";
@@ -22,7 +21,7 @@ export const useServicosState = (
   const { defaultSubatividades } = useServicoSubatividades();
 
   // Use the refactored hooks with component name
-  const { debugInfoLoaded } = useServicosDebug("useServicosState");
+  const { debugInfoLoaded } = useServicosDebug();
   const { loadingSources, trackSource, getSourceTrackerObject, logSourceSummary } = useServicosSourceTracking();
   const { hasInitialized, loadSubatividades } = useSubatividadesLoader({
     defaultValues,
@@ -121,7 +120,7 @@ export const useServicosState = (
     });
     
     // Log sources after all loads are complete
-    logSourceSummary(sourceTracker);
+    logSourceSummary();
     
     // Cleanup function to prevent state updates after unmounting
     return () => {
