@@ -1,19 +1,19 @@
 
-import { Servico, EtapaOS, TipoServico, SubAtividade, OrdemServico } from "@/types/ordens";
+import { Servico, TipoServico, EtapaOS, OrdemServico } from "@/types/ordens";
 
-export type ServicoStatus = 'nao_iniciado' | 'em_andamento' | 'pausado' | 'concluido';
+export type ServicoStatus = "nao_iniciado" | "em_andamento" | "pausado" | "concluido";
 
-export type PausaRegistro = {
+export interface PausaRegistro {
   inicio: number;
   fim?: number;
   motivo?: string;
-};
+}
 
 export interface ServicoTrackerProps {
   servico: Servico;
   ordem: OrdemServico;
-  onUpdate?: (ordemAtualizada: OrdemServico) => void;
-  // Legacy props
+  onUpdate: (ordem: OrdemServico) => void;
+  // Legacy props support
   ordemId?: string;
   funcionarioId?: string;
   funcionarioNome?: string;
@@ -23,9 +23,6 @@ export interface ServicoTrackerProps {
   onSubatividadeSelecionadaToggle?: (subatividadeId: string, checked: boolean) => void;
   canAddSubatividades?: boolean;
 }
-
-// Alias for backward compatibility
-export type UseServicoTrackerProps = ServicoTrackerProps;
 
 export interface ServicoTrackerState {
   isRunning: boolean;
@@ -62,7 +59,7 @@ export interface UseServicoTrackerResult {
   completedSubatividades: number;
   totalSubatividades: number;
   tempoTotalEstimado: number;
-  subatividadesFiltradas: SubAtividade[];
+  subatividadesFiltradas: any[];
   pausas: PausaRegistro[];
   handleLoadFuncionarios: () => Promise<void>;
   handleSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
@@ -71,7 +68,8 @@ export interface UseServicoTrackerResult {
   handleResume: () => void;
   handleFinish: () => void;
   handleMarcarConcluido: () => void;
-  // Additional operations 
+  
+  // Additional props for expanded interface
   handleReiniciarServico: () => void;
   responsavelSelecionadoId: string;
   setResponsavelSelecionadoId: React.Dispatch<React.SetStateAction<string>>;

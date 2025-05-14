@@ -1,6 +1,6 @@
 
 import { Servico, TipoServico, EtapaOS, OrdemServico } from "@/types/ordens";
-import ServicoTracker from "../servico/ServicoTracker";
+import { ServicoTracker } from "../servico";
 
 interface EtapaServicosProps {
   ordem: OrdemServico;
@@ -38,9 +38,21 @@ export function EtapaServicos({
           etapa={etapa}
           funcionarioId={funcionarioId}
           funcionarioNome={funcionarioNome}
-          onServicoStatusChange={onServicoStatusChange}
-          onSubatividadeToggle={onSubatividadeToggle}
-          onSubatividadeSelecionadaToggle={onSubatividadeSelecionadaToggle}
+          onServicoStatusChange={
+            onServicoStatusChange ? 
+              (concluido, funcId, funcNome) => onServicoStatusChange(servico.tipo, concluido, funcId, funcNome) : 
+              undefined
+          }
+          onSubatividadeToggle={
+            onSubatividadeToggle ? 
+              (subatividadeId, checked) => onSubatividadeToggle(servico.tipo, subatividadeId, checked) : 
+              undefined
+          }
+          onSubatividadeSelecionadaToggle={
+            onSubatividadeSelecionadaToggle ? 
+              (subatividadeId, checked) => onSubatividadeSelecionadaToggle(servico.tipo, subatividadeId, checked) : 
+              undefined
+          }
         />
       ))}
     </div>

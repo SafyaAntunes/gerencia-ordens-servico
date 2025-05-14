@@ -10,7 +10,7 @@ export const etapaNomes: Record<EtapaOS, string> = {
   inspecao_final: "Inspeção Final"
 };
 
-// Adicionando o export para etapaNomeFormatado que está faltando
+// Adicionando o export para etapaNomeFormatado
 export const etapaNomeFormatado: Record<EtapaOS, string> = {
   lavagem: "Lavagem",
   inspecao_inicial: "Inspeção Inicial",
@@ -20,7 +20,7 @@ export const etapaNomeFormatado: Record<EtapaOS, string> = {
   inspecao_final: "Inspeção Final"
 };
 
-// Adicionando o export para tipoServicoLabel que está faltando
+// Adicionando o export para tipoServicoLabel
 export const tipoServicoLabel: Record<TipoServico, string> = {
   bloco: "Bloco",
   biela: "Biela",

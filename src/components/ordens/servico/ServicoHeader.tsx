@@ -1,22 +1,23 @@
+
 import React from 'react';
-import { ChevronDown, ChevronUp, Clock } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import { TipoServico } from '@/types/ordens';
+import { ChevronDown, ChevronUp, Clock, Check } from 'lucide-react';
+import { formatTime } from '@/utils/timerUtils';
 import { ServicoStatus } from './hooks/types/servicoTrackerTypes';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { tipoServicoLabel } from '@/utils/etapaNomes';
 
 interface ServicoHeaderProps {
-  tipo: TipoServico;
-  displayTime: string;
+  tipo: string;
+  displayTime?: string;
   servicoStatus: ServicoStatus;
   progressPercentage: number;
   completedSubatividades: number;
   totalSubatividades: number;
-  tempoTotalEstimado: number;
+  tempoTotalEstimado?: number;
   funcionarioNome?: string;
-  concluido: boolean;
-  temPermissao: boolean;
+  concluido?: boolean;
+  temPermissao?: boolean;
   isOpen: boolean;
   onToggleOpen: () => void;
 }
@@ -30,95 +31,79 @@ const ServicoHeader: React.FC<ServicoHeaderProps> = ({
   totalSubatividades,
   tempoTotalEstimado,
   funcionarioNome,
-  concluido,
-  temPermissao,
+  concluido = false,
+  temPermissao = true,
   isOpen,
   onToggleOpen
 }) => {
-  const StatusBadge = () => {
-    let color = "";
-    let text = "";
-
+  const getStatusBadge = () => {
     switch (servicoStatus) {
-      case 'em_andamento':
-        color = "bg-blue-500";
-        text = "Em andamento";
-        break;
-      case 'pausado':
-        color = "bg-yellow-500";
-        text = "Pausado";
-        break;
-      case 'concluido':
-        color = "bg-green-500";
-        text = "Concluído";
-        break;
-      case 'nao_iniciado':
-        color = "bg-gray-500";
-        text = "Não iniciado";
-        break;
+      case "em_andamento":
+        return <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">Em andamento</Badge>;
+      case "pausado":
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-600 border-yellow-200">Pausado</Badge>;
+      case "concluido":
+        return <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">Concluído</Badge>;
       default:
-        color = "bg-gray-500";
-        text = "Não iniciado";
+        return <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">Não iniciado</Badge>;
     }
-    
-    return (
-      <Badge className={`${color} text-white`}>{text}</Badge>
-    );
   };
-
-  const renderProgressInfo = () => {
-    if (completedSubatividades === 0 && totalSubatividades === 0) {
-      return null;
-    }
-    
-    return (
-      <span className="text-xs text-gray-600">
-        {completedSubatividades}/{totalSubatividades} subatividades
-        {tempoTotalEstimado > 0 && ` • ${tempoTotalEstimado}h estimadas`}
-      </span>
-    );
-  };
+  
+  const servicoLabel = tipoServicoLabel[tipo as keyof typeof tipoServicoLabel] || tipo;
 
   return (
     <div className="flex flex-col">
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <h3 className="font-semibold">{tipoServicoLabel[tipo] || tipo}</h3>
-          <StatusBadge />
-          {funcionarioNome && (
-            <span className="text-xs text-gray-500">
-              Responsável: {funcionarioNome}
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold">{servicoLabel}</h3>
+            {getStatusBadge()}
+          </div>
+          
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+            <Clock className="h-3.5 w-3.5" />
+            <span>
+              {displayTime || '00:00:00'}
+              {tempoTotalEstimado ? ` / ${tempoTotalEstimado}h estimadas` : ''}
             </span>
+          </div>
+          
+          {funcionarioNome && (
+            <div className="text-sm text-muted-foreground mt-1">
+              Responsável: {funcionarioNome}
+            </div>
           )}
         </div>
         
         <div className="flex items-center gap-2">
-          <div className="flex items-center">
-            <Clock className="h-4 w-4 mr-1" />
-            <span className="text-sm font-mono">{displayTime}</span>
+          <div className="text-sm text-muted-foreground">
+            {progressPercentage}%
           </div>
           
-          <button 
+          <button
             onClick={onToggleOpen}
-            className="p-1 rounded-full hover:bg-gray-100"
+            className="p-1 hover:bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-gray-200"
+            aria-label={isOpen ? 'Recolher detalhes' : 'Expandir detalhes'}
           >
-            {isOpen ? (
-              <ChevronUp className="h-5 w-5" />
-            ) : (
-              <ChevronDown className="h-5 w-5" />
-            )}
+            {isOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
           </button>
         </div>
       </div>
       
       <div className="mt-2">
-        <div className="flex justify-between items-center mb-1">
-          <span className="text-xs font-medium">
-            {progressPercentage}% concluído
-          </span>
-          {renderProgressInfo()}
+        <Progress value={progressPercentage} className="h-1" />
+        
+        <div className="flex justify-between text-xs text-muted-foreground mt-1">
+          <div>
+            {completedSubatividades}/{totalSubatividades} subatividades
+          </div>
+          {concluido && (
+            <div className="flex items-center text-green-600">
+              <Check className="h-3 w-3 mr-1" />
+              <span>Concluído</span>
+            </div>
+          )}
         </div>
-        <Progress value={progressPercentage} className="h-1.5" />
       </div>
     </div>
   );

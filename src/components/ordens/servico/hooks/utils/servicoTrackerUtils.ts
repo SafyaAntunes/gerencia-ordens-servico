@@ -1,64 +1,29 @@
 
 import { ServicoStatus } from "../types/servicoTrackerTypes";
 
-/**
- * Define o status do serviço com base no estado atual
- */
-export function getServicoStatus(
-  isRunning: boolean, 
-  isPaused: boolean, 
-  concluido: boolean
-): ServicoStatus {
+// Get status based on running, paused, and completed states
+export const getServicoStatus = (isRunning: boolean, isPaused: boolean, concluido: boolean): ServicoStatus => {
   if (concluido) {
-    return 'concluido';
-  }
-  
-  if (isRunning) {
+    return "concluido";
+  } else if (isRunning) {
     if (isPaused) {
-      return 'pausado';
+      return "pausado";
     }
-    return 'em_andamento';
+    return "em_andamento";
+  } else {
+    return "nao_iniciado";
   }
+};
+
+// Format display time for timer
+export const formatTimeDisplay = (seconds: number): string => {
+  if (seconds < 0) return "00:00:00";
   
-  return 'nao_iniciado' as ServicoStatus;
-}
-
-/**
- * Verifica se o serviço pode ser iniciado
- */
-export function canStartServico(
-  status: ServicoStatus, 
-  temPermissao: boolean
-): boolean {
-  return status === 'nao_iniciado' && temPermissao;
-}
-
-/**
- * Verifica se o serviço pode ser pausado
- */
-export function canPauseServico(
-  status: ServicoStatus, 
-  temPermissao: boolean
-): boolean {
-  return status === 'em_andamento' && temPermissao;
-}
-
-/**
- * Verifica se o serviço pode ser retomado
- */
-export function canResumeServico(
-  status: ServicoStatus, 
-  temPermissao: boolean
-): boolean {
-  return status === 'pausado' && temPermissao;
-}
-
-/**
- * Verifica se o serviço pode ser finalizado
- */
-export function canFinishServico(
-  status: ServicoStatus, 
-  temPermissao: boolean
-): boolean {
-  return (status === 'em_andamento' || status === 'pausado') && temPermissao;
-}
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  
+  return [hours, minutes, secs]
+    .map(unit => String(unit).padStart(2, '0'))
+    .join(':');
+};

@@ -1,6 +1,10 @@
-import { formatTime } from "@/utils/timerUtils";
 
-// Export a renamed function for backwards compatibility
-export const formatTimeDisplay = formatTime;
+import { ServicoStatus } from "../types/servicoTrackerTypes";
+import { getServicoStatus, formatTimeDisplay } from "./servicoTrackerUtils";
 
-// Any other functions from the original file would remain here
+// ... implementation for timer utils if needed
+
+export { 
+  getServicoStatus, 
+  formatTimeDisplay
+};

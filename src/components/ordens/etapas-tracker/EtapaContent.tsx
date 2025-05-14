@@ -25,7 +25,7 @@ export default function EtapaContent({
   const [selectedService, setSelectedService] = useState<TipoServico | undefined>(activeServico);
   
   const {
-    servicosEtapa,
+    getServicosEtapa,
     getEtapaInfo,
     handleSubatividadeToggle,
     handleServicoStatusChange,
@@ -35,6 +35,8 @@ export default function EtapaContent({
     ordem,
     onUpdate: onOrdemUpdate,
   });
+  
+  const servicosEtapa = getServicosEtapa(etapa, selectedService);
   
   // Determinar quais serviços exibir com base na etapa
   const getServicosFiltrados = () => {
@@ -52,7 +54,7 @@ export default function EtapaContent({
   // Verificar se é etapa de inspeção e precisa selecionar serviço
   const isInspecaoEtapa = etapa === "inspecao_inicial" || etapa === "inspecao_final";
   const servicosFiltrados = getServicosFiltrados();
-  const servicosTipo = [...new Set(servicosEtapa.map(s => s.tipo))];
+  const servicosTipo = [...new Set(servicosEtapa.map(s => s.tipo))] as TipoServico[];
   
   if (servicosEtapa.length === 0) {
     return <EmptyServices etapa={etapa} />;
@@ -84,16 +86,17 @@ export default function EtapaContent({
       
       <EtapaCard
         ordem={ordem}
+        ordemId={ordem.id}
         etapa={etapa}
         etapaNome={etapaNome}
         funcionarioId=""
         servicos={servicosFiltrados}
         etapaInfo={etapaInfo}
         servicoTipo={selectedService}
-        onSubatividadeToggle={handleSubatividadeToggle}
-        onServicoStatusChange={handleServicoStatusChange}
-        onEtapaStatusChange={handleEtapaStatusChange}
-        onSubatividadeSelecionadaToggle={handleSubatividadeSelecionadaToggle}
+        onSubatividadeToggle={(tipo, subId, checked) => handleSubatividadeToggle(tipo, subId, checked)}
+        onServicoStatusChange={(tipo, concluido, funcId, funcNome) => handleServicoStatusChange(tipo, concluido, funcId, funcNome)}
+        onEtapaStatusChange={(etapa, concluida, funcId, funcNome, servicoTipo) => handleEtapaStatusChange(etapa, concluida, funcId, funcNome, servicoTipo)}
+        onSubatividadeSelecionadaToggle={(tipo, subId, checked) => handleSubatividadeSelecionadaToggle(tipo, subId, checked)}
         onFuncionariosChange={onFuncionariosChange}
       />
     </div>

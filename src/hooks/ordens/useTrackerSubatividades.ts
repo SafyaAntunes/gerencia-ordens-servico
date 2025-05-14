@@ -18,9 +18,15 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
   
   // Adicionar subatividades predefinidas a um serviço
   const addDefaultSubatividades = useCallback(async (servicoTipo: TipoServico) => {
-    if (!ordem?.id) {
+    if (!ordem) {
+      toast.error("Ordem não encontrada");
+      console.error("Ordem não encontrada:", ordem);
+      return;
+    }
+    
+    if (!ordem.id) {
       toast.error("ID da ordem não encontrado");
-      console.error("ordem ou ordem.id não encontrado:", ordem);
+      console.error("ordem.id não encontrado:", ordem);
       return;
     }
     
@@ -115,7 +121,12 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
     nome: string,
     tempoEstimado: number = 1
   ) => {
-    if (!ordem?.id) {
+    if (!ordem) {
+      toast.error("Ordem não encontrada");
+      return;
+    }
+    
+    if (!ordem.id) {
       toast.error("ID da ordem não encontrado");
       return;
     }
