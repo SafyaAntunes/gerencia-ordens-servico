@@ -65,9 +65,30 @@ export const useServicosState = (
     
     if (defaultValues?.servicosSubatividades) {
       console.log("📝 [useServicosState] Inicializando com subatividades do defaultValues:", defaultValues.servicosSubatividades);
-      setServicosSubatividades(prev => {
-        if (isEqual(prev, defaultValues.servicosSubatividades)) return prev;
-        return defaultValues.servicosSubatividades ?? {};
+      
+      // Importante: precisamos preservar os estados 'selecionada' das subatividades existentes
+      const processedSubatividades: Record<string, SubAtividade[]> = {};
+      
+      Object.entries(defaultValues.servicosSubatividades).forEach(([tipo, subatividades]) => {
+        if (subatividades && subatividades.length > 0) {
+          // Garantir que todas as subatividades tenham os estados corretos
+          processedSubatividades[tipo] = subatividades.map(sub => ({
+            ...sub,
+            // Preservar o estado 'selecionada' ou definir como true se não existir
+            selecionada: sub.selecionada !== undefined ? sub.selecionada : true,
+            // Preservar o estado 'concluida' ou definir como false se não existir
+            concluida: sub.concluida ?? false
+          }));
+        }
+      });
+      
+      setServicosSubatividades(processedSubatividades);
+      setLoadingSources(prev => {
+        const newSources = { ...prev };
+        Object.keys(processedSubatividades).forEach(tipo => {
+          newSources[tipo] = "edição";
+        });
+        return newSources;
       });
     }
     
@@ -104,19 +125,39 @@ export const useServicosState = (
         console.log(`⏭️ [loadSubatividades] Já está carregando subatividades para ${tipo}, pulando...`);
         return;
       }
+      
+      // Se já temos subatividades salvas para este tipo, não carregue novamente
+      if (defaultValues?.servicosSubatividades?.[tipo]?.length > 0) {
+        console.log(`✅ [loadSubatividades] Usando subatividades SALVAS da ordem para ${tipo}`);
+        
+        // Garantir que todas as subatividades tenham os estados corretos
+        const savedSubatividades = defaultValues.servicosSubatividades[tipo].map(sub => ({
+          ...sub,
+          // Preservar o estado 'selecionada' ou definir como true se não existir
+          selecionada: sub.selecionada !== undefined ? sub.selecionada : true,
+          // Preservar o estado 'concluida' ou definir como false se não existir
+          concluida: sub.concluida ?? false
+        }));
+        
+        setServicosSubatividades(prev => ({
+          ...prev,
+          [tipo]: savedSubatividades
+        }));
+        
+        sourceTracker[tipo] = "edição";
+        setLoadingSources(prev => ({...prev, [tipo]: "edição"}));
+        return;
+      }
+      
       pendingOperations[tipo] = true;
       
       try {
         // PRIORIDADE MAIS ALTA: Usar subatividades existentes no modo de edição
-        const existingSubatividades = defaultValues?.servicosSubatividades?.[tipo] || [];
+        const existingSubatividades = servicosSubatividades[tipo] || [];
         if (existingSubatividades.length > 0) {
-          console.log(`✅ [loadSubatividades] USANDO SUBATIVIDADES DO MODO DE EDIÇÃO para ${tipo}:`, existingSubatividades);
-          setServicosSubatividades(prev => ({
-            ...prev,
-            [tipo]: existingSubatividades
-          }));
-          sourceTracker[tipo] = "edição";
-          setLoadingSources(prev => ({...prev, [tipo]: "edição"}));
+          console.log(`✅ [loadSubatividades] USANDO SUBATIVIDADES EXISTENTES para ${tipo}:`, existingSubatividades);
+          sourceTracker[tipo] = "existente";
+          setLoadingSources(prev => ({...prev, [tipo]: "existente"}));
           return;
         }
         
@@ -199,7 +240,7 @@ export const useServicosState = (
             [tipo]: defaultSubs
           }));
           sourceTracker[tipo] = "padrão (recuperação de erro)";
-          setLoadingSources(prev => ({...prev, [tipo]: "básico (recuperação de erro)"}));
+          setLoadingSources(prev => ({...prev, [tipo]: "subatividades (recuperação de erro)"}));
         } else {
           setServicosSubatividades(prev => ({
             ...prev,
@@ -238,7 +279,7 @@ export const useServicosState = (
     return () => {
       isMounted = false;
     };
-  }, [servicosTipos, defaultValues?.servicosSubatividades, previousServiceTypes, defaultSubatividades, hasInitialized]);
+  }, [servicosTipos, defaultValues?.servicosSubatividades, previousServiceTypes, defaultSubatividades, hasInitialized, servicosSubatividades]);
 
   const handleServicoDescricaoChange = useCallback((tipo: string, descricao: string) => {
     setServicosDescricoes(prev => {

@@ -106,8 +106,8 @@ export const ServicoTipoSelector = memo(({
       return <Badge variant="outline" className="ml-2 bg-green-50">Configuração</Badge>;
     } else if (source.includes("edição")) {
       return <Badge variant="outline" className="ml-2 bg-blue-50">Salvo</Badge>;
-    } else if (source.includes("padrão")) {
-      return <Badge variant="outline" className="ml-2 bg-amber-50">Básico</Badge>;
+    } else if (source.includes("padrão") || source.includes("básico")) {
+      return <Badge variant="outline" className="ml-2 bg-amber-50">Subatividades</Badge>;
     }
     
     return null;
