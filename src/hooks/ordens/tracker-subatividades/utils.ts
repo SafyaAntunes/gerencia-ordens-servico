@@ -38,9 +38,39 @@ export const atualizarOrdemNoEstado = (
 };
 
 /**
- * Filtra subatividades para mostrar apenas as selecionadas
+ * Filtra subatividades para mostrar apenas as selecionadas.
+ * Se nenhuma estiver selecionada, mostra todas as subatividades para facilitar a seleção.
  */
 export const filtrarSubatividadesSelecionadas = (subatividades?: SubAtividade[]): SubAtividade[] => {
   if (!subatividades) return [];
-  return subatividades.filter(sub => sub.selecionada);
+  
+  // Verificar se existem subatividades selecionadas
+  const existemSelecionadas = subatividades.some(sub => sub.selecionada);
+  
+  // Se nenhuma estiver selecionada, retornar todas para permitir seleção
+  if (!existemSelecionadas) {
+    console.log("Nenhuma subatividade selecionada, exibindo todas:", subatividades.length);
+    return subatividades;
+  }
+  
+  // Caso contrário, filtrar apenas as selecionadas
+  const filtradas = subatividades.filter(sub => sub.selecionada);
+  console.log(`Filtrando subatividades: ${filtradas.length} de ${subatividades.length} selecionadas`);
+  return filtradas;
+};
+
+/**
+ * Marcar uma subatividade como selecionada
+ */
+export const marcarSubatividadeSelecionada = (
+  subatividades: SubAtividade[],
+  subatividadeId: string,
+  selecionada: boolean = true
+): SubAtividade[] => {
+  return subatividades.map(sub => {
+    if (sub.id === subatividadeId) {
+      return { ...sub, selecionada };
+    }
+    return sub;
+  });
 };

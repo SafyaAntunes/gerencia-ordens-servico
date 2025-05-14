@@ -1,7 +1,7 @@
 
 // Importar componentes e hooks necessários
 import React, { useState, useEffect, useCallback } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -151,29 +151,26 @@ export function SelectSubatividadesDialog({
     setSelectedSubatividades({});
   }, []);
   
-  // Manipulador para aplicar seleções
+  // Manipulador para aplicar seleções - MODIFICADO: agora passa IDs, não nomes
   const handleApply = useCallback(() => {
     console.log("SelectSubatividadesDialog - Aplicando seleções:", selectedSubatividades);
     
-    const selectedNames = Object.entries(selectedSubatividades)
+    // Pegar IDs das subatividades selecionadas (não os nomes)
+    const selectedIds = Object.entries(selectedSubatividades)
       .filter(([_, isSelected]) => isSelected)
-      .map(([id, _]) => {
-        const sub = subatividades.find(s => s.id === id);
-        return sub ? sub.nome : "";
-      })
-      .filter(name => name !== "");
+      .map(([id, _]) => id);
     
-    console.log("SelectSubatividadesDialog - Nomes selecionados:", selectedNames);
+    console.log("SelectSubatividadesDialog - IDs selecionados:", selectedIds);
     
-    if (selectedNames.length === 0) {
+    if (selectedIds.length === 0) {
       console.log("SelectSubatividadesDialog - Nenhuma subatividade selecionada, fechando diálogo");
       onOpenChange(false);
       return;
     }
     
-    onSelect(selectedNames);
+    onSelect(selectedIds);
     // Deixamos o diálogo aberto até que o componente pai o feche após processar as seleções
-  }, [selectedSubatividades, subatividades, onSelect, onOpenChange]);
+  }, [selectedSubatividades, onSelect, onOpenChange]);
   
   // Verificar se há alguma subatividade selecionada
   const hasSelectedSubatividades = Object.values(selectedSubatividades).some(Boolean);
@@ -183,6 +180,9 @@ export function SelectSubatividadesDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Selecionar Subatividades</DialogTitle>
+          <DialogDescription>
+            Escolha as subatividades que deseja adicionar a este serviço.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="py-4">

@@ -40,6 +40,7 @@ export const useSubatividadeOperations = (ordem?: OrdemServico, onOrdemUpdate?: 
       
       // Buscar preset de subatividades do Firestore
       const presetsData = await fetchSubatividadesPreset();
+      console.log("Presets de subatividades carregados:", presetsData);
       
       // Encontrar o serviço a ser atualizado
       const servicoExistente = ordemData.servicos.find(s => s.tipo === servicoTipo);
@@ -63,27 +64,66 @@ export const useSubatividadeOperations = (ordem?: OrdemServico, onOrdemUpdate?: 
       // Filtrar presets relevantes e criar novas subatividades
       const novasSubatividades: SubAtividade[] = [];
       
-      // Para cada ID de subatividade selecionada, adicionar à lista
+      console.log("Processando subatividades selecionadas...");
+      
+      // Para cada ID de subatividade selecionada, buscar no preset e adicionar
       for (const subId of subatividadesIds) {
+        console.log(`Processando subatividade ID: ${subId}`);
+        
         // Verificar se a subatividade já existe
-        if (!subatividadesExistentes.has(subId)) {
-          // Encontrar a definição da subatividade no preset
-          const presetItem = presetsData.find(preset => 
-            preset.subatividades?.some(sub => sub.id === subId)
-          );
+        if (subatividadesExistentes.has(subId)) {
+          console.log(`Subatividade ${subId} já existe, ignorando`);
           
-          if (presetItem) {
-            const subatividade = presetItem.subatividades?.find(sub => sub.id === subId);
-            
-            if (subatividade) {
-              novasSubatividades.push({
-                id: subatividade.id,
-                nome: subatividade.nome,
-                selecionada: true, // Garantir que subatividades adicionadas sejam selecionadas
-                concluida: false,
-                tempoEstimado: subatividade.tempoEstimado || 1,
-                servicoTipo: servicoTipo
-              });
+          // Atualizar flag selecionada para true se não estiver
+          const existingSubatividade = subatividadesExistentes.get(subId);
+          if (!existingSubatividade.selecionada) {
+            existingSubatividade.selecionada = true;
+          }
+          continue;
+        }
+        
+        // Buscar todos os presets para encontrar a subatividade pelo ID
+        let subatividadeEncontrada = null;
+        for (const preset of presetsData) {
+          const foundSub = preset.subatividades?.find(sub => sub.id === subId);
+          if (foundSub) {
+            subatividadeEncontrada = foundSub;
+            break;
+          }
+        }
+        
+        // Se encontrou a subatividade
+        if (subatividadeEncontrada) {
+          console.log(`Subatividade encontrada no preset: ${subatividadeEncontrada.nome}`);
+          novasSubatividades.push({
+            id: subatividadeEncontrada.id,
+            nome: subatividadeEncontrada.nome,
+            selecionada: true, // Garantir que subatividades adicionadas sejam selecionadas
+            concluida: false,
+            tempoEstimado: subatividadeEncontrada.tempoEstimado || 1,
+            servicoTipo: servicoTipo
+          });
+        } else {
+          // Se não encontrou pelo ID, pode ser um ID padrão (default-*)
+          // Verificar se é um ID padrão que contém o nome da subatividade
+          if (subId.startsWith('default-')) {
+            // Extrair nome da subatividade do ID (se possível)
+            const parts = subId.split('-');
+            if (parts.length >= 3) {
+              const index = parseInt(parts[parts.length - 1]);
+              const defaultSubatividades = getDefaultSubatividades(servicoTipo);
+              if (index < defaultSubatividades.length) {
+                const nome = defaultSubatividades[index];
+                console.log(`Criando subatividade padrão: ${nome}`);
+                novasSubatividades.push({
+                  id: uuidv4(), // Gerar novo ID único
+                  nome: nome,
+                  selecionada: true,
+                  concluida: false,
+                  tempoEstimado: 1,
+                  servicoTipo: servicoTipo
+                });
+              }
             }
           }
         }
@@ -91,16 +131,26 @@ export const useSubatividadeOperations = (ordem?: OrdemServico, onOrdemUpdate?: 
       
       console.log(`Adicionando ${novasSubatividades.length} novas subatividades ao serviço ${servicoTipo}`);
       
+      // Atualizar subatividades existentes (se a selecionada foi alterada)
+      const subatividadesAtualizadas = servicoExistente.subatividades.map(sub => {
+        if (subatividadesExistentes.has(sub.id)) {
+          return subatividadesExistentes.get(sub.id);
+        }
+        return sub;
+      });
+      
       // Adicionar novas subatividades à lista existente
-      const subatividadesAtualizadas = [
-        ...servicoExistente.subatividades,
+      const finalSubatividades = [
+        ...subatividadesAtualizadas,
         ...novasSubatividades
       ];
+      
+      console.log("Subatividades finais:", finalSubatividades.length);
       
       // Criar serviço atualizado
       const servicoAtualizado = {
         ...servicoExistente,
-        subatividades: subatividadesAtualizadas
+        subatividades: finalSubatividades
       };
       
       // Atualizar array de serviços
@@ -242,3 +292,31 @@ export const useSubatividadeOperations = (ordem?: OrdemServico, onOrdemUpdate?: 
     addCustomSubatividade
   };
 };
+
+// Função auxiliar para obter subatividades padrão por tipo de serviço (copiada da SelectSubatividadesDialog)
+function getDefaultSubatividades(servicoTipo: TipoServico): string[] {
+  switch (servicoTipo) {
+    case 'bloco':
+      return ["Lavagem", "Inspeção", "Análise de trincas", "Retífica", "Brunimento", "Mandrilhamento"];
+    case 'biela':
+      return ["Inspeção", "Alinhamento", "Troca de buchas", "Balanceamento"];
+    case 'cabecote':
+      return ["Lavagem", "Teste de trincas", "Plano", "Assentamento de válvulas", "Sedes", "Guias"];
+    case 'virabrequim':
+      return ["Inspeção", "Retífica", "Polimento", "Balanceamento"];
+    case 'eixo_comando':
+      return ["Inspeção", "Retífica", "Balanceamento"];
+    case 'montagem':
+      return ["Preparação", "Montagem do cabeçote", "Montagem do bloco", "Ajustes finais", "Testes"];
+    case 'dinamometro':
+      return ["Potência", "Torque", "Consumo", "Análise"];
+    case 'lavagem':
+      return ["Preparação", "Lavagem química", "Lavagem externa", "Secagem"];
+    case 'inspecao_inicial':
+      return ["Verificação de trincas", "Medição de componentes", "Verificação dimensional"];
+    case 'inspecao_final':
+      return ["Verificação visual", "Teste de qualidade", "Conformidade com especificações"];
+    default:
+      return ["Preparação", "Execução", "Finalização"];
+  }
+}

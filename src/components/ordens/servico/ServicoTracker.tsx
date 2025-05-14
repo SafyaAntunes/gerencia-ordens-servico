@@ -41,6 +41,17 @@ function ServicoTracker({
       subatividades: servico.subatividades?.length || 0,
       subatividadesSelecionadas: servico.subatividades?.filter(s => s.selecionada).length || 0
     });
+    
+    // Log das subatividades para debug
+    if (servico.subatividades && servico.subatividades.length > 0) {
+      console.log("ServicoTracker - Subatividades detalhadas:", 
+        servico.subatividades.map(s => ({
+          id: s.id,
+          nome: s.nome,
+          selecionada: s.selecionada
+        }))
+      );
+    }
   }, [servico, ordem, ordemId, onUpdate]);
   
   // Hook para adicionar subatividades
@@ -83,7 +94,7 @@ function ServicoTracker({
     onSubatividadeSelecionadaToggle
   });
   
-  // Forçar o uso apenas das subatividades selecionadas para exibição
+  // Forçar o uso das subatividades selecionadas para exibição, com lógica aprimorada
   const subatividadesExibidas = filtrarSubatividadesSelecionadas(servico.subatividades);
   
   const handleAddSelectedSubatividades = (selecionadas: string[]) => {
@@ -112,6 +123,7 @@ function ServicoTracker({
     // Fazer o cast explícito para TipoServico
     const tipoServico = servico.tipo as TipoServico;
     
+    // Chamar a função de adição com IDs (agora que o diálogo passa IDs)
     addSelectedSubatividades(tipoServico, selecionadas)
       .then(() => {
         console.log("ServicoTracker - Subatividades adicionadas com sucesso, fechando diálogo");
@@ -151,20 +163,20 @@ function ServicoTracker({
     }
   };
 
-  // Log subatividades para debug
+  // Logs adicional para debug
   useEffect(() => {
     if (servico.subatividades) {
-      console.log("ServicoTracker - Subatividades disponíveis:", {
-        total: servico.subatividades.length,
-        selecionadas: servico.subatividades.filter(s => s.selecionada).length,
-        detalhes: servico.subatividades.map(s => ({
-          id: s.id.substr(0, 4),
+      console.log("ServicoTracker - Subatividades filtradas para exibição:", {
+        total: subatividadesExibidas.length,
+        selecionadas: subatividadesExibidas.filter(s => s.selecionada).length,
+        detalhes: subatividadesExibidas.map(s => ({
+          id: s.id.substr(0, 8),
           nome: s.nome,
           selecionada: s.selecionada
         }))
       });
     }
-  }, [servico.subatividades]);
+  }, [servico.subatividades, subatividadesExibidas]);
 
   return (
     <div className="border rounded-lg p-4 mb-4">
@@ -188,7 +200,7 @@ function ServicoTracker({
           <div className="mt-4">
             <ServicoDetails
               descricao={servico.descricao}
-              subatividades={subatividadesExibidas.length > 0 ? subatividadesExibidas : subatividadesFiltradas}
+              subatividades={subatividadesExibidas}
               temPermissao={temPermissao}
               onSubatividadeToggle={handleSubatividadeToggle}
             />
