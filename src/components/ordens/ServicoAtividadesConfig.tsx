@@ -32,14 +32,14 @@ export default function ServicoAtividadesConfig({
       subatividades?.map(sub => ({ 
         id: sub.id, 
         nome: sub.nome, 
-        selecionada: sub.selecionada !== undefined ? sub.selecionada : true,
+        selecionada: sub.selecionada !== undefined ? sub.selecionada : false,
         concluida: sub.concluida 
       })));
     
-    // MELHORIA: Garantir que o estado 'selecionada' seja preservado ou definido como verdadeiro por padrão
+    // MELHORIA: Preservar o estado 'selecionada' de cada subatividade
     const processedSubs = (subatividades || []).map(sub => ({
       ...sub,
-      selecionada: sub.selecionada !== undefined ? sub.selecionada : true
+      selecionada: sub.selecionada !== undefined ? sub.selecionada : false
     }));
     
     setLocalSubatividades(processedSubs);

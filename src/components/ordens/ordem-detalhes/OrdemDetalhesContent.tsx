@@ -102,7 +102,7 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
     handleOrdemUpdate(ordemAtualizada);
   };
 
-  // Preparar as subatividades para o formulário de edição, preservando o estado 'selecionada'
+  // CORREÇÃO: Preparar as subatividades para o formulário de edição, preservando CORRETAMENTE o estado 'selecionada'
   const prepareSubatividadesForEdit = () => {
     if (!ordem || !ordem.servicos) return {};
     
@@ -114,17 +114,17 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
         // Log detalhado para cada serviço e suas subatividades
         console.log(`[OrdemDetalhes] Serviço ${servico.tipo} tem ${servico.subatividades.length} subatividades.`);
         
-        // MELHORIA: Garantir que todas as subatividades tenham o estado 'selecionada' explicitamente definido
-        // Assumimos que se uma subatividade está na ordem, ela foi selecionada (true por padrão)
+        // CORREÇÃO: Preservar exatamente o estado 'selecionada' de cada subatividade
+        // em vez de forçar todas como selecionadas
         servicosSubatividades[servico.tipo] = servico.subatividades.map(sub => {
           // Log individual para entender o estado de cada subatividade
-          console.log(`[OrdemDetalhes] Subatividade ${sub.nome}: selecionada=${sub.selecionada !== undefined ? sub.selecionada : true}, concluida=${sub.concluida}`);
+          console.log(`[OrdemDetalhes] Subatividade ${sub.nome}: selecionada=${sub.selecionada}, concluida=${sub.concluida}`);
           
           return {
             ...sub,
-            // IMPORTANTE: Garantir que todas as subatividades estejam marcadas como selecionadas
-            // Se a subatividade está na ordem, ela foi selecionada anteriormente
-            selecionada: true
+            // IMPORTANTE: Preservar o estado 'selecionada' sem alterá-lo
+            // Apenas definir como false se for undefined
+            selecionada: sub.selecionada !== undefined ? sub.selecionada : false
           };
         });
         

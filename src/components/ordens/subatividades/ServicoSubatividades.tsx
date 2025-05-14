@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { SubAtividade, TipoServico, TipoAtividade } from "@/types/ordens";
 import { useServicoSubatividades } from "@/hooks/useServicoSubatividades";
@@ -36,24 +35,23 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
     );
   }, []);
   
-  // MELHORIA: Prioritizar e preservar o estado 'selecionada' das subatividades recebidas via props
+  // PRIORITIZAR subatividades das props e preservar seu estado 'selecionada'
   useEffect(() => {
     if (subatividades && subatividades.length > 0) {
       console.log(`[ServicoSubatividades] Usando subatividades das props para ${tipoServico}:`, 
         subatividades.map(s => ({
           id: s.id, 
           nome: s.nome, 
-          selecionada: s.selecionada !== undefined ? s.selecionada : true,
+          selecionada: s.selecionada !== undefined ? s.selecionada : false,
           concluida: s.concluida
         }))
       );
       
-      // IMPORTANTE: Garantir que todas as subatividades tenham o estado 'selecionada' definido corretamente
+      // IMPORTANTE: Preservar o estado 'selecionada' de cada subatividade sem modificá-lo
       const processedSubs = subatividades.map(sub => ({
         ...sub,
-        // Todas as subatividades que vêm do formulário de edição devem ser consideradas selecionadas
-        // a menos que explicitamente marcadas como não selecionadas
-        selecionada: sub.selecionada !== undefined ? sub.selecionada : true
+        // Apenas definir como false se for undefined
+        selecionada: sub.selecionada !== undefined ? sub.selecionada : false
       }));
       
       // Log para depuração - verificar o estado 'selecionada' após processamento
@@ -132,14 +130,14 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
         subatividades.map(sub => ({ 
           id: sub.id, 
           nome: sub.nome, 
-          selecionada: sub.selecionada !== undefined ? sub.selecionada : true,
+          selecionada: sub.selecionada !== undefined ? sub.selecionada : false,
           concluida: sub.concluida 
         })));
       
-      // MELHORIA: Garantir que o estado 'selecionada' seja preservado ou definido como verdadeiro por padrão
+      // MELHORIA: Preservar o estado 'selecionada' sem modificá-lo
       const updatedSubs = subatividades.map(sub => ({
         ...sub,
-        selecionada: sub.selecionada !== undefined ? sub.selecionada : true
+        selecionada: sub.selecionada !== undefined ? sub.selecionada : false
       }));
       
       setLocalSubatividades(updatedSubs);

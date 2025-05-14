@@ -51,7 +51,7 @@ export const useOrdemUpdate = (
             formSubatividades.map(s => ({
               id: s.id, 
               nome: s.nome, 
-              selecionada: s.selecionada !== undefined ? s.selecionada : true,
+              selecionada: s.selecionada !== undefined ? s.selecionada : false,
               concluida: s.concluida
             }))
           );
@@ -59,8 +59,8 @@ export const useOrdemUpdate = (
           // If this is a new service type (not in the existing order)
           const isNewServiceType = !existingServico;
           
-          // Process subatividades - preserve existing status for those that were already present
-          // IMPORTANTE: Filtrar apenas subatividades marcadas como selecionadas no formulário
+          // CORREÇÃO: Processa subatividades preservando o exato estado 'selecionada' do formulário
+          // Filtra apenas aquelas com selecionada=true
           let processedSubatividades = formSubatividades
             .filter(formSub => formSub.selecionada === true) // Only include selected subatividades
             .map(formSub => {
