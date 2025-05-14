@@ -11,6 +11,7 @@ interface EtapaServicosListaProps {
   ordem?: OrdemServico;
   onSubatividadeToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
   onServicoStatusChange?: (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
+  onOrdemUpdate?: (ordemAtualizada: OrdemServico) => void;
 }
 
 export default function EtapaServicosLista({
@@ -21,7 +22,8 @@ export default function EtapaServicosLista({
   etapa,
   ordem,
   onSubatividadeToggle,
-  onServicoStatusChange
+  onServicoStatusChange,
+  onOrdemUpdate
 }: EtapaServicosListaProps) {
   if (servicos.length === 0) {
     return null;
@@ -37,7 +39,7 @@ export default function EtapaServicosLista({
           key={`${servico.tipo}-${i}`}
           servico={servico}
           ordem={ordemToUse}
-          onUpdate={() => {}}  // Add empty onUpdate handler
+          onUpdate={onOrdemUpdate}  // Pass onOrdemUpdate instead of empty function
           ordemId={ordemId}  // Legacy prop
           funcionarioId={funcionarioId}  // Legacy prop
           funcionarioNome={funcionarioNome}  // Legacy prop

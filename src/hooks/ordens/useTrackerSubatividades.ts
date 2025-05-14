@@ -2,7 +2,7 @@
 import { useState, useCallback } from 'react';
 import { SubAtividade, TipoServico, OrdemServico } from '@/types/ordens';
 import { toast } from 'sonner';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -93,12 +93,21 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
       const ordemRef = doc(db, "ordens_servico", ordem.id);
       await updateDoc(ordemRef, { servicos: servicosAtualizados });
       
-      // Atualizar estado local
-      const ordemAtualizada = {
-        ...ordem,
-        servicos: servicosAtualizados
-      };
+      // Buscar a ordem atualizada para garantir que temos os dados mais recentes
+      const ordemDoc = await getDoc(ordemRef);
+      let ordemAtualizada: OrdemServico;
       
+      if (ordemDoc.exists()) {
+        ordemAtualizada = { ...ordemDoc.data(), id: ordemDoc.id } as OrdemServico;
+      } else {
+        // Se não conseguir buscar a ordem atualizada, usar a versão local
+        ordemAtualizada = {
+          ...ordem,
+          servicos: servicosAtualizados
+        };
+      }
+      
+      // Atualizar estado local através do callback
       if (onOrdemUpdate) {
         onOrdemUpdate(ordemAtualizada);
       }
@@ -171,12 +180,21 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
       const ordemRef = doc(db, "ordens_servico", ordem.id);
       await updateDoc(ordemRef, { servicos: servicosAtualizados });
       
-      // Atualizar estado local
-      const ordemAtualizada = {
-        ...ordem,
-        servicos: servicosAtualizados
-      };
+      // Buscar a ordem atualizada para garantir que temos os dados mais recentes
+      const ordemDoc = await getDoc(ordemRef);
+      let ordemAtualizada: OrdemServico;
       
+      if (ordemDoc.exists()) {
+        ordemAtualizada = { ...ordemDoc.data(), id: ordemDoc.id } as OrdemServico;
+      } else {
+        // Se não conseguir buscar a ordem atualizada, usar a versão local
+        ordemAtualizada = {
+          ...ordem,
+          servicos: servicosAtualizados
+        };
+      }
+      
+      // Atualizar estado local através do callback
       if (onOrdemUpdate) {
         onOrdemUpdate(ordemAtualizada);
       }

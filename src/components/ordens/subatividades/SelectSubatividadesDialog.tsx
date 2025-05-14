@@ -85,6 +85,7 @@ export function SelectSubatividadesDialog({
       .filter(([_, selecionada]) => selecionada)
       .map(([nome]) => nome);
     
+    console.log("Subatividades selecionadas para adicionar:", subatividadesSelecionadas);
     onSelect(subatividadesSelecionadas);
     onOpenChange(false);
   };

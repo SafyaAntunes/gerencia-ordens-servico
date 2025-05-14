@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useServicoTracker } from './hooks/useServicoTracker';
 import ServicoHeader from './ServicoHeader';
 import ServicoDetails from './ServicoDetails';
@@ -73,11 +73,15 @@ function ServicoTracker({
     onSubatividadeSelecionadaToggle
   });
   
-  const handleAddDefaultSubatividades = () => {
-    setIsSelectDialogOpen(true);
-  };
-  
   const handleAddSelectedSubatividades = (selecionadas: string[]) => {
+    console.log("Subatividades selecionadas:", selecionadas);
+    
+    // Garantir que temos uma ordem ou ordemId
+    if (!ordem && !ordemId) {
+      console.error("Ordem não encontrada para adicionar subatividades");
+      return;
+    }
+    
     addSelectedSubatividades(servico.tipo, selecionadas);
   };
   
@@ -127,7 +131,7 @@ function ServicoTracker({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleAddDefaultSubatividades}
+                  onClick={() => setIsSelectDialogOpen(true)}
                   disabled={isAddingSubatividades}
                   className="flex items-center gap-1"
                 >
