@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Cliente } from "@/types/clientes";
@@ -46,10 +47,13 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
 
   const { logSubatividadesState } = useTrackingSubatividades();
   
+  console.log("OrdemDetalhesContent render - isEditando:", isEditando);
+  
   // Carrega dados de clientes e outros para o formulário de edição
   useEffect(() => {
     const fetchFormData = async () => {
       if (isEditando) {
+        console.log("Fetching form data for editing");
         setIsLoadingClientes(true);
         try {
           const data = await loadOrderFormData();
@@ -122,6 +126,11 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
     return <div>Nenhuma ordem selecionada.</div>;
   }
 
+  const handleEditClick = () => {
+    console.log("Setting isEditando to true");
+    setIsEditando(true);
+  };
+
   const handleVoltar = () => {
     if (isEditando) {
       // Se estiver editando, pergunte antes de cancelar
@@ -139,7 +148,7 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
         id={ordem.id}
         nome={ordem.nome}
         canEdit={canEditThisOrder}
-        onEditClick={() => setIsEditando(true)}
+        onEditClick={handleEditClick}
         onDeleteClick={() => setDeleteDialogOpen(true)}
         ordem={ordem}
       />
