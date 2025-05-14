@@ -12,6 +12,7 @@ interface EtapaServicosProps {
   onServicoStatusChange?: (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
   onSubatividadeToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
   onSubatividadeSelecionadaToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
+  onOrdemUpdate?: (ordemAtualizada: OrdemServico) => void;
 }
 
 export function EtapaServicos({
@@ -23,8 +24,17 @@ export function EtapaServicos({
   servicoTipo,
   onServicoStatusChange,
   onSubatividadeToggle,
-  onSubatividadeSelecionadaToggle
+  onSubatividadeSelecionadaToggle,
+  onOrdemUpdate
 }: EtapaServicosProps) {
+  // Handler to propagate ordem updates to parent component
+  const handleOrdemUpdate = (ordemAtualizada: OrdemServico) => {
+    console.log("EtapaServicos - handleOrdemUpdate:", ordemAtualizada);
+    if (onOrdemUpdate) {
+      onOrdemUpdate(ordemAtualizada);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {servicos.map((servico) => (
@@ -32,7 +42,7 @@ export function EtapaServicos({
           key={servico.tipo}
           servico={servico}
           ordem={ordem}
-          onUpdate={() => {}}  // Add empty onUpdate handler
+          onUpdate={handleOrdemUpdate}
           // Legacy props support
           ordemId={ordem.id}
           etapa={etapa}

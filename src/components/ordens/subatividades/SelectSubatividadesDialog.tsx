@@ -1,229 +1,207 @@
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { TipoServico, SubAtividade } from "@/types/ordens";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
-import { getSubatividadesByTipo } from "@/services/subatividadeService";
-import { Loader2 } from "lucide-react";
-import { useServicoSubatividades } from "@/hooks/useServicoSubatividades";
-import { toast } from "sonner";
+// Importar componentes e hooks necessários
+import React, { useState, useEffect, useCallback } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { TipoServico } from '@/types/ordens';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+interface SubatividadePadrao {
+  id: string;
+  nome: string;
+  servico: TipoServico;
+  tempoEstimado?: number;
+}
 
 interface SelectSubatividadesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   servicoTipo: TipoServico;
-  onSelect: (selecionadas: string[]) => void;
+  onSelect: (subatividades: string[]) => void;
 }
 
 export function SelectSubatividadesDialog({
   open,
   onOpenChange,
   servicoTipo,
-  onSelect,
+  onSelect
 }: SelectSubatividadesDialogProps) {
-  const [subatividadesDisponiveis, setSubatividadesDisponiveis] = useState<SubAtividade[]>([]);
-  const [selecionadas, setSelecionadas] = useState<Record<string, boolean>>({});
+  const [subatividades, setSubatividades] = useState<SubatividadePadrao[]>([]);
+  const [selectedSubatividades, setSelectedSubatividades] = useState<{[id: string]: boolean}>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [isDataFetched, setIsDataFetched] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
-  // Obter as subatividades padrão caso não haja nenhuma no banco
-  const { defaultSubatividades } = useServicoSubatividades();
-  const previousOpenState = useRef(open);
-  const shouldFetch = useRef(false);
-
-  // Controle de efeitos para evitar re-renders desnecessários
+  // Função para buscar subatividades padrão do Firestore
+  const fetchSubatividades = useCallback(async () => {
+    if (!open) return; // Não buscar quando o diálogo não estiver aberto
+    
+    console.log("SelectSubatividadesDialog - Buscando subatividades para:", servicoTipo);
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Buscar subatividades específicas para este tipo de serviço
+      const q = query(
+        collection(db, "subatividades_padrao"),
+        where("servico", "==", servicoTipo)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const subatividadesData: SubatividadePadrao[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        subatividadesData.push({ 
+          id: doc.id, 
+          ...doc.data() 
+        } as SubatividadePadrao);
+      });
+      
+      console.log("SelectSubatividadesDialog - Subatividades encontradas:", subatividadesData);
+      setSubatividades(subatividadesData);
+      
+      // Limpar seleções anteriores
+      setSelectedSubatividades({});
+    } catch (error) {
+      console.error("Erro ao buscar subatividades padrão:", error);
+      setError("Erro ao carregar subatividades padrão");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [servicoTipo, open]);
+  
+  // Carregar subatividades quando o diálogo abrir
   useEffect(() => {
-    // Resetamos as subatividades ao fechar o diálogo
-    if (!open && previousOpenState.current) {
-      console.log("Dialog fechou, resetando estado interno");
-      setIsDataFetched(false);
-      shouldFetch.current = false;
+    if (open) {
+      console.log("SelectSubatividadesDialog - Diálogo abriu, buscando subatividades");
+      fetchSubatividades();
+    } else {
+      // Limpar seleções quando fechar
+      console.log("SelectSubatividadesDialog - Diálogo fechou, limpando seleções");
+      setSelectedSubatividades({});
     }
-    
-    // Se o diálogo foi aberto e ainda não buscamos os dados
-    if (open && !previousOpenState.current) {
-      console.log("Dialog abriu, preparando para buscar dados");
-      setIsDataFetched(false);
-      shouldFetch.current = true;
-    }
-    
-    previousOpenState.current = open;
-  }, [open]);
-
-  // Efeito separado para carregar dados apenas quando necessário
-  useEffect(() => {
-    if (!open || !shouldFetch.current || servicoTipo === undefined || isDataFetched) {
-      return;
-    }
-    
-    console.log(`Buscando subatividades para ${servicoTipo}, shouldFetch=${shouldFetch.current}, isDataFetched=${isDataFetched}`);
-    
-    const loadSubatividades = async () => {
-      setIsLoading(true);
-      try {
-        // Buscar subatividades do banco de dados para este tipo de serviço
-        const subatividades = await getSubatividadesByTipo(servicoTipo);
-        console.log(`Subatividades carregadas do banco para ${servicoTipo}:`, subatividades);
-        
-        let subatividadesFinais: SubAtividade[] = [];
-        
-        if (subatividades.length === 0) {
-          // Se não houver subatividades no banco, usar as padrão
-          const subatividadesPadrao = defaultSubatividades[servicoTipo] || [];
-          console.log("Usando subatividades padrão:", subatividadesPadrao);
-          
-          // Converter strings para objetos SubAtividade
-          subatividadesFinais = subatividadesPadrao.map((nome, index) => ({
-            id: `default-${index}`,
-            nome,
-            selecionada: false,
-            tempoEstimado: 1
-          }));
-        } else {
-          subatividadesFinais = subatividades;
-        }
-        
-        setSubatividadesDisponiveis(subatividadesFinais);
-        
-        // Inicializar todas como selecionadas
-        const inicial: Record<string, boolean> = {};
-        subatividadesFinais.forEach(sub => {
-          inicial[sub.nome] = true;
-        });
-        
-        setSelecionadas(inicial);
-        setIsDataFetched(true);
-        shouldFetch.current = false;
-      } catch (error) {
-        console.error("Erro ao buscar subatividades:", error);
-        toast.error("Erro ao carregar subatividades");
-        
-        // Em caso de erro, tentar usar as padrão
-        const subatividadesPadrao = defaultSubatividades[servicoTipo] || [];
-        const subatividadesObjetos = subatividadesPadrao.map((nome, index) => ({
-          id: `default-${index}`,
-          nome,
-          selecionada: false,
-          tempoEstimado: 1
-        }));
-        
-        setSubatividadesDisponiveis(subatividadesObjetos);
-        
-        const inicial: Record<string, boolean> = {};
-        subatividadesPadrao.forEach(nome => {
-          inicial[nome] = true;
-        });
-        
-        setSelecionadas(inicial);
-        setIsDataFetched(true);
-        shouldFetch.current = false;
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadSubatividades();
-  }, [servicoTipo, open, defaultSubatividades, isDataFetched]);
-
-  const handleToggleSubatividade = useCallback((nome: string, checked: boolean) => {
-    setSelecionadas(prev => ({
+  }, [open, fetchSubatividades]);
+  
+  // Manipulador para toggle de subatividades
+  const handleToggleSubatividade = useCallback((id: string, checked: boolean) => {
+    console.log("SelectSubatividadesDialog - Toggle subatividade:", { id, checked });
+    setSelectedSubatividades(prev => ({
       ...prev,
-      [nome]: checked
+      [id]: checked
     }));
   }, []);
-
+  
+  // Manipulador para selecionar todas as subatividades
   const handleSelectAll = useCallback(() => {
-    const todas: Record<string, boolean> = {};
-    subatividadesDisponiveis.forEach(sub => {
-      todas[sub.nome] = true;
-    });
-    setSelecionadas(todas);
-  }, [subatividadesDisponiveis]);
-
-  const handleDeselectAll = useCallback(() => {
-    const nenhuma: Record<string, boolean> = {};
-    subatividadesDisponiveis.forEach(sub => {
-      nenhuma[sub.nome] = false;
-    });
-    setSelecionadas(nenhuma);
-  }, [subatividadesDisponiveis]);
-
-  const handleConfirm = useCallback(() => {
-    // Filtrar apenas as subatividades selecionadas
-    const subatividadesSelecionadas = Object.entries(selecionadas)
-      .filter(([_, selecionada]) => selecionada)
-      .map(([nome]) => nome);
+    console.log("SelectSubatividadesDialog - Selecionando todas");
+    const allSelected = subatividades.reduce(
+      (acc, curr) => ({ ...acc, [curr.id]: true }), 
+      {}
+    );
+    setSelectedSubatividades(allSelected);
+  }, [subatividades]);
+  
+  // Manipulador para limpar todas as seleções
+  const handleClearAll = useCallback(() => {
+    console.log("SelectSubatividadesDialog - Limpando todas as seleções");
+    setSelectedSubatividades({});
+  }, []);
+  
+  // Manipulador para aplicar seleções
+  const handleApply = useCallback(() => {
+    console.log("SelectSubatividadesDialog - Aplicando seleções:", selectedSubatividades);
     
-    console.log("Subatividades selecionadas para adicionar:", subatividadesSelecionadas);
+    const selectedNames = Object.entries(selectedSubatividades)
+      .filter(([_, isSelected]) => isSelected)
+      .map(([id, _]) => {
+        const sub = subatividades.find(s => s.id === id);
+        return sub ? sub.nome : "";
+      })
+      .filter(name => name !== "");
     
-    if (subatividadesSelecionadas.length === 0) {
-      toast.warning("Nenhuma subatividade selecionada");
+    console.log("SelectSubatividadesDialog - Nomes selecionados:", selectedNames);
+    
+    if (selectedNames.length === 0) {
+      console.log("SelectSubatividadesDialog - Nenhuma subatividade selecionada, fechando diálogo");
+      onOpenChange(false);
       return;
     }
     
-    onSelect(subatividadesSelecionadas);
-    onOpenChange(false);
-  }, [selecionadas, onSelect, onOpenChange]);
-
+    onSelect(selectedNames);
+    // Não fechamos o diálogo aqui, deixamos que o componente pai cuide de fechá-lo
+    // depois de processar as seleções
+  }, [selectedSubatividades, subatividades, onSelect, onOpenChange]);
+  
+  // Verificar se há alguma subatividade selecionada
+  const hasSelectedSubatividades = Object.values(selectedSubatividades).some(Boolean);
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Adicionar Subatividades</DialogTitle>
+          <DialogTitle>Selecionar Subatividades</DialogTitle>
         </DialogHeader>
+        
         <div className="py-4">
-          <div className="flex justify-between mb-4">
-            <Button variant="outline" size="sm" onClick={handleSelectAll}>
-              Selecionar Todas
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleDeselectAll}>
-              Desmarcar Todas
-            </Button>
-          </div>
-          
           {isLoading ? (
-            <div className="flex justify-center items-center h-40">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="text-center py-4">
+              <p>Carregando subatividades...</p>
             </div>
-          ) : subatividadesDisponiveis.length === 0 ? (
-            <div className="text-center py-4 text-muted-foreground">
-              Nenhuma subatividade configurada para este tipo de serviço.
+          ) : error ? (
+            <div className="text-center text-red-500 py-4">
+              <p>{error}</p>
+              <Button 
+                variant="outline" 
+                onClick={fetchSubatividades} 
+                className="mt-2"
+              >
+                Tentar novamente
+              </Button>
+            </div>
+          ) : subatividades.length === 0 ? (
+            <div className="text-center py-4">
+              <p>Nenhuma subatividade encontrada para este serviço.</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Configure as subatividades padrão nas configurações.
+              </p>
             </div>
           ) : (
-            <div className="max-h-60 overflow-y-auto space-y-2 border rounded-md p-3">
-              {subatividadesDisponiveis.map((subatividade) => (
-                <div key={subatividade.id} className="flex items-center space-x-2">
-                  <Checkbox 
-                    id={`sub-${subatividade.id}`} 
-                    checked={selecionadas[subatividade.nome]} 
-                    onCheckedChange={(checked) => handleToggleSubatividade(subatividade.nome, !!checked)}
-                  />
-                  <Label htmlFor={`sub-${subatividade.id}`} className="text-sm">
-                    {subatividade.nome}
-                  </Label>
-                </div>
-              ))}
-            </div>
+            <>
+              <div className="flex justify-between mb-4">
+                <Button variant="outline" size="sm" onClick={handleSelectAll}>
+                  Selecionar todas
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleClearAll}>
+                  Limpar seleção
+                </Button>
+              </div>
+              
+              <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+                {subatividades.map((sub) => (
+                  <div key={sub.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`sub-${sub.id}`}
+                      checked={selectedSubatividades[sub.id] || false}
+                      onCheckedChange={(checked) => 
+                        handleToggleSubatividade(sub.id, checked === true)
+                      }
+                    />
+                    <Label htmlFor={`sub-${sub.id}`}>{sub.nome}</Label>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
+        
         <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline">Cancelar</Button>
-          </DialogClose>
-          <Button 
-            onClick={handleConfirm}
-            disabled={isLoading || Object.values(selecionadas).every(sel => !sel)}
+          <Button
+            onClick={handleApply}
+            disabled={isLoading || !hasSelectedSubatividades}
           >
-            Adicionar
+            Adicionar Selecionadas
           </Button>
         </DialogFooter>
       </DialogContent>

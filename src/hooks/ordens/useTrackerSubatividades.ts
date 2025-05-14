@@ -28,26 +28,29 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
     });
     
     if (!ordem) {
-      toast.error("Ordem não encontrada");
-      console.error("Ordem não encontrada:", ordem);
-      return;
+      const error = "Ordem não encontrada";
+      toast.error(error);
+      console.error(error, ordem);
+      return Promise.reject(error);
     }
     
     if (!ordem.id) {
-      toast.error("ID da ordem não encontrado");
-      console.error("ordem.id não encontrado:", ordem);
-      return;
+      const error = "ID da ordem não encontrado";
+      toast.error(error);
+      console.error(error, ordem);
+      return Promise.reject(error);
     }
     
     if (subatividadesNomes.length === 0) {
-      toast.warning("Nenhuma subatividade selecionada");
-      return;
+      const warning = "Nenhuma subatividade selecionada";
+      toast.warning(warning);
+      return Promise.reject(warning);
     }
     
     // Verificar se já está em processo de adição
     if (isAddingSubatividades) {
       console.log("Já está adicionando subatividades, ignorando nova solicitação");
-      return;
+      return Promise.reject("Operação em andamento");
     }
     
     setIsAddingSubatividades(true);
@@ -57,9 +60,10 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
       const servicoIndex = ordem.servicos.findIndex(s => s.tipo === servicoTipo);
       
       if (servicoIndex === -1) {
-        toast.error(`Serviço ${servicoTipo} não encontrado`);
+        const error = `Serviço ${servicoTipo} não encontrado`;
+        toast.error(error);
         setIsAddingSubatividades(false);
-        return;
+        return Promise.reject(error);
       }
       
       // Preparar as novas subatividades
@@ -89,7 +93,7 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
         if (novasParaAdicionar.length === 0) {
           toast.info("Todas as subatividades já foram adicionadas");
           setIsAddingSubatividades(false);
-          return;
+          return Promise.resolve();
         }
         
         console.log("Subatividades filtradas para adicionar:", novasParaAdicionar);
@@ -140,9 +144,11 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
       }
       
       toast.success(`Subatividades adicionadas com sucesso para ${servicoTipo}`);
+      return Promise.resolve(ordemAtualizada);
     } catch (error) {
       console.error("Erro ao adicionar subatividades:", error);
       toast.error("Erro ao adicionar subatividades");
+      return Promise.reject(error);
     } finally {
       setIsAddingSubatividades(false);
     }
@@ -164,24 +170,27 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
     });
     
     if (!ordem) {
-      toast.error("Ordem não encontrada");
-      return;
+      const error = "Ordem não encontrada";
+      toast.error(error);
+      return Promise.reject(error);
     }
     
     if (!ordem.id) {
-      toast.error("ID da ordem não encontrado");
-      return;
+      const error = "ID da ordem não encontrado";
+      toast.error(error);
+      return Promise.reject(error);
     }
     
     if (!nome.trim()) {
-      toast.error("Nome da subatividade não pode ser vazio");
-      return;
+      const error = "Nome da subatividade não pode ser vazio";
+      toast.error(error);
+      return Promise.reject(error);
     }
     
     // Verificar se já está em processo de adição
     if (isAddingSubatividades) {
       console.log("Já está adicionando subatividades, ignorando nova solicitação");
-      return;
+      return Promise.reject("Operação em andamento");
     }
     
     setIsAddingSubatividades(true);
@@ -191,9 +200,10 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
       const servicoIndex = ordem.servicos.findIndex(s => s.tipo === servicoTipo);
       
       if (servicoIndex === -1) {
-        toast.error(`Serviço ${servicoTipo} não encontrado`);
+        const error = `Serviço ${servicoTipo} não encontrado`;
+        toast.error(error);
         setIsAddingSubatividades(false);
-        return;
+        return Promise.reject(error);
       }
       
       // Criar nova subatividade
@@ -211,9 +221,10 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
       
       // Verificar se já existe subatividade com mesmo nome
       if (existentes.some(s => s.nome.toLowerCase() === nome.trim().toLowerCase())) {
-        toast.error("Já existe uma subatividade com este nome");
+        const error = "Já existe uma subatividade com este nome";
+        toast.error(error);
         setIsAddingSubatividades(false);
-        return;
+        return Promise.reject(error);
       }
       
       // Adicionar nova subatividade
@@ -251,11 +262,11 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
       }
       
       toast.success(`Subatividade "${nome}" adicionada com sucesso`);
-      return novaSubatividade;
+      return Promise.resolve(novaSubatividade);
     } catch (error) {
       console.error("Erro ao adicionar subatividade:", error);
       toast.error("Erro ao adicionar subatividade");
-      return null;
+      return Promise.reject(error);
     } finally {
       setIsAddingSubatividades(false);
     }

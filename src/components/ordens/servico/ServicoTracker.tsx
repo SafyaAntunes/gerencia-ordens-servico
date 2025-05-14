@@ -33,6 +33,17 @@ function ServicoTracker({
   const [novaSubatividade, setNovaSubatividade] = useState('');
   const [tempoEstimado, setTempoEstimado] = useState(1);
   
+  // Log initial props for debugging
+  useEffect(() => {
+    console.log("ServicoTracker mounted/updated with props:", {
+      servicoTipo: servico.tipo,
+      temOnUpdate: !!onUpdate,
+      temOrdem: !!ordem,
+      ordemId: ordemId || ordem?.id,
+      subatividades: servico.subatividades?.length || 0
+    });
+  }, [servico, ordem, ordemId, onUpdate]);
+  
   // Hook para adicionar subatividades
   const { 
     isAddingSubatividades,
@@ -74,7 +85,12 @@ function ServicoTracker({
   });
   
   const handleAddSelectedSubatividades = (selecionadas: string[]) => {
-    console.log("Subatividades selecionadas:", selecionadas);
+    console.log("ServicoTracker - handleAddSelectedSubatividades:", {
+      servicoTipo: servico.tipo,
+      selecionadas,
+      temOrdem: !!ordem,
+      ordemId: ordem?.id || ordemId
+    });
     
     // Garantir que temos uma ordem ou ordemId
     if (!ordem && !ordemId) {
@@ -82,19 +98,32 @@ function ServicoTracker({
       return;
     }
     
-    addSelectedSubatividades(servico.tipo, selecionadas);
+    addSelectedSubatividades(servico.tipo, selecionadas)
+      .then(() => {
+        console.log("ServicoTracker - Subatividades adicionadas com sucesso, fechando diálogo");
+        setIsSelectDialogOpen(false);
+      })
+      .catch((error) => {
+        console.error("ServicoTracker - Erro ao adicionar subatividades:", error);
+        setIsSelectDialogOpen(false);
+      });
   };
   
   const handleAddCustomSubatividade = async () => {
     if (novaSubatividade.trim()) {
-      await addCustomSubatividade(
-        servico.tipo, 
-        novaSubatividade, 
-        tempoEstimado
-      );
-      setNovaSubatividade('');
-      setTempoEstimado(1);
-      setIsAddDialogOpen(false);
+      try {
+        await addCustomSubatividade(
+          servico.tipo, 
+          novaSubatividade, 
+          tempoEstimado
+        );
+        setNovaSubatividade('');
+        setTempoEstimado(1);
+        setIsAddDialogOpen(false);
+      } catch (error) {
+        console.error("Erro ao adicionar subatividade personalizada:", error);
+        setIsAddDialogOpen(false);
+      }
     }
   };
 
@@ -187,10 +216,13 @@ function ServicoTracker({
                   </DialogContent>
                 </Dialog>
                 
-                {/* Novo diálogo de seleção de subatividades */}
+                {/* Diálogo de seleção de subatividades com melhor controle de estado */}
                 <SelectSubatividadesDialog
                   open={isSelectDialogOpen}
-                  onOpenChange={setIsSelectDialogOpen}
+                  onOpenChange={(open) => {
+                    console.log("ServicoTracker - SelectSubatividadesDialog onOpenChange:", open);
+                    setIsSelectDialogOpen(open);
+                  }}
                   servicoTipo={servico.tipo}
                   onSelect={handleAddSelectedSubatividades}
                 />
