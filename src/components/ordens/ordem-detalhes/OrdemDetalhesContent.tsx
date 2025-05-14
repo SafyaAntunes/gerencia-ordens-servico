@@ -54,7 +54,7 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
   }
 
   if (!ordem && id) {
-    return <NotFoundOrdem ordemId={id} />;
+    return <NotFoundOrdem id={id} />;
   }
 
   if (!ordem) {
