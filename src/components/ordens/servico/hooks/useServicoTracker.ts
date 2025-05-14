@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { getFuncionarios } from "@/services/funcionarioService";
@@ -188,7 +187,7 @@ export function useServicoTracker({
     state: {
       isRunning,
       isPaused,
-      time: displayTime, // Changed from number 0 to use displayTime which is a string
+      time: displayTime, // Fix: using the string displayTime instead of a number
       concluido: servico.concluido,
       status: servicoStatus,
       pausas,
