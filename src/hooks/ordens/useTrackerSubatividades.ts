@@ -16,8 +16,11 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
   const [isAddingSubatividades, setIsAddingSubatividades] = useState(false);
   const { defaultSubatividades } = useServicoSubatividades();
   
-  // Adicionar subatividades predefinidas a um serviço
-  const addDefaultSubatividades = useCallback(async (servicoTipo: TipoServico) => {
+  // Adicionar subatividades específicas a um serviço
+  const addSelectedSubatividades = useCallback(async (
+    servicoTipo: TipoServico,
+    subatividadesNomes: string[]
+  ) => {
     if (!ordem) {
       toast.error("Ordem não encontrada");
       console.error("Ordem não encontrada:", ordem);
@@ -30,18 +33,14 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
       return;
     }
     
+    if (subatividadesNomes.length === 0) {
+      toast.warning("Nenhuma subatividade selecionada");
+      return;
+    }
+    
     setIsAddingSubatividades(true);
     
     try {
-      // Obter subatividades padrão para este tipo de serviço
-      const subatividadesPadrao = defaultSubatividades[servicoTipo] || [];
-      
-      if (subatividadesPadrao.length === 0) {
-        toast.warning(`Não há subatividades configuradas para ${servicoTipo}`);
-        setIsAddingSubatividades(false);
-        return;
-      }
-      
       // Encontrar o serviço a ser atualizado
       const servicoIndex = ordem.servicos.findIndex(s => s.tipo === servicoTipo);
       
@@ -52,7 +51,7 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
       }
       
       // Preparar as novas subatividades
-      const novasSubatividades: SubAtividade[] = subatividadesPadrao.map(nome => ({
+      const novasSubatividades: SubAtividade[] = subatividadesNomes.map(nome => ({
         id: uuidv4(),
         nome,
         selecionada: true, // Já vem selecionada por padrão
@@ -113,7 +112,28 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
     } finally {
       setIsAddingSubatividades(false);
     }
-  }, [ordem, defaultSubatividades, onOrdemUpdate]);
+  }, [ordem, onOrdemUpdate]);
+  
+  // Manter o método original para compatibilidade
+  const addDefaultSubatividades = useCallback(async (servicoTipo: TipoServico) => {
+    if (!ordem) {
+      toast.error("Ordem não encontrada");
+      console.error("Ordem não encontrada:", ordem);
+      return;
+    }
+    
+    // Obter todas as subatividades padrão para este tipo
+    const subatividadesPadrao = defaultSubatividades[servicoTipo] || [];
+    
+    if (subatividadesPadrao.length === 0) {
+      toast.warning(`Não há subatividades configuradas para ${servicoTipo}`);
+      return;
+    }
+    
+    // Adicionar todas as subatividades padrão
+    await addSelectedSubatividades(servicoTipo, subatividadesPadrao);
+    
+  }, [ordem, defaultSubatividades, addSelectedSubatividades]);
   
   // Adicionar uma única subatividade personalizada
   const addCustomSubatividade = useCallback(async (
@@ -196,6 +216,7 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
   return {
     isAddingSubatividades,
     addDefaultSubatividades,
+    addSelectedSubatividades,
     addCustomSubatividade
   };
 };

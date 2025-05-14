@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SubAtividade } from '@/types/ordens';
+import { SelectSubatividadesDialog } from '../subatividades/SelectSubatividadesDialog';
 
 function ServicoTracker({ 
   servico, 
@@ -29,6 +30,7 @@ function ServicoTracker({
 }: ServicoTrackerProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isSelectDialogOpen, setIsSelectDialogOpen] = useState(false);
   const [novaSubatividade, setNovaSubatividade] = useState('');
   const [tempoEstimado, setTempoEstimado] = useState(1);
   
@@ -36,6 +38,7 @@ function ServicoTracker({
   const { 
     isAddingSubatividades,
     addDefaultSubatividades,
+    addSelectedSubatividades,
     addCustomSubatividade
   } = useTrackerSubatividades({ 
     ordem, 
@@ -73,7 +76,11 @@ function ServicoTracker({
   });
   
   const handleAddDefaultSubatividades = () => {
-    addDefaultSubatividades(servico.tipo);
+    setIsSelectDialogOpen(true);
+  };
+  
+  const handleAddSelectedSubatividades = (selecionadas: string[]) => {
+    addSelectedSubatividades(servico.tipo, selecionadas);
   };
   
   const handleAddCustomSubatividade = async () => {
@@ -177,6 +184,14 @@ function ServicoTracker({
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
+                
+                {/* Novo diálogo de seleção de subatividades */}
+                <SelectSubatividadesDialog
+                  open={isSelectDialogOpen}
+                  onOpenChange={setIsSelectDialogOpen}
+                  servicoTipo={servico.tipo}
+                  onSelect={handleAddSelectedSubatividades}
+                />
               </div>
             )}
           </div>
