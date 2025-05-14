@@ -1,6 +1,7 @@
 
 import { ServicoTracker } from "@/components/ordens/servico";
 import { EtapaOS, Servico, TipoServico, OrdemServico } from "@/types/ordens";
+import { useState, useCallback } from "react";
 
 interface EtapaServicosListaProps {
   servicos: Servico[];
@@ -29,8 +30,23 @@ export default function EtapaServicosLista({
     return null;
   }
   
-  // Create a dummy ordem object to pass to ServicoTracker if none is provided
-  const ordemToUse: OrdemServico = ordem || { id: ordemId, servicos: servicos } as OrdemServico;
+  // Create a proper ordem object to pass to ServicoTracker if none is provided
+  const [ordemLocal, setOrdemLocal] = useState<OrdemServico>(() => {
+    return ordem || { id: ordemId, servicos: servicos } as OrdemServico;
+  });
+  
+  // Create a proper onUpdate handler that updates the local state
+  const handleOrdemUpdate = useCallback((ordemAtualizada: OrdemServico) => {
+    console.log("EtapaServicosLista component - handleOrdemUpdate:", ordemAtualizada);
+    
+    // Update local state
+    setOrdemLocal(ordemAtualizada);
+    
+    // Pass up to parent if available
+    if (onOrdemUpdate) {
+      onOrdemUpdate(ordemAtualizada);
+    }
+  }, [onOrdemUpdate]);
   
   return (
     <div className="space-y-4">
@@ -38,8 +54,8 @@ export default function EtapaServicosLista({
         <ServicoTracker
           key={`${servico.tipo}-${i}`}
           servico={servico}
-          ordem={ordemToUse}
-          onUpdate={onOrdemUpdate}  // Pass onOrdemUpdate instead of empty function
+          ordem={ordemLocal}
+          onUpdate={handleOrdemUpdate}
           ordemId={ordemId}  // Legacy prop
           funcionarioId={funcionarioId}  // Legacy prop
           funcionarioNome={funcionarioNome}  // Legacy prop

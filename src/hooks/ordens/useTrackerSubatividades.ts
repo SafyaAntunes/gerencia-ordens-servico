@@ -19,6 +19,14 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
     servicoTipo: TipoServico,
     subatividadesNomes: string[]
   ) => {
+    console.log("useTrackerSubatividades.addSelectedSubatividades - iniciando com:", {
+      servicoTipo,
+      subatividadesNomes,
+      temOrdem: !!ordem,
+      temOrdemId: ordem?.id ? true : false,
+      temCallback: !!onOrdemUpdate
+    });
+    
     if (!ordem) {
       toast.error("Ordem não encontrada");
       console.error("Ordem não encontrada:", ordem);
@@ -33,6 +41,12 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
     
     if (subatividadesNomes.length === 0) {
       toast.warning("Nenhuma subatividade selecionada");
+      return;
+    }
+    
+    // Verificar se já está em processo de adição
+    if (isAddingSubatividades) {
+      console.log("Já está adicionando subatividades, ignorando nova solicitação");
       return;
     }
     
@@ -99,6 +113,8 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
       const ordemRef = doc(db, "ordens_servico", ordem.id);
       await updateDoc(ordemRef, { servicos: servicosAtualizados });
       
+      console.log("Firebase atualizado com sucesso, buscando a versão mais recente da ordem");
+      
       // Buscar a ordem atualizada para garantir que temos os dados mais recentes
       const ordemDoc = await getDoc(ordemRef);
       let ordemAtualizada: OrdemServico;
@@ -130,7 +146,7 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
     } finally {
       setIsAddingSubatividades(false);
     }
-  }, [ordem, onOrdemUpdate]);
+  }, [ordem, onOrdemUpdate, isAddingSubatividades]);
   
   // Adicionar uma única subatividade personalizada
   const addCustomSubatividade = useCallback(async (
@@ -138,6 +154,15 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
     nome: string,
     tempoEstimado: number = 1
   ) => {
+    console.log("useTrackerSubatividades.addCustomSubatividade - iniciando com:", {
+      servicoTipo,
+      nome,
+      tempoEstimado,
+      temOrdem: !!ordem,
+      temOrdemId: ordem?.id ? true : false,
+      temCallback: !!onOrdemUpdate
+    });
+    
     if (!ordem) {
       toast.error("Ordem não encontrada");
       return;
@@ -153,12 +178,21 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
       return;
     }
     
+    // Verificar se já está em processo de adição
+    if (isAddingSubatividades) {
+      console.log("Já está adicionando subatividades, ignorando nova solicitação");
+      return;
+    }
+    
+    setIsAddingSubatividades(true);
+    
     try {
       // Encontrar o serviço a ser atualizado
       const servicoIndex = ordem.servicos.findIndex(s => s.tipo === servicoTipo);
       
       if (servicoIndex === -1) {
         toast.error(`Serviço ${servicoTipo} não encontrado`);
+        setIsAddingSubatividades(false);
         return;
       }
       
@@ -178,6 +212,7 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
       // Verificar se já existe subatividade com mesmo nome
       if (existentes.some(s => s.nome.toLowerCase() === nome.trim().toLowerCase())) {
         toast.error("Já existe uma subatividade com este nome");
+        setIsAddingSubatividades(false);
         return;
       }
       
@@ -197,18 +232,22 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
       
       if (ordemDoc.exists()) {
         ordemAtualizada = { ...ordemDoc.data(), id: ordemDoc.id } as OrdemServico;
+        console.log("Ordem atualizada do Firestore após adicionar subatividade personalizada:", ordemAtualizada);
       } else {
         // Se não conseguir buscar a ordem atualizada, usar a versão local
         ordemAtualizada = {
           ...ordem,
           servicos: servicosAtualizados
         };
+        console.log("Usando ordem local atualizada após adicionar subatividade personalizada:", ordemAtualizada);
       }
       
       // Atualizar estado local através do callback
       if (onOrdemUpdate) {
         console.log("Chamando onOrdemUpdate com ordem atualizada após adicionar subatividade personalizada");
         onOrdemUpdate(ordemAtualizada);
+      } else {
+        console.warn("onOrdemUpdate não está definido, não foi possível atualizar a UI após adicionar subatividade personalizada");
       }
       
       toast.success(`Subatividade "${nome}" adicionada com sucesso`);
@@ -217,8 +256,10 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
       console.error("Erro ao adicionar subatividade:", error);
       toast.error("Erro ao adicionar subatividade");
       return null;
+    } finally {
+      setIsAddingSubatividades(false);
     }
-  }, [ordem, onOrdemUpdate]);
+  }, [ordem, onOrdemUpdate, isAddingSubatividades]);
 
   return {
     isAddingSubatividades,

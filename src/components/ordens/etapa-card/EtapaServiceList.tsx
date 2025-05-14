@@ -1,6 +1,7 @@
 
 import { ServicoTracker } from "../servico";
-import { Servico, TipoServico, EtapaOS } from "@/types/ordens";
+import { Servico, TipoServico, EtapaOS, OrdemServico } from "@/types/ordens";
+import { useState, useCallback } from "react";
 
 interface EtapaServiceListProps {
   servicos: Servico[];
@@ -25,8 +26,17 @@ export default function EtapaServiceList({
     return null;
   }
   
-  // Create a dummy ordem object to pass to ServicoTracker
-  const dummyOrdem = { id: ordemId } as any;
+  // Create a proper ordem object to pass to ServicoTracker
+  const [ordemLocal, setOrdemLocal] = useState<OrdemServico>({ 
+    id: ordemId, 
+    servicos: servicos 
+  } as OrdemServico);
+  
+  // Create a proper onUpdate handler that updates the local state
+  const handleOrdemUpdate = useCallback((ordemAtualizada: OrdemServico) => {
+    console.log("EtapaServiceList - handleOrdemUpdate:", ordemAtualizada);
+    setOrdemLocal(ordemAtualizada);
+  }, []);
   
   return (
     <div className="space-y-4">
@@ -34,8 +44,8 @@ export default function EtapaServiceList({
         <ServicoTracker
           key={`${servico.tipo}-${i}`}
           servico={servico}
-          ordem={dummyOrdem}
-          onUpdate={() => {}}  // Add empty onUpdate handler
+          ordem={ordemLocal}
+          onUpdate={handleOrdemUpdate}
           ordemId={ordemId}  // Legacy prop
           funcionarioId={funcionarioId}  // Legacy prop
           funcionarioNome={funcionarioNome}  // Legacy prop
