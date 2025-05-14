@@ -8,6 +8,7 @@ import { ServicoTrackerProps } from './hooks/types/servicoTrackerTypes';
 import { useTrackerSubatividades } from '@/hooks/ordens/useTrackerSubatividades';
 import { SubatividadesButtons } from './components/SubatividadesButtons';
 import { TipoServico } from '@/types/ordens';
+import { toast } from 'sonner';
 
 function ServicoTracker({ 
   servico, 
@@ -91,16 +92,30 @@ function ServicoTracker({
     // Garantir que temos uma ordem ou ordemId
     if (!ordem && !ordemId) {
       console.error("Ordem não encontrada para adicionar subatividades");
+      toast.error("Erro: ordem não encontrada");
+      setIsSelectDialogOpen(false);
       return;
     }
     
-    addSelectedSubatividades(servico.tipo, selecionadas)
+    // Confirmar que temos subatividades para adicionar
+    if (!selecionadas.length) {
+      toast.warning("Nenhuma subatividade selecionada");
+      setIsSelectDialogOpen(false);
+      return;
+    }
+    
+    // Fazer o cast explícito para TipoServico
+    const tipoServico = servico.tipo as TipoServico;
+    
+    addSelectedSubatividades(tipoServico, selecionadas)
       .then(() => {
         console.log("ServicoTracker - Subatividades adicionadas com sucesso, fechando diálogo");
+        toast.success(`${selecionadas.length} subatividades adicionadas com sucesso`);
         setIsSelectDialogOpen(false);
       })
       .catch((error) => {
         console.error("ServicoTracker - Erro ao adicionar subatividades:", error);
+        toast.error("Erro ao adicionar subatividades");
         setIsSelectDialogOpen(false);
       });
   };
@@ -108,18 +123,26 @@ function ServicoTracker({
   const handleAddCustomSubatividade = async () => {
     if (novaSubatividade.trim()) {
       try {
+        // Fazer o cast explícito para TipoServico
+        const tipoServico = servico.tipo as TipoServico;
+        
         await addCustomSubatividade(
-          servico.tipo, 
+          tipoServico, 
           novaSubatividade, 
           tempoEstimado
         );
+        
+        toast.success(`Subatividade "${novaSubatividade}" adicionada com sucesso`);
         setNovaSubatividade('');
         setTempoEstimado(1);
         setIsAddDialogOpen(false);
       } catch (error) {
         console.error("Erro ao adicionar subatividade personalizada:", error);
+        toast.error("Erro ao adicionar subatividade");
         setIsAddDialogOpen(false);
       }
+    } else {
+      toast.warning("Digite o nome da subatividade");
     }
   };
 
@@ -154,7 +177,7 @@ function ServicoTracker({
               canAddSubatividades={canAddSubatividades}
               temPermissao={temPermissao}
               servicoConcluido={servico.concluido}
-              servicoTipo={servico.tipo as TipoServico} // Ensure it's cast to TipoServico
+              servicoTipo={servico.tipo as TipoServico} // Cast explícito para TipoServico
               isAddDialogOpen={isAddDialogOpen}
               setIsAddDialogOpen={setIsAddDialogOpen}
               isSelectDialogOpen={isSelectDialogOpen}

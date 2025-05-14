@@ -10,7 +10,7 @@ interface SubatividadesButtonsProps {
   canAddSubatividades: boolean;
   temPermissao: boolean;
   servicoConcluido: boolean;
-  servicoTipo: TipoServico; // Changed from string to TipoServico
+  servicoTipo: TipoServico; // Tipado corretamente como TipoServico
   isAddDialogOpen: boolean;
   setIsAddDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
   isSelectDialogOpen: boolean;
@@ -45,8 +45,32 @@ export const SubatividadesButtons: React.FC<SubatividadesButtonsProps> = ({
     return null;
   }
 
+  // Manipulador para tratar a seleção de subatividades
+  const handleSelected = (selecionadas: string[]) => {
+    console.log("SubatividadesButtons - Subatividades selecionadas:", selecionadas);
+    
+    if (selecionadas && selecionadas.length > 0) {
+      handleAddSelectedSubatividades(selecionadas);
+      // Não fechamos o diálogo aqui - deixamos que a operação completa dispare o fechamento
+    } else {
+      // Se não houver seleção, fechamos o diálogo manualmente
+      setIsSelectDialogOpen(false);
+    }
+  };
+
   return (
     <div className="mt-4 flex flex-wrap gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setIsAddDialogOpen(true)}
+        disabled={isAddingSubatividades}
+        className="flex items-center gap-1"
+      >
+        <Plus className="h-4 w-4" /> 
+        Adicionar Subatividade
+      </Button>
+      
       <Button
         variant="outline"
         size="sm"
@@ -75,7 +99,7 @@ export const SubatividadesButtons: React.FC<SubatividadesButtonsProps> = ({
           setIsSelectDialogOpen(open);
         }}
         servicoTipo={servicoTipo}
-        onSelect={handleAddSelectedSubatividades}
+        onSelect={handleSelected}
       />
     </div>
   );

@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { TipoServico } from '@/types/ordens';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 
 interface SubatividadePadrao {
   id: string;
@@ -43,23 +45,63 @@ export function SelectSubatividadesDialog({
     setError(null);
     
     try {
-      // Buscar subatividades específicas para este tipo de serviço
-      const q = query(
+      // Método 1: Tentar buscar da coleção subatividades_padrao
+      let q = query(
         collection(db, "subatividades_padrao"),
         where("servico", "==", servicoTipo)
       );
       
-      const querySnapshot = await getDocs(q);
-      const subatividadesData: SubatividadePadrao[] = [];
+      let querySnapshot = await getDocs(q);
+      let subatividadesData: SubatividadePadrao[] = [];
+      
+      // Se não encontrou na primeira coleção, tentar na coleção subatividades
+      if (querySnapshot.empty) {
+        console.log("SelectSubatividadesDialog - Nada encontrado em subatividades_padrao, tentando em subatividades");
+        
+        // Método 2: Buscar na coleção subatividades usando o campo tipoServico
+        q = query(
+          collection(db, "subatividades"),
+          where("tipoServico", "==", servicoTipo)
+        );
+        
+        querySnapshot = await getDocs(q);
+        
+        // Se ainda estiver vazio, tentar com o campo servicoTipo
+        if (querySnapshot.empty) {
+          console.log("SelectSubatividadesDialog - Nada encontrado com tipoServico, tentando com servicoTipo");
+          q = query(
+            collection(db, "subatividades"),
+            where("servicoTipo", "==", servicoTipo)
+          );
+          
+          querySnapshot = await getDocs(q);
+        }
+      }
       
       querySnapshot.forEach((doc) => {
+        const data = doc.data();
         subatividadesData.push({ 
           id: doc.id, 
-          ...doc.data() 
-        } as SubatividadePadrao);
+          nome: data.nome, 
+          servico: servicoTipo,
+          tempoEstimado: data.tempoEstimado 
+        });
       });
       
-      console.log("SelectSubatividadesDialog - Subatividades encontradas:", subatividadesData);
+      // Se ainda não encontrou nada, usar valores padrão do sistema
+      if (subatividadesData.length === 0) {
+        console.log("SelectSubatividadesDialog - Nenhuma subatividade encontrada no banco, gerando padrões");
+        
+        // Usar os valores padrão conforme o tipo de serviço
+        const defaultValues = getDefaultSubatividades(servicoTipo);
+        subatividadesData = defaultValues.map((nome, index) => ({
+          id: `default-${servicoTipo}-${index}`,
+          nome,
+          servico: servicoTipo
+        }));
+      }
+      
+      console.log("SelectSubatividadesDialog - Subatividades finais:", subatividadesData);
       setSubatividades(subatividadesData);
       
       // Limpar seleções anteriores
@@ -130,8 +172,7 @@ export function SelectSubatividadesDialog({
     }
     
     onSelect(selectedNames);
-    // Não fechamos o diálogo aqui, deixamos que o componente pai cuide de fechá-lo
-    // depois de processar as seleções
+    // Deixamos o diálogo aberto até que o componente pai o feche após processar as seleções
   }, [selectedSubatividades, subatividades, onSelect, onOpenChange]);
   
   // Verificar se há alguma subatividade selecionada
@@ -146,7 +187,8 @@ export function SelectSubatividadesDialog({
         
         <div className="py-4">
           {isLoading ? (
-            <div className="text-center py-4">
+            <div className="text-center py-4 flex flex-col items-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
               <p>Carregando subatividades...</p>
             </div>
           ) : error ? (
@@ -207,4 +249,32 @@ export function SelectSubatividadesDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+// Função auxiliar para obter subatividades padrão por tipo de serviço
+function getDefaultSubatividades(servicoTipo: TipoServico): string[] {
+  switch (servicoTipo) {
+    case 'bloco':
+      return ["Lavagem", "Inspeção", "Análise de trincas", "Retífica", "Brunimento", "Mandrilhamento"];
+    case 'biela':
+      return ["Inspeção", "Alinhamento", "Troca de buchas", "Balanceamento"];
+    case 'cabecote':
+      return ["Lavagem", "Teste de trincas", "Plano", "Assentamento de válvulas", "Sedes", "Guias"];
+    case 'virabrequim':
+      return ["Inspeção", "Retífica", "Polimento", "Balanceamento"];
+    case 'eixo_comando':
+      return ["Inspeção", "Retífica", "Balanceamento"];
+    case 'montagem':
+      return ["Preparação", "Montagem do cabeçote", "Montagem do bloco", "Ajustes finais", "Testes"];
+    case 'dinamometro':
+      return ["Potência", "Torque", "Consumo", "Análise"];
+    case 'lavagem':
+      return ["Preparação", "Lavagem química", "Lavagem externa", "Secagem"];
+    case 'inspecao_inicial':
+      return ["Verificação de trincas", "Medição de componentes", "Verificação dimensional"];
+    case 'inspecao_final':
+      return ["Verificação visual", "Teste de qualidade", "Conformidade com especificações"];
+    default:
+      return ["Preparação", "Execução", "Finalização"];
+  }
 }
