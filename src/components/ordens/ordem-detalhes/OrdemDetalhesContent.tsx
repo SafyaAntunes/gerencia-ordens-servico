@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Cliente } from "@/types/clientes";
-import { Motor, Ordem, OrdemServico, SubAtividade } from "@/types/ordens";
+import { OrdemServico, StatusOS } from "@/types/ordens";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
@@ -11,7 +12,6 @@ import { OrdemDetailsTabs } from "./OrdemDetailsTabs";
 import { OrdemFormWrapper } from "./OrdemFormWrapper";
 import { BackButton } from "./BackButton";
 import { useOrdemDetalhes } from "@/hooks/useOrdemDetalhes";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { DeleteOrdemDialog } from "@/components/ordens/detalhes/DeleteOrdemDialog";
 import { NotFoundOrdem } from "@/components/ordens/detalhes/NotFoundOrdem";
 import { OrdemHeaderCustom } from "@/components/ordens/detalhes/OrdemHeaderCustom";
@@ -50,7 +50,7 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
   }, [id, isLoading, ordem]);
 
   if (isLoading) {
-    return <LoadingSpinner />;
+    return <div className="flex justify-center items-center h-64"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div></div>;
   }
 
   if (!ordem && id) {
@@ -61,22 +61,22 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
     return <div>Nenhuma ordem selecionada.</div>;
   }
 
+  const handleVoltar = () => {
+    navigate(-1);
+  };
+
   return (
-    <OrdemFormWrapper
-      isEditando={isEditando}
-      canEditThisOrder={canEditThisOrder}
-      onEditToggle={setIsEditando}
-      headerContent={
-        <OrdemHeaderCustom
-          ordem={ordem}
-          isEditando={isEditando}
-          canEditThisOrder={canEditThisOrder}
-          onLogout={onLogout}
-          onDelete={() => setDeleteDialogOpen(true)}
-          onStatusChange={handleStatusChange}
-        />
-      }
-      formContent={
+    <div>
+      <OrdemHeaderCustom
+        id={ordem.id}
+        nome={ordem.nome}
+        canEdit={canEditThisOrder}
+        onEditClick={() => setIsEditando(true)}
+        onDeleteClick={() => setDeleteDialogOpen(true)}
+        ordem={ordem}
+      />
+      
+      <div className="mt-4">
         <OrdemDetailsTabs
           ordem={ordem}
           activeTab={activeTab}
@@ -84,11 +84,13 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
           onStatusChange={handleStatusChange}
           onOrdemUpdate={handleOrdemUpdate}
         />
-      }
-      footerContent={
-        <>
-          <BackButton navigate={navigate} />
-          {isEditando && (
+      </div>
+      
+      <div className="mt-6 flex justify-between">
+        <BackButton onClick={handleVoltar} />
+        
+        {isEditando && (
+          <div className="space-x-2">
             <Button
               type="button"
               variant="secondary"
@@ -97,8 +99,6 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
             >
               Cancelar
             </Button>
-          )}
-          {isEditando && (
             <Button
               type="button"
               onClick={handleSubmit}
@@ -106,16 +106,16 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
             >
               Salvar
             </Button>
-          )}
-        </>
-      }
-    >
+          </div>
+        )}
+      </div>
+
       <DeleteOrdemDialog
-        open={deleteDialogOpen}
-        setOpen={setDeleteDialogOpen}
+        isOpen={deleteDialogOpen}
+        isDeleting={isSubmitting}
+        onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDelete}
-        ordemId={ordem.id}
       />
-    </OrdemFormWrapper>
+    </div>
   );
 }

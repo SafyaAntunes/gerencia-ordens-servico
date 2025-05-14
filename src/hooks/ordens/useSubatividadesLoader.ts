@@ -40,7 +40,7 @@ export function useSubatividadesLoader({
 
     try {
       console.log(`[useSubatividadesLoader] Buscando subatividades para ${tipoServico}`);
-      const resultado = await getAllSubatividades(tipoServico);
+      const resultado = await getAllSubatividades();
       
       // Garantir que todas as subatividades tenham selecionada=false por padrão
       const subatividadesComDefault = resultado.map(sub => ({

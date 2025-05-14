@@ -24,9 +24,7 @@ export const useServicosState = (
   const { debugInfoLoaded } = useServicosDebug();
   const { loadingSources, trackSource, getSourceTrackerObject, logSourceSummary } = useServicosSourceTracking();
   const { hasInitialized, loadSubatividades } = useSubatividadesLoader({
-    defaultValues,
-    defaultSubatividades,
-    trackSource
+    defaultValues: defaultValues?.servicosSubatividades || {}
   });
 
   // Initialize from defaultValues once
@@ -83,16 +81,10 @@ export const useServicosState = (
     
     // Track pending async operations
     let isMounted = true;
-    const pendingOperations: Record<string, boolean> = {};
     const sourceTracker = getSourceTrackerObject();
     
     const loadSubatividadesForType = async (tipo: TipoServico) => {
-      const result = await loadSubatividades(
-        tipo, 
-        servicosSubatividades,
-        pendingOperations,
-        sourceTracker
-      );
+      const result = await loadSubatividades(tipo);
       
       if (result && isMounted) {
         console.log(`✅ [useServicosState] Atualizando subatividades para ${tipo} após carregamento:`, result);
@@ -128,10 +120,8 @@ export const useServicosState = (
     };
   }, [
     servicosTipos, 
-    defaultValues?.servicosSubatividades, 
     previousServiceTypes, 
-    hasInitialized, 
-    servicosSubatividades,
+    hasInitialized,
     loadSubatividades,
     getSourceTrackerObject,
     logSourceSummary

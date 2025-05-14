@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Servico } from "@/types/ordens";
+import { Servico, EtapaOS } from "@/types/ordens";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -20,7 +21,7 @@ interface ServicoTrackerProps {
   onServicoStatusChange: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
   onSubatividadeSelecionadaToggle?: (subatividadeId: string, checked: boolean) => void;
   className?: string;
-  etapa?: string;
+  etapa?: EtapaOS | string;
 }
 
 export default function ServicoTracker({
@@ -59,7 +60,7 @@ export default function ServicoTracker({
     ordemId,
     funcionarioId,
     funcionarioNome,
-    etapa,
+    etapa: etapa as EtapaOS,
     onServicoStatusChange,
     onSubatividadeToggle
   });
@@ -86,7 +87,7 @@ export default function ServicoTracker({
       {funcionarioId && etapa && (
         <EtapaResponsavelManager
           ordemId={ordemId}
-          etapa={etapa}
+          etapa={etapa as EtapaOS}
           servicoTipo={servico.tipo}
           funcionarioId={funcionarioId}
           funcionarioNome={funcionarioNome}
