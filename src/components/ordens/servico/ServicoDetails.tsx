@@ -1,3 +1,4 @@
+
 import { SubAtividade } from "@/types/ordens";
 import { CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -10,17 +11,26 @@ interface ServicoDetailsProps {
   subatividades: SubAtividade[];
   temPermissao: boolean;
   onSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
+  onSubatividadeSelecionadaToggle?: (subatividadeId: string, checked: boolean) => void;
 }
 
 export default function ServicoDetails({
   descricao,
   subatividades,
   temPermissao,
-  onSubatividadeToggle
+  onSubatividadeToggle,
+  onSubatividadeSelecionadaToggle
 }: ServicoDetailsProps) {
   const handleToggle = (subatividadeId: string, checked: boolean) => {
     console.log('ServicoDetails - Toggle:', { subatividadeId, checked });
     onSubatividadeToggle(subatividadeId, checked);
+  };
+
+  const handleSelecionadaToggle = (subatividadeId: string, checked: boolean) => {
+    if (onSubatividadeSelecionadaToggle) {
+      console.log('ServicoDetails - Toggle Selecionada:', { subatividadeId, checked });
+      onSubatividadeSelecionadaToggle(subatividadeId, checked);
+    }
   };
 
   return (
@@ -60,11 +70,22 @@ export default function ServicoDetails({
                       {subatividade.nome}
                     </Label>
                   </div>
-                  {subatividade.tempoEstimado && (
-                    <span className="text-xs text-muted-foreground">
-                      {subatividade.tempoEstimado} {subatividade.tempoEstimado === 1 ? 'hora' : 'horas'}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {subatividade.tempoEstimado && (
+                      <span className="text-xs text-muted-foreground">
+                        {subatividade.tempoEstimado} {subatividade.tempoEstimado === 1 ? 'hora' : 'horas'}
+                      </span>
+                    )}
+                    {onSubatividadeSelecionadaToggle && (
+                      <Checkbox
+                        id={`subatividade-selecionada-${subatividade.id}`}
+                        checked={subatividade.selecionada}
+                        onCheckedChange={(checked) => handleSelecionadaToggle(subatividade.id, checked === true)}
+                        disabled={!temPermissao}
+                        className="data-[state=checked]:bg-blue-600"
+                      />
+                    )}
+                  </div>
                 </div>
               );
             })}

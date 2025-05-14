@@ -18,7 +18,7 @@ interface ServicoTrackerProps {
   funcionarioNome?: string;
   onSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
   onServicoStatusChange: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
-  onSubatividadeSelecionadaToggle?: (subatividadeId: string, checked: boolean) => void; // Added this prop to match usage
+  onSubatividadeSelecionadaToggle?: (subatividadeId: string, checked: boolean) => void;
   className?: string;
   etapa?: string;
 }
@@ -30,6 +30,7 @@ export default function ServicoTracker({
   funcionarioNome,
   onSubatividadeToggle,
   onServicoStatusChange,
+  onSubatividadeSelecionadaToggle,
   className,
   etapa,
 }: ServicoTrackerProps) {
@@ -63,6 +64,13 @@ export default function ServicoTracker({
     onServicoStatusChange,
     onSubatividadeToggle
   });
+
+  // Handler for subatividade selecionada toggle
+  const handleSubatividadeSelecionadaToggleInternal = (subatividadeId: string, checked: boolean) => {
+    if (onSubatividadeSelecionadaToggle) {
+      onSubatividadeSelecionadaToggle(subatividadeId, checked);
+    }
+  };
 
   // Load funcionarios if needed (when the component mounts)
   useEffect(() => {
@@ -109,6 +117,7 @@ export default function ServicoTracker({
               subatividades={subatividadesFiltradas}
               temPermissao={temPermissao}
               onSubatividadeToggle={handleSubatividadeToggle}
+              onSubatividadeSelecionadaToggle={handleSubatividadeSelecionadaToggleInternal}
             />
             
             {/* Mostrar pausas mesmo quando o serviço está concluído */}

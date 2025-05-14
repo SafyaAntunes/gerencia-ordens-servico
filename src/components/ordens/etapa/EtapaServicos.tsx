@@ -40,12 +40,12 @@ export default function EtapaServicos({
           onSubatividadeToggle={
             onSubatividadeToggle ? 
               (subId, checked) => onSubatividadeToggle(servico.tipo, subId, checked) : 
-              undefined
+              () => {}
           }
           onServicoStatusChange={
             onServicoStatusChange ? 
               (concluido, funcId, funcNome) => onServicoStatusChange(servico.tipo, concluido, funcId, funcNome) : 
-              undefined
+              () => {}
           }
           onSubatividadeSelecionadaToggle={
             onSubatividadeSelecionadaToggle ? 
