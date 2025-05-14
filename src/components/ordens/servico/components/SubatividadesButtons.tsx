@@ -4,12 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Plus, Settings } from 'lucide-react';
 import { AddSubatividadeDialog } from '../dialogs/AddSubatividadeDialog';
 import { SelectSubatividadesDialog } from '../../subatividades/SelectSubatividadesDialog';
+import { TipoServico } from '@/types/ordens';
 
 interface SubatividadesButtonsProps {
   canAddSubatividades: boolean;
   temPermissao: boolean;
   servicoConcluido: boolean;
-  servicoTipo: string;
+  servicoTipo: TipoServico; // Changed from string to TipoServico
   isAddDialogOpen: boolean;
   setIsAddDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
   isSelectDialogOpen: boolean;

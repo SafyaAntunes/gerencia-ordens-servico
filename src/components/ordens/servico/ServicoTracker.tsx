@@ -7,6 +7,7 @@ import ServicoControls from './ServicoControls';
 import { ServicoTrackerProps } from './hooks/types/servicoTrackerTypes';
 import { useTrackerSubatividades } from '@/hooks/ordens/useTrackerSubatividades';
 import { SubatividadesButtons } from './components/SubatividadesButtons';
+import { TipoServico } from '@/types/ordens';
 
 function ServicoTracker({ 
   servico, 
@@ -153,7 +154,7 @@ function ServicoTracker({
               canAddSubatividades={canAddSubatividades}
               temPermissao={temPermissao}
               servicoConcluido={servico.concluido}
-              servicoTipo={servico.tipo}
+              servicoTipo={servico.tipo as TipoServico} // Ensure it's cast to TipoServico
               isAddDialogOpen={isAddDialogOpen}
               setIsAddDialogOpen={setIsAddDialogOpen}
               isSelectDialogOpen={isSelectDialogOpen}
