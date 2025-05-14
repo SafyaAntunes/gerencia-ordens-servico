@@ -50,7 +50,8 @@ export const useOrdemDetalhes = (id: string | undefined): UseOrdemDetalhesResult
     // Recarregar os dados quando mudar para a tab de tracker
     if (activeTab === "tracker" && id) {
       // Não limpar o cache diretamente, mas forçar uma nova requisição
-      fetchMotorDetails(id, true); // Adicionamos um parâmetro para forçar atualização
+      // Fix the type error - use a string parameter instead of boolean
+      fetchMotorDetails(id, "forceUpdate"); // Changed from boolean to string parameter
       console.log("Forçando atualização dos dados da ordem ao acessar tracker");
     }
     
