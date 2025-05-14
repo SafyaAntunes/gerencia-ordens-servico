@@ -1,6 +1,9 @@
 
 import { OrdemServico, StatusOS } from "@/types/ordens";
 
+// Define the SetOrdemFunction type that was missing
+export type SetOrdemFunction = React.Dispatch<React.SetStateAction<OrdemServico | null>>;
+
 export interface UseOrdemDetalhesResult {
   ordem: OrdemServico | null;
   isLoading: boolean;
