@@ -1,10 +1,11 @@
 
-import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Plus, Settings } from 'lucide-react';
-import { AddSubatividadeDialog } from '../dialogs/AddSubatividadeDialog';
-import { SelectSubatividadesDialog } from '../../subatividades/SelectSubatividadesDialog';
-import { TipoServico } from '@/types/ordens';
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { TipoServico } from "@/types/ordens";
+import { SubatividadeSelector } from "./SubatividadeSelector";
 
 interface SubatividadesButtonsProps {
   canAddSubatividades: boolean;
@@ -12,19 +13,19 @@ interface SubatividadesButtonsProps {
   servicoConcluido: boolean;
   servicoTipo: TipoServico;
   isAddDialogOpen: boolean;
-  setIsAddDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsAddDialogOpen: (open: boolean) => void;
   isSelectDialogOpen: boolean;
-  setIsSelectDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsSelectDialogOpen: (open: boolean) => void;
   novaSubatividade: string;
-  setNovaSubatividade: React.Dispatch<React.SetStateAction<string>>;
+  setNovaSubatividade: (value: string) => void;
   tempoEstimado: number;
-  setTempoEstimado: React.Dispatch<React.SetStateAction<number>>;
+  setTempoEstimado: (value: number) => void;
   isAddingSubatividades: boolean;
-  handleAddCustomSubatividade: () => Promise<void>;
+  handleAddCustomSubatividade: () => void;
   handleAddSelectedSubatividades: (selecionadas: string[]) => void;
 }
 
-export const SubatividadesButtons: React.FC<SubatividadesButtonsProps> = ({
+export function SubatividadesButtons({
   canAddSubatividades,
   temPermissao,
   servicoConcluido,
@@ -40,69 +41,99 @@ export const SubatividadesButtons: React.FC<SubatividadesButtonsProps> = ({
   isAddingSubatividades,
   handleAddCustomSubatividade,
   handleAddSelectedSubatividades
-}) => {
-  if (!canAddSubatividades || !temPermissao || servicoConcluido) {
+}: SubatividadesButtonsProps) {
+  // Não mostrar botões se o serviço estiver concluído ou não tiver permissão
+  if (servicoConcluido || !temPermissao || !canAddSubatividades) {
     return null;
   }
 
-  // Manipulador para tratar a seleção de subatividades
-  const handleSelected = (selecionadas: string[]) => {
-    console.log("SubatividadesButtons - Subatividades selecionadas:", selecionadas);
-    
-    if (selecionadas && selecionadas.length > 0) {
-      handleAddSelectedSubatividades(selecionadas);
-      // Não fechamos o diálogo aqui - deixamos que a operação completa dispare o fechamento
-    } else {
-      // Se não houver seleção, fechamos o diálogo manualmente
-      setIsSelectDialogOpen(false);
-    }
-  };
-
   return (
-    <div className="mt-4 flex flex-wrap gap-2">
-      <Button
-        variant="outline"
-        size="sm"
+    <div className="mt-3 flex flex-wrap gap-2">
+      <Button 
+        variant="secondary" 
+        size="sm" 
         onClick={() => setIsAddDialogOpen(true)}
-        disabled={isAddingSubatividades}
         className="flex items-center gap-1"
       >
-        <Plus className="h-4 w-4" /> 
-        Adicionar Subatividade
+        <Plus className="h-4 w-4" /> Adicionar subatividade personalizada
       </Button>
       
-      <Button
-        variant="outline"
-        size="sm"
+      <Button 
+        variant="outline" 
+        size="sm" 
         onClick={() => setIsSelectDialogOpen(true)}
-        disabled={isAddingSubatividades}
         className="flex items-center gap-1"
       >
-        <Settings className="h-4 w-4" /> 
-        Adicionar Subatividades Padrão
+        <Plus className="h-4 w-4" /> Selecionar de predefinidas
       </Button>
       
-      <AddSubatividadeDialog 
-        isOpen={isAddDialogOpen}
-        setIsOpen={setIsAddDialogOpen}
-        novaSubatividade={novaSubatividade}
-        setNovaSubatividade={setNovaSubatividade}
-        tempoEstimado={tempoEstimado}
-        setTempoEstimado={setTempoEstimado}
-        handleAddCustomSubatividade={handleAddCustomSubatividade}
-        isAddingSubatividades={isAddingSubatividades}
-        servicoTipo={servicoTipo}
-      />
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Adicionar Subatividade</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="nome" className="text-right">
+                Nome
+              </Label>
+              <Input
+                id="nome"
+                className="col-span-3"
+                placeholder="Nome da subatividade"
+                value={novaSubatividade}
+                onChange={(e) => setNovaSubatividade(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="tempo" className="text-right">
+                Tempo (h)
+              </Label>
+              <Input
+                id="tempo"
+                className="col-span-3"
+                type="number"
+                min={0.5}
+                step={0.5}
+                placeholder="Tempo estimado em horas"
+                value={tempoEstimado}
+                onChange={(e) => setTempoEstimado(Number(e.target.value))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="secondary" 
+              onClick={() => setIsAddDialogOpen(false)}
+              className="mr-2"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleAddCustomSubatividade} 
+              disabled={isAddingSubatividades || novaSubatividade.trim() === ''}
+            >
+              {isAddingSubatividades ? "Adicionando..." : "Adicionar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
-      <SelectSubatividadesDialog
-        open={isSelectDialogOpen}
-        onOpenChange={(open) => {
-          console.log("SubatividadesButtons - SelectSubatividadesDialog onOpenChange:", open);
-          setIsSelectDialogOpen(open);
-        }}
-        servicoTipo={servicoTipo}
-        onSelect={handleSelected}
-      />
+      <Dialog open={isSelectDialogOpen} onOpenChange={setIsSelectDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Adicionar Subatividades Predefinidas</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <SubatividadeSelector
+              tipoServico={servicoTipo}
+              onConfirm={handleAddSelectedSubatividades}
+              onCancel={() => setIsSelectDialogOpen(false)}
+              isLoading={isAddingSubatividades}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-};
+}

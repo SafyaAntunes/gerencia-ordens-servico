@@ -1,62 +1,65 @@
 
-import { OrdemServico, SubAtividade, TipoServico } from "@/types/ordens";
-
-/**
- * Atualiza a ordem no estado com as novas informações
- */
-export const atualizarOrdemNoEstado = (
-  ordem: OrdemServico,
-  servicoTipo: TipoServico,
-  novasSubatividades: SubAtividade[]
-): OrdemServico => {
-  if (!ordem) return ordem;
-
-  // Clone a ordem para não modificar o objeto original
-  const novaOrdem = { ...ordem };
-  
-  // Encontre o serviço a ser atualizado
-  const servicoIndex = novaOrdem.servicos.findIndex(s => s.tipo === servicoTipo);
-  
-  if (servicoIndex === -1) return ordem; // Serviço não encontrado
-  
-  // Atualize as subatividades no serviço
-  novaOrdem.servicos[servicoIndex] = {
-    ...novaOrdem.servicos[servicoIndex],
-    subatividades: novasSubatividades
-  };
-  
-  return novaOrdem;
-};
+import { SubAtividade, TipoServico, EtapaOS } from "@/types/ordens";
 
 /**
  * Filtra as subatividades para mostrar apenas as selecionadas
- * Se nenhuma estiver selecionada, retorna todas
  */
-export const filtrarSubatividadesSelecionadas = (
-  subatividades: SubAtividade[] | undefined
-): SubAtividade[] => {
-  if (!subatividades || subatividades.length === 0) {
-    console.log("filtrarSubatividadesSelecionadas - Nenhuma subatividade disponível");
-    return [];
+export const filtrarSubatividadesSelecionadas = (subatividades?: SubAtividade[]): SubAtividade[] => {
+  if (!subatividades || subatividades.length === 0) return [];
+  return subatividades.filter(sub => sub.selecionada);
+};
+
+/**
+ * Gera uma chave consistente para etapas, especialmente para inspeção inicial/final
+ * que precisam do tipo do serviço como parte da chave
+ */
+export const gerarEtapaKey = (etapa: EtapaOS, servicoTipo?: TipoServico | null): string => {
+  // Para inspeções e lavagem, a chave inclui o tipo de serviço se fornecido
+  if (["inspecao_inicial", "inspecao_final", "lavagem"].includes(etapa) && servicoTipo) {
+    return `${etapa}_${servicoTipo}`;
   }
+  return etapa;
+};
+
+/**
+ * Verifica se uma etapa está concluída baseado nos dados de etapasAndamento
+ */
+export const verificarEtapaConcluida = (
+  etapasAndamento: any, 
+  etapa: EtapaOS, 
+  servicoTipo?: TipoServico | null
+): boolean => {
+  if (!etapasAndamento) return false;
   
-  // Verificar se há pelo menos uma subatividade selecionada
-  const temSubatividadesSelecionadas = subatividades.some(sub => sub.selecionada);
+  const etapaKey = gerarEtapaKey(etapa, servicoTipo);
   
-  // Se não houver nenhuma selecionada, retornar todas para exibição
-  if (!temSubatividadesSelecionadas) {
-    console.log(`filtrarSubatividadesSelecionadas - Nenhuma subatividade selecionada, exibindo todas ${subatividades.length}`);
-    return [...subatividades]; // Retorna uma cópia do array para evitar mutações acidentais
+  // Log para debug
+  console.log(`Verificando conclusão da etapa: ${etapaKey}`, etapasAndamento[etapaKey]);
+  
+  // Verifica se a etapa existe e está concluída
+  return Boolean(etapasAndamento[etapaKey]?.concluido);
+};
+
+/**
+ * Obtém o status da etapa com base nos dados de etapasAndamento
+ */
+export const obterEtapaStatus = (
+  etapasAndamento: any,
+  etapa: EtapaOS,
+  servicoTipo?: TipoServico | null
+): 'concluido' | 'em_andamento' | 'nao_iniciado' => {
+  if (!etapasAndamento) return 'nao_iniciado';
+  
+  const etapaKey = gerarEtapaKey(etapa, servicoTipo);
+  const etapaInfo = etapasAndamento[etapaKey];
+  
+  if (!etapaInfo) return 'nao_iniciado';
+  
+  if (etapaInfo.concluido === true) {
+    return 'concluido';
+  } else if (etapaInfo.iniciado) {
+    return 'em_andamento';
+  } else {
+    return 'nao_iniciado';
   }
-  
-  // Caso contrário, filtrar apenas as selecionadas
-  const selecionadas = subatividades.filter(sub => sub.selecionada);
-  console.log(`filtrarSubatividadesSelecionadas - Filtrando subatividades: ${selecionadas.length} de ${subatividades.length} selecionadas`);
-  
-  // Log detalhado das subatividades filtradas para depuração
-  selecionadas.forEach(sub => {
-    console.log(`  - Subatividade selecionada: ${sub.id.substr(0, 8)} - ${sub.nome} (concluída: ${sub.concluida})`);
-  });
-  
-  return selecionadas;
 };

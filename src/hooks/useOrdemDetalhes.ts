@@ -45,15 +45,23 @@ export const useOrdemDetalhes = (id: string | undefined): UseOrdemDetalhesResult
   // Check if the current user can edit this order
   const canEditThisOrder = ordem ? canEditOrder(ordem.id) : false;
   
-  // Limpar cache ao desmontar o componente
+  // Limpar cache ao desmontar o componente E quando o activeTab muda para "tracker"
   useEffect(() => {
+    // Recarregar os dados quando mudar para a tab de tracker
+    if (activeTab === "tracker" && id) {
+      // Não limpar o cache diretamente, mas forçar uma nova requisição
+      fetchMotorDetails(id, true); // Adicionamos um parâmetro para forçar atualização
+      console.log("Forçando atualização dos dados da ordem ao acessar tracker");
+    }
+    
     return () => {
       // Limpar somente o cache desta ordem específica ao desmontar
       if (id) {
+        console.log("Limpando cache ao desmontar useOrdemDetalhes");
         clearCache(`ordens_servico/${id}`, 'document');
       }
     };
-  }, [id]);
+  }, [id, activeTab]);
 
   return {
     ordem,
