@@ -59,12 +59,23 @@ export const useServicosState = (
     }
   }, [debugInfoLoaded]);
 
-  // Priorizar valores de edição - carregados apenas uma vez na inicialização
+  // MAIS IMPORTANTE: Priorizar valores da edição - carregados apenas uma vez na inicialização
   useEffect(() => {
     if (hasInitialized) return;
     
+    console.log("⚠️ [useServicosState] Verificando valores de inicialização do defaultValues...");
+    
     if (defaultValues?.servicosSubatividades) {
       console.log("📝 [useServicosState] Inicializando com subatividades do defaultValues:", defaultValues.servicosSubatividades);
+      console.log("📝 [useServicosState] Detalhes por tipo: ");
+      
+      // Log detalhado por tipo
+      Object.entries(defaultValues.servicosSubatividades).forEach(([tipo, subs]) => {
+        console.log(`📝 [useServicosState] ${tipo}: ${subs.length} subatividades`);
+        if (subs.length > 0) {
+          console.log(`📝 [useServicosState] Primeira subatividade de ${tipo}:`, subs[0]);
+        }
+      });
       
       // Importante: precisamos preservar os estados 'selecionada' das subatividades existentes
       const processedSubatividades: Record<string, SubAtividade[]> = {};
@@ -82,7 +93,10 @@ export const useServicosState = (
         }
       });
       
+      console.log("📝 [useServicosState] Subatividades processadas:", processedSubatividades);
       setServicosSubatividades(processedSubatividades);
+      
+      // Atualizar fontes de carregamento
       setLoadingSources(prev => {
         const newSources = { ...prev };
         Object.keys(processedSubatividades).forEach(tipo => {
@@ -90,9 +104,12 @@ export const useServicosState = (
         });
         return newSources;
       });
+    } else {
+      console.log("⚠️ [useServicosState] Nenhum valor de subatividades no defaultValues");
     }
     
     if (defaultValues?.servicosDescricoes) {
+      console.log("📝 [useServicosState] Inicializando descrições de serviços:", defaultValues.servicosDescricoes);
       setServicosDescricoes(prev => {
         if (isEqual(prev, defaultValues.servicosDescricoes)) return prev;
         return defaultValues.servicosDescricoes ?? {};
@@ -106,6 +123,7 @@ export const useServicosState = (
   useEffect(() => {
     // Pular se os tipos de serviço não mudaram
     if (isEqual(servicosTipos.sort(), previousServiceTypes.sort()) && hasInitialized) {
+      console.log("⏭️ [useServicosState] Tipos de serviço não mudaram, pulando carregamento");
       return;
     }
     
@@ -126,9 +144,10 @@ export const useServicosState = (
         return;
       }
       
-      // Se já temos subatividades salvas para este tipo, não carregue novamente
+      // PRIORIDADE MÁXIMA: Se já temos subatividades salvas para este tipo na edição, usar essas
       if (defaultValues?.servicosSubatividades?.[tipo]?.length > 0) {
-        console.log(`✅ [loadSubatividades] Usando subatividades SALVAS da ordem para ${tipo}`);
+        console.log(`✅ [loadSubatividades] PRIORIDADE MÁXIMA: Usando subatividades SALVAS da ordem para ${tipo}`, 
+          defaultValues.servicosSubatividades[tipo]);
         
         // Garantir que todas as subatividades tenham os estados corretos
         const savedSubatividades = defaultValues.servicosSubatividades[tipo].map(sub => ({
@@ -149,22 +168,23 @@ export const useServicosState = (
         return;
       }
       
+      // Marcar como pendente para evitar cargas duplicadas
       pendingOperations[tipo] = true;
       
       try {
-        // PRIORIDADE MAIS ALTA: Usar subatividades existentes no modo de edição
+        // PRIORIDADE ALTA: Usar subatividades existentes no estado local
         const existingSubatividades = servicosSubatividades[tipo] || [];
         if (existingSubatividades.length > 0) {
-          console.log(`✅ [loadSubatividades] USANDO SUBATIVIDADES EXISTENTES para ${tipo}:`, existingSubatividades);
+          console.log(`✅ [loadSubatividades] PRIORIDADE ALTA: USANDO SUBATIVIDADES EXISTENTES para ${tipo}:`, existingSubatividades);
           sourceTracker[tipo] = "existente";
           setLoadingSources(prev => ({...prev, [tipo]: "existente"}));
           return;
         }
         
-        // SEGUNDA PRIORIDADE: Buscar subatividades do banco de dados
-        console.log(`🔍 [loadSubatividades] Buscando subatividades do banco para ${tipo}...`);
+        // PRIORIDADE MÉDIA: Buscar subatividades do banco de dados
+        console.log(`🔍 [loadSubatividades] PRIORIDADE MÉDIA: Buscando subatividades do banco para ${tipo}...`);
         const dbSubatividades = await getSubatividadesByTipo(tipo);
-        console.log(`🔍 [loadSubatividades] Recebidas do banco para ${tipo}:`, dbSubatividades);
+        console.log(`🔍 [loadSubatividades] Recebidas do banco para ${tipo}:`, dbSubatividades?.length || 0);
         
         if (dbSubatividades && dbSubatividades.length > 0) {
           const formattedSubs = dbSubatividades.map(sub => ({
@@ -183,7 +203,7 @@ export const useServicosState = (
           return;
         }
         
-        // PRIORIDADE MAIS BAIXA: Usar valores padrão apenas como último recurso
+        // PRIORIDADE BAIXA: Usar valores padrão apenas como último recurso
         if (defaultSubatividades && defaultSubatividades[tipo]) {
           const defaultSubs = defaultSubatividades[tipo].map(nome => ({
             id: nome,
@@ -192,7 +212,7 @@ export const useServicosState = (
             concluida: false
           }));
           
-          console.log(`⚠️ [loadSubatividades] USANDO SUBATIVIDADES BÁSICAS (fallback) para ${tipo}:`, defaultSubs);
+          console.log(`⚠️ [loadSubatividades] PRIORIDADE BAIXA: USANDO SUBATIVIDADES BÁSICAS (fallback) para ${tipo}:`, defaultSubs);
           toast.warning(`Subatividades de configuração não encontradas para ${tipo}. Usando valores básicos.`);
           
           setServicosSubatividades(prev => ({

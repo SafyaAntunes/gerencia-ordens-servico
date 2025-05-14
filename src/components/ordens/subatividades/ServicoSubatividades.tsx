@@ -17,7 +17,7 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
   tipoServico,
   subatividades = [],
   onChange,
-  atividadeTipo = "default"
+  atividadeTipo = "Subatividades"  // Changed from "default" to "Subatividades"
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [localSubatividades, setLocalSubatividades] = useState<SubAtividade[]>(subatividades);
