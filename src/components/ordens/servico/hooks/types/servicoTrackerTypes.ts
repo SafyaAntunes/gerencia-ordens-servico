@@ -62,7 +62,7 @@ export interface UseServicoTrackerResult {
   state: {
     isRunning: boolean;
     isPaused: boolean;
-    time: number;
+    time: string; // Changed from number to string to fix type inconsistency
     concluido: boolean;
     status: ServicoStatus;
     pausas: PausaRegistro[];

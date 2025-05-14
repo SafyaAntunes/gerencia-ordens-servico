@@ -188,7 +188,7 @@ export function useServicoTracker({
     state: {
       isRunning,
       isPaused,
-      time: "0", // Changed from number 0 to string "0" to match the expected type
+      time: displayTime, // Changed from number 0 to use displayTime which is a string
       concluido: servico.concluido,
       status: servicoStatus,
       pausas,
