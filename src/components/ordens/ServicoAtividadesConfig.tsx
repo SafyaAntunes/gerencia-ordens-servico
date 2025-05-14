@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { TipoServico, SubAtividade, TipoAtividade } from "@/types/ordens";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -22,12 +22,24 @@ export default function ServicoAtividadesConfig({
   subatividades,
   onChange
 }: ServicoAtividadesConfigProps) {
-  const [localSubatividades, setLocalSubatividades] = useState<SubAtividade[]>(subatividades || []);
+  const [localSubatividades, setLocalSubatividades] = useState<SubAtividade[]>([]);
   const [tempoEstimado, setTempoEstimado] = useState<Record<string, number>>({});
   const { defaultAtividadesEspecificas } = useServicoSubatividades();
   const { logSubatividadesState } = useTrackingSubatividades();
   
+  // Usar useRef para evitar comparações desnecessárias e loops infinitos
+  const prevSubatividadesRef = useRef<SubAtividade[]>([]);
+  
   useEffect(() => {
+    // Verificar se as subatividades realmente mudaram antes de atualizar o estado
+    if (JSON.stringify(prevSubatividadesRef.current) === JSON.stringify(subatividades)) {
+      console.log(`[ServicoAtividadesConfig] Ignorando atualização redundante para ${servicoTipo}`);
+      return;
+    }
+    
+    // Atualizar a referência com os novos valores
+    prevSubatividadesRef.current = subatividades;
+    
     // Log de debug para visualizar o estado das subatividades recebidas
     console.log(`[ServicoAtividadesConfig] Recebendo subatividades para ${servicoTipo}:`, subatividades);
     logSubatividadesState("ServicoAtividadesConfig-recebidas", servicoTipo, subatividades);
@@ -51,7 +63,7 @@ export default function ServicoAtividadesConfig({
       }
     });
     setTempoEstimado(tempos);
-  }, [subatividades, servicoTipo]);
+  }, [subatividades, servicoTipo, logSubatividadesState]);
   
   const handleToggleSubatividade = (id: string, checked: boolean) => {
     console.log(`[ServicoAtividadesConfig] Alterando seleção da subatividade ${id} para ${checked}`);
