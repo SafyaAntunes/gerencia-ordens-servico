@@ -1,57 +1,46 @@
 
 import { Servico, TipoServico, EtapaOS, OrdemServico } from "@/types/ordens";
-import { ServicoTracker } from "@/components/ordens/servico";
+import ServicoTracker from "../servico/ServicoTracker";
 
 interface EtapaServicosProps {
-  servicos: Servico[];
   ordem: OrdemServico;
-  funcionarioId: string;
-  funcionarioNome?: string;
+  servicos: Servico[];
   etapa: EtapaOS;
-  onSubatividadeToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
+  funcionarioId?: string;
+  funcionarioNome?: string;
+  servicoTipo?: TipoServico;
   onServicoStatusChange?: (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
+  onSubatividadeToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
   onSubatividadeSelecionadaToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
 }
 
-export default function EtapaServicos({
-  servicos,
+export function EtapaServicos({
   ordem,
-  funcionarioId,
-  funcionarioNome,
+  servicos,
   etapa,
-  onSubatividadeToggle,
+  funcionarioId = '',
+  funcionarioNome = '',
+  servicoTipo,
   onServicoStatusChange,
+  onSubatividadeToggle,
   onSubatividadeSelecionadaToggle
 }: EtapaServicosProps) {
-  if (servicos.length === 0) {
-    return null;
-  }
-  
   return (
     <div className="space-y-4">
-      {servicos.map((servico, i) => (
+      {servicos.map((servico) => (
         <ServicoTracker
-          key={`${servico.tipo}-${i}`}
+          key={servico.tipo}
           servico={servico}
           ordem={ordem}
+          onUpdate={(ordem) => {}}
+          // Legacy props support
+          ordemId={ordem.id}
+          etapa={etapa}
           funcionarioId={funcionarioId}
           funcionarioNome={funcionarioNome}
-          etapa={etapa}
-          onSubatividadeToggle={
-            onSubatividadeToggle ? 
-              (subId, checked) => onSubatividadeToggle(servico.tipo, subId, checked) : 
-              undefined
-          }
-          onServicoStatusChange={
-            onServicoStatusChange ? 
-              (concluido, funcId, funcNome) => onServicoStatusChange(servico.tipo, concluido, funcId, funcNome) : 
-              undefined
-          }
-          onSubatividadeSelecionadaToggle={
-            onSubatividadeSelecionadaToggle ? 
-              (subId, checked) => onSubatividadeSelecionadaToggle(servico.tipo, subId, checked) : 
-              undefined
-          }
+          onServicoStatusChange={onServicoStatusChange}
+          onSubatividadeToggle={onSubatividadeToggle}
+          onSubatividadeSelecionadaToggle={onSubatividadeSelecionadaToggle}
         />
       ))}
     </div>

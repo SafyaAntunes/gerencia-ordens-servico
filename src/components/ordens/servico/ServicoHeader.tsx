@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ChevronDown, ChevronUp, Clock } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';

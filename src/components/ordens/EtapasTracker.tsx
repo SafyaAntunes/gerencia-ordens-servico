@@ -6,7 +6,6 @@ import { useEtapasProgress } from "@/components/ordens/etapas-tracker/useEtapasP
 // Import components directly to avoid errors
 import EtapaContent from "@/components/ordens/etapas-tracker/EtapaContent";
 import EtapasSelector from "@/components/ordens/etapas-tracker/EtapasSelector";
-import InspecaoServicosSelector from "@/components/ordens/etapas-tracker/InspecaoServicosSelector";
 
 interface EtapasTrackerProps {
   ordem: OrdemServico;
@@ -78,11 +77,6 @@ export default function EtapasTracker({ ordem, onOrdemUpdate, onFuncionariosChan
   
   const servicosByEtapa = getServicosByEtapa();
   
-  // Handler for service type selection
-  const handleServicoTipoSelect = (tipo: TipoServico) => {
-    setServicoTipo(tipo);
-  };
-  
   // Limpar o tipo de serviço quando a etapa mudar
   useEffect(() => {
     if (!precisaEscolherServico) {
@@ -119,30 +113,12 @@ export default function EtapasTracker({ ordem, onOrdemUpdate, onFuncionariosChan
         </div>
         
         <div className="w-full md:w-2/3">
-          {precisaEscolherServico && (
-            <InspecaoServicosSelector 
-              servicosTipo={["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"]}
-              etapa={etapaAtual}
-              selectedServicoTipo={servicoTipo}
-              onServicoTipoSelect={handleServicoTipoSelect}
-            />
-          )}
-          
           {(etapaAtual && (!precisaEscolherServico || servicoTipo)) && (
             <EtapaContent 
-              ordemId={ordem.id}
+              ordem={ordem}
               etapa={etapaAtual}
-              etapaInfo={ordem.etapasAndamento}
-              servicos={
-                precisaEscolherServico && servicoTipo ? 
-                  ordem.servicos.filter(s => s.tipo === servicoTipo) : 
-                  servicosByEtapa[etapaAtual] || []
-              }
-              servicoTipo={servicoTipo}
-              onSubatividadeToggle={handleSubatividadeToggle}
-              onServicoStatusChange={handleServicoStatusChange}
-              onEtapaStatusChange={handleEtapaStatusChange}
-              onSubatividadeSelecionadaToggle={handleSubatividadeSelecionadaToggle}
+              activeServico={servicoTipo}
+              onOrdemUpdate={onOrdemUpdate}
               onFuncionariosChange={onFuncionariosChange}
             />
           )}

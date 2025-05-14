@@ -4,7 +4,7 @@ import { OrdemServico, EtapaOS, TipoServico } from "@/types/ordens";
 import { useEtapaOperations } from "../etapa/hooks/useEtapaOperations";
 import EtapaCard from "../etapa/EtapaCard";
 import InspecaoServicosSelector from "./InspecaoServicosSelector";
-import EmptyServices from "./EmptyServices";
+import { EmptyServices } from "./EmptyServices";
 import { etapaNomeFormatado } from "@/utils/etapaNomes";
 
 interface EtapaContentProps {
@@ -52,7 +52,7 @@ export default function EtapaContent({
   // Verificar se é etapa de inspeção e precisa selecionar serviço
   const isInspecaoEtapa = etapa === "inspecao_inicial" || etapa === "inspecao_final";
   const servicosFiltrados = getServicosFiltrados();
-  const servicosTipos = [...new Set(servicosEtapa.map(s => s.tipo))];
+  const servicosTipo = [...new Set(servicosEtapa.map(s => s.tipo))];
   
   if (servicosEtapa.length === 0) {
     return <EmptyServices etapa={etapa} />;
@@ -61,7 +61,7 @@ export default function EtapaContent({
   if (isInspecaoEtapa && !selectedService) {
     return (
       <InspecaoServicosSelector
-        servicosTipos={servicosTipos}
+        servicosTipo={servicosTipo}
         onSelect={setSelectedService}
         etapa={etapa}
       />
@@ -75,15 +75,14 @@ export default function EtapaContent({
     <div className="mt-4">
       {isInspecaoEtapa && (
         <InspecaoServicosSelector
-          servicosTipos={servicosTipos}
-          selectedService={selectedService}
-          onSelect={setSelectedService}
+          servicosTipo={servicosTipo}
+          selectedServicoTipo={selectedService}
+          onServicoTipoSelect={setSelectedService}
           etapa={etapa}
         />
       )}
       
       <EtapaCard
-        ordemId={ordem.id}
         ordem={ordem}
         etapa={etapa}
         etapaNome={etapaNome}
