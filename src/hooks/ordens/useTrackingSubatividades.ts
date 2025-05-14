@@ -1,22 +1,18 @@
 
-import { useState, useEffect } from 'react';
-import { SubAtividade } from '@/types/ordens';
+import { useState, useCallback } from 'react';
+import { SubAtividade, TipoServico } from '@/types/ordens';
 
-/**
- * Hook para rastrear e fazer debug do estado das subatividades
- */
 export const useTrackingSubatividades = () => {
-  // Função para fazer log do estado das subatividades
-  const logSubatividadesState = (servicoTipo: string, subatividades: SubAtividade[]) => {
-    console.log(`[useTrackingSubatividades] Estado das subatividades para ${servicoTipo}:`, 
-      subatividades.map(sub => ({
-        id: sub.id,
-        nome: sub.nome,
-        selecionada: sub.selecionada,
-        concluida: sub.concluida
-      }))
-    );
-  };
+  const [trackingData, setTrackingData] = useState<Record<string, any>>({});
 
-  return { logSubatividadesState };
+  // Modified to accept a string for the second parameter instead of SubAtividade[]
+  const logSubatividadesState = useCallback((location: string, servicoTipo: string) => {
+    console.log(`[${location}] Subatividades tracking for ${servicoTipo}`);
+    setTrackingData(prev => ({
+      ...prev,
+      [`${location}-${servicoTipo}`]: new Date().toISOString()
+    }));
+  }, []);
+
+  return { trackingData, logSubatividadesState };
 };
