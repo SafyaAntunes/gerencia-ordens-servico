@@ -9,6 +9,8 @@ import {
   prepareServiceUpdate, 
   updateOrdemWithNewServicos 
 } from './utils';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export function useSubatividadeOperations(
   ordem?: OrdemServico,
@@ -74,16 +76,26 @@ export function useSubatividadeOperations(
       // Update in Firebase and get updated ordem
       const ordemAtualizada = await updateOrdemWithNewServicos(ordem, servicosAtualizados);
       
+      // Fetch fresh data from Firebase to ensure we have the latest state
+      const ordemRef = doc(db, "ordens_servico", ordem.id);
+      const ordemSnap = await getDoc(ordemRef);
+      let ordemFresh = ordemAtualizada;
+      
+      if (ordemSnap.exists()) {
+        ordemFresh = { ...ordemSnap.data(), id: ordemSnap.id } as OrdemServico;
+        console.log("Dados frescos da ordem obtidos do Firebase:", ordemFresh);
+      }
+      
       // Update local state through callback
       if (onOrdemUpdate) {
         console.log("Chamando onOrdemUpdate com ordem atualizada");
-        onOrdemUpdate(ordemAtualizada);
+        onOrdemUpdate(ordemFresh);
       } else {
         console.warn("onOrdemUpdate não está definido, não foi possível atualizar a UI");
       }
       
       toast.success(`Subatividades adicionadas com sucesso para ${servicoTipo}`);
-      return Promise.resolve(ordemAtualizada);
+      return Promise.resolve(ordemFresh);
     } catch (error) {
       console.error("Erro ao adicionar subatividades:", error);
       toast.error("Erro ao adicionar subatividades");
@@ -165,10 +177,20 @@ export function useSubatividadeOperations(
       // Update in Firebase and get updated ordem
       const ordemAtualizada = await updateOrdemWithNewServicos(ordem, servicosAtualizados);
       
+      // Fetch fresh data from Firebase to ensure we have the latest state
+      const ordemRef = doc(db, "ordens_servico", ordem.id);
+      const ordemSnap = await getDoc(ordemRef);
+      let ordemFresh = ordemAtualizada;
+      
+      if (ordemSnap.exists()) {
+        ordemFresh = { ...ordemSnap.data(), id: ordemSnap.id } as OrdemServico;
+        console.log("Dados frescos da ordem obtidos do Firebase após adicionar subatividade:", ordemFresh);
+      }
+      
       // Update local state through callback
       if (onOrdemUpdate) {
-        console.log("Chamando onOrdemUpdate com ordem atualizada");
-        onOrdemUpdate(ordemAtualizada);
+        console.log("Chamando onOrdemUpdate com ordem atualizada após adicionar subatividade");
+        onOrdemUpdate(ordemFresh);
       } else {
         console.warn("onOrdemUpdate não está definido, não foi possível atualizar a UI");
       }

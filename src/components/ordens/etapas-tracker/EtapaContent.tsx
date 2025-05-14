@@ -1,11 +1,14 @@
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { OrdemServico, EtapaOS, TipoServico } from "@/types/ordens";
 import { useEtapaOperations } from "../etapa/hooks/useEtapaOperations";
 import EtapaCard from "../etapa/EtapaCard";
 import InspecaoServicosSelector from "./InspecaoServicosSelector";
 import { EmptyServices } from "./EmptyServices";
 import { etapaNomeFormatado } from "@/utils/etapaNomes";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { toast } from "sonner";
 
 interface EtapaContentProps {
   ordem: OrdemServico;
@@ -23,6 +26,18 @@ export default function EtapaContent({
   onFuncionariosChange
 }: EtapaContentProps) {
   const [selectedService, setSelectedService] = useState<TipoServico | undefined>(activeServico);
+  const [isReloading, setIsReloading] = useState(false);
+  const [localOrdem, setLocalOrdem] = useState<OrdemServico>(ordem);
+  
+  // Log ordem updates for debugging
+  useEffect(() => {
+    console.log("EtapaContent - ordem atualizada:", {
+      id: ordem.id,
+      servicosCount: ordem.servicos.length,
+      status: ordem.status
+    });
+    setLocalOrdem(ordem);
+  }, [ordem]);
   
   const {
     getServicosEtapa,
@@ -32,13 +47,61 @@ export default function EtapaContent({
     handleEtapaStatusChange,
     handleSubatividadeSelecionadaToggle
   } = useEtapaOperations({
-    ordem,
+    ordem: localOrdem,
     onUpdate: onOrdemUpdate,
   });
   
+  // Function to reload fresh ordem data from Firebase
+  const reloadOrdemData = useCallback(async () => {
+    if (!ordem.id) return;
+    
+    setIsReloading(true);
+    console.log("EtapaContent - Recarregando dados da ordem do Firebase:", ordem.id);
+    
+    try {
+      const ordemRef = doc(db, "ordens_servico", ordem.id);
+      const ordemSnap = await getDoc(ordemRef);
+      
+      if (ordemSnap.exists()) {
+        const ordemData = { ...ordemSnap.data(), id: ordemSnap.id } as OrdemServico;
+        console.log("EtapaContent - Dados atualizados da ordem:", ordemData);
+        
+        // Update local state
+        setLocalOrdem(ordemData);
+        
+        // Notify parent component
+        onOrdemUpdate(ordemData);
+        
+        toast.success("Dados atualizados com sucesso", {
+          duration: 2000,
+          position: "bottom-right"
+        });
+      } else {
+        console.log("EtapaContent - Ordem não encontrada no Firebase");
+        toast.error("Não foi possível encontrar a ordem");
+      }
+    } catch (error) {
+      console.error("EtapaContent - Erro ao recarregar dados da ordem:", error);
+      toast.error("Erro ao atualizar dados");
+    } finally {
+      setIsReloading(false);
+    }
+  }, [ordem.id, onOrdemUpdate]);
+  
+  // Handle ordem updates from child components
+  const handleLocalOrdemUpdate = useCallback((ordemAtualizada: OrdemServico) => {
+    console.log("EtapaContent - handleLocalOrdemUpdate:", ordemAtualizada);
+    setLocalOrdem(ordemAtualizada);
+    onOrdemUpdate(ordemAtualizada);
+    
+    // Schedule a reload after a short delay to ensure Firebase data is up to date
+    setTimeout(reloadOrdemData, 500);
+  }, [onOrdemUpdate, reloadOrdemData]);
+  
+  // Get services for the current etapa
   const servicosEtapa = getServicosEtapa(etapa, selectedService);
   
-  // Determinar quais serviços exibir com base na etapa
+  // Determine which services to display based on the etapa
   const getServicosFiltrados = () => {
     if (etapa !== "inspecao_inicial" && etapa !== "inspecao_final") {
       return servicosEtapa;
@@ -51,7 +114,7 @@ export default function EtapaContent({
     return [];
   };
   
-  // Verificar se é etapa de inspeção e precisa selecionar serviço
+  // Check if this is an inspection etapa that requires selecting a service
   const isInspecaoEtapa = etapa === "inspecao_inicial" || etapa === "inspecao_final";
   const servicosFiltrados = getServicosFiltrados();
   const servicosTipo = [...new Set(servicosEtapa.map(s => s.tipo))] as TipoServico[];
@@ -75,6 +138,12 @@ export default function EtapaContent({
   
   return (
     <div className="mt-4">
+      {isReloading && (
+        <div className="mb-4 p-2 bg-amber-50 border border-amber-200 rounded text-amber-800 text-center">
+          Atualizando dados da ordem...
+        </div>
+      )}
+      
       {isInspecaoEtapa && (
         <InspecaoServicosSelector
           servicosTipo={servicosTipo}
@@ -85,8 +154,8 @@ export default function EtapaContent({
       )}
       
       <EtapaCard
-        ordem={ordem}
-        ordemId={ordem.id}
+        ordem={localOrdem}
+        ordemId={localOrdem.id}
         etapa={etapa}
         etapaNome={etapaNome}
         funcionarioId=""
@@ -98,7 +167,19 @@ export default function EtapaContent({
         onEtapaStatusChange={(etapa, concluida, funcId, funcNome, servicoTipo) => handleEtapaStatusChange(etapa, concluida, funcId, funcNome, servicoTipo)}
         onSubatividadeSelecionadaToggle={(tipo, subId, checked) => handleSubatividadeSelecionadaToggle(tipo, subId, checked)}
         onFuncionariosChange={onFuncionariosChange}
+        onOrdemUpdate={handleLocalOrdemUpdate}
       />
+      
+      {/* Manual refresh button */}
+      <div className="mt-4 flex justify-end">
+        <button
+          className="text-sm text-muted-foreground hover:text-primary flex items-center"
+          onClick={reloadOrdemData}
+          disabled={isReloading}
+        >
+          <span className="mr-1">{isReloading ? "Recarregando..." : "Recarregar dados"}</span>
+        </button>
+      </div>
     </div>
   );
 }

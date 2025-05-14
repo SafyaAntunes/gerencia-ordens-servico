@@ -1,6 +1,7 @@
 
 import { Servico, TipoServico, EtapaOS, OrdemServico } from "@/types/ordens";
 import { ServicoTracker } from "../servico";
+import { useCallback, useEffect } from "react";
 
 interface EtapaServicosProps {
   ordem: OrdemServico;
@@ -27,13 +28,19 @@ export function EtapaServicos({
   onSubatividadeSelecionadaToggle,
   onOrdemUpdate
 }: EtapaServicosProps) {
+  // Debug logs to track data flow
+  useEffect(() => {
+    console.log("EtapaServicos - servicos recebidos:", servicos);
+    console.log("EtapaServicos - tem callback onOrdemUpdate:", !!onOrdemUpdate);
+  }, [servicos, onOrdemUpdate]);
+
   // Handler to propagate ordem updates to parent component
-  const handleOrdemUpdate = (ordemAtualizada: OrdemServico) => {
+  const handleOrdemUpdate = useCallback((ordemAtualizada: OrdemServico) => {
     console.log("EtapaServicos - handleOrdemUpdate:", ordemAtualizada);
     if (onOrdemUpdate) {
       onOrdemUpdate(ordemAtualizada);
     }
-  };
+  }, [onOrdemUpdate]);
 
   return (
     <div className="space-y-4">
