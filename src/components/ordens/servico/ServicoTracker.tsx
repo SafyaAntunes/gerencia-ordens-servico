@@ -9,6 +9,7 @@ import { useTrackerSubatividades } from '@/hooks/ordens/useTrackerSubatividades'
 import { SubatividadesButtons } from './components/SubatividadesButtons';
 import { TipoServico } from '@/types/ordens';
 import { toast } from 'sonner';
+import { filtrarSubatividadesSelecionadas } from '@/hooks/ordens/tracker-subatividades/utils';
 
 function ServicoTracker({ 
   servico, 
@@ -37,7 +38,8 @@ function ServicoTracker({
       temOnUpdate: !!onUpdate,
       temOrdem: !!ordem,
       ordemId: ordemId || ordem?.id,
-      subatividades: servico.subatividades?.length || 0
+      subatividades: servico.subatividades?.length || 0,
+      subatividadesSelecionadas: servico.subatividades?.filter(s => s.selecionada).length || 0
     });
   }, [servico, ordem, ordemId, onUpdate]);
   
@@ -80,6 +82,9 @@ function ServicoTracker({
     onSubatividadeToggle,
     onSubatividadeSelecionadaToggle
   });
+  
+  // Forçar o uso apenas das subatividades selecionadas para exibição
+  const subatividadesExibidas = filtrarSubatividadesSelecionadas(servico.subatividades);
   
   const handleAddSelectedSubatividades = (selecionadas: string[]) => {
     console.log("ServicoTracker - handleAddSelectedSubatividades:", {
@@ -146,6 +151,21 @@ function ServicoTracker({
     }
   };
 
+  // Log subatividades para debug
+  useEffect(() => {
+    if (servico.subatividades) {
+      console.log("ServicoTracker - Subatividades disponíveis:", {
+        total: servico.subatividades.length,
+        selecionadas: servico.subatividades.filter(s => s.selecionada).length,
+        detalhes: servico.subatividades.map(s => ({
+          id: s.id.substr(0, 4),
+          nome: s.nome,
+          selecionada: s.selecionada
+        }))
+      });
+    }
+  }, [servico.subatividades]);
+
   return (
     <div className="border rounded-lg p-4 mb-4">
       <ServicoHeader
@@ -168,7 +188,7 @@ function ServicoTracker({
           <div className="mt-4">
             <ServicoDetails
               descricao={servico.descricao}
-              subatividades={subatividadesFiltradas}
+              subatividades={subatividadesExibidas.length > 0 ? subatividadesExibidas : subatividadesFiltradas}
               temPermissao={temPermissao}
               onSubatividadeToggle={handleSubatividadeToggle}
             />

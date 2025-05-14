@@ -1,82 +1,46 @@
 
 import { OrdemServico, TipoServico, SubAtividade } from "@/types/ordens";
-import { v4 as uuidv4 } from "uuid";
 
 /**
- * Verifica se uma subatividade já existe no serviço pelo ID
+ * Verifica se uma subatividade já existe em um serviço
  */
-export const subatividadeExiste = (servico: any, subatividadeId: string): boolean => {
-  if (!servico || !servico.subatividades) return false;
-  return servico.subatividades.some((sub: any) => sub.id === subatividadeId);
-};
-
-/**
- * Gera uma nova subatividade com valores padrão
- */
-export const criarSubatividade = (
-  nome: string,
-  servicoTipo: TipoServico,
-  tempoEstimado: number = 1
-): SubAtividade => {
-  return {
-    id: uuidv4(),
-    nome,
-    selecionada: true,
-    concluida: false,
-    tempoEstimado,
-    servicoTipo
-  };
-};
-
-/**
- * Atualiza as subatividades de um serviço específico na ordem
- */
-export const atualizarSubatividadesServico = (
-  ordem: OrdemServico,
-  servicoTipo: TipoServico,
-  novasSubatividades: SubAtividade[]
-): OrdemServico => {
-  // Clone a ordem para não modificar o objeto original
-  const ordemAtualizada = { ...ordem };
-  
-  // Verifica se a ordem tem serviços
-  if (!ordemAtualizada.servicos) {
-    ordemAtualizada.servicos = [];
+export const subatividadeExisteEmServico = (
+  servico: { subatividades?: SubAtividade[] },
+  subatividadeId: string
+): boolean => {
+  if (!servico.subatividades || servico.subatividades.length === 0) {
+    return false;
   }
   
-  // Encontra o índice do serviço a ser atualizado
+  return servico.subatividades.some(sub => sub.id === subatividadeId);
+};
+
+/**
+ * Atualiza o estado da ordem no componente local após adicionar/modificar subatividades
+ */
+export const atualizarOrdemNoEstado = (
+  ordem: OrdemServico,
+  servicoTipo: TipoServico,
+  subatividades: SubAtividade[]
+): OrdemServico => {
+  // Cria uma cópia profunda da ordem para evitar mutações no estado
+  const ordemAtualizada = JSON.parse(JSON.stringify(ordem)) as OrdemServico;
+  
+  // Encontra o serviço a ser atualizado
   const servicoIndex = ordemAtualizada.servicos.findIndex(s => s.tipo === servicoTipo);
   
   if (servicoIndex >= 0) {
-    // Clone o serviço para não modificar o objeto original
-    const servicoAtualizado = { ...ordemAtualizada.servicos[servicoIndex] };
-    
-    // Atualiza as subatividades
-    servicoAtualizado.subatividades = novasSubatividades;
-    
-    // Substitui o serviço na lista
-    ordemAtualizada.servicos[servicoIndex] = servicoAtualizado;
+    // Atualiza as subatividades do serviço
+    ordemAtualizada.servicos[servicoIndex].subatividades = subatividades;
   }
   
   return ordemAtualizada;
 };
 
 /**
- * Calcula o progresso total de subatividades concluídas em um serviço
+ * Filtra subatividades para mostrar apenas as selecionadas
  */
-export const calcularProgressoSubatividades = (servico: any): number => {
-  if (!servico || !servico.subatividades || servico.subatividades.length === 0) {
-    return 0;
-  }
-  
-  const subatividadesSelecionadas = servico.subatividades.filter((sub: any) => sub.selecionada);
-  
-  if (subatividadesSelecionadas.length === 0) {
-    return 0;
-  }
-  
-  const concluidas = subatividadesSelecionadas.filter((sub: any) => sub.concluida).length;
-  const total = subatividadesSelecionadas.length;
-  
-  return Math.round((concluidas / total) * 100);
+export const filtrarSubatividadesSelecionadas = (subatividades?: SubAtividade[]): SubAtividade[] => {
+  if (!subatividades) return [];
+  return subatividades.filter(sub => sub.selecionada);
 };

@@ -6,6 +6,7 @@ import { OrdemServico, TipoServico, SubAtividade } from "@/types/ordens";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import { fetchSubatividadesPreset } from "@/services/subatividadeService";
+import { atualizarOrdemNoEstado } from "./utils";
 
 /**
  * Hook que fornece operações para adicionar e gerenciar subatividades em serviços
@@ -78,7 +79,7 @@ export const useSubatividadeOperations = (ordem?: OrdemServico, onOrdemUpdate?: 
               novasSubatividades.push({
                 id: subatividade.id,
                 nome: subatividade.nome,
-                selecionada: true,
+                selecionada: true, // Garantir que subatividades adicionadas sejam selecionadas
                 concluida: false,
                 tempoEstimado: subatividade.tempoEstimado || 1,
                 servicoTipo: servicoTipo
@@ -125,6 +126,7 @@ export const useSubatividadeOperations = (ordem?: OrdemServico, onOrdemUpdate?: 
       
       // Chamar callback se fornecido
       if (onOrdemUpdate) {
+        console.log("Chamando callback onOrdemUpdate após adicionar subatividades");
         onOrdemUpdate(ordemAtualizada);
       }
       
@@ -179,7 +181,7 @@ export const useSubatividadeOperations = (ordem?: OrdemServico, onOrdemUpdate?: 
       const novaSubatividade: SubAtividade = {
         id: uuidv4(),
         nome: nome,
-        selecionada: true,
+        selecionada: true, // Garantir que subatividades adicionadas sejam selecionadas
         concluida: false,
         tempoEstimado: tempoEstimado,
         servicoTipo: servicoTipo
@@ -220,6 +222,7 @@ export const useSubatividadeOperations = (ordem?: OrdemServico, onOrdemUpdate?: 
       
       // Chamar callback se fornecido
       if (onOrdemUpdate) {
+        console.log("Chamando callback onOrdemUpdate após adicionar subatividade personalizada");
         onOrdemUpdate(ordemAtualizada);
       }
       
