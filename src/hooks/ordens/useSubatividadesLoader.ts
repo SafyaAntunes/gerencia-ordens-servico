@@ -31,9 +31,10 @@ export const useSubatividadesLoader = ({
       
       // Log details by type
       Object.entries(defaultValues.servicosSubatividades).forEach(([tipo, subs]) => {
-        console.log(`📝 [useSubatividadesLoader] ${tipo}: ${subs.length} subatividades`);
-        if (subs.length > 0) {
-          console.log(`📝 [useSubatividadesLoader] Primeira subatividade de ${tipo}:`, subs[0]);
+        const subsArray = Array.isArray(subs) ? subs : [];
+        console.log(`📝 [useSubatividadesLoader] ${tipo}: ${subsArray.length} subatividades`);
+        if (subsArray.length > 0) {
+          console.log(`📝 [useSubatividadesLoader] Primeira subatividade de ${tipo}:`, subsArray[0]);
         }
       });
     } else {
@@ -57,22 +58,28 @@ export const useSubatividadesLoader = ({
     }
     
     // HIGHEST PRIORITY: Use saved subatividades from editing mode if available
-    if (defaultValues?.servicosSubatividades?.[tipo]?.length > 0) {
-      console.log(`✅ [loadSubatividades] PRIORIDADE MÁXIMA: Usando subatividades SALVAS da ordem para ${tipo}`, 
-        defaultValues.servicosSubatividades[tipo]);
-      
-      // Ensure all subatividades have the correct states
-      const savedSubatividades = defaultValues.servicosSubatividades[tipo].map(sub => ({
-        ...sub,
-        // Preserve the 'selected' state or set as true if it doesn't exist
-        selecionada: sub.selecionada !== undefined ? sub.selecionada : true,
-        // Preserve the 'completed' state or set as false if it doesn't exist
-        concluida: sub.concluida ?? false
-      }));
-      
-      sourceTracker[tipo] = "edição";
-      trackSource(tipo, "edição");
-      return savedSubatividades;
+    if (defaultValues?.servicosSubatividades?.[tipo]) {
+      const subatividadesArray = Array.isArray(defaultValues.servicosSubatividades[tipo]) 
+                                ? defaultValues.servicosSubatividades[tipo] 
+                                : [];
+                                
+      if (subatividadesArray.length > 0) {
+        console.log(`✅ [loadSubatividades] PRIORIDADE MÁXIMA: Usando subatividades SALVAS da ordem para ${tipo}`, 
+          subatividadesArray);
+        
+        // Ensure all subatividades have the correct states
+        const savedSubatividades = subatividadesArray.map(sub => ({
+          ...sub,
+          // Preserve the 'selected' state or set as true if it doesn't exist
+          selecionada: sub.selecionada !== undefined ? sub.selecionada : true,
+          // Preserve the 'completed' state or set as false if it doesn't exist
+          concluida: sub.concluida ?? false
+        }));
+        
+        sourceTracker[tipo] = "edição";
+        trackSource(tipo, "edição");
+        return savedSubatividades;
+      }
     }
     
     // Mark as pending to avoid duplicate loads
@@ -133,14 +140,21 @@ export const useSubatividadesLoader = ({
       toast.error(`Erro ao carregar subatividades para ${tipo}`);
       
       // If we have values from edit mode, use them despite the error
-      if (defaultValues?.servicosSubatividades?.[tipo]?.length > 0) {
-        console.log(`🔄 [loadSubatividades] Apesar do erro, usando subatividades do modo de edição para ${tipo}`);
-        sourceTracker[tipo] = "edição (recuperação de erro)";
-        trackSource(tipo, "edição (recuperação de erro)");
-        return defaultValues.servicosSubatividades![tipo];
-      } 
+      if (defaultValues?.servicosSubatividades?.[tipo]) {
+        const recoveryArray = Array.isArray(defaultValues.servicosSubatividades[tipo])
+                            ? defaultValues.servicosSubatividades[tipo]
+                            : [];
+                            
+        if (recoveryArray.length > 0) {
+          console.log(`🔄 [loadSubatividades] Apesar do erro, usando subatividades do modo de edição para ${tipo}`);
+          sourceTracker[tipo] = "edição (recuperação de erro)";
+          trackSource(tipo, "edição (recuperação de erro)");
+          return recoveryArray;
+        }
+      }
+      
       // Otherwise use defaults as last resort
-      else if (defaultSubatividades && defaultSubatividades[tipo]) {
+      if (defaultSubatividades && defaultSubatividades[tipo]) {
         console.log(`🔄 [loadSubatividades] Usando básicos como último recurso para ${tipo}`);
         const defaultSubs = defaultSubatividades[tipo].map(nome => ({
           id: nome,
