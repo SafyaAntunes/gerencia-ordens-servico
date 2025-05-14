@@ -1,4 +1,3 @@
-
 import { memo, useCallback, useEffect, useState } from "react";
 import { FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -107,7 +106,7 @@ export const ServicoTipoSelector = memo(({
     } else if (source.includes("edição")) {
       return <Badge variant="outline" className="ml-2 bg-blue-50">Salvo</Badge>;
     } else if (source.includes("padrão") || source.includes("básico")) {
-      return <Badge variant="outline" className="ml-2 bg-amber-50">Subatividades</Badge>;
+      return <Badge variant="outline" className="ml-2 bg-amber-50">Subatividades</Badge>;  // Changed from "Básico" to "Subatividades"
     }
     
     return null;
