@@ -82,10 +82,11 @@ export default function ServicoAtividadesConfig({
   
   const formatActivityType = (tipo: TipoAtividade): string => {
     switch(tipo) {
-      case 'lavagem': return 'Subatividades - Lavagem';
-      case 'inspecao_inicial': return 'Subatividades - Inspeção Inicial';
-      case 'inspecao_final': return 'Subatividades - Inspeção Final';
-      default: return `Subatividades - ${tipo}`;
+      case 'lavagem': return 'Lavagem';
+      case 'inspecao_inicial': return 'Inspeção Inicial';
+      case 'inspecao_final': return 'Inspeção Final';
+      case 'Subatividades': return 'Subatividades';  // Return without adding prefix
+      default: return tipo;
     }
   };
   
@@ -105,11 +106,19 @@ export default function ServicoAtividadesConfig({
     }
   };
   
+  const getCardTitle = () => {
+    if (atividadeTipo === 'Subatividades') {
+      return `Subatividades - ${formatServiceType(servicoTipo)}`;
+    } else {
+      return `${formatActivityType(atividadeTipo)} - ${formatServiceType(servicoTipo)}`;
+    }
+  };
+  
   return (
     <Card className="mb-4">
       <CardHeader>
         <CardTitle className="text-lg">
-          {formatActivityType(atividadeTipo)} - {formatServiceType(servicoTipo)}
+          {getCardTitle()}
         </CardTitle>
       </CardHeader>
       <CardContent>

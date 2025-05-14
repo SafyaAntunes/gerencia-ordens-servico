@@ -29,12 +29,20 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
     if (subatividades && subatividades.length > 0) {
       console.log(`[ServicoSubatividades] Usando subatividades das props para ${tipoServico}:`, subatividades);
       
-      // Garantir que estados importantes como 'selecionada' estejam corretos
+      // Garantir que estados importantes como 'selecionada' estejam preservados exatamente como vieram
+      // Log para depuração - verificar o estado 'selecionada' antes de processamento
+      console.log(`[ServicoSubatividades] Estado 'selecionada' das subatividades recebidas:`, 
+          subatividades.map(sub => ({ id: sub.id, nome: sub.nome, selecionada: sub.selecionada })));
+      
       const processedSubs = subatividades.map(sub => ({
         ...sub,
         // IMPORTANTE: Preservar o valor de selecionada exatamente como veio das props
-        selecionada: sub.selecionada !== undefined ? sub.selecionada : true
+        selecionada: sub.selecionada
       }));
+      
+      // Log para depuração - verificar o estado 'selecionada' após processamento
+      console.log(`[ServicoSubatividades] Estado 'selecionada' após processamento:`, 
+          processedSubs.map(sub => ({ id: sub.id, nome: sub.nome, selecionada: sub.selecionada })));
       
       setLocalSubatividades(processedSubs);
       setDataSource("props");
@@ -98,13 +106,15 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
   // Importante: Atualizar quando as props mudarem, mantendo seleções
   useEffect(() => {
     if (subatividades && subatividades.length > 0) {
-      console.log(`[ServicoSubatividades] Atualizando subatividades para ${tipoServico} a partir das props:`, subatividades);
+      console.log(`[ServicoSubatividades] Atualizando subatividades para ${tipoServico} a partir das props:`, 
+        subatividades.map(sub => ({ id: sub.id, nome: sub.nome, selecionada: sub.selecionada })));
       setLocalSubatividades(subatividades);
     }
   }, [subatividades, tipoServico]);
   
   const handleSubatividadesChange = (updatedSubatividades: SubAtividade[]) => {
-    console.log(`[ServicoSubatividades] Alterações em subatividades para ${tipoServico}:`, updatedSubatividades);
+    console.log(`[ServicoSubatividades] Alterações em subatividades para ${tipoServico}:`, 
+      updatedSubatividades.map(sub => ({ id: sub.id, nome: sub.nome, selecionada: sub.selecionada })));
     setLocalSubatividades(updatedSubatividades);
     onChange(updatedSubatividades);
   };

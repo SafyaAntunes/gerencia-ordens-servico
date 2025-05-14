@@ -66,7 +66,8 @@ export const ServicoTipoSelector = memo(({
   // Use useCallback to memoize handleSubatividadeChange for each tipo
   const getMemoizedChangeHandler = useCallback((tipo: TipoServico) => {
     return (subatividades: SubAtividade[]) => {
-      console.log(`[ServicoTipoSelector] Subatividades alteradas para ${tipo}:`, subatividades);
+      console.log(`[ServicoTipoSelector] Subatividades alteradas para ${tipo}:`, 
+        subatividades.map(sub => ({ id: sub.id, nome: sub.nome, selecionada: sub.selecionada })));
       onSubatividadesChange(tipo, subatividades);
     };
   }, [onSubatividadesChange]);
@@ -76,9 +77,12 @@ export const ServicoTipoSelector = memo(({
     const servicosTipos = form.getValues("servicosTipos") || [];
     
     servicosTipos.forEach(tipo => {
+      // Check if we already have subatividades for this service type
+      const existingSubatividades = servicosSubatividades[tipo];
+      
       // If there are no subatividades for this service type but we have defaults, 
       // create basic subatividades from the defaults
-      if ((!servicosSubatividades[tipo] || servicosSubatividades[tipo].length === 0) && 
+      if ((!existingSubatividades || existingSubatividades.length === 0) && 
           defaultSubatividades && defaultSubatividades[tipo as TipoServico]) {
         
         console.log(`[ServicoTipoSelector] Nenhuma subatividade encontrada para ${tipo}, criando padrões`);
@@ -92,7 +96,8 @@ export const ServicoTipoSelector = memo(({
         onSubatividadesChange(tipo as TipoServico, defaultSubs);
       } else {
         console.log(`[ServicoTipoSelector] Subatividades para ${tipo} já existem:`, 
-          servicosSubatividades[tipo]?.length || 0);
+          existingSubatividades?.length || 0, 
+          existingSubatividades?.map(sub => ({ id: sub.id, nome: sub.nome, selecionada: sub.selecionada })));
       }
     });
   }, [form, servicosSubatividades, defaultSubatividades, onSubatividadesChange]);

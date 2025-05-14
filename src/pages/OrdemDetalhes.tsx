@@ -121,24 +121,31 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
     const servicosSubatividades: Record<string, SubAtividade[]> = {};
     ordem.servicos.forEach(servico => {
       if (servico.subatividades && servico.subatividades.length > 0) {
-        // Log para depuração - visualizar as subatividades antes de passar para o form
+        // Log detalhado para cada serviço e suas subatividades
+        console.log(`[OrdemDetalhes] Serviço ${servico.tipo} tem ${servico.subatividades.length} subatividades.`);
         console.log(`[OrdemDetalhes] Subatividades do serviço ${servico.tipo} para edição:`, 
           servico.subatividades.map(sub => ({ 
             id: sub.id, 
             nome: sub.nome, 
-            selecionada: sub.selecionada 
+            selecionada: sub.selecionada !== undefined ? sub.selecionada : true
           }))
         );
         
         // Importante: Preservar explicitamente o estado 'selecionada' de cada subatividade
-        servicosSubatividades[servico.tipo] = servico.subatividades.map(sub => ({
-          ...sub,
-          // Se selecionada já estiver definido, use esse valor, caso contrário, defina como true
-          selecionada: sub.selecionada !== undefined ? sub.selecionada : true
-        }));
+        servicosSubatividades[servico.tipo] = servico.subatividades.map(sub => {
+          // Log individual para entender o estado de cada subatividade
+          console.log(`[OrdemDetalhes] Subatividade ${sub.nome}: selecionada=${sub.selecionada !== undefined ? sub.selecionada : 'undefined'}`);
+          
+          return {
+            ...sub,
+            // Se selecionada já estiver definido, use esse valor, caso contrário, defina como true
+            selecionada: sub.selecionada !== undefined ? sub.selecionada : true
+          };
+        });
       }
     });
     
+    console.log("[OrdemDetalhes] Resultado final das subatividades preparadas:", servicosSubatividades);
     return servicosSubatividades;
   };
 
