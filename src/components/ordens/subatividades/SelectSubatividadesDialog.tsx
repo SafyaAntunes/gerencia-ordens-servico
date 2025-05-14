@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/dialog";
 import { getSubatividadesByTipo } from "@/services/subatividadeService";
 import { Loader2 } from "lucide-react";
+import { useServicoSubatividades } from "@/hooks/useServicoSubatividades";
+import { toast } from "sonner";
 
 interface SelectSubatividadesDialogProps {
   open: boolean;
@@ -31,30 +33,78 @@ export function SelectSubatividadesDialog({
   const [subatividadesDisponiveis, setSubatividadesDisponiveis] = useState<SubAtividade[]>([]);
   const [selecionadas, setSelecionadas] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Obter as subatividades padrão caso não haja nenhuma no banco
+  const { defaultSubatividades } = useServicoSubatividades();
 
   useEffect(() => {
     if (open && servicoTipo) {
       setIsLoading(true);
+      
       // Buscar subatividades do banco de dados para este tipo de serviço
       getSubatividadesByTipo(servicoTipo)
         .then((subatividades) => {
           console.log(`Subatividades carregadas do banco para ${servicoTipo}:`, subatividades);
-          setSubatividadesDisponiveis(subatividades);
+          
+          if (subatividades.length === 0) {
+            // Se não houver subatividades no banco, usar as padrão
+            const subatividadesPadrao = defaultSubatividades[servicoTipo] || [];
+            console.log("Usando subatividades padrão:", subatividadesPadrao);
+            
+            // Converter strings para objetos SubAtividade
+            const subatividadesObjetos = subatividadesPadrao.map((nome, index) => ({
+              id: `default-${index}`,
+              nome,
+              selecionada: false,
+              tempoEstimado: 1
+            }));
+            
+            setSubatividadesDisponiveis(subatividadesObjetos);
+          } else {
+            setSubatividadesDisponiveis(subatividades);
+          }
           
           // Inicializar todas como selecionadas
           const inicial: Record<string, boolean> = {};
-          subatividades.forEach(sub => {
+          const subs = subatividades.length > 0 ? subatividades : defaultSubatividades[servicoTipo]?.map((nome, index) => ({
+            id: `default-${index}`,
+            nome,
+            selecionada: false,
+            tempoEstimado: 1
+          })) || [];
+          
+          subs.forEach(sub => {
             inicial[sub.nome] = true;
           });
+          
           setSelecionadas(inicial);
           setIsLoading(false);
         })
         .catch(error => {
           console.error("Erro ao buscar subatividades:", error);
+          toast.error("Erro ao carregar subatividades");
+          
+          // Em caso de erro, tentar usar as padrão
+          const subatividadesPadrao = defaultSubatividades[servicoTipo] || [];
+          const subatividadesObjetos = subatividadesPadrao.map((nome, index) => ({
+            id: `default-${index}`,
+            nome,
+            selecionada: false,
+            tempoEstimado: 1
+          }));
+          
+          setSubatividadesDisponiveis(subatividadesObjetos);
+          
+          const inicial: Record<string, boolean> = {};
+          subatividadesPadrao.forEach(nome => {
+            inicial[nome] = true;
+          });
+          
+          setSelecionadas(inicial);
           setIsLoading(false);
         });
     }
-  }, [open, servicoTipo]);
+  }, [open, servicoTipo, defaultSubatividades]);
 
   const handleToggleSubatividade = (nome: string, checked: boolean) => {
     setSelecionadas(prev => ({
@@ -86,6 +136,12 @@ export function SelectSubatividadesDialog({
       .map(([nome]) => nome);
     
     console.log("Subatividades selecionadas para adicionar:", subatividadesSelecionadas);
+    
+    if (subatividadesSelecionadas.length === 0) {
+      toast.warning("Nenhuma subatividade selecionada");
+      return;
+    }
+    
     onSelect(subatividadesSelecionadas);
     onOpenChange(false);
   };

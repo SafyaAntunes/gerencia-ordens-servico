@@ -57,6 +57,8 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
         tempoEstimado: 1 // Tempo padrão de 1 hora
       }));
       
+      console.log("Novas subatividades a serem adicionadas:", novasSubatividades);
+      
       // Criar uma cópia do array de serviços para modificação
       const servicosAtualizados = [...ordem.servicos];
       
@@ -76,6 +78,8 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
           return;
         }
         
+        console.log("Subatividades filtradas para adicionar:", novasParaAdicionar);
+        
         // Adicionar novas subatividades às existentes
         servicosAtualizados[servicoIndex] = {
           ...servicosAtualizados[servicoIndex],
@@ -89,6 +93,8 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
         };
       }
       
+      console.log("Serviços atualizados:", servicosAtualizados);
+      
       // Atualizar no Firebase
       const ordemRef = doc(db, "ordens_servico", ordem.id);
       await updateDoc(ordemRef, { servicos: servicosAtualizados });
@@ -99,17 +105,22 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
       
       if (ordemDoc.exists()) {
         ordemAtualizada = { ...ordemDoc.data(), id: ordemDoc.id } as OrdemServico;
+        console.log("Ordem atualizada do Firestore:", ordemAtualizada);
       } else {
         // Se não conseguir buscar a ordem atualizada, usar a versão local
         ordemAtualizada = {
           ...ordem,
           servicos: servicosAtualizados
         };
+        console.log("Usando ordem local atualizada:", ordemAtualizada);
       }
       
       // Atualizar estado local através do callback
       if (onOrdemUpdate) {
+        console.log("Chamando onOrdemUpdate com ordem atualizada");
         onOrdemUpdate(ordemAtualizada);
+      } else {
+        console.warn("onOrdemUpdate não está definido, não foi possível atualizar a UI");
       }
       
       toast.success(`Subatividades adicionadas com sucesso para ${servicoTipo}`);
@@ -196,6 +207,7 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
       
       // Atualizar estado local através do callback
       if (onOrdemUpdate) {
+        console.log("Chamando onOrdemUpdate com ordem atualizada após adicionar subatividade personalizada");
         onOrdemUpdate(ordemAtualizada);
       }
       
