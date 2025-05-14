@@ -7,7 +7,7 @@ import { OrdemDetalhesContent } from "@/components/ordens/ordem-detalhes";
 interface OrdemDetalhesProps extends LogoutProps {}
 
 export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
 
   return (
     <Layout onLogout={onLogout}>

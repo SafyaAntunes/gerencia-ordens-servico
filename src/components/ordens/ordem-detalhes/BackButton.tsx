@@ -1,8 +1,9 @@
 
+import React from 'react';
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
-interface BackButtonProps {
+export interface BackButtonProps {
   onClick: () => void;
 }
 

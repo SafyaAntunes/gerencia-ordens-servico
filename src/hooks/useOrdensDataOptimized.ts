@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { collection, getDocs, query, orderBy, where, limit, startAfter } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, where, limit, startAfter, DocumentData, QueryDocumentSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { OrdemServico } from "@/types/ordens";
 import { toast } from "sonner";
@@ -30,7 +30,7 @@ export const useOrdensDataOptimized = ({
   const [progressoFilter, setProgressoFilter] = useState("all");
   
   // Estados para paginação
-  const [lastVisible, setLastVisible] = useState<any>(null);
+  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -87,22 +87,22 @@ export const useOrdensDataOptimized = ({
             const querySnapshot = await getDocs(baseQuery);
             
             // Atualiza o último item visível para paginação
-            if (enablePagination) {
+            if (enablePagination && querySnapshot.docs.length > 0) {
               const lastDoc = querySnapshot.docs[querySnapshot.docs.length - 1];
               setLastVisible(lastDoc);
               setHasMore(querySnapshot.docs.length === ITEMS_PER_PAGE);
             }
             
             return querySnapshot.docs.map(doc => {
-              const data = doc.data();
+              const docData = doc.data();
               
               return {
-                ...data,
+                ...docData,
                 id: doc.id,
-                dataAbertura: data.dataAbertura?.toDate() || new Date(),
-                dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
+                dataAbertura: docData.dataAbertura?.toDate() || new Date(),
+                dataPrevistaEntrega: docData.dataPrevistaEntrega?.toDate() || new Date(),
                 // Cálculo de progresso otimizado
-                progressoEtapas: calculateProgressoEtapas(data)
+                progressoEtapas: calculateProgressoEtapas(docData)
               } as OrdemServico;
             });
           }
@@ -145,7 +145,7 @@ export const useOrdensDataOptimized = ({
   }, [isTecnico, funcionarioId, especialidades, lastVisible, currentPage, enablePagination]);
 
   // Função de cálculo de progresso otimizada
-  const calculateProgressoEtapas = (data: any) => {
+  const calculateProgressoEtapas = (data: DocumentData) => {
     if (data.progressoEtapas !== undefined) {
       return data.progressoEtapas;
     }

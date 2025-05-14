@@ -1,18 +1,33 @@
 
 import { useState, useCallback } from 'react';
-import { SubAtividade, TipoServico } from '@/types/ordens';
+import { SubAtividade } from '@/types/ordens';
 
 export const useTrackingSubatividades = () => {
-  const [trackingData, setTrackingData] = useState<Record<string, any>>({});
+  const [subatividades, setSubatividades] = useState<Record<string, SubAtividade[]>>({});
 
-  // Modified to accept a string for the second parameter instead of SubAtividade[]
-  const logSubatividadesState = useCallback((location: string, servicoTipo: string) => {
-    console.log(`[${location}] Subatividades tracking for ${servicoTipo}`);
-    setTrackingData(prev => ({
-      ...prev,
-      [`${location}-${servicoTipo}`]: new Date().toISOString()
-    }));
+  // Preparar subatividades para edição com status preservado
+  const prepareSubatividadesForEdit = useCallback(() => {
+    return subatividades;
+  }, [subatividades]);
+
+  // Atualizar estado de seleção de uma subatividade
+  const onSubatividadeToggle = useCallback((servicoTipo: string, subId: string, checked: boolean) => {
+    setSubatividades(prev => {
+      const tipoSubatividades = prev[servicoTipo] || [];
+      
+      return {
+        ...prev,
+        [servicoTipo]: tipoSubatividades.map(sub => 
+          sub.id === subId ? { ...sub, selecionada: checked } : sub
+        )
+      };
+    });
   }, []);
 
-  return { trackingData, logSubatividadesState };
+  return {
+    subatividades,
+    setSubatividades,
+    prepareSubatividadesForEdit,
+    onSubatividadeToggle
+  };
 };
