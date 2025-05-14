@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { SubAtividade, TipoServico } from "@/types/ordens";
 import { getSubatividadesByTipo, getAllSubatividades } from "@/services/subatividadeService";
@@ -98,7 +99,7 @@ export const useServicosState = (
     const sourceTracker: Record<string, string> = {};
     
     const loadSubatividades = async (tipo: TipoServico) => {
-      // Pular se j�� estamos carregando este tipo
+      // Pular se já estamos carregando este tipo
       if (pendingOperations[tipo]) {
         console.log(`⏭️ [loadSubatividades] Já está carregando subatividades para ${tipo}, pulando...`);
         return;
@@ -150,8 +151,8 @@ export const useServicosState = (
             concluida: false
           }));
           
-          console.log(`⚠️ [loadSubatividades] USANDO SUBATIVIDADES PADRÃO (fallback) para ${tipo}:`, defaultSubs);
-          toast.warning(`Subatividades de configuração não encontradas para ${tipo}. Usando valores padrão.`);
+          console.log(`⚠️ [loadSubatividades] USANDO SUBATIVIDADES BÁSICAS (fallback) para ${tipo}:`, defaultSubs);
+          toast.warning(`Subatividades de configuração não encontradas para ${tipo}. Usando valores básicos.`);
           
           setServicosSubatividades(prev => ({
             ...prev,
@@ -185,7 +186,7 @@ export const useServicosState = (
         } 
         // Caso contrário, use os padrões como última opção
         else if (defaultSubatividades && defaultSubatividades[tipo as TipoServico]) {
-          console.log(`🔄 [loadSubatividades] Usando padrões como último recurso para ${tipo}`);
+          console.log(`🔄 [loadSubatividades] Usando básicos como último recurso para ${tipo}`);
           const defaultSubs = defaultSubatividades[tipo as TipoServico].map(nome => ({
             id: nome,
             nome,
@@ -198,7 +199,7 @@ export const useServicosState = (
             [tipo]: defaultSubs
           }));
           sourceTracker[tipo] = "padrão (recuperação de erro)";
-          setLoadingSources(prev => ({...prev, [tipo]: "padrão (recuperação de erro)"}));
+          setLoadingSources(prev => ({...prev, [tipo]: "básico (recuperação de erro)"}));
         } else {
           setServicosSubatividades(prev => ({
             ...prev,

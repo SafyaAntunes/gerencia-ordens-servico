@@ -22,7 +22,7 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [localSubatividades, setLocalSubatividades] = useState<SubAtividade[]>(subatividades);
   const { defaultSubatividades } = useServicoSubatividades();
-  const [dataSource, setDataSource] = useState<"banco" | "default" | "props">("props");
+  const [dataSource, setDataSource] = useState<"banco" | "básico" | "props">("props");
   
   // Priorizar subatividades fornecidas via props (da edição)
   useEffect(() => {
@@ -51,7 +51,7 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
           setDataSource("banco");
           onChange(mappedSubs);
         } else {
-          console.log(`[ServicoSubatividades] Nenhuma subatividade encontrada no banco para ${tipoServico}, usando padrões`);
+          console.log(`[ServicoSubatividades] Nenhuma subatividade encontrada no banco para ${tipoServico}, usando básicos`);
           // Usar padrões apenas se não tiver subatividades no banco de dados
           const defaultSubs = defaultSubatividades[tipoServico]?.map(nome => ({
             id: nome,
@@ -61,7 +61,7 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
           })) || [];
           
           setLocalSubatividades(defaultSubs);
-          setDataSource("default");
+          setDataSource("básico");
           onChange(defaultSubs);
         }
       } catch (error) {
@@ -77,7 +77,7 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
         })) || [];
         
         setLocalSubatividades(defaultSubs);
-        setDataSource("default");
+        setDataSource("básico");
         onChange(defaultSubs);
       } finally {
         setIsLoading(false);
@@ -90,11 +90,13 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
   // Update local state when subatividades change from props
   useEffect(() => {
     if (subatividades && subatividades.length > 0) {
+      console.log(`[ServicoSubatividades] Atualizando subatividades para ${tipoServico} a partir das props:`, subatividades);
       setLocalSubatividades(subatividades);
     }
-  }, [subatividades]);
+  }, [subatividades, tipoServico]);
   
   const handleSubatividadesChange = (updatedSubatividades: SubAtividade[]) => {
+    console.log(`[ServicoSubatividades] Alterações em subatividades para ${tipoServico}:`, updatedSubatividades);
     setLocalSubatividades(updatedSubatividades);
     onChange(updatedSubatividades);
   };
@@ -105,9 +107,9 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
 
   return (
     <div>
-      {dataSource === "default" && (
+      {dataSource === "básico" && (
         <div className="text-sm text-amber-600 mb-2">
-          ⚠️ Usando subatividades padrão. As configurações não foram encontradas no banco de dados.
+          ⚠️ Usando subatividades básicas. As configurações não foram encontradas no banco de dados.
         </div>
       )}
       
