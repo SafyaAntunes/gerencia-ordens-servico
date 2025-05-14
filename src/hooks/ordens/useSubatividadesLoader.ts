@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { getAllSubatividades } from '@/services/subatividadeService';
+import { getAllSubatividades, getSubatividadesByTipo } from '@/services/subatividadeService';
 import { SubAtividade, TipoServico } from '@/types/ordens';
 import { isEqual } from 'lodash';
 
@@ -39,16 +39,19 @@ export function useSubatividadesLoader({
     setError(null);
 
     try {
-      console.log(`[useSubatividadesLoader] Buscando subatividades para ${tipoServico}`);
-      const resultado = await getAllSubatividades();
+      console.log(`[useSubatividadesLoader] Buscando subatividades para ${tipoServico} diretamente do banco`);
       
-      // CORREÇÃO: Garantir que todas as subatividades tenham selecionada=false por padrão
-      const subatividadesComDefault = resultado.map(sub => ({
+      // Usar getSubatividadesByTipo para obter subatividades específicas para este tipo
+      const subatividades = await getSubatividadesByTipo(tipoServico);
+      
+      // Marcar todas as subatividades como não selecionadas por padrão
+      const subatividadesComDefault = subatividades.map(sub => ({
         ...sub,
         selecionada: false // Todas começam não selecionadas por padrão
       }));
       
-      console.log(`[useSubatividadesLoader] Obtidas ${subatividadesComDefault.length} subatividades para ${tipoServico}`);
+      console.log(`[useSubatividadesLoader] Obtidas ${subatividadesComDefault.length} subatividades do banco para ${tipoServico}:`, 
+        subatividadesComDefault.map(s => ({ id: s.id, nome: s.nome })));
       
       // Atualizar o estado apenas se houver mudanças
       setLoadedSubatividades(prevState => {

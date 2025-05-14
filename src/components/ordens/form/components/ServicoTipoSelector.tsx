@@ -1,4 +1,3 @@
-
 import { memo, useCallback, useEffect, useState } from "react";
 import { FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -110,25 +109,26 @@ export const ServicoTipoSelector = memo(({
           nome,
           selecionada: false, // Garantir que subatividades novas sempre começam desmarcadas
           concluida: false,
+          tempoEstimado: 0,
+          servicoTipo: tipo as TipoServico
         }));
         
         onSubatividadesChange(tipo as TipoServico, defaultSubs);
       } else if (existingSubatividades) {
-        // MELHORIA: Garantir que todas as subatividades existentes tenham o estado 'selecionada' definido corretamente
-        // Se estamos em modo de edição, preservar a seleção, caso contrário, definir como false
+        // Verificar a fonte de carregamento para decidir sobre a seleção padrão
+        // Se NÃO for de uma edição existente, garantir que todas subatividades começam desmarcadas
         const isFromEditing = loadingSources[tipo] === "edição";
         
-        const processedSubs = existingSubatividades.map(sub => ({
-          ...sub,
-          // Se for de edição, preservar o estado atual, senão forçar como false
-          selecionada: isFromEditing ? sub.selecionada : false
-        }));
-        
-        if (JSON.stringify(processedSubs) !== JSON.stringify(existingSubatividades)) {
-          console.log(`[ServicoTipoSelector] Atualizando subatividades para ${tipo} para garantir estado 'selecionada'`);
+        if (!isFromEditing) {
+          console.log(`[ServicoTipoSelector] Serviço ${tipo} NÃO é de edição, desmarcando todas subatividades`);
+          const processedSubs = existingSubatividades.map(sub => ({
+            ...sub,
+            selecionada: false // Forçar como false para novos serviços
+          }));
+          
           onSubatividadesChange(tipo as TipoServico, processedSubs);
         } else {
-          console.log(`[ServicoTipoSelector] Subatividades para ${tipo} já têm estado 'selecionada' correto`);
+          console.log(`[ServicoTipoSelector] Serviço ${tipo} é de edição, preservando seleções existentes`);
         }
       }
     });

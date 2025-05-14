@@ -38,11 +38,11 @@ export const ServicoSubatividades = memo(({
     
     logSubatividadesState("ServicoSubatividades-recebidas", tipoServico.toString());
     
-    // Corrigir qualquer inconsistência no estado 'selecionada'
-    // CORREÇÃO: NÃO definir selecionada como true por padrão, preservar o estado existente
+    // NUNCA definir selecionada como true por padrão, preservar o estado existente
     const processedSubs = subatividades.map(sub => ({
       ...sub,
-      selecionada: sub.selecionada !== undefined ? sub.selecionada : false // Definir false por padrão
+      // Se já tiver definição de selecionada, manter. Caso contrário, definir como false
+      selecionada: sub.selecionada !== undefined ? sub.selecionada : false
     }));
     
     // Se houver diferenças, atualizar
@@ -128,6 +128,3 @@ export const ServicoSubatividades = memo(({
 });
 
 ServicoSubatividades.displayName = "ServicoSubatividades";
-
-// Re-exportar para compatibilidade com importações anteriores
-export { ServicoSubatividades as ServicoSubatividadesComponent };
