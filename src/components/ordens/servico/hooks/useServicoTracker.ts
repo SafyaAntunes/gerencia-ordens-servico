@@ -1,11 +1,10 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { getFuncionarios } from "@/services/funcionarioService";
 import { Servico, SubAtividade, TipoServico, EtapaOS, OrdemServico } from "@/types/ordens";
 import { Funcionario } from "@/types/funcionarios";
 import { useAuth } from "@/hooks/useAuth";
-import { UseServicoTrackerProps, UseServicoTrackerResult, ServicoStatus, PausaRegistro } from "./types/servicoTrackerTypes";
+import { ServicoTrackerProps, UseServicoTrackerResult, ServicoStatus, PausaRegistro } from "./types/servicoTrackerTypes";
 import { useOrdemTimer } from "@/hooks/useOrdemTimer";
 import { getServicoStatus } from "./utils/servicoTrackerUtils";
 import { formatTime } from "@/utils/timerUtils";
@@ -21,7 +20,7 @@ export function useServicoTracker({
   etapa: legacyEtapa,
   onServicoStatusChange,
   onSubatividadeToggle
-}: UseServicoTrackerProps): UseServicoTrackerResult {
+}: ServicoTrackerProps): UseServicoTrackerResult {
   const { funcionario, canEditOrder } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);

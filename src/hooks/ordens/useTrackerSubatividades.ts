@@ -8,11 +8,11 @@ import { useServicoSubatividades } from '@/hooks/useServicoSubatividades';
 import { v4 as uuidv4 } from 'uuid';
 
 interface UseTrackerSubatividadesProps {
-  ordem: OrdemServico;
+  ordem?: OrdemServico;
   onOrdemUpdate?: (ordemAtualizada: OrdemServico) => void;
 }
 
-export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSubatividadesProps) => {
+export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSubatividadesProps = {}) => {
   const [isAddingSubatividades, setIsAddingSubatividades] = useState(false);
   const { defaultSubatividades } = useServicoSubatividades();
   
@@ -20,6 +20,7 @@ export const useTrackerSubatividades = ({ ordem, onOrdemUpdate }: UseTrackerSuba
   const addDefaultSubatividades = useCallback(async (servicoTipo: TipoServico) => {
     if (!ordem?.id) {
       toast.error("ID da ordem não encontrado");
+      console.error("ordem ou ordem.id não encontrado:", ordem);
       return;
     }
     

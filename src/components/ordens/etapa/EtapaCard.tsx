@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { useEtapaResponsavel } from "./hooks/useEtapaResponsavel";
-import { EtapaOS, Servico, TipoServico } from "@/types/ordens";
+import { EtapaOS, Servico, TipoServico, OrdemServico } from "@/types/ordens";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { getFuncionarios } from "@/services/funcionarioService";
@@ -34,6 +34,7 @@ interface EtapaCardProps {
     funcionariosNomes?: string[];
     servicoTipo?: TipoServico;
   };
+  ordem: OrdemServico;
   servicoTipo?: TipoServico;
   onSubatividadeToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
   onServicoStatusChange?: (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
@@ -50,6 +51,7 @@ export default function EtapaCard({
   funcionarioNome,
   servicos = [],
   etapaInfo,
+  ordem,
   servicoTipo,
   onSubatividadeToggle,
   onServicoStatusChange,
@@ -220,7 +222,7 @@ export default function EtapaCard({
       
       <EtapaServicos
         servicos={servicos}
-        ordemId={ordemId}
+        ordem={ordem}
         funcionarioId={funcionarioSelecionadoId || funcionarioId}
         funcionarioNome={funcionarioSelecionadoNome || funcionarioNome}
         etapa={etapa}

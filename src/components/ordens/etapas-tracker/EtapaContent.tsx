@@ -1,100 +1,100 @@
 
-import { EtapaOS, Servico, TipoServico } from "@/types/ordens";
-import { Card } from "@/components/ui/card";
-import { EmptyServices } from "./EmptyServices";
-import EtapaCard from "@/components/ordens/etapa/EtapaCard";
-import { etapaNomes } from "@/utils/etapaNomes";
+import { useState } from "react";
+import { OrdemServico, EtapaOS, TipoServico } from "@/types/ordens";
+import { useEtapaOperations } from "../etapa/hooks/useEtapaOperations";
+import EtapaCard from "../etapa/EtapaCard";
+import InspecaoServicosSelector from "./InspecaoServicosSelector";
+import EmptyServices from "./EmptyServices";
+import { etapaNomeFormatado } from "@/utils/etapaNomes";
 
 interface EtapaContentProps {
-  ordemId: string;
+  ordem: OrdemServico;
   etapa: EtapaOS;
-  etapaInfo?: any;
-  servicos: Servico[];
-  servicoTipo?: TipoServico;
-  onSubatividadeToggle: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
-  onServicoStatusChange: (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
-  onEtapaStatusChange: (etapa: EtapaOS, concluida: boolean, funcionarioId?: string, funcionarioNome?: string, servicoTipo?: TipoServico) => void;
-  onSubatividadeSelecionadaToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
-  onFuncionariosChange?: (etapa: EtapaOS, funcionariosIds: string[], funcionariosNomes: string[], servicoTipo?: string) => void;
+  activeServico?: TipoServico;
+  onOrdemUpdate: (ordemAtualizada: OrdemServico) => void;
+  onFuncionariosChange?: (etapa: EtapaOS, funcionariosIds: string[], funcionariosNomes: string[], servicoTipo?: TipoServico) => void;
 }
 
 export default function EtapaContent({
-  ordemId,
+  ordem,
   etapa,
-  etapaInfo,
-  servicos,
-  servicoTipo,
-  onSubatividadeToggle,
-  onServicoStatusChange,
-  onEtapaStatusChange,
-  onSubatividadeSelecionadaToggle,
+  activeServico,
+  onOrdemUpdate,
   onFuncionariosChange
 }: EtapaContentProps) {
-  const etapaKey = servicoTipo ? `${etapa}_${servicoTipo}` : etapa;
-  const etapaInfoEspecifica = etapaInfo ? 
-    (servicoTipo ? etapaInfo[`${etapa}_${servicoTipo}`] : etapaInfo[etapa]) : 
-    undefined;
+  const [selectedService, setSelectedService] = useState<TipoServico | undefined>(activeServico);
   
-  console.log("EtapaContent - Recebendo serviços:", { etapa, servicoTipo, servicosRecebidos: servicos.map(s => s.tipo) });
-  
-  // Filtrar serviços com base na etapa atual
-  const servicosFiltrados = servicos.filter(servico => {
-    // Para etapa de inspeção, já estamos recebendo os serviços filtrados pelo servicoTipo
-    if ((etapa === "inspecao_inicial" || etapa === "inspecao_final") && servicoTipo) {
-      console.log("Filtro de inspeção:", servico.tipo, servicoTipo, servico.tipo === servicoTipo);
-      return servico.tipo === servicoTipo;
-    }
-    
-    // Para a etapa de lavagem, mostrar somente os serviços de lavagem
-    if (etapa === "lavagem") {
-      console.log("Filtro de lavagem:", servico.tipo, servico.tipo === "lavagem");
-      return servico.tipo === "lavagem";
-    }
-    
-    // Para a etapa de retifica, considerar os serviços específicos de retifica
-    if (etapa === "retifica") {
-      const isRetifica = ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(servico.tipo);
-      console.log("Filtro de retifica:", servico.tipo, isRetifica);
-      return isRetifica;
-    }
-    
-    // Para outras etapas, mostrar serviços do mesmo tipo da etapa
-    console.log("Filtro padrão:", servico.tipo, etapa, servico.tipo === etapa);
-    return servico.tipo === etapa;
+  const {
+    servicosEtapa,
+    getEtapaInfo,
+    handleSubatividadeToggle,
+    handleServicoStatusChange,
+    handleEtapaStatusChange,
+    handleSubatividadeSelecionadaToggle
+  } = useEtapaOperations({
+    ordem,
+    onUpdate: onOrdemUpdate,
   });
   
-  console.log("EtapaContent - Após filtro, mostrando serviços:", servicosFiltrados.map(s => s.tipo));
-  
-  if (servicosFiltrados.length === 0) {
-    console.log("EtapaContent - Nenhum serviço encontrado para a etapa:", etapa);
-    return <EmptyServices etapa={etapa} />;
-  }
-
-  const getNomeEtapa = (etapa: EtapaOS, servicoTipo?: TipoServico): string => {
-    let nome = etapaNomes[etapa] || etapa.replace('_', ' ');
-    
-    if ((etapa === "inspecao_inicial" || etapa === "inspecao_final") && servicoTipo) {
-      const servicoNome = servicoTipo.replace('_', ' ');
-      nome += ` - ${servicoNome.charAt(0).toUpperCase() + servicoNome.slice(1)}`;
+  // Determinar quais serviços exibir com base na etapa
+  const getServicosFiltrados = () => {
+    if (etapa !== "inspecao_inicial" && etapa !== "inspecao_final") {
+      return servicosEtapa;
     }
     
-    return nome;
+    if (selectedService) {
+      return servicosEtapa.filter(s => s.tipo === selectedService);
+    }
+    
+    return [];
   };
-
-  return (
-    <div className="space-y-4">
-      <EtapaCard
-        ordemId={ordemId}
+  
+  // Verificar se é etapa de inspeção e precisa selecionar serviço
+  const isInspecaoEtapa = etapa === "inspecao_inicial" || etapa === "inspecao_final";
+  const servicosFiltrados = getServicosFiltrados();
+  const servicosTipos = [...new Set(servicosEtapa.map(s => s.tipo))];
+  
+  if (servicosEtapa.length === 0) {
+    return <EmptyServices etapa={etapa} />;
+  }
+  
+  if (isInspecaoEtapa && !selectedService) {
+    return (
+      <InspecaoServicosSelector
+        servicosTipos={servicosTipos}
+        onSelect={setSelectedService}
         etapa={etapa}
-        etapaNome={getNomeEtapa(etapa, servicoTipo)}
-        funcionarioId={etapaInfoEspecifica?.funcionarioId || ""}
-        funcionarioNome={etapaInfoEspecifica?.funcionarioNome || ""}
+      />
+    );
+  }
+  
+  const etapaInfo = getEtapaInfo(etapa, selectedService);
+  const etapaNome = etapaNomeFormatado[etapa] || etapa;
+  
+  return (
+    <div className="mt-4">
+      {isInspecaoEtapa && (
+        <InspecaoServicosSelector
+          servicosTipos={servicosTipos}
+          selectedService={selectedService}
+          onSelect={setSelectedService}
+          etapa={etapa}
+        />
+      )}
+      
+      <EtapaCard
+        ordemId={ordem.id}
+        ordem={ordem}
+        etapa={etapa}
+        etapaNome={etapaNome}
+        funcionarioId=""
         servicos={servicosFiltrados}
-        etapaInfo={etapaInfoEspecifica}
-        servicoTipo={servicoTipo}
-        onSubatividadeToggle={onSubatividadeToggle}
-        onServicoStatusChange={onServicoStatusChange}
-        onEtapaStatusChange={onEtapaStatusChange}
+        etapaInfo={etapaInfo}
+        servicoTipo={selectedService}
+        onSubatividadeToggle={handleSubatividadeToggle}
+        onServicoStatusChange={handleServicoStatusChange}
+        onEtapaStatusChange={handleEtapaStatusChange}
+        onSubatividadeSelecionadaToggle={handleSubatividadeSelecionadaToggle}
         onFuncionariosChange={onFuncionariosChange}
       />
     </div>

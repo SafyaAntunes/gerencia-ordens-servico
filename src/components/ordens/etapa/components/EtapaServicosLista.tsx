@@ -8,6 +8,7 @@ interface EtapaServicosListaProps {
   funcionarioId: string;
   funcionarioNome?: string;
   etapa: EtapaOS;
+  ordem?: OrdemServico;
   onSubatividadeToggle?: (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => void;
   onServicoStatusChange?: (servicoTipo: TipoServico, concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
 }
@@ -18,6 +19,7 @@ export default function EtapaServicosLista({
   funcionarioId,
   funcionarioNome,
   etapa,
+  ordem,
   onSubatividadeToggle,
   onServicoStatusChange
 }: EtapaServicosListaProps) {
@@ -25,8 +27,8 @@ export default function EtapaServicosLista({
     return null;
   }
   
-  // Create a dummy ordem object to pass to ServicoTracker
-  const dummyOrdem: OrdemServico = { id: ordemId } as OrdemServico;
+  // Create a dummy ordem object to pass to ServicoTracker if none is provided
+  const ordemToUse: OrdemServico = ordem || { id: ordemId, servicos: servicos } as OrdemServico;
   
   return (
     <div className="space-y-4">
@@ -34,7 +36,7 @@ export default function EtapaServicosLista({
         <ServicoTracker
           key={`${servico.tipo}-${i}`}
           servico={servico}
-          ordem={dummyOrdem}
+          ordem={ordemToUse}
           ordemId={ordemId}  // Legacy prop
           funcionarioId={funcionarioId}  // Legacy prop
           funcionarioNome={funcionarioNome}  // Legacy prop
