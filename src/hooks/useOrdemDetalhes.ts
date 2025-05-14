@@ -1,14 +1,16 @@
 
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { useOrdemFetch } from "./ordem-detalhes/useOrdemFetch";
 import { useOrdemStatus } from "./ordem-detalhes/useOrdemStatus";
 import { useOrdemUpdate } from "./ordem-detalhes/useOrdemUpdate";
 import { useOrdemDelete } from "./ordem-detalhes/useOrdemDelete";
 import { UseOrdemDetalhesResult } from "./ordem-detalhes/types";
 
-export const useOrdemDetalhes = (id: string | undefined): UseOrdemDetalhesResult => {
+export const useOrdemDetalhes = (id: string | undefined): UseOrdemDetalhesResult & { canEditThisOrder: boolean } => {
   const [activeTab, setActiveTab] = useState<string>("detalhes");
   const [isEditando, setIsEditando] = useState(false);
+  const { funcionario, canEditOrder } = useAuth();
   
   // Fetch ordem data
   const { ordem, setOrdem, isLoading, fetchMotorDetails } = useOrdemFetch(id);
@@ -33,6 +35,9 @@ export const useOrdemDetalhes = (id: string | undefined): UseOrdemDetalhesResult
   
   // Combine submission states
   const isSubmitting = isStatusSubmitting || isUpdateSubmitting || isDeleteSubmitting;
+  
+  // Check if the current user can edit this order
+  const canEditThisOrder = ordem ? canEditOrder(ordem.id) : false;
 
   return {
     ordem,
@@ -48,5 +53,6 @@ export const useOrdemDetalhes = (id: string | undefined): UseOrdemDetalhesResult
     handleSubmit,
     handleDelete,
     handleStatusChange,
+    canEditThisOrder
   };
 };

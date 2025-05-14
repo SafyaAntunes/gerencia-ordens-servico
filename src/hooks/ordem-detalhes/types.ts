@@ -12,10 +12,7 @@ export interface UseOrdemDetalhesResult {
   setIsEditando: (editing: boolean) => void;
   setDeleteDialogOpen: (open: boolean) => void;
   handleOrdemUpdate: (ordemAtualizada: OrdemServico) => void;
-  handleSubmit: (values: any) => Promise<void>;
-  handleDelete: () => Promise<void>;
-  handleStatusChange: (newStatus: StatusOS) => Promise<void>;
+  handleSubmit: (data: any) => void;
+  handleDelete: () => void;
+  handleStatusChange: (status: StatusOS) => void;
 }
-
-// Define the type for setOrdem function
-export type SetOrdemFunction = (ordem: OrdemServico | null | ((prev: OrdemServico | null) => OrdemServico | null)) => void;
