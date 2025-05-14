@@ -1,9 +1,12 @@
+
 import React, { useEffect, useState } from "react";
 import { SubAtividade, TipoServico, TipoAtividade } from "@/types/ordens";
 import { useServicoSubatividades } from "@/hooks/useServicoSubatividades";
 import ServicoAtividadesConfig from "@/components/ordens/ServicoAtividadesConfig";
 import { getSubatividadesByTipo } from "@/services/subatividadeService";
 import { toast } from "sonner";
+import { useTrackingSubatividades } from "@/hooks/ordens/useTrackingSubatividades";
+import { useServicosDebug } from "@/hooks/ordens/useServicosDebug";
 
 interface ServicoSubatividadesProps {
   tipoServico: TipoServico;
@@ -22,47 +25,29 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
   const [localSubatividades, setLocalSubatividades] = useState<SubAtividade[]>(subatividades);
   const { defaultSubatividades } = useServicoSubatividades();
   const [dataSource, setDataSource] = useState<"banco" | "básico" | "props">("props");
+  const { logSubatividadesState } = useTrackingSubatividades();
+  const { logSubatividades } = useServicosDebug('ServicoSubatividades');
   
   // Depuração inicial das subatividades recebidas via props
   useEffect(() => {
-    console.log(`[ServicoSubatividades] INICIALIZAÇÃO - subatividades para ${tipoServico}:`, 
-      subatividades.map(sub => ({
-        id: sub.id,
-        nome: sub.nome,
-        selecionada: sub.selecionada,
-        concluida: sub.concluida
-      }))
-    );
+    logSubatividades('inicialização', tipoServico, subatividades);
   }, []);
   
   // PRIORITIZAR subatividades das props e preservar seu estado 'selecionada'
   useEffect(() => {
     if (subatividades && subatividades.length > 0) {
-      console.log(`[ServicoSubatividades] Usando subatividades das props para ${tipoServico}:`, 
-        subatividades.map(s => ({
-          id: s.id, 
-          nome: s.nome, 
-          selecionada: s.selecionada !== undefined ? s.selecionada : false,
-          concluida: s.concluida
-        }))
-      );
+      logSubatividades('props-update', tipoServico, subatividades);
       
-      // IMPORTANTE: Preservar o estado 'selecionada' de cada subatividade sem modificá-lo
+      // IMPORTANTE: Preservar o estado 'selecionada' de cada subatividade
+      // CORREÇÃO CRÍTICA: Definir como default TRUE, não FALSE para subatividades undefined
       const processedSubs = subatividades.map(sub => ({
         ...sub,
-        // Apenas definir como false se for undefined
-        selecionada: sub.selecionada !== undefined ? sub.selecionada : false
+        // Apenas definir como TRUE se for undefined
+        selecionada: sub.selecionada !== undefined ? sub.selecionada : true
       }));
       
       // Log para depuração - verificar o estado 'selecionada' após processamento
-      console.log(`[ServicoSubatividades] Estado 'selecionada' após processamento:`, 
-        processedSubs.map(sub => ({ 
-          id: sub.id, 
-          nome: sub.nome, 
-          selecionada: sub.selecionada,
-          concluida: sub.concluida
-        }))
-      );
+      logSubatividades('processamento', tipoServico, processedSubs);
       
       setLocalSubatividades(processedSubs);
       setDataSource("props");
@@ -80,9 +65,12 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
           // Mapear para garantir que todas tenham o estado selecionada e concluída
           const mappedSubs = dbSubatividades.map(sub => ({
             ...sub,
-            selecionada: sub.selecionada ?? true,
+            selecionada: sub.selecionada ?? true, // DEFAULT TRUE
             concluida: sub.concluida ?? false
           }));
+          
+          logSubatividades('banco-carregadas', tipoServico, mappedSubs);
+          
           setLocalSubatividades(mappedSubs);
           setDataSource("banco");
           onChange(mappedSubs);
@@ -92,9 +80,11 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
           const defaultSubs = defaultSubatividades[tipoServico]?.map(nome => ({
             id: nome,
             nome,
-            selecionada: true,
+            selecionada: true, // SEMPRE TRUE para defaults
             concluida: false
           })) || [];
+          
+          logSubatividades('default-criadas', tipoServico, defaultSubs);
           
           setLocalSubatividades(defaultSubs);
           setDataSource("básico");
@@ -108,7 +98,7 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
         const defaultSubs = defaultSubatividades[tipoServico]?.map(nome => ({
           id: nome,
           nome,
-          selecionada: true,
+          selecionada: true, // SEMPRE TRUE para defaults 
           concluida: false
         })) || [];
         
@@ -126,18 +116,13 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
   // Importante: Atualizar quando as props mudarem, mantendo seleções
   useEffect(() => {
     if (subatividades && subatividades.length > 0) {
-      console.log(`[ServicoSubatividades] Atualizando subatividades para ${tipoServico} a partir das props:`, 
-        subatividades.map(sub => ({ 
-          id: sub.id, 
-          nome: sub.nome, 
-          selecionada: sub.selecionada !== undefined ? sub.selecionada : false,
-          concluida: sub.concluida 
-        })));
+      logSubatividades('props-changed', tipoServico, subatividades);
       
-      // MELHORIA: Preservar o estado 'selecionada' sem modificá-lo
+      // MELHORIA: Preservar o estado 'selecionada'
+      // CORREÇÃO CRÍTICA: Default é TRUE não FALSE
       const updatedSubs = subatividades.map(sub => ({
         ...sub,
-        selecionada: sub.selecionada !== undefined ? sub.selecionada : false
+        selecionada: sub.selecionada !== undefined ? sub.selecionada : true
       }));
       
       setLocalSubatividades(updatedSubs);
@@ -145,13 +130,7 @@ const ServicoSubatividades: React.FC<ServicoSubatividadesProps> = ({
   }, [subatividades, tipoServico]);
   
   const handleSubatividadesChange = (updatedSubatividades: SubAtividade[]) => {
-    console.log(`[ServicoSubatividades] Alterações em subatividades para ${tipoServico}:`, 
-      updatedSubatividades.map(sub => ({ 
-        id: sub.id, 
-        nome: sub.nome, 
-        selecionada: sub.selecionada,
-        concluida: sub.concluida
-      })));
+    logSubatividades('handle-change', tipoServico, updatedSubatividades);
     setLocalSubatividades(updatedSubatividades);
     onChange(updatedSubatividades);
   };

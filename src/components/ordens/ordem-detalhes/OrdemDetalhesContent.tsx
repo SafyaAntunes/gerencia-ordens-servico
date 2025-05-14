@@ -15,6 +15,7 @@ import { DeleteOrdemDialog } from "@/components/ordens/detalhes/DeleteOrdemDialo
 import { LoadingOrdem } from "@/components/ordens/detalhes/LoadingOrdem";
 import { NotFoundOrdem } from "@/components/ordens/detalhes/NotFoundOrdem";
 import { OrdemHeaderCustom } from "@/components/ordens/detalhes/OrdemHeaderCustom";
+import { useTrackingSubatividades } from "@/hooks/ordens/useTrackingSubatividades";
 
 interface OrdemDetalhesContentProps {
   id?: string;
@@ -25,6 +26,7 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
   const navigate = useNavigate();
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [isLoadingClientes, setIsLoadingClientes] = useState(false);
+  const { logSubatividadesState } = useTrackingSubatividades();
   
   const {
     ordem,
@@ -114,35 +116,25 @@ export function OrdemDetalhesContent({ id, onLogout }: OrdemDetalhesContentProps
         // Log detalhado para cada serviço e suas subatividades
         console.log(`[OrdemDetalhes] Serviço ${servico.tipo} tem ${servico.subatividades.length} subatividades.`);
         
-        // CORREÇÃO: Preservar exatamente o estado 'selecionada' de cada subatividade
-        // em vez de forçar todas como selecionadas
+        // CORREÇÃO CRÍTICA: Todas as subatividades devem ter selecionada=true por padrão
+        // já que elas já estão associadas à ordem
         servicosSubatividades[servico.tipo] = servico.subatividades.map(sub => {
           // Log individual para entender o estado de cada subatividade
           console.log(`[OrdemDetalhes] Subatividade ${sub.nome}: selecionada=${sub.selecionada}, concluida=${sub.concluida}`);
           
           return {
             ...sub,
-            // IMPORTANTE: Preservar o estado 'selecionada' sem alterá-lo
-            // Apenas definir como false se for undefined
-            selecionada: sub.selecionada !== undefined ? sub.selecionada : false
+            // IMPORTANTE: Definir EXPLICITAMENTE como true, já que estas subatividades
+            // já foram escolhidas para esta ordem
+            selecionada: true
           };
         });
         
-        // Log das subatividades preparadas para este serviço
-        console.log(`[OrdemDetalhes] Subatividades preparadas para ${servico.tipo}:`, 
-          servicosSubatividades[servico.tipo].map(s => ({id: s.id, nome: s.nome, selecionada: s.selecionada, concluida: s.concluida}))
-        );
+        // Usar nosso hook de debug para logar detalhadamente o estado após processamento
+        logSubatividadesState("OrdemDetalhes", servico.tipo, servicosSubatividades[servico.tipo]);
       }
     });
     
-    console.log("[OrdemDetalhes] Resultado final das subatividades preparadas:", 
-      Object.entries(servicosSubatividades).map(([tipo, subs]) => ({
-        tipo, 
-        total: subs.length,
-        selecionadas: subs.filter(s => s.selecionada).length,
-        concluidas: subs.filter(s => s.concluida).length
-      }))
-    );
     return servicosSubatividades;
   };
 

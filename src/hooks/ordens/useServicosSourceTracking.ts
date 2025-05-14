@@ -1,32 +1,43 @@
 
-import { useState } from "react";
-import { TipoServico } from "@/types/ordens";
+import { useState, useEffect } from 'react';
+import { SubAtividade, TipoServico } from '@/types/ordens';
+import { useTrackingSubatividades } from './useTrackingSubatividades';
 
 /**
- * Hook for tracking the source of subatividades for each service type
+ * Hook para rastrear a origem das subatividades em diferentes componentes
+ * Isso ajudará a identificar onde estão ocorrendo problemas
  */
-export const useServicosSourceTracking = () => {
+export function useServicosSourceTracking() {
   const [loadingSources, setLoadingSources] = useState<Record<string, string>>({});
-
-  const trackSource = (tipo: TipoServico, source: string) => {
-    setLoadingSources(prev => ({...prev, [tipo]: source}));
+  const [subatividadesOrigins, setSubatividadesOrigins] = useState<Record<string, string>>({});
+  const { logSubatividadesState } = useTrackingSubatividades();
+  
+  const trackSubatividadesOrigin = (
+    servicoTipo: TipoServico, 
+    subatividades: SubAtividade[] | undefined,
+    source: string
+  ) => {
+    if (!subatividades) return;
+    
+    // Registrar origem das subatividades
+    setSubatividadesOrigins(prev => ({
+      ...prev,
+      [servicoTipo]: source
+    }));
+    
+    // Registrar fonte de carregamento
+    setLoadingSources(prev => ({
+      ...prev,
+      [servicoTipo]: source
+    }));
+    
+    // Debug do estado das subatividades nesta origem
+    logSubatividadesState(`Origin: ${source}`, servicoTipo, subatividades);
   };
-
-  const getSourceTrackerObject = () => {
-    const sourceTracker: Record<string, string> = {};
-    return sourceTracker;
+  
+  return {
+    loadingSources,
+    subatividadesOrigins,
+    trackSubatividadesOrigin
   };
-
-  const logSourceSummary = (sourceTracker: Record<string, string>) => {
-    setTimeout(() => {
-      console.log("📊 [useServicosState] Origem das subatividades carregadas:", sourceTracker);
-    }, 1000);
-  };
-
-  return { 
-    loadingSources, 
-    trackSource, 
-    getSourceTrackerObject,
-    logSourceSummary
-  };
-};
+}

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useServicoSubatividades } from "@/hooks/useServicoSubatividades";
+import { useTrackingSubatividades } from "@/hooks/ordens/useTrackingSubatividades";
 
 interface ServicoAtividadesConfigProps {
   servicoTipo: TipoServico;
@@ -24,23 +25,21 @@ export default function ServicoAtividadesConfig({
   const [localSubatividades, setLocalSubatividades] = useState<SubAtividade[]>(subatividades || []);
   const [tempoEstimado, setTempoEstimado] = useState<Record<string, number>>({});
   const { defaultAtividadesEspecificas } = useServicoSubatividades();
+  const { logSubatividadesState } = useTrackingSubatividades();
   
   useEffect(() => {
     // Log de debug para visualizar o estado das subatividades recebidas
     console.log(`[ServicoAtividadesConfig] Recebendo subatividades para ${servicoTipo}:`, subatividades);
-    console.log(`[ServicoAtividadesConfig] Estado de seleção das subatividades:`, 
-      subatividades?.map(sub => ({ 
-        id: sub.id, 
-        nome: sub.nome, 
-        selecionada: sub.selecionada !== undefined ? sub.selecionada : false,
-        concluida: sub.concluida 
-      })));
+    logSubatividadesState("ServicoAtividadesConfig-recebidas", servicoTipo, subatividades);
     
-    // MELHORIA: Preservar o estado 'selecionada' de cada subatividade
+    // CORREÇÃO CRÍTICA: Preservar o estado 'selecionada' de cada subatividade
+    // IMPORTANTE: Definir como default TRUE, não FALSE
     const processedSubs = (subatividades || []).map(sub => ({
       ...sub,
-      selecionada: sub.selecionada !== undefined ? sub.selecionada : false
+      selecionada: sub.selecionada !== undefined ? sub.selecionada : true
     }));
+    
+    logSubatividadesState("ServicoAtividadesConfig-processadas", servicoTipo, processedSubs);
     
     setLocalSubatividades(processedSubs);
     
@@ -52,7 +51,7 @@ export default function ServicoAtividadesConfig({
       }
     });
     setTempoEstimado(tempos);
-  }, [subatividades]);
+  }, [subatividades, servicoTipo]);
   
   const handleToggleSubatividade = (id: string, checked: boolean) => {
     console.log(`[ServicoAtividadesConfig] Alterando seleção da subatividade ${id} para ${checked}`);
@@ -66,6 +65,8 @@ export default function ServicoAtividadesConfig({
       });
     
     const novasSubatividades = atualizarSubatividades(localSubatividades);
+    logSubatividadesState("ServicoAtividadesConfig-toggle", servicoTipo, novasSubatividades);
+    
     setLocalSubatividades(novasSubatividades);
     onChange(novasSubatividades);
   };

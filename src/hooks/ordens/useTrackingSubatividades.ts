@@ -1,57 +1,48 @@
 
-import { useEffect, useState } from 'react';
-import { SubAtividade, TipoServico } from '@/types/ordens';
+import { useEffect } from 'react';
+import { SubAtividade } from '@/types/ordens';
 
 /**
- * Hook to track subatividades state through the various components
+ * Hook para ajudar no debug de problemas com subatividades
+ * Este hook vai rastrear e logar informações sobre subatividades em pontos críticos
  */
-export const useTrackingSubatividades = () => {
-  const [trackingData, setTrackingData] = useState<Record<string, {
-    source: string,
-    count: number,
-    selected: number
-  }>>({});
-
+export function useTrackingSubatividades() {
   /**
-   * Track a subatividade update event
+   * Função para logar o estado de subatividades
    */
-  const trackSubatividadesUpdate = (
-    tipoServico: TipoServico, 
-    source: string, 
-    subatividades: SubAtividade[]
+  const logSubatividadesState = (
+    context: string, 
+    tipo: string,
+    subatividades: SubAtividade[] | undefined
   ) => {
-    const selected = subatividades.filter(s => s.selecionada).length;
+    if (!subatividades) {
+      console.log(`[${context}] Sem subatividades para ${tipo}`);
+      return;
+    }
     
-    console.log(`[useTrackingSubatividades] ${source} - ${tipoServico}: ${selected}/${subatividades.length} selecionadas`);
-    
-    setTrackingData(prev => ({
-      ...prev,
-      [tipoServico]: {
-        source,
-        count: subatividades.length,
-        selected
-      }
-    }));
-  };
-
-  /**
-   * Log the current tracking state
-   */
-  const logTrackingState = () => {
-    console.table(
-      Object.entries(trackingData).map(([tipo, data]) => ({
-        Tipo: tipo,
-        Origem: data.source,
-        Total: data.count,
-        Selecionadas: data.selected,
-        Percentual: `${Math.round((data.selected / data.count) * 100)}%`
+    console.log(`[${context}] ${tipo} tem ${subatividades.length} subatividades:`);
+    console.log(`[${context}] Detalhes:`, 
+      subatividades.map(sub => ({
+        id: sub.id,
+        nome: sub.nome,
+        selecionada: sub.selecionada !== undefined ? sub.selecionada : '(undefined)',
+        concluida: sub.concluida
       }))
     );
-  };
+    
+    // Estatísticas
+    const stats = {
+      total: subatividades.length,
+      selecionadas: subatividades.filter(s => s.selecionada === true).length,
+      naoSelecionadas: subatividades.filter(s => s.selecionada === false).length,
+      indefinidas: subatividades.filter(s => s.selecionada === undefined).length,
+      concluidas: subatividades.filter(s => s.concluida).length
+    };
+    
+    console.log(`[${context}] Estatísticas para ${tipo}:`, stats);
+  }
 
   return {
-    trackSubatividadesUpdate,
-    logTrackingState,
-    trackingData
+    logSubatividadesState
   };
-};
+}
