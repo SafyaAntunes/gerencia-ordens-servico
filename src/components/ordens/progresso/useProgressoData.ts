@@ -1,6 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { OrdemServico, EtapaOS } from "@/types/ordens";
+import { isValid } from "date-fns";
 
 export function useProgressoData(ordem: OrdemServico) {
   const [progressoEtapas, setProgressoEtapas] = useState<{etapa: EtapaOS, nome: string, progresso: number, concluida: boolean}[]>([]);
@@ -133,11 +133,19 @@ export function useProgressoData(ordem: OrdemServico) {
     
     ordem.tempoRegistros?.forEach(registro => {
       if (registro.inicio && registro.fim) {
-        const duracao = new Date(registro.fim).getTime() - new Date(registro.inicio).getTime();
-        total += duracao;
+        // Validate both dates before calculation
+        const inicioDate = new Date(registro.inicio);
+        const fimDate = new Date(registro.fim);
         
-        const etapaKey = registro.etapa;
-        temposPorEtapa[etapaKey] = (temposPorEtapa[etapaKey] || 0) + duracao;
+        if (isValid(inicioDate) && isValid(fimDate)) {
+          const duracao = fimDate.getTime() - inicioDate.getTime();
+          if (duracao > 0) { // Ensure duration is positive
+            total += duracao;
+            
+            const etapaKey = registro.etapa;
+            temposPorEtapa[etapaKey] = (temposPorEtapa[etapaKey] || 0) + duracao;
+          }
+        }
       }
     });
     
@@ -150,7 +158,7 @@ export function useProgressoData(ordem: OrdemServico) {
       if (data) {
         try {
           const parsed = JSON.parse(data);
-          if (parsed.totalTime) {
+          if (parsed.totalTime && typeof parsed.totalTime === 'number') {
             total += parsed.totalTime;
             temposPorEtapa[servicoTipo] = (temposPorEtapa[servicoTipo] || 0) + parsed.totalTime;
           }
@@ -188,11 +196,33 @@ export function useProgressoData(ordem: OrdemServico) {
   };
   
   const calcularDiasEmAndamento = () => {
-    const dataAbertura = new Date(ordem.dataAbertura).getTime();
-    const hoje = new Date().getTime();
-    const diasTotais = Math.ceil((hoje - dataAbertura) / (1000 * 60 * 60 * 24));
-    
-    setDiasEmAndamento(diasTotais);
+    try {
+      // Validate the date before calculation
+      const dataAbertura = ordem.dataAbertura ? new Date(ordem.dataAbertura) : null;
+      
+      if (!dataAbertura || !isValid(dataAbertura)) {
+        console.error("Data de abertura inválida:", ordem.dataAbertura);
+        setDiasEmAndamento(0);
+        return;
+      }
+      
+      const hoje = new Date();
+      const dataAberturaMs = dataAbertura.getTime();
+      const hojeMs = hoje.getTime();
+      
+      // Ensure we have valid timestamps
+      if (isNaN(dataAberturaMs) || isNaN(hojeMs)) {
+        console.error("Timestamp inválido calculado de datas:", { dataAbertura, hoje });
+        setDiasEmAndamento(0);
+        return;
+      }
+      
+      const diasTotais = Math.max(0, Math.ceil((hojeMs - dataAberturaMs) / (1000 * 60 * 60 * 24)));
+      setDiasEmAndamento(diasTotais);
+    } catch (error) {
+      console.error("Erro ao calcular dias em andamento:", error);
+      setDiasEmAndamento(0);
+    }
   };
   
   const calcularProgressoTotal = () => {
@@ -248,6 +278,11 @@ export function useProgressoData(ordem: OrdemServico) {
   };
   
   const formatarTempo = (ms: number) => {
+    if (typeof ms !== 'number' || isNaN(ms)) {
+      console.error("Valor inválido para formatarTempo:", ms);
+      return "0h 0m 0s";
+    }
+    
     const horas = Math.floor(ms / (1000 * 60 * 60));
     const minutos = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
     const segundos = Math.floor((ms % (1000 * 60)) / 1000);

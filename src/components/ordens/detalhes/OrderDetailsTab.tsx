@@ -2,7 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { OrdemServico, StatusOS, EtapaOS } from "@/types/ordens";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -34,7 +34,7 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
         servico.subatividades
           .filter(sub => sub.selecionada)
           .forEach(sub => {
-            if (sub.tempoEstimado) {
+            if (sub.tempoEstimado && typeof sub.tempoEstimado === 'number') {
               const tempoEstimadoMs = sub.tempoEstimado * 60 * 60 * 1000; // horas para ms
               
               // Atribuir ao tipo de serviço correto
@@ -47,7 +47,7 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
     });
     
     // Usar o tempo total estimado armazenado se disponível
-    if (ordem.tempoTotalEstimado && ordem.tempoTotalEstimado > 0) {
+    if (ordem.tempoTotalEstimado && typeof ordem.tempoTotalEstimado === 'number' && ordem.tempoTotalEstimado > 0) {
       total = ordem.tempoTotalEstimado;
     }
     
@@ -80,11 +80,31 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
   };
 
   const formatarTempo = (ms: number) => {
-    if (!ms) return "0h";
+    if (typeof ms !== 'number' || isNaN(ms)) {
+      return "0h";
+    }
     const horas = Math.floor(ms / (1000 * 60 * 60));
     const minutos = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
     
     return `${horas}h${minutos > 0 ? ` ${minutos}m` : ''}`;
+  };
+  
+  // Helper function to safely format dates
+  const formatDateSafely = (date: any): string => {
+    if (!date) return "Data não definida";
+    
+    try {
+      // Handle string dates
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      
+      // Validate the date is valid before formatting
+      if (!isValid(dateObj)) return "Data inválida";
+      
+      return format(dateObj, "dd/MM/yyyy", { locale: ptBR });
+    } catch (error) {
+      console.error("Erro ao formatar data:", error, date);
+      return "Data inválida";
+    }
   };
 
   return (
@@ -124,13 +144,13 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
             <div>
               <p className="text-sm text-muted-foreground">Data de Abertura</p>
               <p className="font-medium">
-                {format(new Date(ordem.dataAbertura), "dd/MM/yyyy", { locale: ptBR })}
+                {formatDateSafely(ordem.dataAbertura)}
               </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Previsão de Entrega</p>
               <p className="font-medium">
-                {format(new Date(ordem.dataPrevistaEntrega), "dd/MM/yyyy", { locale: ptBR })}
+                {formatDateSafely(ordem.dataPrevistaEntrega)}
               </p>
             </div>
           </div>

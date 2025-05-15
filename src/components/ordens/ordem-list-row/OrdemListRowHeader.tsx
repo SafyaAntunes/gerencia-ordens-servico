@@ -1,9 +1,8 @@
 
-import { format, isValid } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { OrdemServico } from "@/types/ordens";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { MoveVertical } from "lucide-react";
+import { formatDateSafely } from "@/utils/dateUtils";
 
 interface OrdemListRowHeaderProps {
   ordem: OrdemServico;
@@ -12,24 +11,6 @@ interface OrdemListRowHeaderProps {
 }
 
 export default function OrdemListRowHeader({ ordem, index, isAtrasada = false }: OrdemListRowHeaderProps) {
-  // Formatar data com segurança
-  const formatDateSafely = (date: any) => {
-    if (!date) return "N/D";
-    
-    try {
-      // Handle string dates
-      const dateObj = typeof date === 'string' ? new Date(date) : date;
-      
-      // Validate the date is valid before formatting
-      if (!isValid(dateObj)) return "Data inválida";
-      
-      return format(dateObj, "dd/MM/yy", { locale: ptBR });
-    } catch (error) {
-      console.error("Error formatting date:", error, date);
-      return "Data inválida";
-    }
-  };
-
   return (
     <div className={`grid grid-cols-12 gap-2 p-4 pb-2 items-center border-b ${
       isAtrasada ? 'border-red-200 bg-red-50' : 'border-gray-100'
@@ -74,7 +55,7 @@ export default function OrdemListRowHeader({ ordem, index, isAtrasada = false }:
       <div className="col-span-2 text-right">
         <div className="text-xs text-gray-500 mb-0.5">Data de Entrada</div>
         <div className={`text-gray-600 ${isAtrasada ? 'text-red-600' : ''}`}>
-          {formatDateSafely(ordem.dataAbertura)}
+          {formatDateSafely(ordem.dataAbertura, "dd/MM/yy")}
         </div>
       </div>
     </div>

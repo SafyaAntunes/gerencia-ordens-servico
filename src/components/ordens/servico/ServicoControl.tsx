@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useFuncionariosDisponibilidade } from "@/hooks/useFuncionariosDisponibilidade";
 import { liberarFuncionarioDeServico } from "@/services/funcionarioEmServicoService";
+import { formatDateSafely } from "@/utils/dateUtils";
 
 interface ServicoControlProps {
   servico: Servico;
@@ -137,7 +138,7 @@ export function ServicoControl({
                   <span className="text-sm">{servico.funcionarioNome || 'Não atribuído'}</span>
                   {servico.dataConclusao && (
                     <span className="text-xs text-gray-500 mt-1">
-                      Concluído em: {new Date(servico.dataConclusao).toLocaleDateString()}
+                      Concluído em: {formatDateSafely(servico.dataConclusao)}
                     </span>
                   )}
                 </div>

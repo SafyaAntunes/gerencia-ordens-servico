@@ -6,6 +6,7 @@ import { format, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { EtapaOS, OrdemServico } from "@/types/ordens";
 import { TimeStatusDisplay } from "./TimeStatusDisplay";
+import { formatDateSafely } from "@/utils/dateUtils";
 
 interface ProgressoSummaryCardProps {
   ordem: OrdemServico;
@@ -28,24 +29,6 @@ export function ProgressoSummaryCard({
   etapasNomes,
   formatarTempo
 }: ProgressoSummaryCardProps) {
-  // Safe date formatting
-  const formatDateSafely = (date: any) => {
-    if (!date) return "N/D";
-    
-    try {
-      // Handle string dates
-      const dateObj = typeof date === 'string' ? new Date(date) : date;
-      
-      // Validate the date is valid before formatting
-      if (!isValid(dateObj)) return "Data inválida";
-      
-      return format(dateObj, "dd/MM/yyyy", { locale: ptBR });
-    } catch (error) {
-      console.error("Error formatting date:", error, date);
-      return "Data inválida";
-    }
-  };
-
   return (
     <Card>
       <CardHeader>
