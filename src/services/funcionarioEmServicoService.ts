@@ -101,3 +101,44 @@ export const liberarFuncionarioDeServico = async (
     return false;
   }
 };
+
+// Função para forçar a liberação de um funcionário (usado em casos excepcionais)
+export const forcarLiberacaoFuncionario = async (
+  funcionarioId: string
+): Promise<boolean> => {
+  if (!funcionarioId) {
+    console.error("ID de funcionário inválido");
+    return false;
+  }
+  
+  try {
+    // Atualizar o documento do funcionário para registrar que está disponível
+    const funcionarioRef = doc(db, "funcionarios", funcionarioId);
+    
+    await updateDoc(funcionarioRef, {
+      statusAtividade: "disponivel",
+      atividadeAtual: null
+    });
+    
+    // Atualizar o registro de tracking
+    try {
+      const emServicoRef = doc(db, "funcionarios_em_servico", funcionarioId);
+      await updateDoc(emServicoRef, {
+        finalizado: new Date(),
+        status: "finalizado_forcado",
+        observacao: "Liberação forçada pelo sistema"
+      });
+    } catch (err) {
+      // Se não encontrar o documento de tracking, não é um problema crítico
+      console.warn("Aviso: Não foi possível atualizar registro de tracking", err);
+    }
+    
+    toast.success(`Funcionário liberado com sucesso`);
+    console.log(`Funcionário ${funcionarioId} liberado forçadamente`);
+    return true;
+  } catch (error) {
+    console.error("Erro ao forçar liberação do funcionário:", error);
+    toast.error("Erro ao liberar funcionário");
+    return false;
+  }
+};
