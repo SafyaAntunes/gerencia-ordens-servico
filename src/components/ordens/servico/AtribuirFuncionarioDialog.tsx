@@ -35,6 +35,11 @@ export default function AtribuirFuncionarioDialog({
   onConfirm,
   dialogAction,
 }: AtribuirFuncionarioDialogProps) {
+  // Filtramos a lista para mostrar apenas funcionários disponíveis ou o funcionário atual
+  const filteredFuncionarios = funcionariosOptions.filter(f => 
+    (f.status === 'disponivel' && f.ativo !== false) || (funcionarioAtual && f.id === funcionarioAtual.id)
+  );
+  
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
@@ -57,11 +62,11 @@ export default function AtribuirFuncionarioDialog({
                     {funcionarioAtual.nome} (você)
                   </SelectItem>
                 )}
-                {funcionariosOptions
-                  .filter(f => f.id !== funcionarioAtual?.id)
+                {filteredFuncionarios
+                  .filter(f => !funcionarioAtual || f.id !== funcionarioAtual.id)
                   .map(f => (
                     <SelectItem key={f.id} value={f.id}>
-                      {f.nome}
+                      {f.nome} {f.status === 'ocupado' ? " (Ocupado)" : ""}
                     </SelectItem>
                   ))
                 }

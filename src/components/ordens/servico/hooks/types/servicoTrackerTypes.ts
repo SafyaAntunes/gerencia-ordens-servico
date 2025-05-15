@@ -2,22 +2,21 @@
 import { Servico, SubAtividade, TipoServico, EtapaOS } from "@/types/ordens";
 import { Funcionario } from "@/types/funcionarios";
 
+// Definição de tipos para o estado do serviço
 export type ServicoStatus = 'nao_iniciado' | 'em_andamento' | 'pausado' | 'concluido';
 
-export interface UseServicoTimerResult {
-  isRunning: boolean;
-  isPaused: boolean;
-  displayTime: string;
-  elapsedSeconds: number;
-  startTime: number | null;
-  pauseTime: number | null;
-  pausas: { inicio: number; fim?: number }[];
-  handleStartClick: () => void;
-  handlePause: () => void;
-  handleResume: () => void;
-  handleFinish: () => void;
+// Props para o hook useServicoTracker
+export interface UseServicoTrackerProps {
+  servico: Servico;
+  ordemId: string;
+  funcionarioId?: string;
+  funcionarioNome?: string;
+  etapa?: EtapaOS;
+  onServicoStatusChange?: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
+  onSubatividadeToggle?: (subatividadeId: string, checked: boolean) => void;
 }
 
+// Estado do serviço
 export interface ServicoTrackerState {
   isRunning: boolean;
   isPaused: boolean;
@@ -25,12 +24,13 @@ export interface ServicoTrackerState {
   concluido: boolean;
   status: ServicoStatus;
   pausas: { inicio: number; fim?: number }[];
-  tipoServico: TipoServico;
   progressPercentage: number;
+  tipoServico: TipoServico;
   completedSubatividades: number;
   totalSubatividades: number;
 }
 
+// Operações disponíveis
 export interface ServicoTrackerOperations {
   start: () => void;
   pause: () => void;
@@ -40,19 +40,11 @@ export interface ServicoTrackerOperations {
   reset: () => void;
 }
 
-export interface UseServicoTrackerProps {
-  servico: Servico;
-  ordemId: string;
-  funcionarioId?: string;
-  funcionarioNome?: string;
-  etapa?: string;
-  onServicoStatusChange: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
-  onSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
-}
-
+// Resultado do hook useServicoTracker
 export interface UseServicoTrackerResult {
   isOpen: boolean;
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  funcionariosOptions: Funcionario[];
   temPermissao: boolean;
   servicoStatus: ServicoStatus;
   progressPercentage: number;
@@ -62,9 +54,8 @@ export interface UseServicoTrackerResult {
   handleLoadFuncionarios: () => Promise<void>;
   handleSubatividadeToggle: (subatividadeId: string, checked: boolean) => void;
   handleMarcarConcluido: () => void;
-  funcionariosOptions: Funcionario[];
   responsavelSelecionadoId: string;
-  setResponsavelSelecionadoId: (id: string) => void;
+  setResponsavelSelecionadoId: React.Dispatch<React.SetStateAction<string>>;
   handleSaveResponsavel: () => Promise<void>;
   isSavingResponsavel: boolean;
   lastSavedResponsavelId: string;

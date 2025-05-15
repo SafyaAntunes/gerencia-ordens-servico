@@ -6,7 +6,8 @@ import { Servico, SubAtividade, TipoServico, EtapaOS } from "@/types/ordens";
 import { Funcionario } from "@/types/funcionarios";
 import { useAuth } from "@/hooks/useAuth";
 import { UseServicoTrackerProps, UseServicoTrackerResult, ServicoStatus } from "./types/servicoTrackerTypes";
-import { getServicoStatus } from "./utils/servicoTrackerUtils";
+import { useFuncionariosDisponibilidade } from "@/hooks/useFuncionariosDisponibilidade";
+import { marcarFuncionarioEmServico, liberarFuncionarioDeServico } from "@/services/funcionarioEmServicoService";
 
 export function useServicoTracker({
   servico,
@@ -18,6 +19,7 @@ export function useServicoTracker({
   onSubatividadeToggle
 }: UseServicoTrackerProps): UseServicoTrackerResult {
   const { funcionario, canEditOrder } = useAuth();
+  const { funcionariosStatus } = useFuncionariosDisponibilidade();
   const [isOpen, setIsOpen] = useState(false);
   const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
   const [responsavelSelecionadoId, setResponsavelSelecionadoId] = useState(servico.funcionarioId || funcionarioId || '');
@@ -47,13 +49,30 @@ export function useServicoTracker({
     try {
       const funcionariosData = await getFuncionarios();
       if (funcionariosData) {
-        setFuncionariosOptions(funcionariosData);
+        // Filtrar para incluir apenas funcionários disponíveis e o atual do serviço
+        const funcionariosFiltrados = funcionariosData.filter(f => {
+          // Buscar status atualizado do funcionário
+          const funcionarioStatus = funcionariosStatus.find(fs => fs.id === f.id);
+          
+          // Sempre incluir o funcionário atual do serviço
+          if (f.id === servico.funcionarioId) {
+            return true;
+          }
+          
+          // Para outros funcionários, verificar disponibilidade
+          const isDisponivel = funcionarioStatus?.status === 'disponivel';
+          const isAtivo = f.ativo !== false;
+          
+          return isDisponivel && isAtivo;
+        });
+        
+        setFuncionariosOptions(funcionariosFiltrados);
       }
     } catch (error) {
       console.error("Erro ao carregar funcionários:", error);
       toast.error("Erro ao carregar lista de funcionários");
     }
-  }, []);
+  }, [funcionariosStatus, servico.funcionarioId]);
   
   const handleSubatividadeToggle = (subatividadeId: string, checked: boolean) => {
     console.log('Toggle subatividade:', { subatividadeId, checked });
@@ -62,34 +81,113 @@ export function useServicoTracker({
     }
   };
   
-  const handleMarcarConcluido = () => {
+  const handleMarcarConcluido = useCallback(async () => {
     if (onServicoStatusChange) {
       // Usar o responsável selecionado ou o funcionário atual
       const funcId = responsavelSelecionadoId || funcionario?.id;
       const funcNome = funcionariosOptions.find(f => f.id === funcId)?.nome || funcionario?.nome;
       
+      // Se o serviço estava em andamento, precisamos liberar o funcionário
+      if (servico.status === 'em_andamento' && servico.funcionarioId) {
+        await liberarFuncionarioDeServico(servico.funcionarioId);
+      }
+      
       setStatus("concluido");
       onServicoStatusChange(true, funcId, funcNome);
       toast.success("Serviço marcado como concluído");
     }
-  };
+  }, [responsavelSelecionadoId, funcionario, funcionariosOptions, onServicoStatusChange, servico.status, servico.funcionarioId]);
 
-  const handleStatusChange = (newStatus: ServicoStatus) => {
-    if (newStatus === "concluido") {
-      handleMarcarConcluido();
-    } else {
-      setStatus(newStatus);
-      toast.success(`Status do serviço alterado para ${
-        newStatus === "em_andamento" ? "Em Andamento" : 
-        newStatus === "pausado" ? "Pausado" : 
-        "Não Iniciado"
-      }`);
+  const handleStatusChange = useCallback(async (newStatus: ServicoStatus) => {
+    if (!responsavelSelecionadoId && (newStatus === 'em_andamento' || newStatus === 'concluido')) {
+      toast.error("Selecione um funcionário para continuar");
+      return;
     }
-  };
+    
+    try {
+      // Se estamos alterando para "em_andamento", verificar se o funcionário está disponível
+      if (newStatus === 'em_andamento' && servicoStatus !== 'em_andamento') {
+        // Verificar se o funcionário selecionado está disponível (a menos que seja o mesmo já atribuído)
+        if (responsavelSelecionadoId !== servico.funcionarioId) {
+          const funcionarioSelecionado = funcionariosStatus.find(f => f.id === responsavelSelecionadoId);
+          
+          if (funcionarioSelecionado && funcionarioSelecionado.status !== 'disponivel') {
+            toast.error(`O funcionário ${funcionarioSelecionado.nome} já está ocupado em outro serviço`);
+            return;
+          }
+          
+          // Marcar funcionário como ocupado
+          await marcarFuncionarioEmServico(
+            responsavelSelecionadoId,
+            ordemId,
+            etapa || 'retifica',
+            servico.tipo
+          );
+        }
+      }
+      
+      // Se o status está passando de "em_andamento" para outro estado, liberar o funcionário
+      if (servicoStatus === 'em_andamento' && newStatus !== 'em_andamento') {
+        // Liberar o funcionário atual se houver um
+        if (servico.funcionarioId) {
+          await liberarFuncionarioDeServico(servico.funcionarioId);
+        }
+      }
+      
+      if (newStatus === "concluido") {
+        handleMarcarConcluido();
+      } else {
+        setStatus(newStatus);
+        
+        // Se estamos mudando para um status diferente de concluído, chamar onServicoStatusChange com concluido=false
+        if (onServicoStatusChange) {
+          const funcId = responsavelSelecionadoId || servico.funcionarioId;
+          const funcNome = funcionariosOptions.find(f => f.id === funcId)?.nome || servico.funcionarioNome;
+          
+          if (newStatus === 'em_andamento') {
+            onServicoStatusChange(false, funcId, funcNome);
+          } else {
+            onServicoStatusChange(false, servico.funcionarioId, servico.funcionarioNome);
+          }
+        }
+        
+        toast.success(`Status do serviço alterado para ${
+          newStatus === "em_andamento" ? "Em Andamento" : 
+          newStatus === "pausado" ? "Pausado" : 
+          "Não Iniciado"
+        }`);
+      }
+    } catch (error) {
+      console.error("Erro ao mudar status:", error);
+      toast.error("Erro ao alterar status do serviço");
+    }
+  }, [
+    responsavelSelecionadoId, 
+    servicoStatus, 
+    funcionariosStatus, 
+    ordemId, 
+    etapa, 
+    servico.tipo,
+    servico.funcionarioId, 
+    servico.funcionarioNome, 
+    funcionariosOptions, 
+    handleMarcarConcluido, 
+    onServicoStatusChange
+  ]);
 
   const handleSaveResponsavel = async () => {
     setIsSavingResponsavel(true);
     try {
+      // Validar se o funcionário selecionado está disponível
+      if (!servico.funcionarioId || responsavelSelecionadoId !== servico.funcionarioId) {
+        const funcionarioSelecionado = funcionariosStatus.find(f => f.id === responsavelSelecionadoId);
+        
+        if (funcionarioSelecionado && funcionarioSelecionado.status !== 'disponivel') {
+          toast.error(`O funcionário ${funcionarioSelecionado.nome} já está ocupado`);
+          return Promise.reject(new Error("Funcionário ocupado"));
+        }
+      }
+      
       // Simulação de salvamento de responsável (aqui seria uma chamada de API real)
       await new Promise(resolve => setTimeout(resolve, 500));
       toast.success("Responsável atribuído com sucesso");

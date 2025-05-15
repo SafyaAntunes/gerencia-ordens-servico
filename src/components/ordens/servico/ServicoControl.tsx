@@ -43,14 +43,14 @@ export function ServicoControl({
     ? 'concluido' 
     : servico.status || 'nao_iniciado';
 
-  // Filtrar apenas os funcionários disponíveis + o funcionário já atribuído
+  // Filtrar apenas os funcionários disponíveis + o funcionário já atribuído a este serviço específico
   const funcionariosOptions = funcionariosStatus.filter(funcionario => {
     // Sempre incluir o funcionário atual do serviço, mesmo que ocupado
     if (funcionario.id === servico.funcionarioId) {
       return true;
     }
     
-    // Para outros funcionários, incluir somente os disponíveis
+    // Para outros funcionários, incluir somente os disponíveis e ativos
     return funcionario.status === 'disponivel' && funcionario.ativo !== false;
   });
 
@@ -80,6 +80,19 @@ export function ServicoControl({
         // Liberar funcionário atual se houver um
         if (servico.funcionarioId) {
           await liberarFuncionarioDeServico(servico.funcionarioId);
+        }
+      }
+      
+      // Validar se o funcionário está disponível quando o status muda para em_andamento
+      if (status === 'em_andamento' && servicoStatus !== 'em_andamento') {
+        // Se o funcionário não for o mesmo que já estava atribuído e não estiver disponível
+        if (responsavelId !== servico.funcionarioId) {
+          const funcionario = funcionariosStatus.find(f => f.id === responsavelId);
+          if (funcionario && funcionario.status !== 'disponivel') {
+            toast.error("Este funcionário já está ocupado em outro serviço");
+            setIsLoading(false);
+            return;
+          }
         }
       }
       

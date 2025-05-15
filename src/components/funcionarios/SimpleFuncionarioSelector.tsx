@@ -47,11 +47,24 @@ export function SimpleFuncionarioSelector({
 
   // Filtrar funcionários elegíveis - memoizado para performance
   const funcionariosElegiveis = useMemo(() => {
-    // Mudança: não filtrar por disponibilidade a menos que especificamente solicitado
-    return apenasDisponiveis 
-      ? funcionariosStatus.filter(f => f.status === 'disponivel')
-      : funcionariosStatus.filter(f => f.status !== 'inativo');
-  }, [apenasDisponiveis, funcionariosStatus]);
+    // Se apenasDisponiveis=true, mostrar apenas funcionários disponíveis
+    // Se apenasDisponiveis=false, mostrar disponíveis + o funcionário atual (se existir)
+    return funcionariosStatus.filter(f => {
+      // Sempre excluir inativos
+      if (f.status === 'inativo' || f.ativo === false) {
+        return false;
+      }
+      
+      // Se pediu apenas disponíveis, filtrar por status 'disponivel'
+      if (apenasDisponiveis) {
+        return f.status === 'disponivel';
+      }
+      
+      // Caso não tenha pedido apenas disponíveis, permite selecionar funcionários ocupados
+      // mas sempre inclui o funcionário atual se ele existir
+      return f.status === 'disponivel' || f.id === funcionarioAtualId;
+    });
+  }, [apenasDisponiveis, funcionariosStatus, funcionarioAtualId]);
 
   // Se tiver especialidade requerida, filtrar mais - memoizado para performance
   const funcionariosFiltrados = useMemo(() => {
@@ -79,12 +92,18 @@ export function SimpleFuncionarioSelector({
     
     if (funcionario) {
       console.log("Funcionário selecionado:", funcionario);
+      
+      // Verificar se o funcionário está ocupado e não é o atual
+      if (funcionario.status === 'ocupado' && id !== funcionarioAtualId) {
+        toast.warning(`${funcionario.nome} já está ocupado em outro serviço`);
+      }
+      
       onFuncionarioSelecionado(id, funcionario.nome);
     } else {
       console.error("Funcionário não encontrado:", id);
       toast.error("Funcionário não encontrado");
     }
-  }, [funcionariosStatus, onFuncionarioSelecionado]);
+  }, [funcionariosStatus, onFuncionarioSelecionado, funcionarioAtualId]);
 
   if (loading) {
     return (
