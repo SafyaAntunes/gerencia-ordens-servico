@@ -9,7 +9,6 @@ import { useServicoTracker } from "./hooks/useServicoTracker";
 import ServicoHeader from "./ServicoHeader";
 import ServicoDetails from "./ServicoDetails";
 import ServicoControls from "./ServicoControls";
-import TimerPausas from "../etapa/TimerPausas";
 
 interface ServicoTrackerProps {
   servico: Servico;
@@ -38,23 +37,21 @@ export default function ServicoTracker({
     isOpen,
     setIsOpen,
     temPermissao,
-    isRunning,
-    isPaused,
-    displayTime,
     servicoStatus,
     progressPercentage,
     completedSubatividades,
     totalSubatividades,
-    tempoTotalEstimado,
     subatividadesFiltradas,
     handleLoadFuncionarios,
     handleSubatividadeToggle,
-    handleStartClick,
-    handlePause,
-    handleResume,
-    handleFinish,
     handleMarcarConcluido,
-    pausas,
+    funcionariosOptions,
+    responsavelSelecionadoId,
+    setResponsavelSelecionadoId,
+    handleSaveResponsavel,
+    isSavingResponsavel,
+    lastSavedResponsavelId,
+    lastSavedResponsavelNome
   } = useServicoTracker({
     servico,
     ordemId,
@@ -81,13 +78,6 @@ export default function ServicoTracker({
   const todasSubatividadesConcluidas = subatividadesFiltradas.length === 0 || 
     (subatividadesFiltradas.length > 0 && subatividadesFiltradas.every(sub => sub.concluida));
 
-  // Convert pausas for TimerPausas component format if needed
-  const formattedPausas = pausas.map(p => ({
-    inicio: p.iniciado,
-    fim: p.finalizado,
-    motivo: p.motivo
-  }));
-
   return (
     <Card className={cn("w-full", className)}>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -95,50 +85,51 @@ export default function ServicoTracker({
           <CardContent className="pt-6">
             <ServicoHeader 
               tipo={servico.tipo}
-              displayTime={displayTime}
               servicoStatus={servicoStatus}
               progressPercentage={Number(progressPercentage)}
               completedSubatividades={completedSubatividades}
               totalSubatividades={totalSubatividades}
-              tempoTotalEstimado={tempoTotalEstimado}
               funcionarioNome={servico.concluido ? servico.funcionarioNome : undefined}
               concluido={servico.concluido}
               temPermissao={temPermissao}
               isOpen={isOpen}
               onToggleOpen={() => setIsOpen(!isOpen)}
+              responsavelNome={lastSavedResponsavelNome || funcionarioNome}
             />
           </CardContent>
         </CollapsibleTrigger>
 
         <CollapsibleContent>
           <CardContent className="pt-0">
-            <ServicoDetails 
-              descricao={servico.descricao}
-              subatividades={subatividadesFiltradas}
-              temPermissao={temPermissao}
-              onSubatividadeToggle={handleSubatividadeToggle}
-              onSubatividadeSelecionadaToggle={handleSubatividadeSelecionadaToggleInternal}
-            />
-            
-            {/* Mostrar pausas mesmo quando o serviço está concluído */}
-            {pausas && pausas.length > 0 && (
-              <div className="py-2">
-                <TimerPausas pausas={formattedPausas} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium">Serviços</h4>
+                <ServicoDetails 
+                  descricao={servico.descricao}
+                  subatividades={subatividadesFiltradas}
+                  temPermissao={temPermissao}
+                  onSubatividadeToggle={handleSubatividadeToggle}
+                  onSubatividadeSelecionadaToggle={handleSubatividadeSelecionadaToggleInternal}
+                />
               </div>
-            )}
-            
-            <ServicoControls 
-              isRunning={isRunning}
-              isPaused={isPaused}
-              temPermissao={temPermissao}
-              concluido={servico.concluido}
-              todasSubatividadesConcluidas={todasSubatividadesConcluidas}
-              onStartClick={handleStartClick}
-              onPauseClick={handlePause}
-              onResumeClick={handleResume}
-              onFinishClick={handleFinish}
-              onMarcarConcluido={handleMarcarConcluido}
-            />
+              
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium">Funcionário</h4>
+                <ServicoControls 
+                  temPermissao={temPermissao}
+                  concluido={servico.concluido}
+                  todasSubatividadesConcluidas={todasSubatividadesConcluidas}
+                  onMarcarConcluido={handleMarcarConcluido}
+                  funcionariosOptions={funcionariosOptions}
+                  responsavelSelecionadoId={responsavelSelecionadoId}
+                  setResponsavelSelecionadoId={setResponsavelSelecionadoId}
+                  handleSaveResponsavel={handleSaveResponsavel}
+                  isSavingResponsavel={isSavingResponsavel}
+                  lastSavedResponsavelId={lastSavedResponsavelId}
+                  lastSavedResponsavelNome={lastSavedResponsavelNome}
+                />
+              </div>
+            </div>
           </CardContent>
         </CollapsibleContent>
       </Collapsible>

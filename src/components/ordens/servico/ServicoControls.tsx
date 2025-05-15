@@ -1,120 +1,101 @@
 
 import { Button } from "@/components/ui/button";
-import { Play, Pause, StopCircle, CheckCircle2 } from "lucide-react";
-import { useState } from "react";
-import PausaDialog from "../PausaDialog";
+import { CheckCircle2 } from "lucide-react";
+import { Funcionario } from "@/types/funcionarios";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState, useEffect } from "react";
 
 interface ServicoControlsProps {
-  isRunning: boolean;
-  isPaused: boolean;
   temPermissao: boolean;
   concluido: boolean;
   todasSubatividadesConcluidas: boolean;
-  onStartClick: () => void;
-  onPauseClick: (motivo?: string) => void;
-  onResumeClick: () => void;
-  onFinishClick: () => void;
   onMarcarConcluido: () => void;
+  funcionariosOptions: Funcionario[];
+  responsavelSelecionadoId: string;
+  setResponsavelSelecionadoId: (id: string) => void;
+  handleSaveResponsavel: () => Promise<void>;
+  isSavingResponsavel: boolean;
+  lastSavedResponsavelId: string;
+  lastSavedResponsavelNome: string;
 }
 
 export default function ServicoControls({
-  isRunning,
-  isPaused,
   temPermissao,
   concluido,
   todasSubatividadesConcluidas,
-  onStartClick,
-  onPauseClick,
-  onResumeClick,
-  onFinishClick,
   onMarcarConcluido,
+  funcionariosOptions,
+  responsavelSelecionadoId,
+  setResponsavelSelecionadoId,
+  handleSaveResponsavel,
+  isSavingResponsavel,
+  lastSavedResponsavelId,
 }: ServicoControlsProps) {
-  const [pausaDialogOpen, setPausaDialogOpen] = useState(false);
-  
-  const handlePauseClick = () => {
-    setPausaDialogOpen(true);
-  };
-  
-  const handlePausaConfirm = (motivo: string) => {
-    onPauseClick(motivo);
-    setPausaDialogOpen(false);
-  };
+  const [hasChanges, setHasChanges] = useState(false);
 
-  const handlePausaCancel = () => {
-    setPausaDialogOpen(false);
-  };
+  useEffect(() => {
+    // Check if the currently selected funcionário is different from the last saved one
+    setHasChanges(responsavelSelecionadoId !== lastSavedResponsavelId);
+  }, [responsavelSelecionadoId, lastSavedResponsavelId]);
 
   if (!temPermissao) {
     return null;
   }
-  
+
   return (
-    <>
-      <div className="py-3">
-        <div className="flex space-x-2 my-2">
-          {!isRunning && !isPaused && !concluido && (
-            <Button
-              onClick={onStartClick}
-              className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
-            >
-              <Play className="h-4 w-4 mr-1" />
-              Iniciar Timer
-            </Button>
-          )}
-          
-          {isRunning && !isPaused && (
-            <Button
-              onClick={handlePauseClick}
-              className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-white"
-            >
-              <Pause className="h-4 w-4 mr-1" />
-              Pausar
-            </Button>
-          )}
-          
-          {isPaused && (
-            <Button
-              onClick={onResumeClick}
-              className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
-            >
-              <Play className="h-4 w-4 mr-1" />
-              Retomar
-            </Button>
-          )}
-          
-          {(isRunning || isPaused) && (
-            <Button
-              onClick={onFinishClick}
-              className="flex-1 bg-red-500 hover:bg-red-600 text-white"
-            >
-              <StopCircle className="h-4 w-4 mr-1" />
-              Terminar
-            </Button>
-          )}
-        </div>
-      </div>
-      
+    <div className="space-y-4">
       {!concluido && (
-        <div className="pt-0 pb-4">
+        <>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Selecionar Responsável</label>
+            <Select 
+              value={responsavelSelecionadoId} 
+              onValueChange={setResponsavelSelecionadoId}
+              disabled={concluido}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecione um funcionário" />
+              </SelectTrigger>
+              <SelectContent>
+                {funcionariosOptions.map((funcionario) => (
+                  <SelectItem key={funcionario.id} value={funcionario.id}>
+                    {funcionario.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {hasChanges && (
+            <Button
+              variant="outline"
+              onClick={handleSaveResponsavel}
+              disabled={isSavingResponsavel || !responsavelSelecionadoId}
+              className="w-full"
+            >
+              {isSavingResponsavel ? "Salvando..." : "Salvar Responsável"}
+            </Button>
+          )}
+          
           <Button 
             variant="default" 
             size="sm" 
             onClick={onMarcarConcluido}
-            disabled={!todasSubatividadesConcluidas}
-            className={`w-full ${todasSubatividadesConcluidas ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400'} text-white`}
-            title={!todasSubatividadesConcluidas ? "Complete todas as subatividades primeiro" : "Marcar como concluído"}
+            disabled={!todasSubatividadesConcluidas || !responsavelSelecionadoId}
+            className={`w-full ${todasSubatividadesConcluidas && responsavelSelecionadoId ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400'} text-white`}
+            title={!todasSubatividadesConcluidas ? "Complete todas as subatividades primeiro" : !responsavelSelecionadoId ? "Selecione um responsável" : "Marcar como concluído"}
           >
             <CheckCircle2 className="h-4 w-4 mr-1" />
             Marcar Concluído
           </Button>
+        </>
+      )}
+
+      {concluido && (
+        <div className="p-3 bg-green-50 border border-green-100 rounded-md text-green-700 text-sm text-center">
+          Serviço concluído
         </div>
       )}
-      
-      <PausaDialog 
-        isOpen={pausaDialogOpen}
-        onClose={handlePausaCancel}
-        onConfirm={handlePausaConfirm}
-      />
-    </>
+    </div>
   );
 }

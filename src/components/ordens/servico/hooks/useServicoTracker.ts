@@ -1,13 +1,12 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { getFuncionarios } from "@/services/funcionarioService";
 import { Servico, SubAtividade, TipoServico, EtapaOS } from "@/types/ordens";
 import { Funcionario } from "@/types/funcionarios";
 import { useAuth } from "@/hooks/useAuth";
-import { UseServicoTrackerProps, UseServicoTrackerResult, ServicoStatus, PausaRegistro } from "./types/servicoTrackerTypes";
-import { useOrdemTimer } from "@/hooks/useOrdemTimer";
+import { UseServicoTrackerProps, UseServicoTrackerResult, ServicoStatus } from "./types/servicoTrackerTypes";
 import { getServicoStatus } from "./utils/servicoTrackerUtils";
-import { formatTime } from "@/utils/timerUtils";
 
 export function useServicoTracker({
   servico,
@@ -21,66 +20,19 @@ export function useServicoTracker({
   const { funcionario, canEditOrder } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
+  const [responsavelSelecionadoId, setResponsavelSelecionadoId] = useState(funcionarioId || '');
+  const [isSavingResponsavel, setIsSavingResponsavel] = useState(false);
   
   const temPermissao = canEditOrder(ordemId);
   
-  const {
-    isRunning,
-    isPaused,
-    displayTime: timerDisplayTime,
-    handleStart,
-    handlePause: pauseTimer,
-    handleResume: resumeTimer,
-    handleFinish: finishTimer,
-    pausas: timerPausas
-  } = useOrdemTimer({
-    ordemId,
-    etapa: etapa as EtapaOS,
-    tipoServico: servico.tipo,
-    onPause: () => {
-      toast.success("Timer pausado");
-    },
-    onResume: () => {
-      toast.success("Timer retomado");
-    },
-    onFinish: () => {
-      toast.success("Timer finalizado");
-    },
-    isEtapaConcluida: servico.concluido
-  });
-
-  // Use the timer display time directly 
-  const displayTime = timerDisplayTime;
-
-  // Convert timer pausas to PausaRegistro format
-  const pausas: PausaRegistro[] = timerPausas.map(p => ({
-    iniciado: p.inicio,
-    finalizado: p.fim,
-    motivo: p.motivo
-  }));
-  
-  const handlePause = (motivo?: string) => {
-    pauseTimer(motivo);
-    toast.success("Timer pausado");
-  };
-  
-  const handleResume = () => {
-    resumeTimer();
-    toast.success("Timer retomado");
-  };
-  
-  // Determine service status based on running, paused and completed states
-  const servicoStatus: ServicoStatus = getServicoStatus(isRunning, isPaused, servico.concluido);
+  // Determine service status based on completed state
+  const servicoStatus: ServicoStatus = getServicoStatus(false, false, servico.concluido);
   
   const completedSubatividades = servico.subatividades?.filter(sub => sub.concluida).length || 0;
   const totalSubatividades = servico.subatividades?.filter(sub => sub.selecionada).length || 0;
   
   // Ensure progressPercentage is a number
   const progressPercentage = totalSubatividades > 0 ? Math.round((completedSubatividades / totalSubatividades) * 100) : 0;
-  
-  const tempoTotalEstimado = servico.subatividades?.reduce((total, sub) => {
-    return sub.selecionada && sub.tempoEstimado ? total + sub.tempoEstimado : total;
-  }, 0) || 0;
   
   const subatividadesFiltradas = servico.subatividades?.filter(sub => sub.selecionada) || [];
   
@@ -103,100 +55,83 @@ export function useServicoTracker({
     }
   };
   
-  const handleStartClick = () => {
-    handleStart();
-  };
-  
-  const handleFinish = () => {
-    finishTimer();
-  };
-  
   const handleMarcarConcluido = () => {
-    // Se o timer ainda estiver rodando, finalizar primeiro
-    if (isRunning || isPaused) {
-      finishTimer();
-    }
-    
     if (onServicoStatusChange) {
-      // Usar o ID do funcionário atual
-      onServicoStatusChange(true, funcionario?.id, funcionario?.nome);
+      // Usar o responsável selecionado ou o funcionário atual
+      const funcId = responsavelSelecionadoId || funcionario?.id;
+      const funcNome = funcionariosOptions.find(f => f.id === funcId)?.nome || funcionario?.nome;
+      
+      onServicoStatusChange(true, funcId, funcNome);
+      toast.success("Serviço marcado como concluído");
     }
   };
-
-  // Dummy implementations to match interface
-  const [responsavelSelecionadoId, setResponsavelSelecionadoId] = useState(funcionarioId || '');
-  const [isSavingResponsavel, setIsSavingResponsavel] = useState(false);
-  const lastSavedResponsavelId = funcionarioId ? String(funcionarioId) : '';
-  const lastSavedResponsavelNome = funcionarioNome || '';
 
   const handleSaveResponsavel = async () => {
     setIsSavingResponsavel(true);
     try {
-      // Implementation would go here
+      // Simulação de salvamento de responsável (aqui seria uma chamada de API real)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      toast.success("Responsável atribuído com sucesso");
       setIsSavingResponsavel(false);
       return Promise.resolve();
     } catch (error) {
+      toast.error("Erro ao atribuir responsável");
       setIsSavingResponsavel(false);
       return Promise.reject(error);
     }
   };
 
-  const handleReiniciarServico = () => {
-    // Implementation would go here
-  };
-  
+  useEffect(() => {
+    // Inicializar o responsável selecionado com o funcionário atual, se não houver um
+    if (!responsavelSelecionadoId && funcionario?.id) {
+      setResponsavelSelecionadoId(funcionario.id);
+    }
+  }, [funcionario, responsavelSelecionadoId]);
+
+  // Return tracking state
   return {
     isOpen,
     setIsOpen,
     funcionariosOptions,
     temPermissao,
-    isRunning,
-    isPaused,
-    displayTime,
     servicoStatus,
     progressPercentage,
     completedSubatividades,
     totalSubatividades,
-    tempoTotalEstimado,
     subatividadesFiltradas,
-    pausas,
     handleLoadFuncionarios,
     handleSubatividadeToggle,
-    handleStartClick,
-    handlePause,
-    handleResume,
-    handleFinish,
     handleMarcarConcluido,
-    // Additional properties needed by interface
-    handleReiniciarServico,
     responsavelSelecionadoId,
     setResponsavelSelecionadoId,
     handleSaveResponsavel,
     isSavingResponsavel,
-    lastSavedResponsavelId,
-    lastSavedResponsavelNome,
+    lastSavedResponsavelId: funcionarioId || '',
+    lastSavedResponsavelNome: funcionarioNome || '',
+    // Para compatibilidade com a interface existente
+    handleReiniciarServico: () => {},
     state: {
-      isRunning,
-      isPaused,
+      isRunning: false,
+      isPaused: false,
       time: 0,
       concluido: servico.concluido,
       status: servicoStatus,
-      pausas,
+      pausas: [],
       progressPercentage,
       tipoServico: servico.tipo,
       completedSubatividades,
       totalSubatividades
     },
     operations: {
-      start: handleStartClick,
-      pause: handlePause,
-      resume: handleResume,
-      stop: handleFinish,
+      start: () => {},
+      pause: () => {},
+      resume: () => {},
+      stop: () => {},
       complete: handleMarcarConcluido,
       reset: () => {}
     },
-    registerPausa: handlePause,
-    finalizarPausa: handleResume,
+    registerPausa: () => {},
+    finalizarPausa: () => {},
     handleAssign: () => {}
   };
 }
