@@ -52,6 +52,19 @@ export default function ServicoHeader({
     return titles[tipo] || tipo;
   };
   
+  const getStatusBadge = () => {
+    switch (servicoStatus) {
+      case "concluido":
+        return <Badge variant="success">Concluído</Badge>;
+      case "em_andamento":
+        return <Badge variant="default" className="bg-blue-500">Em andamento</Badge>;
+      case "pausado":
+        return <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">Pausado</Badge>;
+      case "nao_iniciado":
+        return <Badge variant="outline" className="bg-gray-100">Não iniciado</Badge>;
+    }
+  };
+  
   return (
     <div className="flex flex-col space-y-2">
       <div className="flex justify-between">
@@ -67,23 +80,7 @@ export default function ServicoHeader({
         </div>
         
         <div className="flex items-center space-x-2">
-          {servicoStatus === "concluido" && (
-            <Badge variant="success">
-              Concluído
-            </Badge>
-          )}
-          
-          {servicoStatus === "em_andamento" && (
-            <Badge variant="default">
-              Em andamento
-            </Badge>
-          )}
-          
-          {servicoStatus === "nao_iniciado" && (
-            <Badge variant="outline" className="bg-gray-100">
-              Não iniciado
-            </Badge>
-          )}
+          {getStatusBadge()}
           
           <Button variant="ghost" size="sm" className="p-0 h-8 w-8" onClick={onToggleOpen}>
             {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}

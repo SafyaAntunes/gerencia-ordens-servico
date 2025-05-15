@@ -22,11 +22,14 @@ export function useServicoTracker({
   const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
   const [responsavelSelecionadoId, setResponsavelSelecionadoId] = useState(funcionarioId || '');
   const [isSavingResponsavel, setIsSavingResponsavel] = useState(false);
+  const [status, setStatus] = useState<ServicoStatus>(
+    servico.concluido ? "concluido" : "em_andamento"
+  );
   
   const temPermissao = canEditOrder(ordemId);
   
   // Determine service status based on completed state
-  const servicoStatus: ServicoStatus = getServicoStatus(false, false, servico.concluido);
+  const servicoStatus: ServicoStatus = status;
   
   const completedSubatividades = servico.subatividades?.filter(sub => sub.concluida).length || 0;
   const totalSubatividades = servico.subatividades?.filter(sub => sub.selecionada).length || 0;
@@ -61,8 +64,18 @@ export function useServicoTracker({
       const funcId = responsavelSelecionadoId || funcionario?.id;
       const funcNome = funcionariosOptions.find(f => f.id === funcId)?.nome || funcionario?.nome;
       
+      setStatus("concluido");
       onServicoStatusChange(true, funcId, funcNome);
       toast.success("Serviço marcado como concluído");
+    }
+  };
+
+  const handleStatusChange = (newStatus: ServicoStatus) => {
+    if (newStatus === "concluido") {
+      handleMarcarConcluido();
+    } else {
+      setStatus(newStatus);
+      toast.success(`Status do serviço alterado para ${newStatus === "em_andamento" ? "Em Andamento" : "Pausado"}`);
     }
   };
 
@@ -108,11 +121,13 @@ export function useServicoTracker({
     isSavingResponsavel,
     lastSavedResponsavelId: funcionarioId || '',
     lastSavedResponsavelNome: funcionarioNome || '',
+    handleStatusChange,
+    setStatus,
     // Para compatibilidade com a interface existente
     handleReiniciarServico: () => {},
     state: {
-      isRunning: false,
-      isPaused: false,
+      isRunning: status === "em_andamento",
+      isPaused: status === "pausado",
       time: 0,
       concluido: servico.concluido,
       status: servicoStatus,
@@ -123,9 +138,9 @@ export function useServicoTracker({
       totalSubatividades
     },
     operations: {
-      start: () => {},
-      pause: () => {},
-      resume: () => {},
+      start: () => handleStatusChange("em_andamento"),
+      pause: () => handleStatusChange("pausado"),
+      resume: () => handleStatusChange("em_andamento"),
       stop: () => {},
       complete: handleMarcarConcluido,
       reset: () => {}

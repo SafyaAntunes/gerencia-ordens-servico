@@ -101,7 +101,14 @@ export default function ServicoTracker({
 
         <CollapsibleContent>
           <CardContent className="pt-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium">Etapa</h4>
+                <div className="p-3 bg-slate-50 rounded-md">
+                  <p className="text-sm font-semibold capitalize">{etapa?.replace('_', ' ') || 'N/A'}</p>
+                </div>
+              </div>
+              
               <div className="space-y-4">
                 <h4 className="text-sm font-medium">Serviços</h4>
                 <ServicoDetails 
@@ -127,6 +134,7 @@ export default function ServicoTracker({
                   isSavingResponsavel={isSavingResponsavel}
                   lastSavedResponsavelId={lastSavedResponsavelId}
                   lastSavedResponsavelNome={lastSavedResponsavelNome}
+                  servicoStatus={servicoStatus}
                 />
               </div>
             </div>
