@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Servico } from "@/types/ordens";
 import { cn } from "@/lib/utils";
@@ -70,9 +70,9 @@ export default function ServicoTracker({
   };
 
   // Load funcionarios if needed (when the component mounts)
-  useEffect(() => {
+  useState(() => {
     handleLoadFuncionarios();
-  }, [handleLoadFuncionarios]);
+  });
 
   // Verifica se todas subatividades selecionadas estão concluídas
   const todasSubatividadesConcluidas = subatividadesFiltradas.length === 0 || 

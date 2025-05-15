@@ -157,11 +157,6 @@ const formSchema = z.object({
   prioridade: z.enum(["baixa", "media", "alta", "urgente"] as const),
   servicosTipos: z.array(z.string()).optional(),
   servicosDescricoes: z.record(z.string()).optional(),
-  servicosSubatividades: z.record(z.array(z.any())).optional(),
-  etapasTempoPreco: z.record(z.object({
-    precoHora: z.number().optional(),
-    tempoEstimado: z.number().optional()
-  })).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -173,8 +168,6 @@ type OrdemFormProps = {
   defaultFotosEntrada?: any[];
   defaultFotosSaida?: any[];
   onCancel?: () => void;
-  onSubatividadeToggle?: (servicoTipo: string, subatividadeId: string, checked: boolean) => void;
-  isSubatividadeEditingEnabled?: boolean;
   clientes?: Cliente[];
   isLoadingClientes?: boolean;
 };
@@ -201,11 +194,8 @@ export default function OrdemForm({
   onCancel,
   clientes = [],
   isLoadingClientes = false,
-  onSubatividadeToggle,
-  isSubatividadeEditingEnabled = false,
 }: OrdemFormProps) {
   const [servicosDescricoes, setServicosDescricoes] = useState<Record<string, string>>({});
-  const [servicosSubatividades, setServicosSubatividades] = useState<Record<string, SubAtividade[]>>({});
   const [fotosEntrada, setFotosEntrada] = useState<File[]>([]);
   const [fotosSaida, setFotosSaida] = useState<File[]>([]);
   const [activeTab, setActiveTab] = useState("dados");
@@ -214,20 +204,6 @@ export default function OrdemForm({
   const [isNovoClienteOpen, setIsNovoClienteOpen] = useState(false);
   const [isSubmittingCliente, setIsSubmittingCliente] = useState(false);
   const [isLoadingMotores, setIsLoadingMotores] = useState(false);
-  const [etapasConfig, setEtapasConfig] = useState<Record<TipoAtividade, SubAtividade[]>>({
-    lavagem: [],
-    inspecao_inicial: [],
-    inspecao_final: []
-  });
-  const [isLoadingEtapas, setIsLoadingEtapas] = useState(false);
-  const [etapasTempoPreco, setEtapasTempoPreco] = useState<Record<EtapaOS, {precoHora?: number, tempoEstimado?: number}>>({
-    lavagem: {precoHora: 0, tempoEstimado: 0},
-    inspecao_inicial: {precoHora: 0, tempoEstimado: 0},
-    inspecao_final: {precoHora: 0, tempoEstimado: 0},
-    retifica: {precoHora: 0, tempoEstimado: 0},
-    montagem: {precoHora: 0, tempoEstimado: 0},
-    dinamometro: {precoHora: 0, tempoEstimado: 0}
-  });
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -241,52 +217,36 @@ export default function OrdemForm({
       prioridade: defaultValues?.prioridade || "media",
       servicosTipos: defaultValues?.servicosTipos || [],
       servicosDescricoes: defaultValues?.servicosDescricoes || {},
-      servicosSubatividades: defaultValues?.servicosSubatividades || {},
-      etapasTempoPreco: defaultValues?.etapasTempoPreco || {},
     },
   });
   
   useEffect(() => {
-    const fetchEtapasConfig = async () => {
-      setIsLoadingEtapas(true);
-      try {
-        const etapasData = await getSubatividades();
-        
-        // Apenas precisamos das etapas lavagem, inspecao_inicial e inspecao_final
-        const tiposAtividade: TipoAtividade[] = ['lavagem', 'inspecao_inicial', 'inspecao_final'];
-        
-        // Para cada tipo de atividade, atualize o tempo padrão se houver subatividades
-        tiposAtividade.forEach((tipo) => {
-          if (etapasData[tipo] && etapasData[tipo].length > 0) {
-            // Use o tempo estimado da primeira subatividade como tempo padrão
-            const defaultTempo = etapasData[tipo][0].tempoEstimado || 0;
-            
-            setEtapasTempoPreco(prev => ({
-              ...prev,
-              [tipo]: { 
-                ...prev[tipo],
-                tempoEstimado: defaultTempo 
-              }
-            }));
-          }
-          
-          // Guarde as subatividades para referência
-          if (etapasData[tipo]) {
-            setEtapasConfig(prev => ({
-              ...prev,
-              [tipo]: etapasData[tipo]
-            }));
-          }
-        });
-      } catch (error) {
-        console.error("Erro ao buscar configurações de etapas:", error);
-      } finally {
-        setIsLoadingEtapas(false);
-      }
-    };
-    
-    fetchEtapasConfig();
-  }, []);
+    if (defaultValues?.servicosDescricoes) {
+      setServicosDescricoes(defaultValues.servicosDescricoes);
+    }
+  }, [defaultValues?.servicosDescricoes]);
+  
+  useEffect(() => {
+    if (selectedClienteId) {
+      const fetchMotores = async () => {
+        setIsLoadingMotores(true);
+        try {
+          const motoresData = await getMotores(selectedClienteId);
+          setMotores(motoresData);
+        } catch (error) {
+          console.error("Erro ao buscar motores:", error);
+          toast.error("Não foi possível carregar os motores deste cliente");
+          setMotores([]);
+        } finally {
+          setIsLoadingMotores(false);
+        }
+      };
+      
+      fetchMotores();
+    } else {
+      setMotores([]);
+    }
+  }, [selectedClienteId]);
   
   useEffect(() => {
     const processDefaultFotos = () => {
@@ -314,111 +274,6 @@ export default function OrdemForm({
     processDefaultFotos();
   }, [defaultFotosEntrada, defaultFotosSaida]);
   
-  useEffect(() => {
-    if (selectedClienteId) {
-      const fetchMotores = async () => {
-        setIsLoadingMotores(true);
-        try {
-          const motoresData = await getMotores(selectedClienteId);
-          setMotores(motoresData);
-        } catch (error) {
-          console.error("Erro ao buscar motores:", error);
-          toast.error("Não foi possível carregar os motores deste cliente");
-          setMotores([]);
-        } finally {
-          setIsLoadingMotores(false);
-        }
-      };
-      
-      fetchMotores();
-    } else {
-      setMotores([]);
-    }
-  }, [selectedClienteId]);
-  
-  useEffect(() => {
-    if (defaultValues?.servicosSubatividades) {
-      setServicosSubatividades(defaultValues.servicosSubatividades);
-    }
-    
-    if (defaultValues?.servicosDescricoes) {
-      setServicosDescricoes(defaultValues.servicosDescricoes);
-    }
-    
-    if (defaultValues?.etapasTempoPreco) {
-      setEtapasTempoPreco(prev => ({
-        ...prev,
-        ...defaultValues.etapasTempoPreco as any
-      }));
-    }
-  }, [defaultValues?.servicosSubatividades, defaultValues?.servicosDescricoes, defaultValues?.etapasTempoPreco]);
-  
-  useEffect(() => {
-    const tiposList = form.watch("servicosTipos") || [];
-    
-    const loadSubatividades = async (tipo: TipoServico) => {
-      try {
-        // Carregar subatividades do banco de dados
-        const subatividadesList = await getSubatividadesByTipo(tipo);
-        if (subatividadesList && subatividadesList.length > 0) {
-          // Use as subatividades do banco de dados
-          setServicosSubatividades(prev => ({
-            ...prev,
-            [tipo]: subatividadesList.map(sub => ({
-              ...sub,
-              selecionada: false
-            }))
-          }));
-        } else {
-          // Se não houver subatividades no banco, use os padrões como fallback
-          const defaultSubs = SUBATIVIDADES[tipo] || [];
-          const defaultSubatividades = defaultSubs.map(nome => ({
-            id: uuidv4(),
-            nome,
-            selecionada: false
-          }));
-          
-          setServicosSubatividades(prev => ({
-            ...prev,
-            [tipo]: defaultSubatividades
-          }));
-        }
-      } catch (error) {
-        console.error(`Erro ao carregar subatividades para ${tipo}:`, error);
-        // Em caso de erro, ainda use os padrões
-        const defaultSubs = SUBATIVIDADES[tipo] || [];
-        const defaultSubatividades = defaultSubs.map(nome => ({
-          id: uuidv4(),
-          nome,
-          selecionada: false
-        }));
-        
-        setServicosSubatividades(prev => ({
-          ...prev,
-          [tipo]: defaultSubatividades
-        }));
-      }
-    };
-    
-    // Para cada tipo de serviço selecionado
-    tiposList.forEach((tipo) => {
-      if (!servicosSubatividades[tipo]) {
-        loadSubatividades(tipo as TipoServico);
-      }
-    });
-    
-    // Remover tipos não selecionados
-    Object.keys(servicosSubatividades).forEach((tipo) => {
-      if (!tiposList.includes(tipo)) {
-        setServicosSubatividades(prev => {
-          const newState = { ...prev };
-          delete newState[tipo];
-          return newState;
-        });
-      }
-    });
-  }, [form.watch("servicosTipos")]);
-  
   const handleServicoDescricaoChange = (tipo: string, descricao: string) => {
     setServicosDescricoes(prev => ({
       ...prev,
@@ -426,29 +281,10 @@ export default function OrdemForm({
     }));
   };
   
-  const handleSubatividadesChange = (tipo: TipoServico, subatividades: SubAtividade[]) => {
-    setServicosSubatividades(prev => ({
-      ...prev,
-      [tipo]: subatividades
-    }));
-  };
-  
-  const handleEtapaTempoPrecoChange = (etapa: EtapaOS, field: 'precoHora' | 'tempoEstimado', value: number) => {
-    setEtapasTempoPreco(prev => ({
-      ...prev,
-      [etapa]: {
-        ...prev[etapa],
-        [field]: value
-      }
-    }));
-  };
-  
   const handleFormSubmit = (values: FormValues) => {
     const formData = {
       ...values,
       servicosDescricoes,
-      servicosSubatividades,
-      etapasTempoPreco,
       fotosEntrada,
       fotosSaida
     };
@@ -816,28 +652,16 @@ export default function OrdemForm({
                                   </div>
                                   
                                   {field.value?.includes(tipo.value) && (
-                                    <>
-                                      <div className="ml-6">
-                                        <Textarea
-                                          placeholder={`Descreva o serviço de ${tipo.label.toLowerCase()}...`}
-                                          value={servicosDescricoes[tipo.value] || ""}
-                                          onChange={(e) => 
-                                            handleServicoDescricaoChange(tipo.value, e.target.value)
-                                          }
-                                          className="resize-none"
-                                        />
-                                      </div>
-                                      
-                                      {servicosSubatividades[tipo.value] && (
-                                        <ServicoSubatividades
-                                          tipoServico={tipo.value}
-                                          subatividades={servicosSubatividades[tipo.value]}
-                                          onChange={(subatividades) => 
-                                            handleSubatividadesChange(tipo.value, subatividades)
-                                          }
-                                        />
-                                      )}
-                                    </>
+                                    <div className="ml-6">
+                                      <Textarea
+                                        placeholder={`Descreva o serviço de ${tipo.label.toLowerCase()}...`}
+                                        value={servicosDescricoes[tipo.value] || ""}
+                                        onChange={(e) => 
+                                          handleServicoDescricaoChange(tipo.value, e.target.value)
+                                        }
+                                        className="resize-none"
+                                      />
+                                    </div>
                                   )}
                                 </FormItem>
                               );
