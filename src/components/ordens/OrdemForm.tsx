@@ -212,8 +212,8 @@ export default function OrdemForm({
       nome: defaultValues?.nome || "",
       clienteId: defaultValues?.clienteId || "",
       motorId: defaultValues?.motorId || "",
-      dataAbertura: defaultValues?.dataAbertura || new Date(),
-      dataPrevistaEntrega: defaultValues?.dataPrevistaEntrega || new Date(),
+      dataAbertura: defaultValues?.dataAbertura instanceof Date ? defaultValues.dataAbertura : new Date(),
+      dataPrevistaEntrega: defaultValues?.dataPrevistaEntrega instanceof Date ? defaultValues.dataPrevistaEntrega : new Date(),
       prioridade: defaultValues?.prioridade || "media",
       servicosTipos: defaultValues?.servicosTipos || [],
       servicosDescricoes: defaultValues?.servicosDescricoes || {},
@@ -512,8 +512,8 @@ export default function OrdemForm({
                               !field.value && "text-muted-foreground"
                             )}
                           >
-                            {field.value ? (
-                              format(new Date(field.value), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                            {field.value instanceof Date && !isNaN(field.value.getTime()) ? (
+                              format(field.value, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
                             ) : (
                               <span>Selecione uma data</span>
                             )}
@@ -524,7 +524,7 @@ export default function OrdemForm({
                       <PopoverContent className="w-auto p-0 bg-white" align="start">
                         <Calendar
                           mode="single"
-                          selected={field.value instanceof Date ? field.value : new Date(field.value || Date.now())}
+                          selected={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value : undefined}
                           onSelect={field.onChange}
                           initialFocus
                           locale={ptBR}
@@ -553,8 +553,8 @@ export default function OrdemForm({
                               !field.value && "text-muted-foreground"
                             )}
                           >
-                            {field.value ? (
-                              format(new Date(field.value), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                            {field.value instanceof Date && !isNaN(field.value.getTime()) ? (
+                              format(field.value, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
                             ) : (
                               <span>Selecione uma data</span>
                             )}
@@ -565,7 +565,7 @@ export default function OrdemForm({
                       <PopoverContent className="w-auto p-0 bg-white" align="start">
                         <Calendar
                           mode="single"
-                          selected={field.value instanceof Date ? field.value : new Date(field.value || Date.now())}
+                          selected={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value : undefined}
                           onSelect={field.onChange}
                           initialFocus
                           locale={ptBR}
