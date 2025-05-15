@@ -2,9 +2,18 @@
 import { useState } from "react";
 import { db } from "@/lib/firebase";
 import { doc, updateDoc } from "firebase/firestore";
-import { OrdemServico, Servico } from "@/types/ordens";
+import { OrdemServico, Servico, ServicoStatus } from "@/types/ordens";
 import { toast } from "sonner";
 import { SetOrdemFunction } from "./types";
+
+// Define a type for the existingServico to prevent type errors
+interface ExistingServicoPartial {
+  status?: ServicoStatus;
+  funcionarioId?: string | null;
+  funcionarioNome?: string | null;
+  concluido?: boolean;
+  dataConclusao?: Date | null;
+}
 
 export const useOrdemUpdate = (
   id: string | undefined, 
@@ -27,7 +36,7 @@ export const useOrdemUpdate = (
         ...formData,
         servicos: formData.servicos.map((newServico: any, index: number) => {
           // Preserve existing service data if available
-          const existingServico = ordem.servicos[index] || {};
+          const existingServico: ExistingServicoPartial = ordem.servicos[index] || {};
           return {
             ...newServico,
             // Ensure we have default values if properties don't exist
