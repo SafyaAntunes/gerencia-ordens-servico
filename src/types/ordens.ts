@@ -57,6 +57,7 @@ export type Servico = {
   tipo: TipoServico;
   descricao: string;
   concluido: boolean;
+  status?: 'em_andamento' | 'pausado' | 'concluido';
   subatividades?: SubAtividade[];
   atividadesRelacionadas?: {
     lavagem?: SubAtividade[];

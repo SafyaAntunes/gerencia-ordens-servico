@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { LogoutProps } from "@/types/props";
 import { useAuth } from "@/hooks/useAuth";
-import { SubAtividade } from "@/types/ordens";
 import { useOrdemDetalhes } from "@/hooks/useOrdemDetalhes";
 import OrdemForm from "@/components/ordens/OrdemForm";
 import { OrdemTabs } from "@/components/ordens/detalhes/OrdemTabs";
@@ -81,37 +80,6 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
     );
   }
 
-  // Função para lidar com toggles de subatividades durante a edição da ordem
-  const handleSubatividadeToggleInEditMode = (servicoTipo: string, subId: string, checked: boolean) => {
-    if (!ordem || !isEditando) return;
-    
-    const servicosAtualizados = ordem.servicos.map(servico => {
-      if (servico.tipo === servicoTipo) {
-        const subatividadesAtualizadas = servico.subatividades?.map(sub => {
-          if (sub.id === subId) {
-            return { ...sub, concluida: checked };
-          }
-          return sub;
-        }) || [];
-        
-        return {
-          ...servico,
-          subatividades: subatividadesAtualizadas
-        };
-      }
-      return servico;
-    });
-    
-    // Atualiza a ordem localmente
-    const ordemAtualizada = {
-      ...ordem,
-      servicos: servicosAtualizados
-    };
-    
-    // Chama o método para atualizar o estado da ordem
-    handleOrdemUpdate(ordemAtualizada);
-  };
-
   return (
     <Layout onLogout={onLogout}>
       <div className="mb-4">
@@ -153,19 +121,11 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
             servicosDescricoes: ordem.servicos?.reduce((acc, s) => {
               acc[s.tipo] = s.descricao;
               return acc;
-            }, {} as Record<string, string>) || {},
-            servicosSubatividades: ordem.servicos?.reduce((acc, s) => {
-              if (s.subatividades) {
-                acc[s.tipo] = s.subatividades;
-              }
-              return acc;
-            }, {} as Record<string, SubAtividade[]>) || {}
+            }, {} as Record<string, string>) || {}
           }}
           defaultFotosEntrada={ordem?.fotosEntrada || []}
           defaultFotosSaida={ordem?.fotosSaida || []}
           onCancel={() => setIsEditando(false)}
-          onSubatividadeToggle={handleSubatividadeToggleInEditMode}
-          isSubatividadeEditingEnabled={true}
           clientes={clientes}
           isLoadingClientes={isLoadingClientes}
         />

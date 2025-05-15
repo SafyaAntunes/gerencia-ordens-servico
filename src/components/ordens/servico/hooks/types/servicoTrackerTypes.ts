@@ -9,7 +9,7 @@ export interface UseServicoTrackerProps {
   ordemId?: string;
   funcionarioId?: string;
   funcionarioNome?: string;
-  etapa?: EtapaOS;
+  etapa?: string;
   onServicoStatusChange?: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
   onSubatividadeToggle?: (subatividadeId: string, checked: boolean) => void;
 }
