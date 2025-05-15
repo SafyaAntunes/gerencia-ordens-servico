@@ -1,3 +1,4 @@
+
 import {
   FileText,
   Clock,
@@ -25,7 +26,7 @@ import { toast } from "sonner";
 import { Funcionario } from "@/types/funcionarios";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format, startOfMonth, endOfMonth, isWithinInterval, addMonths, subMonths, isAfter } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isWithinInterval, addMonths, subMonths, isAfter, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useFuncionariosDisponibilidade } from "@/hooks/useFuncionariosDisponibilidade";
 
@@ -78,6 +79,49 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
     });
   };
 
+  // Função segura para validar e converter datas
+  const safeConvertToDate = (dateValue: any): Date | null => {
+    if (!dateValue) return null;
+    
+    try {
+      // If it's a Firestore Timestamp
+      if (dateValue instanceof Timestamp) {
+        return dateValue.toDate();
+      }
+      
+      // If it's already a Date
+      if (dateValue instanceof Date && isValid(dateValue)) {
+        return dateValue;
+      }
+      
+      // If it's a string, try to convert it
+      if (typeof dateValue === 'string') {
+        const parsedDate = new Date(dateValue);
+        return isValid(parsedDate) ? parsedDate : null;
+      }
+    } catch (error) {
+      console.error("Error converting date:", error, dateValue);
+      return null;
+    }
+    
+    return null;
+  };
+
+  // Função segura para formatar datas
+  const formatDateSafely = (date: any): string => {
+    if (!date) return "N/D";
+    
+    const safeDate = safeConvertToDate(date);
+    if (!safeDate) return "Data inválida";
+    
+    try {
+      return format(safeDate, "dd/MM/yyyy", { locale: ptBR });
+    } catch (error) {
+      console.error("Error formatting date:", error, date);
+      return "Data inválida";
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
@@ -90,11 +134,15 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         querySnapshot.forEach((doc) => {
           const data = doc.data();
           
+          // Converter datas com segurança
+          const dataAbertura = safeConvertToDate(data.dataAbertura);
+          const dataPrevistaEntrega = safeConvertToDate(data.dataPrevistaEntrega);
+          
           ordensData.push({
             ...data,
             id: doc.id,
-            dataAbertura: data.dataAbertura?.toDate() || new Date(),
-            dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
+            dataAbertura: dataAbertura || new Date(),
+            dataPrevistaEntrega: dataPrevistaEntrega || new Date(),
           } as OrdemServico);
         });
         
@@ -138,13 +186,18 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
     const ordensFiltradas = ordensData.filter(ordem => {
       if (!ordem.dataAbertura) return false;
       
-      const dataAbertura = ordem.dataAbertura instanceof Date ? 
-        ordem.dataAbertura : new Date(ordem.dataAbertura);
+      const dataAbertura = safeConvertToDate(ordem.dataAbertura);
+      if (!dataAbertura) return false;
       
-      return isWithinInterval(dataAbertura, {
-        start: dateFilter.startDate,
-        end: dateFilter.endDate
-      });
+      try {
+        return isWithinInterval(dataAbertura, {
+          start: dateFilter.startDate,
+          end: dateFilter.endDate
+        });
+      } catch (error) {
+        console.error("Erro ao verificar intervalo de data:", error, ordem.dataAbertura);
+        return false;
+      }
     });
     
     const total = ordensFiltradas.length;
@@ -156,10 +209,15 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
     // Calcular OSs atrasadas (data prevista de entrega menor que a data atual e status não finalizado/entregue)
     const hoje = new Date();
     const atrasadas = ordensFiltradas.filter(ordem => {
-      const dataPrevista = ordem.dataPrevistaEntrega instanceof Date ? 
-        ordem.dataPrevistaEntrega : new Date(ordem.dataPrevistaEntrega);
-        
-      return isAfter(hoje, dataPrevista) && !['finalizado', 'entregue'].includes(ordem.status);
+      const dataPrevista = safeConvertToDate(ordem.dataPrevistaEntrega);
+      if (!dataPrevista) return false;
+      
+      try {
+        return isAfter(hoje, dataPrevista) && !['finalizado', 'entregue'].includes(ordem.status);
+      } catch (error) {
+        console.error("Erro ao comparar datas de entrega:", error, ordem.dataPrevistaEntrega);
+        return false;
+      }
     }).length;
     
     setMetricas({
@@ -183,13 +241,18 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
     const ordensFiltradas = ordensData.filter(ordem => {
       if (!ordem.dataAbertura) return false;
       
-      const dataAbertura = ordem.dataAbertura instanceof Date ? 
-        ordem.dataAbertura : new Date(ordem.dataAbertura);
+      const dataAbertura = safeConvertToDate(ordem.dataAbertura);
+      if (!dataAbertura) return false;
       
-      return isWithinInterval(dataAbertura, {
-        start: dateFilter.startDate,
-        end: dateFilter.endDate
-      });
+      try {
+        return isWithinInterval(dataAbertura, {
+          start: dateFilter.startDate,
+          end: dateFilter.endDate
+        });
+      } catch (error) {
+        console.error("Erro ao verificar intervalo de data para gráficos:", error, ordem.dataAbertura);
+        return false;
+      }
     });
     
     ordensFiltradas.forEach(ordem => {

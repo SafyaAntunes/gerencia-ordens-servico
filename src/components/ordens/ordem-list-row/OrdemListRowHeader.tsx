@@ -1,5 +1,5 @@
 
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { OrdemServico } from "@/types/ordens";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -17,8 +17,12 @@ export default function OrdemListRowHeader({ ordem, index, isAtrasada = false }:
     if (!date) return "N/D";
     
     try {
-      // Ensure date is a Date object
-      const dateObj = date instanceof Date ? date : new Date(date);
+      // Handle string dates
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      
+      // Validate the date is valid before formatting
+      if (!isValid(dateObj)) return "Data inválida";
+      
       return format(dateObj, "dd/MM/yy", { locale: ptBR });
     } catch (error) {
       console.error("Error formatting date:", error, date);

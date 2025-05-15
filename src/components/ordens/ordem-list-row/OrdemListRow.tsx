@@ -5,6 +5,7 @@ import OrdemListRowHeader from "./OrdemListRowHeader";
 import OrdemListRowDetails from "./OrdemListRowDetails";
 import OrdemListRowProgress from "./OrdemListRowProgress";
 import { Checkbox } from "@/components/ui/checkbox";
+import { isValid } from "date-fns";
 
 interface OrdemListRowProps {
   ordem: OrdemServico;
@@ -48,19 +49,27 @@ export default function OrdemListRow({
 
   // Verificar se a ordem está atrasada - com validação de datas
   const hoje = new Date();
-  let dataPrevista = ordem.dataPrevistaEntrega;
+  let isAtrasada = false;
   
-  // Ensure dataPrevistaEntrega is a valid Date object
-  if (!(dataPrevista instanceof Date) && dataPrevista) {
-    try {
-      dataPrevista = new Date(dataPrevista);
-    } catch (err) {
-      console.error("Invalid date:", dataPrevista);
-      dataPrevista = new Date(); // Fallback to current date
+  try {
+    let dataPrevista = ordem.dataPrevistaEntrega;
+    
+    // Ensure dataPrevistaEntrega is a valid Date object
+    if (dataPrevista) {
+      // Convert string to Date if needed
+      if (typeof dataPrevista === 'string') {
+        dataPrevista = new Date(dataPrevista);
+      }
+      
+      // Only check if it's atrasada if the date is valid
+      if (isValid(dataPrevista)) {
+        isAtrasada = dataPrevista < hoje && !['finalizado', 'entregue'].includes(ordem.status);
+      }
     }
+  } catch (error) {
+    console.error("Error checking if ordem is atrasada:", error);
+    isAtrasada = false;
   }
-  
-  const isAtrasada = dataPrevista < hoje && !['finalizado', 'entregue'].includes(ordem.status);
 
   // Calculate progress with validation
   let progresso = 0;

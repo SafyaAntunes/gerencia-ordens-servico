@@ -2,7 +2,7 @@
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { EtapaOS, OrdemServico } from "@/types/ordens";
 import { TimeStatusDisplay } from "./TimeStatusDisplay";
@@ -28,12 +28,30 @@ export function ProgressoSummaryCard({
   etapasNomes,
   formatarTempo
 }: ProgressoSummaryCardProps) {
+  // Safe date formatting
+  const formatDateSafely = (date: any) => {
+    if (!date) return "N/D";
+    
+    try {
+      // Handle string dates
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      
+      // Validate the date is valid before formatting
+      if (!isValid(dateObj)) return "Data inválida";
+      
+      return format(dateObj, "dd/MM/yyyy", { locale: ptBR });
+    } catch (error) {
+      console.error("Error formatting date:", error, date);
+      return "Data inválida";
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Progresso Geral da OS #{ordem.id.slice(-5)}</CardTitle>
         <CardDescription>
-          Ordem aberta há {diasEmAndamento} dias - {format(new Date(ordem.dataAbertura), "dd/MM/yyyy", { locale: ptBR })}
+          Ordem aberta há {diasEmAndamento} dias - {formatDateSafely(ordem.dataAbertura)}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

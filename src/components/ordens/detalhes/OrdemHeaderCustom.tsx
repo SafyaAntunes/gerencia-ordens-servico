@@ -28,13 +28,18 @@ export const OrdemHeaderCustom: React.FC<OrdemHeaderCustomProps> = ({
   const formatDate = (date: Date | string | null | undefined): string => {
     if (!date) return 'Data não definida';
     
-    // Handle string dates
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
-    
-    // Validate the date is valid before formatting
-    if (!isValid(dateObj)) return 'Data inválida';
-    
-    return format(dateObj, 'dd/MM/yyyy', { locale: ptBR });
+    try {
+      // Handle string dates
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      
+      // Validate the date is valid before formatting
+      if (!isValid(dateObj)) return 'Data inválida';
+      
+      return format(dateObj, 'dd/MM/yyyy', { locale: ptBR });
+    } catch (error) {
+      console.error("Erro ao formatar data:", error, date);
+      return 'Data inválida';
+    }
   };
 
   return (
