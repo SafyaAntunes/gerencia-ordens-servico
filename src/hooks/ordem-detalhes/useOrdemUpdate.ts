@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { db } from "@/lib/firebase";
 import { doc, updateDoc } from "firebase/firestore";
-import { OrdemServico } from "@/types/ordens";
+import { OrdemServico, Servico } from "@/types/ordens";
 import { toast } from "sonner";
 import { SetOrdemFunction } from "./types";
 
@@ -30,13 +30,13 @@ export const useOrdemUpdate = (
           const existingServico = ordem.servicos[index] || {};
           return {
             ...newServico,
-            // Preserve status, funcionarioId and funcionarioNome if they exist
+            // Ensure we have default values if properties don't exist
             status: existingServico.status || 'nao_iniciado',
             funcionarioId: existingServico.funcionarioId || null,
             funcionarioNome: existingServico.funcionarioNome || null,
             concluido: existingServico.concluido || false,
             dataConclusao: existingServico.dataConclusao || null
-          };
+          } as Servico;
         })
       };
       
