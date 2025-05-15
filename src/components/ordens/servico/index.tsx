@@ -9,7 +9,7 @@ import { useServicoTracker } from "./hooks";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import AtribuirFuncionarioDialog from "./AtribuirFuncionarioDialog";
-import { useFuncionariosDisponibilidade } from "@/hooks/useFuncionariosDisponibilidade";
+import { useFuncionariosDisponibilidade, FuncionarioStatus } from "@/hooks/useFuncionariosDisponibilidade";
 
 interface ServicoTrackerProps {
   servico: Servico;

@@ -15,11 +15,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Funcionario } from "@/types/funcionarios";
+import { FuncionarioStatus } from "@/hooks/useFuncionariosDisponibilidade";
 
 interface AtribuirFuncionarioDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  funcionariosOptions: Funcionario[];
+  funcionariosOptions: FuncionarioStatus[];
   funcionarioAtual?: { id: string; nome: string };
   onFuncionarioChange: (id: string) => void;
   onConfirm: () => void;
