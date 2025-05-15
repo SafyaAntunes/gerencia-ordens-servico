@@ -10,6 +10,8 @@ import { getFuncionarios } from "@/services/funcionarioService";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useFuncionariosDisponibilidade } from "@/hooks/useFuncionariosDisponibilidade";
+import { liberarFuncionarioDeServico } from "@/services/funcionarioEmServicoService";
 
 interface ServicoControlProps {
   servico: Servico;
@@ -29,7 +31,7 @@ export function ServicoControl({
   onStatusChange
 }: ServicoControlProps) {
   const { canEditOrder } = useAuth();
-  const [funcionarios, setFuncionarios] = useState<Array<{id: string, nome: string}>>([]);
+  const { funcionariosStatus, funcionariosDisponiveis } = useFuncionariosDisponibilidade();
   const [responsavelId, setResponsavelId] = useState(servico.funcionarioId || funcionarioId);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -40,22 +42,16 @@ export function ServicoControl({
     ? 'concluido' 
     : servico.status || 'nao_iniciado';
 
-  // Load funcionarios when the component mounts
-  useEffect(() => {
-    const loadFuncionarios = async () => {
-      try {
-        const funcionariosData = await getFuncionarios();
-        if (funcionariosData) {
-          setFuncionarios(funcionariosData);
-        }
-      } catch (error) {
-        console.error("Erro ao carregar funcionários:", error);
-        toast.error("Não foi possível carregar a lista de funcionários");
-      }
-    };
+  // Filtrar apenas os funcionários disponíveis + o funcionário já atribuído
+  const funcionariosOptions = funcionariosStatus.filter(funcionario => {
+    // Sempre incluir o funcionário atual do serviço, mesmo que ocupado
+    if (funcionario.id === servico.funcionarioId) {
+      return true;
+    }
     
-    loadFuncionarios();
-  }, []);
+    // Para outros funcionários, incluir somente os disponíveis
+    return funcionario.status === 'disponivel' && funcionario.ativo !== false;
+  });
 
   // Update responsavelId when servico.funcionarioId changes
   useEffect(() => {
@@ -64,15 +60,27 @@ export function ServicoControl({
     }
   }, [servico.funcionarioId]);
 
-  const handleStatusChange = (status: 'em_andamento' | 'pausado' | 'concluido') => {
+  const handleStatusChange = async (status: 'em_andamento' | 'pausado' | 'concluido') => {
     if (!temPermissao || isDisabled || isLoading) return;
     
     setIsLoading(true);
     
     try {
       // Find responsável nome
-      const funcionarioSelecionado = funcionarios.find(f => f.id === responsavelId);
+      const funcionarioSelecionado = funcionariosStatus.find(f => f.id === responsavelId);
       const respNome = funcionarioSelecionado?.nome || funcionarioNome;
+      
+      // Se o status atual é "em_andamento" e mudou para outro status
+      // OU se qualquer status mudou para "concluido", liberar o funcionário
+      if (
+        (servicoStatus === 'em_andamento' && status !== 'em_andamento') || 
+        status === 'concluido'
+      ) {
+        // Liberar funcionário atual se houver um
+        if (servico.funcionarioId) {
+          await liberarFuncionarioDeServico(servico.funcionarioId);
+        }
+      }
       
       onStatusChange(status, responsavelId, respNome);
     } catch (error) {
@@ -143,11 +151,17 @@ export function ServicoControl({
                     <SelectValue placeholder="Selecione um funcionário" />
                   </SelectTrigger>
                   <SelectContent>
-                    {funcionarios.map((func) => (
-                      <SelectItem key={func.id} value={func.id}>
-                        {func.nome}
-                      </SelectItem>
-                    ))}
+                    {funcionariosOptions.length === 0 ? (
+                      <div className="p-2 text-center text-sm text-muted-foreground">
+                        Nenhum funcionário disponível
+                      </div>
+                    ) : (
+                      funcionariosOptions.map((func) => (
+                        <SelectItem key={func.id} value={func.id}>
+                          {func.nome} {func.status === 'ocupado' && func.id !== servico.funcionarioId ? " (Ocupado)" : ""}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               )}
@@ -166,7 +180,8 @@ export function ServicoControl({
                 size="sm" 
                 onClick={() => handleStatusChange("em_andamento")}
                 className={servicoStatus === "em_andamento" ? "bg-blue-500 hover:bg-blue-600" : ""}
-                disabled={!temPermissao || isDisabled || isLoading || servico.concluido}
+                disabled={!temPermissao || isDisabled || isLoading || servico.concluido || !responsavelId}
+                title={!responsavelId ? "Selecione um responsável" : ""}
               >
                 <Play className="h-4 w-4 mr-1" />
                 Em Andamento
@@ -176,7 +191,7 @@ export function ServicoControl({
                 size="sm" 
                 onClick={() => handleStatusChange("pausado")}
                 className={servicoStatus === "pausado" ? "bg-orange-400 hover:bg-orange-500" : ""}
-                disabled={!temPermissao || isDisabled || isLoading || servico.concluido}
+                disabled={!temPermissao || isDisabled || isLoading || servico.concluido || servicoStatus === "nao_iniciado"}
               >
                 <Pause className="h-4 w-4 mr-1" />
                 Pausado

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ServicoControl } from "@/components/ordens/servico/ServicoControl";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { marcarFuncionarioEmServico } from "@/services/funcionarioEmServicoService";
 
 interface ServicoControlTabProps {
   ordem: OrdemServico;
@@ -15,7 +16,7 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
   const { funcionario } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const handleServicoStatusChange = (servicoIndex: number, status: 'em_andamento' | 'pausado' | 'concluido', funcionarioId?: string, funcionarioNome?: string) => {
+  const handleServicoStatusChange = async (servicoIndex: number, status: 'em_andamento' | 'pausado' | 'concluido', funcionarioId?: string, funcionarioNome?: string) => {
     setIsUpdating(true);
 
     try {
@@ -24,6 +25,23 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
       
       // Update the specific service
       const servico = servicosAtualizados[servicoIndex];
+      
+      // Se o status está mudando para "em_andamento" e temos um funcionário selecionado,
+      // precisamos marcar o funcionário como ocupado
+      if (status === 'em_andamento' && funcionarioId && status !== servico.status) {
+        const marcadoComoOcupado = await marcarFuncionarioEmServico(
+          funcionarioId,
+          ordem.id,
+          'retifica', // Default etapa - isso poderia ser um parâmetro mais específico
+          servico.tipo
+        );
+        
+        if (!marcadoComoOcupado) {
+          toast.error("Não foi possível marcar o funcionário como ocupado");
+          setIsUpdating(false);
+          return;
+        }
+      }
       
       // Update service attributes based on status
       if (status === 'concluido') {
@@ -54,7 +72,7 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
       };
       
       // Call the parent function to update the ordem
-      onOrdemUpdate(ordemAtualizada);
+      await onOrdemUpdate(ordemAtualizada);
       
       // Show success message
       let statusMsg = "";
