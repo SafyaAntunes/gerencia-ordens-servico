@@ -1,6 +1,6 @@
 
 import { db } from "@/lib/firebase";
-import { doc, updateDoc, getDoc, setDoc } from "firebase/firestore";
+import { doc, updateDoc, getDoc, setDoc, Timestamp } from "firebase/firestore";
 import { EtapaOS, TipoServico } from "@/types/ordens";
 import { toast } from "sonner";
 
@@ -17,7 +17,9 @@ export const marcarFuncionarioEmServico = async (
   }
 
   try {
-    // Atualizar o documento do funcionário para registrar que está ocupado
+    console.log(`Marcando funcionário ${funcionarioId} como ocupado na ordem ${ordemId}`);
+    
+    // Verificar se o funcionário existe
     const funcionarioRef = doc(db, "funcionarios", funcionarioId);
     const funcionarioDoc = await getDoc(funcionarioRef);
     
@@ -26,28 +28,53 @@ export const marcarFuncionarioEmServico = async (
       return false;
     }
     
+    // Verificar se o funcionário já está ocupado
+    const funcionarioData = funcionarioDoc.data();
+    if (funcionarioData.statusAtividade === "ocupado" && 
+        funcionarioData.atividadeAtual && 
+        funcionarioData.atividadeAtual.ordemId !== ordemId) {
+      console.warn("Funcionário já está ocupado em outra ordem:", funcionarioData.atividadeAtual.ordemId);
+      return false;
+    }
+    
+    // Buscar o nome da ordem para salvar na atividade atual
+    let ordemNome = "";
+    try {
+      const ordemRef = doc(db, "ordens_servico", ordemId);
+      const ordemDoc = await getDoc(ordemRef);
+      if (ordemDoc.exists()) {
+        ordemNome = ordemDoc.data().nome || "";
+      }
+    } catch (e) {
+      console.warn("Erro ao buscar nome da ordem:", e);
+    }
+    
     // Registrar a atividade atual do funcionário
     const atividadeAtual = {
       ordemId,
+      ordemNome,
       etapa,
       servicoTipo: servicoTipo || null,
-      inicio: new Date()
+      inicio: Timestamp.now()
     };
     
+    // Atualizar o documento do funcionário
     await updateDoc(funcionarioRef, {
       statusAtividade: "ocupado",
       atividadeAtual
     });
     
-    // Também podemos registrar essa informação em uma coleção separada para tracking
+    // Registrar na coleção de tracking
     const emServicoRef = doc(db, "funcionarios_em_servico", funcionarioId);
     await setDoc(emServicoRef, {
       funcionarioId,
       ordemId,
+      ordemNome,
       etapa,
       servicoTipo: servicoTipo || null,
-      inicio: new Date(),
-      timestamp: new Date()
+      inicio: Timestamp.now(),
+      timestamp: Timestamp.now(),
+      status: "em_andamento"
     });
     
     console.log(`Funcionário ${funcionarioId} marcado como ocupado na ordem ${ordemId}`);
@@ -68,6 +95,8 @@ export const liberarFuncionarioDeServico = async (
   }
   
   try {
+    console.log(`Liberando funcionário ${funcionarioId} do serviço`);
+    
     // Atualizar o documento do funcionário para registrar que está disponível
     const funcionarioRef = doc(db, "funcionarios", funcionarioId);
     const funcionarioDoc = await getDoc(funcionarioRef);
@@ -82,13 +111,19 @@ export const liberarFuncionarioDeServico = async (
       atividadeAtual: null
     });
     
-    // Remover registro da coleção de tracking
+    // Atualizar registro da coleção de tracking
     try {
       const emServicoRef = doc(db, "funcionarios_em_servico", funcionarioId);
-      await updateDoc(emServicoRef, {
-        finalizado: new Date(),
-        status: "finalizado"
-      });
+      const emServicoDoc = await getDoc(emServicoRef);
+      
+      if (emServicoDoc.exists()) {
+        await updateDoc(emServicoRef, {
+          finalizado: Timestamp.now(),
+          status: "finalizado"
+        });
+      } else {
+        console.warn("Registro de tracking não encontrado para o funcionário:", funcionarioId);
+      }
     } catch (err) {
       console.warn("Aviso: Não foi possível atualizar registro de tracking", err);
       // Não falhar completamente se apenas o tracking falhar
@@ -124,7 +159,7 @@ export const forcarLiberacaoFuncionario = async (
     try {
       const emServicoRef = doc(db, "funcionarios_em_servico", funcionarioId);
       await updateDoc(emServicoRef, {
-        finalizado: new Date(),
+        finalizado: Timestamp.now(),
         status: "finalizado_forcado",
         observacao: "Liberação forçada pelo sistema"
       });

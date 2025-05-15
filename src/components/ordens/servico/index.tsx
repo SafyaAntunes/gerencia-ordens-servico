@@ -1,224 +1,203 @@
 
-import { useCallback, useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, Play, Pause, Clock3 } from "lucide-react";
-import { Servico } from "@/types/ordens";
-import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import { ServicoHeader } from "./ServicoHeader";
+import { ServicoControls } from "./ServicoControls";
+import { ServicoDetails } from "./ServicoDetails";
 import { useServicoTracker } from "./hooks";
+import { Servico, TipoServico, EtapaOS } from "@/types/ordens";
+import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import AtribuirFuncionarioDialog from "./AtribuirFuncionarioDialog";
 import { useFuncionariosDisponibilidade, FuncionarioStatus } from "@/hooks/useFuncionariosDisponibilidade";
 
-interface ServicoTrackerProps {
+export interface ServicoTrackerProps {
   servico: Servico;
   ordemId: string;
+  etapa?: EtapaOS;
   funcionarioId?: string;
   funcionarioNome?: string;
-  onStatusChange?: (status: 'em_andamento' | 'pausado' | 'concluido', funcionarioId?: string, funcionarioNome?: string) => void;
-  onSubatividadeToggle?: (subatividadeId: string, checked: boolean) => void;
+  onServicoStatusChange?: (concluido: boolean, funcionarioId?: string, funcionarioNome?: string) => void;
+  onSubatividadeToggle?: (subatividadeId: string, concluida: boolean) => void;
   isDisabled?: boolean;
 }
 
 export function ServicoTracker({
   servico,
   ordemId,
+  etapa = "retifica",
   funcionarioId,
   funcionarioNome,
-  onStatusChange,
+  onServicoStatusChange,
   onSubatividadeToggle,
   isDisabled = false
 }: ServicoTrackerProps) {
-  const [isAtribuirDialogOpen, setIsAtribuirDialogOpen] = useState(false);
-  const [dialogAction, setDialogAction] = useState<'start' | 'finish'>('start');
-  const { funcionariosStatus } = useFuncionariosDisponibilidade();
-  
-  const {
-    temPermissao,
-    servicoStatus,
-    progressPercentage,
-    responsavelSelecionadoId,
-    setResponsavelSelecionadoId,
-    lastSavedResponsavelId,
-    lastSavedResponsavelNome,
-    handleLoadFuncionarios,
-    handleStatusChange,
-  } = useServicoTracker({
+  const tracker = useServicoTracker({
     servico,
     ordemId,
     funcionarioId,
     funcionarioNome,
-    onServicoStatusChange: onStatusChange,
+    etapa,
+    onServicoStatusChange,
     onSubatividadeToggle
   });
+  
+  const { funcionariosStatus } = useFuncionariosDisponibilidade();
+  const [showFuncionarioDialog, setShowFuncionarioDialog] = useState(false);
+  const [dialogAction, setDialogAction] = useState<'start' | 'finish'>('start');
+  const [selectedFuncionarioId, setSelectedFuncionarioId] = useState(
+    tracker.responsavelSelecionadoId || ""
+  );
 
-  // Carregar funcionários quando o componente montar
-  useEffect(() => {
-    handleLoadFuncionarios();
-  }, [handleLoadFuncionarios]);
+  const handleAssignFuncionario = (action: 'start' | 'finish') => {
+    tracker.handleLoadFuncionarios();
+    setDialogAction(action);
+    setSelectedFuncionarioId(tracker.responsavelSelecionadoId);
+    setShowFuncionarioDialog(true);
+  };
 
-  // Filtrar para mostrar apenas funcionários disponíveis e o funcionário atual deste serviço
-  const funcionariosElegiveis = funcionariosStatus.filter(funcionario => {
-    // Incluir o funcionário atual do serviço, mesmo que ocupado
-    if (funcionario.id === servico.funcionarioId) {
-      return true;
+  const handleFuncionarioChange = (id: string) => {
+    setSelectedFuncionarioId(id);
+  };
+
+  const handleConfirmFuncionarioDialog = async () => {
+    if (!selectedFuncionarioId) {
+      toast.error("Selecione um funcionário para continuar");
+      return;
+    }
+
+    tracker.setResponsavelSelecionadoId(selectedFuncionarioId);
+    
+    // Verificar se o funcionário selecionado está disponível (exceto se for o atual)
+    if (selectedFuncionarioId !== tracker.lastSavedResponsavelId) {
+      const funcionarioSelecionado = funcionariosStatus.find(f => f.id === selectedFuncionarioId);
+      
+      if (funcionarioSelecionado && funcionarioSelecionado.status === 'ocupado') {
+        let mensagem = `O funcionário ${funcionarioSelecionado.nome} já está ocupado`;
+        
+        if (funcionarioSelecionado.atividadeAtual?.ordemNome) {
+          mensagem += ` na ordem ${funcionarioSelecionado.atividadeAtual.ordemNome}`;
+        }
+        
+        toast.error(mensagem);
+        setShowFuncionarioDialog(false);
+        return;
+      }
     }
     
-    // Para outros funcionários, incluir somente os disponíveis e ativos
-    return funcionario.status === 'disponivel' && funcionario.ativo !== false;
-  });
-
-  const handleIniciarClick = useCallback(() => {
-    if (isDisabled) return;
-    
-    // Se já tem um funcionário salvo, inicia diretamente
-    if (lastSavedResponsavelId) {
-      handleStatusChange('em_andamento');
-    } else {
-      // Se não tem funcionário salvo, abre o diálogo para selecionar
-      setDialogAction('start');
-      setIsAtribuirDialogOpen(true);
-    }
-  }, [isDisabled, lastSavedResponsavelId, handleStatusChange]);
-
-  const handleFuncionarioChange = useCallback((id: string) => {
-    setResponsavelSelecionadoId(id);
-  }, [setResponsavelSelecionadoId]);
-
-  const handleConfirmFuncionario = useCallback(() => {
+    // Se for para iniciar, mudar o status para em_andamento
     if (dialogAction === 'start') {
-      // Se estamos iniciando, muda o status para em_andamento
-      handleStatusChange('em_andamento');
-    } else {
-      // Se estamos concluindo, muda o status para concluido
-      handleStatusChange('concluido');
+      await tracker.operations.start();
+    } else if (dialogAction === 'finish') {
+      await tracker.operations.complete();
     }
-  }, [dialogAction, handleStatusChange]);
-
-  const handleConcluirClick = useCallback(() => {
-    if (isDisabled) return;
     
-    // Permitir marcar como concluído usando o último funcionário salvo ou abrir diálogo
-    if (lastSavedResponsavelId) {
-      handleStatusChange('concluido');
-    } else {
-      setDialogAction('finish');
-      setIsAtribuirDialogOpen(true);
-    }
-  }, [isDisabled, lastSavedResponsavelId, handleStatusChange]);
-
-  const formatServiceType = (type: string) => {
-    return type
-      .replace(/_/g, ' ')
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+    setShowFuncionarioDialog(false);
   };
 
-  const getStatusBadge = () => {
-    switch(servicoStatus) {
-      case 'em_andamento':
-        return <Badge variant="secondary" className="flex items-center gap-1"><Play className="h-3 w-3" /> Em andamento</Badge>;
-      case 'pausado':
-        return <Badge variant="warning" className="flex items-center gap-1"><Pause className="h-3 w-3" /> Pausado</Badge>;
-      case 'concluido':
-        return <Badge variant="success" className="flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Concluído</Badge>;
-      default:
-        return <Badge variant="outline" className="flex items-center gap-1"><Clock3 className="h-3 w-3" /> Não iniciado</Badge>;
-    }
-  };
+  const statusBadgeText = tracker.state.concluido
+    ? "Concluído"
+    : tracker.state.isRunning
+    ? "Em andamento"
+    : tracker.state.isPaused
+    ? "Pausado"
+    : "Não iniciado";
+
+  const statusVariant = tracker.state.concluido
+    ? "success"
+    : tracker.state.isRunning
+    ? "default"
+    : tracker.state.isPaused
+    ? "warning"
+    : "outline";
 
   return (
     <>
-      <Card className="w-full">
-        <CardHeader className="pb-2">
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-lg">{formatServiceType(servico.tipo)}</CardTitle>
-            {getStatusBadge()}
-          </div>
-        </CardHeader>
-        <CardContent className="pt-2">
-          {/* Progresso */}
-          <div className="mb-4">
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-sm text-muted-foreground">Progresso</span>
-              <span className="text-sm font-medium">{progressPercentage}%</span>
+      <div className="border rounded-lg overflow-hidden bg-white shadow-sm">
+        <ServicoHeader
+          tipo={servico.tipo as TipoServico}
+          status={
+            <Badge variant={statusVariant} className="ml-2">
+              {statusBadgeText}
+            </Badge>
+          }
+        />
+        <div className="p-4 space-y-4">
+          {tracker.totalSubatividades > 0 && (
+            <div className="space-y-1">
+              <div className="flex justify-between text-sm">
+                <span>Progresso das atividades</span>
+                <span className="text-muted-foreground">
+                  {tracker.completedSubatividades}/{tracker.totalSubatividades} ({tracker.progressPercentage}%)
+                </span>
+              </div>
+              <Progress value={tracker.progressPercentage} className="h-2" />
             </div>
-            <Progress value={progressPercentage} className="h-2" />
-          </div>
+          )}
           
-          {/* Responsável */}
-          <div className="mb-4">
-            <span className="text-sm text-muted-foreground block mb-1">Responsável</span>
-            <span className="text-sm font-medium block">
-              {lastSavedResponsavelNome || (lastSavedResponsavelId ? "ID: " + lastSavedResponsavelId : "Não atribuído")}
-            </span>
-          </div>
+          <ServicoDetails
+            responsavel={{
+              id: tracker.lastSavedResponsavelId,
+              nome: tracker.lastSavedResponsavelNome
+            }}
+            onAssign={handleAssignFuncionario}
+            isDisabled={isDisabled || !tracker.temPermissao}
+            servicoStatus={tracker.state.status}
+          />
           
-          {/* Botões de ação */}
-          <div className="flex gap-2 mt-4">
-            {servicoStatus !== 'em_andamento' && servicoStatus !== 'concluido' && (
-              <Button 
-                size="sm" 
-                onClick={handleIniciarClick} 
-                className="flex-1 bg-blue-500 hover:bg-blue-600"
-                disabled={isDisabled || !temPermissao}
-              >
-                <Play className="mr-1 h-4 w-4" />
-                Iniciar
-              </Button>
-            )}
-            
-            {servicoStatus === 'em_andamento' && (
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={() => handleStatusChange('pausado')}
-                className="flex-1"
-                disabled={isDisabled || !temPermissao}
-              >
-                <Pause className="mr-1 h-4 w-4" />
-                Pausar
-              </Button>
-            )}
-            
-            {servicoStatus === 'pausado' && (
-              <Button 
-                size="sm" 
-                onClick={() => handleStatusChange('em_andamento')}
-                className="flex-1"
-                disabled={isDisabled || !temPermissao}
-              >
-                <Play className="mr-1 h-4 w-4" />
-                Retomar
-              </Button>
-            )}
-            
-            {servicoStatus !== 'concluido' && (
-              <Button 
-                size="sm" 
-                variant={servicoStatus === 'pausado' || servicoStatus === 'em_andamento' ? "default" : "outline"}
-                onClick={handleConcluirClick}
-                className="flex-1"
-                disabled={isDisabled || !temPermissao}
-              >
-                <CheckCircle className="mr-1 h-4 w-4" />
-                Concluir
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Dialog para atribuir funcionário */}
-      <AtribuirFuncionarioDialog 
-        isOpen={isAtribuirDialogOpen}
-        onOpenChange={setIsAtribuirDialogOpen}
-        funcionariosOptions={funcionariosElegiveis}
-        funcionarioAtual={lastSavedResponsavelId ? { id: lastSavedResponsavelId, nome: lastSavedResponsavelNome || "" } : undefined}
+          {tracker.totalSubatividades > 0 && tracker.state.isRunning && (
+            <div className="space-y-2 border-t pt-2">
+              <h4 className="text-sm font-medium">Atividades</h4>
+              <div className="space-y-1">
+                {tracker.subatividadesFiltradas.map(subatividade => (
+                  <div key={subatividade.id} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id={`subatividade-${subatividade.id}`}
+                      checked={subatividade.concluida}
+                      onChange={e => tracker.handleSubatividadeToggle(subatividade.id, e.target.checked)}
+                      className="mr-2 h-4 w-4 rounded"
+                      disabled={isDisabled || !tracker.temPermissao || tracker.state.concluido}
+                    />
+                    <label
+                      htmlFor={`subatividade-${subatividade.id}`}
+                      className={`text-sm ${subatividade.concluida ? 'line-through text-muted-foreground' : ''}`}
+                    >
+                      {subatividade.nome}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          <ServicoControls
+            isRunning={tracker.state.isRunning}
+            isPaused={tracker.state.isPaused}
+            isConcluido={tracker.state.concluido}
+            onStart={() => handleAssignFuncionario('start')}
+            onPause={tracker.operations.pause}
+            onResume={tracker.operations.resume}
+            onComplete={tracker.operations.complete}
+            isDisabled={isDisabled || !tracker.temPermissao}
+          />
+        </div>
+      </div>
+      
+      <AtribuirFuncionarioDialog
+        isOpen={showFuncionarioDialog}
+        onOpenChange={setShowFuncionarioDialog}
+        funcionariosOptions={funcionariosStatus}
+        funcionarioAtual={
+          tracker.lastSavedResponsavelId
+            ? {
+                id: tracker.lastSavedResponsavelId,
+                nome: tracker.lastSavedResponsavelNome
+              }
+            : undefined
+        }
         onFuncionarioChange={handleFuncionarioChange}
-        onConfirm={handleConfirmFuncionario}
+        onConfirm={handleConfirmFuncionarioDialog}
         dialogAction={dialogAction}
       />
     </>

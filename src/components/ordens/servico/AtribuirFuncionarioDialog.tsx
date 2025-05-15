@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/select";
 import { Funcionario } from "@/types/funcionarios";
 import { FuncionarioStatus } from "@/hooks/useFuncionariosDisponibilidade";
+import { Badge } from "@/components/ui/badge";
+import { CircleCheck, Clock } from "lucide-react";
 
 interface AtribuirFuncionarioDialogProps {
   isOpen: boolean;
@@ -38,7 +40,7 @@ export default function AtribuirFuncionarioDialog({
 }: AtribuirFuncionarioDialogProps) {
   // Filtramos a lista para mostrar apenas funcionários disponíveis ou o funcionário atual
   const filteredFuncionarios = funcionariosOptions.filter(f => 
-    (f.status === 'disponivel' && f.ativo !== false) || (funcionarioAtual && f.id === funcionarioAtual.id)
+    f.status === 'disponivel' || (funcionarioAtual && f.id === funcionarioAtual.id)
   );
   
   return (
@@ -59,15 +61,45 @@ export default function AtribuirFuncionarioDialog({
               </SelectTrigger>
               <SelectContent>
                 {funcionarioAtual && (
-                  <SelectItem value={funcionarioAtual.id}>
-                    {funcionarioAtual.nome} (você)
+                  <SelectItem value={funcionarioAtual.id} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {funcionarioAtual.nome} (você)
+                      
+                      {/* Status badge para o funcionário atual */}
+                      {funcionariosOptions.find(f => f.id === funcionarioAtual.id)?.status === 'ocupado' ? (
+                        <Badge variant="warning" className="ml-2 text-xs">
+                          <Clock className="h-3 w-3 mr-1" />
+                          Ocupado
+                        </Badge>
+                      ) : (
+                        <Badge variant="success" className="ml-2 text-xs">
+                          <CircleCheck className="h-3 w-3 mr-1" />
+                          Disponível
+                        </Badge>
+                      )}
+                    </div>
                   </SelectItem>
                 )}
                 {filteredFuncionarios
                   .filter(f => !funcionarioAtual || f.id !== funcionarioAtual.id)
                   .map(f => (
-                    <SelectItem key={f.id} value={f.id}>
-                      {f.nome} {f.status === 'ocupado' ? " (Ocupado)" : ""}
+                    <SelectItem key={f.id} value={f.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {f.nome}
+                        
+                        {/* Status badge */}
+                        {f.status === 'ocupado' ? (
+                          <Badge variant="warning" className="ml-2 text-xs">
+                            <Clock className="h-3 w-3 mr-1" />
+                            Ocupado
+                          </Badge>
+                        ) : (
+                          <Badge variant="success" className="ml-2 text-xs">
+                            <CircleCheck className="h-3 w-3 mr-1" />
+                            Disponível
+                          </Badge>
+                        )}
+                      </div>
                     </SelectItem>
                   ))
                 }

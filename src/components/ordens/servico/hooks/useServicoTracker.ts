@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { getFuncionarios } from "@/services/funcionarioService";
@@ -6,7 +5,7 @@ import { Servico, SubAtividade, TipoServico, EtapaOS } from "@/types/ordens";
 import { Funcionario } from "@/types/funcionarios";
 import { useAuth } from "@/hooks/useAuth";
 import { UseServicoTrackerProps, UseServicoTrackerResult, ServicoStatus } from "./types/servicoTrackerTypes";
-import { useFuncionariosDisponibilidade } from "@/hooks/useFuncionariosDisponibilidade";
+import { useFuncionariosDisponibilidade, FuncionarioStatus } from "@/hooks/useFuncionariosDisponibilidade";
 import { marcarFuncionarioEmServico, liberarFuncionarioDeServico } from "@/services/funcionarioEmServicoService";
 
 export function useServicoTracker({
@@ -47,27 +46,19 @@ export function useServicoTracker({
   
   const handleLoadFuncionarios = useCallback(async () => {
     try {
-      const funcionariosData = await getFuncionarios();
-      if (funcionariosData) {
-        // Filtrar para incluir apenas funcionários disponíveis e o atual do serviço
-        const funcionariosFiltrados = funcionariosData.filter(f => {
-          // Buscar status atualizado do funcionário
-          const funcionarioStatus = funcionariosStatus.find(fs => fs.id === f.id);
-          
-          // Sempre incluir o funcionário atual do serviço
-          if (f.id === servico.funcionarioId) {
-            return true;
-          }
-          
-          // Para outros funcionários, verificar disponibilidade
-          const isDisponivel = funcionarioStatus?.status === 'disponivel';
-          const isAtivo = f.ativo !== false;
-          
-          return isDisponivel && isAtivo;
-        });
+      // MODIFICADO: Usar diretamente funcionariosStatus em vez de buscar de novo
+      const funcionariosFiltrados = funcionariosStatus.filter(f => {
+        // Sempre incluir o funcionário atual do serviço
+        if (f.id === servico.funcionarioId) {
+          return true;
+        }
         
-        setFuncionariosOptions(funcionariosFiltrados);
-      }
+        // Verificar se está ativo e disponível
+        return f.status === 'disponivel' && f.ativo !== false;
+      });
+      
+      setFuncionariosOptions(funcionariosFiltrados);
+      console.log("Funcionários filtrados para selection:", funcionariosFiltrados.length);
     } catch (error) {
       console.error("Erro ao carregar funcionários:", error);
       toast.error("Erro ao carregar lista de funcionários");
@@ -111,8 +102,16 @@ export function useServicoTracker({
         if (responsavelSelecionadoId !== servico.funcionarioId) {
           const funcionarioSelecionado = funcionariosStatus.find(f => f.id === responsavelSelecionadoId);
           
-          if (funcionarioSelecionado && funcionarioSelecionado.status !== 'disponivel') {
-            toast.error(`O funcionário ${funcionarioSelecionado.nome} já está ocupado em outro serviço`);
+          // MODIFICADO: Verificar status do funcionário e dar aviso mais claro
+          if (funcionarioSelecionado && funcionarioSelecionado.status === 'ocupado') {
+            // Mostrar detalhes de onde o funcionário está ocupado
+            let mensagem = `O funcionário ${funcionarioSelecionado.nome} já está ocupado`;
+            
+            if (funcionarioSelecionado.atividadeAtual?.ordemNome) {
+              mensagem += ` na ordem ${funcionarioSelecionado.atividadeAtual.ordemNome}`;
+            }
+            
+            toast.error(mensagem);
             return;
           }
           
@@ -199,6 +198,11 @@ export function useServicoTracker({
       return Promise.reject(error);
     }
   };
+
+  // Atualizar a lista de funcionários quando o componente montar ou quando houver mudanças em funcionariosStatus
+  useEffect(() => {
+    handleLoadFuncionarios();
+  }, [handleLoadFuncionarios, funcionariosStatus]);
 
   // Update os estados quando o servico mudar
   useEffect(() => {
