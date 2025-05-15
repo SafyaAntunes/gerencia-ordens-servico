@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { OrdemServico, Servico } from "@/types/ordens";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,15 +30,20 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
         servicosAtualizados[servicoIndex] = {
           ...servico,
           concluido: true,
-          funcionarioId: funcionarioId || funcionario?.id || '',
-          funcionarioNome: funcionarioNome || funcionario?.nome || '',
+          status: status,
+          // Usar o funcionário atribuído para este serviço
+          funcionarioId: funcionarioId || servico.funcionarioId || '',
+          funcionarioNome: funcionarioNome || servico.funcionarioNome || '',
           dataConclusao: new Date()
         };
       } else {
-        // For other statuses, just update the status flag, keep the concluido state as is
+        // Para outros statuses, atualizar o status e manter os dados do funcionário
         servicosAtualizados[servicoIndex] = {
           ...servico,
-          status: status
+          status: status,
+          // Persistir o funcionário mesmo para serviços não concluídos
+          funcionarioId: funcionarioId || servico.funcionarioId,
+          funcionarioNome: funcionarioNome || servico.funcionarioNome
         };
       }
       
@@ -51,7 +57,13 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
       onOrdemUpdate(ordemAtualizada);
       
       // Show success message
-      toast.success(`Serviço ${servico.tipo} ${status === 'concluido' ? 'concluído' : status === 'pausado' ? 'pausado' : 'em andamento'}`);
+      let statusMsg = "";
+      if (status === 'concluido') statusMsg = "concluído";
+      else if (status === 'pausado') statusMsg = "pausado";
+      else if (status === 'em_andamento') statusMsg = "em andamento";
+      else statusMsg = status;
+      
+      toast.success(`Serviço ${servico.tipo} ${statusMsg}`);
     } catch (error) {
       console.error("Erro ao atualizar serviço:", error);
       toast.error("Erro ao atualizar o status do serviço");
@@ -87,8 +99,8 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
                 servico={servico}
                 ordemId={ordem.id}
                 isDisabled={isUpdating}
-                funcionarioId={funcionario?.id}
-                funcionarioNome={funcionario?.nome}
+                funcionarioId={servico.funcionarioId}
+                funcionarioNome={servico.funcionarioNome}
                 onStatusChange={(status, funcId, funcNome) => 
                   handleServicoStatusChange(index, status, funcId, funcNome)
                 }

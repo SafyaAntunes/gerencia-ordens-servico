@@ -20,11 +20,15 @@ export function useServicoTracker({
   const { funcionario, canEditOrder } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [funcionariosOptions, setFuncionariosOptions] = useState<Funcionario[]>([]);
-  const [responsavelSelecionadoId, setResponsavelSelecionadoId] = useState(funcionarioId || '');
+  const [responsavelSelecionadoId, setResponsavelSelecionadoId] = useState(servico.funcionarioId || funcionarioId || '');
   const [isSavingResponsavel, setIsSavingResponsavel] = useState(false);
-  const [status, setStatus] = useState<ServicoStatus>(
-    servico.concluido ? "concluido" : "em_andamento"
-  );
+  
+  // Determinar o status do serviço com base no estado atual
+  const initialStatus: ServicoStatus = servico.concluido 
+    ? "concluido" 
+    : (servico.status as ServicoStatus) || "nao_iniciado";
+    
+  const [status, setStatus] = useState<ServicoStatus>(initialStatus);
   
   const temPermissao = canEditOrder(ordemId);
   
@@ -75,7 +79,11 @@ export function useServicoTracker({
       handleMarcarConcluido();
     } else {
       setStatus(newStatus);
-      toast.success(`Status do serviço alterado para ${newStatus === "em_andamento" ? "Em Andamento" : "Pausado"}`);
+      toast.success(`Status do serviço alterado para ${
+        newStatus === "em_andamento" ? "Em Andamento" : 
+        newStatus === "pausado" ? "Pausado" : 
+        "Não Iniciado"
+      }`);
     }
   };
 
@@ -93,6 +101,21 @@ export function useServicoTracker({
       return Promise.reject(error);
     }
   };
+
+  // Update os estados quando o servico mudar
+  useEffect(() => {
+    // Atualizar o status baseado no serviço
+    const newStatus: ServicoStatus = servico.concluido 
+      ? "concluido" 
+      : (servico.status as ServicoStatus) || "nao_iniciado";
+    
+    setStatus(newStatus);
+    
+    // Atualizar o responsável selecionado com base no serviço
+    if (servico.funcionarioId) {
+      setResponsavelSelecionadoId(servico.funcionarioId);
+    }
+  }, [servico]);
 
   useEffect(() => {
     // Inicializar o responsável selecionado com o funcionário atual, se não houver um
@@ -119,8 +142,8 @@ export function useServicoTracker({
     setResponsavelSelecionadoId,
     handleSaveResponsavel,
     isSavingResponsavel,
-    lastSavedResponsavelId: funcionarioId || '',
-    lastSavedResponsavelNome: funcionarioNome || '',
+    lastSavedResponsavelId: servico.funcionarioId || funcionarioId || '',
+    lastSavedResponsavelNome: servico.funcionarioNome || funcionarioNome || '',
     handleStatusChange,
     setStatus,
     // Para compatibilidade com a interface existente

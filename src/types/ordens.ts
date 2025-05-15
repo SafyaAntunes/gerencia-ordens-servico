@@ -53,11 +53,13 @@ export type SubAtividade = {
   descricao?: string; // Descrição opcional da subatividade
 };
 
+export type ServicoStatus = 'nao_iniciado' | 'em_andamento' | 'pausado' | 'concluido';
+
 export type Servico = {
   tipo: TipoServico;
   descricao: string;
   concluido: boolean;
-  status?: 'em_andamento' | 'pausado' | 'concluido';
+  status?: ServicoStatus;
   subatividades?: SubAtividade[];
   atividadesRelacionadas?: {
     lavagem?: SubAtividade[];

@@ -34,7 +34,11 @@ export function ServicoControl({
   const [isLoading, setIsLoading] = useState(false);
   
   const temPermissao = canEditOrder(ordemId);
-  const servicoStatus = servico.concluido ? 'concluido' : servico.status || 'em_andamento';
+  
+  // Usar o status do serviço ou "nao_iniciado" se não estiver definido
+  const servicoStatus = servico.concluido 
+    ? 'concluido' 
+    : servico.status || 'nao_iniciado';
 
   // Load funcionarios when the component mounts
   useEffect(() => {
@@ -84,8 +88,10 @@ export function ServicoControl({
       return <Badge variant="success">Concluído</Badge>;
     } else if (servicoStatus === 'pausado') {
       return <Badge variant="warning">Pausado</Badge>;
-    } else {
+    } else if (servicoStatus === 'em_andamento') {
       return <Badge variant="secondary">Em andamento</Badge>;
+    } else {
+      return <Badge variant="outline">Não iniciado</Badge>;
     }
   };
 
@@ -156,20 +162,20 @@ export function ServicoControl({
               (!temPermissao || isDisabled) && "opacity-70 pointer-events-none"
             )}>
               <Button 
-                variant={servicoStatus === "em_andamento" && !servico.concluido ? "default" : "outline"} 
+                variant={servicoStatus === "em_andamento" ? "default" : "outline"} 
                 size="sm" 
                 onClick={() => handleStatusChange("em_andamento")}
-                className={servicoStatus === "em_andamento" && !servico.concluido ? "bg-blue-500 hover:bg-blue-600" : ""}
+                className={servicoStatus === "em_andamento" ? "bg-blue-500 hover:bg-blue-600" : ""}
                 disabled={!temPermissao || isDisabled || isLoading || servico.concluido}
               >
                 <Play className="h-4 w-4 mr-1" />
                 Em Andamento
               </Button>
               <Button 
-                variant={servicoStatus === "pausado" && !servico.concluido ? "default" : "outline"} 
+                variant={servicoStatus === "pausado" ? "default" : "outline"} 
                 size="sm" 
                 onClick={() => handleStatusChange("pausado")}
-                className={servicoStatus === "pausado" && !servico.concluido ? "bg-orange-400 hover:bg-orange-500" : ""}
+                className={servicoStatus === "pausado" ? "bg-orange-400 hover:bg-orange-500" : ""}
                 disabled={!temPermissao || isDisabled || isLoading || servico.concluido}
               >
                 <Pause className="h-4 w-4 mr-1" />
