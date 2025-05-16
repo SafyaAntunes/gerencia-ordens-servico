@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -74,7 +75,7 @@ export default function FuncionarioForm({ initialData, onSubmit, onCancel, isSub
       telefone: initialData?.telefone || "",
       especialidades: initialData?.especialidades || [],
       ativo: initialData?.ativo !== undefined ? initialData.ativo : true,
-      nivelPermissao: (initialData?.nivelPermissao as any) || "visualizacao", // Use 'as any' to avoid type issues
+      nivelPermissao: (initialData?.nivelPermissao as NivelPermissao) || "visualizacao",
       senha: "",
       confirmarSenha: "",
       nomeUsuario: initialData?.nomeUsuario || "",

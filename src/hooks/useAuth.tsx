@@ -1,161 +1,336 @@
-import { useState, useEffect, createContext, useContext } from "react";
-import { useNavigate } from "react-router-dom";
-import { auth, db } from "@/lib/firebase";
-import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  User
-} from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { Funcionario } from "@/types/funcionarios";
 
-interface AuthContextProps {
+import { createContext, useState, useEffect, useContext, ReactNode } from 'react';
+import { auth } from '@/lib/firebase';
+import { User, onAuthStateChanged, signOut } from 'firebase/auth';
+import { toast } from 'sonner';
+import { Funcionario, NivelPermissao } from '@/types/funcionarios';
+import { loginUser, getUserData, registerUser, getFuncionarioByIdentifier } from '@/services/authService';
+
+type AuthContextType = {
   user: User | null;
   funcionario: Funcionario | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  hasPermission: (requiredPermission: string) => boolean;
+  login: (identifier: string, password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
+  register: (email: string, password: string) => Promise<boolean>;
+  hasPermission: (minLevel: string) => boolean;
   canAccessRoute: (route: string) => boolean;
-  isAdmin: boolean;
-  isGerente: boolean;
-  isTecnico: boolean;
-}
+  canViewOrderDetails: (ordenId: string) => boolean;
+  canEditOrder: (ordenId: string) => boolean;
+  canCreateOrder: () => boolean;
+  canDeleteOrder: (ordenId: string) => boolean;
+};
 
-const AuthContext = createContext<AuthContextProps>({
-  user: null,
-  funcionario: null,
-  loading: true,
-  login: async () => {},
-  logout: () => {},
-  hasPermission: () => false,
-  canAccessRoute: () => true,
-  isAdmin: false,
-  isGerente: false,
-  isTecnico: false,
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => useContext(AuthContext);
-
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [funcionario, setFuncionario] = useState<Funcionario | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-  
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUser(user);
+    console.log("AuthProvider initialized");
+    
+    const storedUser = localStorage.getItem('sgr_user');
+    if (storedUser) {
+      try {
+        console.log("Found stored user, restoring session");
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser as User);
         
-        // Fetch funcionario data based on user's email
-        const funcionarioDoc = await getFuncionarioByEmail(user.email || '');
-        setFuncionario(funcionarioDoc);
-      } else {
-        setUser(null);
-        setFuncionario(null);
+        const loadStoredFuncionario = async () => {
+          if (parsedUser.funcionarioId) {
+            const funcionarioData = await getFuncionarioByIdentifier(parsedUser.email || parsedUser.nomeUsuario);
+            if (funcionarioData) {
+              setFuncionario(funcionarioData);
+            } else {
+              setFuncionario({
+                id: parsedUser.funcionarioId,
+                nome: parsedUser.displayName || 'Usuário',
+                email: parsedUser.email || '',
+                telefone: '',
+                especialidades: parsedUser.especialidades || [],
+                ativo: true,
+                nivelPermissao: parsedUser.role as NivelPermissao
+              });
+            }
+          } else if (parsedUser.role === 'admin') {
+            setFuncionario({
+              id: 'admin',
+              nome: 'Administrador',
+              email: parsedUser.email || '',
+              telefone: '',
+              especialidades: [],
+              ativo: true,
+              nivelPermissao: 'admin' as NivelPermissao
+            });
+          }
+        };
+        
+        loadStoredFuncionario();
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+        localStorage.removeItem('sgr_user');
       }
+    }
+    
+    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+      console.log("Firebase auth state changed:", authUser ? "Logged in" : "Logged out");
+      
+      if (authUser) {
+        setUser(authUser);
+        setFuncionario({
+          id: authUser.uid,
+          nome: authUser.displayName || 'Usuário',
+          email: authUser.email || '',
+          telefone: '',
+          especialidades: [],
+          ativo: true,
+          nivelPermissao: 'visualizacao' as NivelPermissao
+        });
+      }
+      
       setLoading(false);
     });
+
+    setTimeout(() => {
+      setLoading(false);
+    }, 1000);
     
     return () => unsubscribe();
   }, []);
-  
-  const login = async (email: string, password: string) => {
+
+  const register = async (email: string, password: string): Promise<boolean> => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const success = await registerUser(email, password);
       
-      // Fetch funcionario data after login
-      const funcionarioDoc = await getFuncionarioByEmail(email);
-      setFuncionario(funcionarioDoc);
-      
-      navigate("/");
-    } catch (error: any) {
-      console.error("Login failed:", error.message);
-      throw error;
-    }
-  };
-  
-  const logout = () => {
-    signOut(auth).then(() => {
-      setUser(null);
-      setFuncionario(null);
-      navigate("/login");
-    });
-  };
-  
-  const getFuncionarioByEmail = async (email: string): Promise<Funcionario | null> => {
-    if (!email) return null;
-    
-    try {
-      // Assuming you have a collection named 'funcionarios'
-      const snapshot = await getDocs(query(collection(db, 'funcionarios'), where('email', '==', email)));
-      
-      if (!snapshot.empty) {
-        const doc = snapshot.docs[0];
-        return {
-          id: doc.id,
-          ...doc.data()
-        } as Funcionario;
-      } else {
-        console.log("No matching documents.");
-        return null;
+      if (success) {
+        return login(email, password);
       }
-    } catch (e) {
-      console.error("Error getting document:", e);
-      return null;
+      
+      return false;
+    } catch (error) {
+      console.error('Erro no registro:', error);
+      toast.error('Erro ao registrar usuário.');
+      return false;
     }
   };
 
-// Fix the visualizador vs visualizacao issue in any permission check functions
-const hasPermission = (requiredPermission: string): boolean => {
-  if (!funcionario) return false;
-  
-  const userLevel = funcionario.nivelPermissao;
-  
-  if (userLevel === 'admin') return true;
-  if (userLevel === 'gerente' && requiredPermission !== 'admin') return true;
-  if (userLevel === 'tecnico' && (requiredPermission === 'tecnico' || requiredPermission === 'visualizacao' || requiredPermission === 'visualizador')) return true;
-  if ((userLevel === 'visualizacao' || userLevel === 'visualizador') && (requiredPermission === 'visualizacao' || requiredPermission === 'visualizador')) return true;
-  
-  return false;
-};
-  
-  const canAccessRoute = (route: string): boolean => {
-    if (!funcionario) return false;
-    
-    // Define route-specific permission checks here
-    if (route.startsWith('/funcionarios') && funcionario.nivelPermissao !== 'admin' && funcionario.nivelPermissao !== 'gerente') {
+  const login = async (identifier: string, password: string): Promise<boolean> => {
+    try {
+      console.log("Login attempt for:", identifier);
+      
+      const success = await loginUser(identifier, password);
+      
+      if (success) {
+        let userData;
+        
+        if (identifier === 'admin@sgr.com') {
+          userData = {
+            uid: 'admin-uid',
+            email: 'admin@sgr.com',
+            displayName: 'Administrador',
+            role: 'admin'
+          };
+          
+          setFuncionario({
+            id: 'admin',
+            nome: 'Administrador',
+            email: 'admin@sgr.com',
+            telefone: '',
+            especialidades: [],
+            ativo: true,
+            nivelPermissao: 'admin' as NivelPermissao
+          });
+        } else {
+          userData = await getUserData(identifier);
+          
+          if (!userData) {
+            toast.error('Erro ao buscar dados do usuário.');
+            return false;
+          }
+          
+          const funcionarioData = await getFuncionarioByIdentifier(identifier);
+          
+          if (funcionarioData) {
+            setFuncionario(funcionarioData);
+            
+            userData = {
+              uid: userData.funcionarioId || identifier,
+              email: userData.email,
+              nomeUsuario: userData.nomeUsuario,
+              displayName: funcionarioData.nome,
+              role: funcionarioData.nivelPermissao,
+              funcionarioId: funcionarioData.id,
+              especialidades: funcionarioData.especialidades
+            };
+          } else {
+            userData = {
+              uid: userData.email || identifier,
+              email: userData.email,
+              nomeUsuario: userData.nomeUsuario,
+              displayName: userData.displayName || 'Usuário',
+              role: userData.role || 'user'
+            };
+            
+            setFuncionario({
+              id: userData.email || identifier,
+              nome: userData.displayName || 'Usuário',
+              email: userData.email || '',
+              telefone: '',
+              especialidades: [],
+              ativo: true,
+              nivelPermissao: userData.role as NivelPermissao || 'visualizacao'
+            });
+          }
+        }
+        
+        setUser(userData as User);
+        
+        localStorage.setItem('sgr_user', JSON.stringify(userData));
+        console.log("User stored in localStorage:", userData);
+        
+        return true;
+      } else {
+        return false;
+      }
+    } catch (error) {
+      console.error('Erro ao fazer login:', error);
       return false;
     }
+  };
+
+  const logout = async () => {
+    try {
+      setUser(null);
+      setFuncionario(null);
+      localStorage.removeItem('sgr_user');
+      
+      await signOut(auth);
+      
+      toast.success('Logout realizado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      toast.error('Erro ao fazer logout.');
+    }
+  };
+
+  const hasPermission = (minLevel: string) => {
+    if (!funcionario) return false;
     
-    return true;
+    const levels = {
+      'admin': 4,
+      'gerente': 3,
+      'tecnico': 2,
+      'visualizacao': 1
+    };
+    
+    const userLevel = levels[funcionario.nivelPermissao as keyof typeof levels] || 0;
+    const requiredLevel = levels[minLevel as keyof typeof levels] || 0;
+    
+    return userLevel >= requiredLevel;
+  };
+
+  const canAccessRoute = (route: string) => {
+    if (!user || !funcionario) return false;
+    
+    if (funcionario.nivelPermissao === 'admin') {
+      return true;
+    }
+    
+    if (funcionario.nivelPermissao === 'gerente') {
+      if (route.startsWith('/configuracoes') || route.startsWith('/relatorios/financeiro')) {
+        return false;
+      }
+      
+      return true;
+    }
+    
+    if (funcionario.nivelPermissao === 'tecnico') {
+      const allowedRoutes = [
+        '/',
+        '/ordens',
+        '/ordens/'
+      ];
+      
+      return allowedRoutes.some(allowedRoute => 
+        route === allowedRoute || 
+        (allowedRoute.endsWith('/') && route.startsWith(allowedRoute))
+      );
+    }
+    
+    if (funcionario.nivelPermissao === 'visualizacao') {
+      const allowedRoutes = [
+        '/'
+      ];
+      
+      return allowedRoutes.some(allowedRoute => route === allowedRoute);
+    }
+    
+    return false;
+  };
+
+  const canViewOrderDetails = (ordenId: string) => {
+    if (!funcionario) return false;
+    
+    if (['admin', 'gerente'].includes(funcionario.nivelPermissao)) {
+      return true;
+    }
+    
+    if (funcionario.nivelPermissao === 'tecnico') {
+      return true;
+    }
+    
+    return false;
+  };
+
+  const canEditOrder = (ordenId: string) => {
+    if (!funcionario) return false;
+    
+    // Agora apenas administradores e gerentes podem editar ordens
+    return ['admin', 'gerente'].includes(funcionario.nivelPermissao);
   };
   
-  const isAdmin = funcionario?.nivelPermissao === 'admin';
-  const isGerente = funcionario?.nivelPermissao === 'gerente';
-  const isTecnico = funcionario?.nivelPermissao === 'tecnico';
+  // Nova função para verificar permissão de criação de ordens
+  const canCreateOrder = () => {
+    if (!funcionario) return false;
+    
+    // Apenas administradores e gerentes podem criar ordens
+    return ['admin', 'gerente'].includes(funcionario.nivelPermissao);
+  };
   
-  const value: AuthContextProps = {
+  // Nova função para verificar permissão de exclusão de ordens
+  const canDeleteOrder = (ordenId: string) => {
+    if (!funcionario) return false;
+    
+    // Apenas administradores e gerentes podem excluir ordens
+    return ['admin', 'gerente'].includes(funcionario.nivelPermissao);
+  };
+
+  const value = {
     user,
     funcionario,
     loading,
     login,
     logout,
+    register,
     hasPermission,
     canAccessRoute,
-    isAdmin,
-    isGerente,
-    isTecnico
+    canViewOrderDetails,
+    canEditOrder,
+    canCreateOrder,
+    canDeleteOrder
   };
-  
-  return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
-    </AuthContext.Provider>
-  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-import { collection, query, where, getDocs } from 'firebase/firestore';
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+export default useAuth;

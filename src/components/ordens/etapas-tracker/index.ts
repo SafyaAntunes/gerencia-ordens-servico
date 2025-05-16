@@ -1,7 +1,7 @@
 
-import EtapasTracker from './EtapasTracker';
-export { EtapasTracker };
-export { getStatusLabel } from './EtapasTracker';
-export { getStatusPercent, useEtapasProgress } from './useEtapasProgress';
+import EtapaContent from "./EtapaContent";
+import EtapasSelector from "./EtapasSelector";
+import InspecaoServicosSelector from "./InspecaoServicosSelector";
+import EtapasTracker from "./EtapasTracker";
 
-export default EtapasTracker;
+export { EtapaContent, EtapasSelector, InspecaoServicosSelector, EtapasTracker };

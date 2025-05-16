@@ -1,61 +1,69 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 import { OrdemServico } from "@/types/ordens";
-import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import { SetOrdemFunction } from "./types";
+import { Timestamp } from "firebase/firestore";
 
-export interface UseOrdemFetchProps {
-  id: string | undefined;
-}
-
-export const useOrdemFetch = ({ id }: UseOrdemFetchProps) => {
+export const useOrdemFetch = (id: string | undefined) => {
   const [ordem, setOrdem] = useState<OrdemServico | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  useEffect(() => {
+
+  const fetchOrdem = useCallback(async () => {
     if (!id) {
       setIsLoading(false);
       return;
     }
     
-    setIsLoading(true);
-    setError(null);
-    
-    const docRef = doc(db, "ordens_servico", id);
-    
-    // Fix the onSnapshot type issue
-    const unsubscribe = onSnapshot(docRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        const ordemData: OrdemServico = {
-          id: snapshot.id,
+    try {
+      setIsLoading(true);
+      const orderRef = doc(db, "ordens_servico", id);
+      const orderSnap = await getDoc(orderRef);
+      
+      if (orderSnap.exists()) {
+        const data = orderSnap.data();
+        
+        // Convert Firestore Timestamps to JavaScript Date objects
+        const ordemData = {
+          id: orderSnap.id,
           ...data,
-          dataAbertura: data.dataAbertura?.toDate() || new Date(),
-          dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
+          dataAbertura: data.dataAbertura instanceof Timestamp ? data.dataAbertura.toDate() : new Date(),
+          dataPrevistaEntrega: data.dataPrevistaEntrega instanceof Timestamp ? data.dataPrevistaEntrega.toDate() : new Date(),
           servicos: data.servicos || [],
-          nome: data.nome || '',
-          cliente: data.cliente || {},
-          status: data.status || 'orcamento',
-          prioridade: data.prioridade || 'media',
           etapasAndamento: data.etapasAndamento || {},
           tempoRegistros: data.tempoRegistros || [],
-          timers: data.timers || {}
-        };
+        } as OrdemServico;
+        
         setOrdem(ordemData);
       } else {
-        setError("Ordem de serviço não encontrada.");
+        console.error("Ordem não encontrada");
         setOrdem(null);
       }
+    } catch (error) {
+      console.error("Erro ao carregar ordem:", error);
+      setOrdem(null);
+    } finally {
       setIsLoading(false);
-    }, (error) => {
-      console.error("Error getting order:", error);
-      setError("Erro ao obter ordem de serviço.");
-      setIsLoading(false);
-    });
-    
-    return () => unsubscribe();
+    }
   }, [id]);
   
-  return { ordem, isLoading, error };
+  const fetchMotorDetails = useCallback(async () => {
+    // This function is simplified to match what useOrdemDetalhes expects
+    // It should fetch motor details if needed
+    if (ordem?.motorId) {
+      // Motor fetching logic would go here
+      console.log("Atualizando detalhes do motor:", ordem.motorId);
+    }
+  }, [ordem?.motorId]);
+
+  useEffect(() => {
+    fetchOrdem();
+  }, [fetchOrdem]);
+
+  return {
+    ordem,
+    setOrdem,
+    isLoading,
+    fetchMotorDetails,
+  };
 };

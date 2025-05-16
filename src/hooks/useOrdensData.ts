@@ -1,208 +1,200 @@
-
 import { useState, useEffect, useCallback } from "react";
-import { collection, query, where, orderBy, getDocs, onSnapshot, Timestamp, limit, DocumentData, Query } from "firebase/firestore";
+import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { OrdemServico, StatusOS } from "@/types/ordens";
-import { useAuth } from "@/hooks/useAuth";
+import { OrdemServico } from "@/types/ordens";
 import { toast } from "sonner";
+import { getOrdensByFuncionarioEspecialidades } from "@/services/funcionarioService";
 
-export type OrdemFiltros = {
-  status?: StatusOS | 'todas';
-  clienteId?: string;
-  dataInicio?: Date;
-  dataFim?: Date;
-  prioridade?: string;
-  busca?: string;
-  limite?: number;
-  isTecnico?: boolean;
+interface UseOrdensDataProps {
+  isTecnico: boolean;
   funcionarioId?: string;
   especialidades?: string[];
-};
+}
 
-export const useOrdensData = (filtros: OrdemFiltros = {}) => {
+export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }: UseOrdensDataProps) => {
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
-  const [filteredOrdens, setFilteredOrdens] = useState<OrdemServico[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('todas');
-  const [prioridadeFilter, setPrioridadeFilter] = useState<string>('todas');
-  const [progressoFilter, setProgressoFilter] = useState<number[]>([0, 100]);
-  const { funcionario } = useAuth();
-  
-  // Determine if we can load data based on user permissions
-  const canLoad = !!funcionario;
-  
-  // Format data for Firestore query
-  const formatDate = (date: Date) => {
-    return Timestamp.fromDate(new Date(date));
-  };
-  
-  // Function to convert Firestore data to OrdemServico
-  const convertToOrdemServico = useCallback((doc: any): OrdemServico => {
-    const data = doc.data();
-    
-    // Handle dates
-    const dataAbertura = data.dataAbertura?.toDate ? data.dataAbertura.toDate() : new Date();
-    const dataPrevistaEntrega = data.dataPrevistaEntrega?.toDate ? data.dataPrevistaEntrega.toDate() : null;
-    
-    // Handle servicos array
-    const servicos = Array.isArray(data.servicos) ? data.servicos.map((servico: any) => ({
-      ...servico,
-      dataConclusao: servico.dataConclusao?.toDate ? servico.dataConclusao.toDate() : null
-    })) : [];
-    
-    // Handle etapasAndamento
-    const etapasAndamento = data.etapasAndamento || {};
-    Object.keys(etapasAndamento).forEach(key => {
-      const etapa = etapasAndamento[key];
-      if (etapa) {
-        if (etapa.iniciado?.toDate) {
-          etapa.iniciado = etapa.iniciado.toDate();
-        }
-        if (etapa.finalizado?.toDate) {
-          etapa.finalizado = etapa.finalizado.toDate();
-        }
-      }
-    });
-    
-    // Handle tempoRegistros
-    const tempoRegistros = Array.isArray(data.tempoRegistros) ? data.tempoRegistros.map((registro: any) => ({
-      ...registro,
-      inicio: registro.inicio?.toDate ? registro.inicio.toDate() : new Date(),
-      fim: registro.fim?.toDate ? registro.fim.toDate() : null,
-      pausas: Array.isArray(registro.pausas) ? registro.pausas.map((pausa: any) => ({
-        ...pausa,
-        inicio: pausa.inicio?.toDate ? pausa.inicio.toDate() : new Date(),
-        fim: pausa.fim?.toDate ? pausa.fim.toDate() : null
-      })) : []
-    })) : [];
-    
-    return {
-      id: doc.id,
-      ...data,
-      dataAbertura,
-      dataPrevistaEntrega,
-      servicos,
-      etapasAndamento,
-      tempoRegistros
-    } as OrdemServico;
-  }, []);
-  
-  // Function to filter ordens based on search term
-  const filterOrdensBySearchTerm = useCallback((ordens: OrdemServico[], searchTerm: string): OrdemServico[] => {
-    if (!searchTerm) return ordens;
-    
-    const lowerSearchTerm = searchTerm.toLowerCase();
-    
-    return ordens.filter(ordem => {
-      // Search in ordem name
-      if (ordem.nome.toLowerCase().includes(lowerSearchTerm)) return true;
-      
-      // Search in cliente name
-      if (ordem.cliente?.nome?.toLowerCase().includes(lowerSearchTerm)) return true;
-      
-      // Search in ordem ID
-      if (ordem.id.toLowerCase().includes(lowerSearchTerm)) return true;
-      
-      // Search in motor details
-      if (ordem.cliente?.motores?.some(motor => 
-        motor.marca?.toLowerCase().includes(lowerSearchTerm) ||
-        motor.modelo?.toLowerCase().includes(lowerSearchTerm) ||
-        motor.numeroSerie?.toLowerCase().includes(lowerSearchTerm)
-      )) return true;
-      
-      return false;
-    });
-  }, []);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [prioridadeFilter, setPrioridadeFilter] = useState("all");
+  const [progressoFilter, setProgressoFilter] = useState("all");
 
-  // Handle reordering of ordens
-  const handleReorder = useCallback((dragIndex: number, dropIndex: number) => {
-    const reorderedOrdens = [...filteredOrdens];
-    const draggedOrdem = reorderedOrdens[dragIndex];
-    reorderedOrdens.splice(dragIndex, 1);
-    reorderedOrdens.splice(dropIndex, 0, draggedOrdem);
-    setFilteredOrdens(reorderedOrdens);
-  }, [filteredOrdens]);
-  
-  // Refresh ordens
-  const refreshOrdens = useCallback(async () => {
-    if (!canLoad) return;
-    
+  const fetchOrdens = useCallback(async () => {
     setLoading(true);
     try {
-      // Build query constraints
-      const constraints = [];
+      let ordensData: OrdemServico[] = [];
       
-      // Status filter
-      if (filtros.status && filtros.status !== 'todas') {
-        constraints.push(where("status", "==", filtros.status));
+      if (isTecnico && especialidades.length) {
+        const especialidadesOrdens = await getOrdensByFuncionarioEspecialidades(especialidades);
+        ordensData = especialidadesOrdens as OrdemServico[];
+      } else {
+        const q = query(collection(db, "ordens_servico"), orderBy("dataAbertura", "desc"));
+        const querySnapshot = await getDocs(q);
+        
+        const ordensWithClienteMotores = await Promise.all(
+          querySnapshot.docs.map(async (doc) => {
+            const data = doc.data();
+            
+            // Handle legacy "fabricacao" status
+            if (data.status === "fabricacao") {
+              data.status = "executando_servico";
+            }
+            
+            if (data.cliente && data.cliente.id) {
+              try {
+                const motoresRef = collection(db, `clientes/${data.cliente.id}/motores`);
+                const motoresSnapshot = await getDocs(motoresRef);
+                const motores = motoresSnapshot.docs.map(motorDoc => ({
+                  id: motorDoc.id,
+                  ...motorDoc.data()
+                }));
+                
+                data.cliente.motores = motores;
+              } catch (error) {
+                console.error("Erro ao carregar motores do cliente:", error);
+              }
+            }
+            
+            let progressoEtapas = data.progressoEtapas;
+            
+            if (progressoEtapas === undefined) {
+              let etapas = ["lavagem", "inspecao_inicial"];
+              
+              if (data.servicos?.some((s: any) => 
+                ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo))) {
+                etapas.push("retifica");
+              }
+              
+              if (data.servicos?.some((s: any) => s.tipo === "montagem")) {
+                etapas.push("montagem");
+              }
+              
+              if (data.servicos?.some((s: any) => s.tipo === "dinamometro")) {
+                etapas.push("dinamometro");
+              }
+              
+              etapas.push("inspecao_final");
+              
+              const etapasAndamento = data.etapasAndamento || {};
+              const etapasConcluidas = etapas.filter(etapa => 
+                etapasAndamento[etapa]?.concluido
+              ).length;
+              
+              progressoEtapas = etapasConcluidas / etapas.length;
+            }
+            
+            return {
+              ...data,
+              id: doc.id,
+              dataAbertura: data.dataAbertura?.toDate() || new Date(),
+              dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
+              progressoEtapas: progressoEtapas
+            } as OrdemServico;
+          })
+        );
+        
+        ordensData = ordensWithClienteMotores;
       }
       
-      // Cliente filter
-      if (filtros.clienteId) {
-        constraints.push(where("cliente.id", "==", filtros.clienteId));
+      // Tenta recuperar a ordem personalizada do localStorage
+      const savedOrder = localStorage.getItem('ordens-custom-order');
+      if (savedOrder) {
+        try {
+          const orderMap = JSON.parse(savedOrder);
+          // Ordena as ordens conforme a ordem salva
+          ordensData.sort((a, b) => {
+            const orderA = orderMap[a.id] !== undefined ? orderMap[a.id] : 999999;
+            const orderB = orderMap[b.id] !== undefined ? orderMap[b.id] : 999999;
+            return orderA - orderB;
+          });
+        } catch (error) {
+          console.error("Erro ao aplicar ordem personalizada:", error);
+        }
       }
       
-      // Date range filter
-      if (filtros.dataInicio) {
-        constraints.push(where("dataAbertura", ">=", formatDate(filtros.dataInicio)));
-      }
-      
-      if (filtros.dataFim) {
-        constraints.push(where("dataAbertura", "<=", formatDate(filtros.dataFim)));
-      }
-      
-      // Prioridade filter
-      if (filtros.prioridade && filtros.prioridade !== 'todas') {
-        constraints.push(where("prioridade", "==", filtros.prioridade));
-      }
-      
-      // Add ordering
-      constraints.push(orderBy("dataAbertura", "desc"));
-      
-      // Add limit if specified
-      if (filtros.limite && filtros.limite > 0) {
-        constraints.push(limit(filtros.limite));
-      }
-      
-      // Execute the query
-      const q: Query<DocumentData> = query(collection(db, "ordens_servico"), ...constraints);
-      const querySnapshot = await getDocs(q);
-      
-      const ordensData: OrdemServico[] = [];
-      querySnapshot.forEach((doc) => {
-        const ordem = convertToOrdemServico(doc);
-        ordensData.push(ordem);
-      });
-      
-      // Apply search filter client-side if needed
-      const filtered = filtros.busca 
-        ? filterOrdensBySearchTerm(ordensData, filtros.busca)
-        : ordensData;
-      
-      setOrdens(filtered);
-      setFilteredOrdens(filtered);
-      setError(null);
-    } catch (err) {
-      console.error("Error fetching ordens:", err);
-      setError("Erro ao buscar ordens de serviço");
-      toast.error("Erro ao carregar ordens de serviço");
+      setOrdens(ordensData);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      toast.error("Erro ao carregar ordens de serviço.");
     } finally {
       setLoading(false);
     }
-  }, [filtros, canLoad, convertToOrdemServico, filterOrdensBySearchTerm]);
-  
-  // Load ordens data
+  }, [isTecnico, funcionarioId, especialidades]);
+
+  // Carregar ordens quando o componente for montado
   useEffect(() => {
-    refreshOrdens();
-  }, [refreshOrdens]);
-  
-  return { 
-    ordens, 
-    filteredOrdens, 
-    loading, 
-    error,
+    fetchOrdens();
+  }, [fetchOrdens]);
+
+  // Verificar se há um parâmetro "filter=atrasadas" na URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const filterParam = params.get('filter');
+    if (filterParam === 'atrasadas') {
+      setProgressoFilter('atrasadas');
+    }
+  }, []);
+
+  const handleReorder = (dragIndex: number, dropIndex: number) => {
+    const reorderedOrdens = [...ordens];
+    const [draggedItem] = reorderedOrdens.splice(dragIndex, 1);
+    reorderedOrdens.splice(dropIndex, 0, draggedItem);
+    setOrdens(reorderedOrdens);
+    
+    // Salva a nova ordem no localStorage
+    const orderMap: Record<string, number> = {};
+    reorderedOrdens.forEach((ordem, index) => {
+      orderMap[ordem.id] = index;
+    });
+    localStorage.setItem('ordens-custom-order', JSON.stringify(orderMap));
+  };
+
+  const refreshOrdens = async () => {
+    await fetchOrdens();
+  };
+
+  const filteredOrdens = ordens.filter((ordem) => {
+    if (!ordem) return false;
+    
+    const searchMatch = 
+      (ordem.nome || '').toLowerCase().includes(search.toLowerCase()) ||
+      (ordem.cliente?.nome || '').toLowerCase().includes(search.toLowerCase()) ||
+      (ordem.id || '').toLowerCase().includes(search.toLowerCase());
+    
+    const statusMatch = statusFilter === "all" ? true : ordem.status === statusFilter;
+    const prioridadeMatch = prioridadeFilter === "all" ? true : ordem.prioridade === prioridadeFilter;
+    
+    let progressoMatch = true;
+    const progresso = ordem.progressoEtapas !== undefined ? ordem.progressoEtapas * 100 : 0;
+    
+    switch (progressoFilter) {
+      case "nao_iniciado":
+        progressoMatch = progresso === 0;
+        break;
+      case "em_andamento":
+        progressoMatch = progresso > 0 && progresso < 100;
+        break;
+      case "quase_concluido":
+        progressoMatch = progresso >= 75 && progresso < 100;
+        break;
+      case "concluido":
+        progressoMatch = progresso === 100;
+        break;
+      case "atrasadas":
+        const hoje = new Date();
+        progressoMatch = ordem.dataPrevistaEntrega < hoje && !['finalizado', 'entregue'].includes(ordem.status);
+        break;
+      default:
+        progressoMatch = true;
+    }
+
+    return searchMatch && statusMatch && prioridadeMatch && progressoMatch;
+  });
+
+  return {
+    ordens,
+    filteredOrdens,
+    loading,
     search,
     setSearch,
     statusFilter,

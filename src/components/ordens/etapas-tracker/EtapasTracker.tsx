@@ -1,211 +1,581 @@
 
-import React, { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
-import { useToast } from "@/components/ui/use-toast";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { doc, updateDoc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { toast } from "sonner";
+import { OrdemServico, EtapaOS, TipoServico } from "@/types/ordens";
+import { useAuth } from "@/hooks/useAuth";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { getStatusPercent } from "./useEtapasProgress";
+import { EmptyServices } from "./EmptyServices";
+import { useEtapasProgress } from "./useEtapasProgress";
+import EtapasSelector from "./EtapasSelector";
+import EtapaContent from "./EtapaContent";
 
-// Create a ProgressCircle component since it's missing
-const ProgressCircle = ({ value }: { value: number }) => {
-  const radius = 40;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (value / 100) * circumference;
+// Objeto para armazenar timestamps de notificações para evitar duplicatas em um curto período
+const notificationTimestamps: Record<string, number> = {};
 
-  return (
-    <div className="relative inline-flex items-center justify-center">
-      <svg className="w-24 h-24" viewBox="0 0 100 100">
-        <circle
-          className="text-slate-200"
-          strokeWidth="8"
-          stroke="currentColor"
-          fill="transparent"
-          r={radius}
-          cx="50"
-          cy="50"
-        />
-        <circle
-          className="text-blue-500"
-          strokeWidth="8"
-          strokeLinecap="round"
-          stroke="currentColor"
-          fill="transparent"
-          r={radius}
-          cx="50"
-          cy="50"
-          style={{
-            strokeDasharray: circumference,
-            strokeDashoffset: strokeDashoffset,
-          }}
-        />
-      </svg>
-      <span className="absolute text-xl font-bold">{Math.round(value)}%</span>
-    </div>
-  );
-};
-
-// Export the getStatusLabel function to fix import issues
-export const getStatusLabel = (status: string): string => {
-  if (status === "orcamento") return "Orçamento";
-  if (status === "aguardando_aprovacao") return "Aguardando Aprovação";
-  if (status === "autorizado") return "Autorizado";
-  if (status === "executando_servico") return "Executando Serviço";
-  if (status === "aguardando_peca_cliente") return "Aguardando Peça (Cliente)";
-  if (status === "aguardando_peca_interno") return "Aguardando Peça (Interno)";
-  if (status === "finalizado") return "Finalizado";
-  if (status === "entregue") return "Entregue";
-  return status;
+// Função para verificar se uma notificação similar já foi mostrada recentemente
+const shouldShowNotification = (message: string, cooldownMs = 3000): boolean => {
+  const now = Date.now();
+  const lastShown = notificationTimestamps[message] || 0;
+  
+  if (now - lastShown > cooldownMs) {
+    notificationTimestamps[message] = now;
+    return true;
+  }
+  
+  return false;
 };
 
 interface EtapasTrackerProps {
-  status: string;
-  progressoEtapas?: number;
-  etapasAndamento: {
-    lavagem?: { concluido: boolean };
-    inspecao_inicial?: { concluido: boolean };
-    retifica?: { concluido: boolean };
-    montagem?: { concluido: boolean };
-    dinamometro?: { concluido: boolean };
-    inspecao_final?: { concluido: boolean };
-  };
-  onStatusChange: (status: string) => void;
-  onEtapaChange: (etapa: string, concluido: boolean) => void;
+  ordem: OrdemServico;
+  onOrdemUpdate: (ordemAtualizada: OrdemServico) => void;
+  onFuncionariosChange?: (etapa: EtapaOS, funcionariosIds: string[], funcionariosNomes: string[], servicoTipo?: string) => void;
 }
 
-export const EtapasTracker: React.FC<EtapasTrackerProps> = ({
-  status,
-  progressoEtapas,
-  etapasAndamento,
-  onStatusChange,
-  onEtapaChange,
-}) => {
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const { toast } = useToast();
+// Memoized component for better performance
+const EtapasTracker = React.memo(({ ordem, onOrdemUpdate, onFuncionariosChange }: EtapasTrackerProps) => {
+  // Incluir todas as etapas na lista
+  const [etapasAtivas, setEtapasAtivas] = useState<EtapaOS[]>([]);
+  const [selectedEtapa, setSelectedEtapa] = useState<EtapaOS | null>(null);
+  const [selectedServicoTipo, setSelectedServicoTipo] = useState<TipoServico | null>(null);
+  const { funcionario } = useAuth();
+  const { progressoTotal, calcularProgressoTotal } = useEtapasProgress({ ordem, onOrdemUpdate });
 
-  const handleStatusClick = (newStatus: string) => {
-    onStatusChange(newStatus);
-    toast({
-      title: "Status atualizado!",
-      description: `Status da ordem de serviço alterado para ${getStatusLabel(newStatus)}.`,
-    });
+  // Use memoization for expensive calculations
+  const verificarEtapasDisponiveis = useCallback(() => {
+    const temMontagem = ordem.servicos.some(s => s.tipo === 'montagem');
+    const temDinamometro = ordem.servicos.some(s => s.tipo === 'dinamometro');
+    return {
+      montagem: temMontagem,
+      dinamometro: temDinamometro
+    };
+  }, [ordem.servicos]);
+
+  // Use memoization for expensive operations
+  const servicosAtivos = useMemo(() => {
+    return ordem.servicos.filter(servico =>
+      servico.subatividades && servico.subatividades.some(sub => sub.selecionada)
+    );
+  }, [ordem.servicos]);
+
+  // Use efeito para determinar quais etapas estão disponíveis para esta ordem
+  useEffect(() => {
+    if (!ordem || !funcionario) {
+      setEtapasAtivas([]);
+      setSelectedEtapa(null);
+      setSelectedServicoTipo(null);
+      return;
+    }
+
+    const etapasDisponiveis = verificarEtapasDisponiveis();
+    // Incluir TODAS as etapas na sequência correta
+    const allEtapas: EtapaOS[] = [
+      'lavagem',
+      'inspecao_inicial',
+      'retifica'
+    ];
+    
+    if (etapasDisponiveis.montagem) allEtapas.push('montagem');
+    if (etapasDisponiveis.dinamometro) allEtapas.push('dinamometro');
+    
+    // Adicionar inspeção final ao final da lista
+    allEtapas.push('inspecao_final');
+
+    setEtapasAtivas(allEtapas);
+    if (!selectedEtapa && allEtapas.length > 0) {
+      setSelectedEtapa(allEtapas[0]);
+    }
+    setSelectedServicoTipo(null);
+    
+    // Calculate progress efficiently
+    calcularProgressoTotal(ordem);
+  }, [ordem.id, funcionario, calcularProgressoTotal, verificarEtapasDisponiveis]);
+
+  // Optimize event handlers with useCallback
+  const handleServicoStatusChange = useCallback(async (
+    servicoTipo: TipoServico, 
+    concluido: boolean, 
+    funcionarioId?: string, 
+    funcionarioNome?: string
+  ) => {
+    if (!ordem?.id || !funcionario?.id) return;
+    
+    if (funcionario.nivelPermissao !== 'admin' && 
+        funcionario.nivelPermissao !== 'gerente' && 
+        !funcionario.especialidades.includes(servicoTipo)) {
+      toast.error("Você não tem permissão para gerenciar este tipo de serviço");
+      return;
+    }
+    
+    try {
+      console.log("Atualizando status do serviço:", { servicoTipo, concluido, funcionarioId });
+      // Important: Only update the status of the specific service, not others
+      const servicosAtualizados = ordem.servicos.map(servico => {
+        if (servico.tipo === servicoTipo) {
+          let subatividades = servico.subatividades;
+          if (concluido && subatividades) {
+            subatividades = subatividades.map(sub => {
+              if (sub.selecionada) {
+                return { ...sub, concluida: true };
+              }
+              return sub;
+            });
+          }
+          
+          return { 
+            ...servico, 
+            concluido,
+            subatividades,
+            funcionarioId: concluido ? (funcionarioId || funcionario.id) : undefined,
+            funcionarioNome: concluido ? (funcionarioNome || funcionario.nome) : undefined,
+            dataConclusao: concluido ? new Date() : undefined
+          };
+        }
+        // Important: Return other services unchanged
+        return servico;
+      });
+      
+      const ordemRef = doc(db, "ordens_servico", ordem.id);
+      await updateDoc(ordemRef, { servicos: servicosAtualizados });
+      
+      const ordemAtualizada = {
+        ...ordem,
+        servicos: servicosAtualizados
+      };
+      
+      if (onOrdemUpdate) {
+        onOrdemUpdate(ordemAtualizada);
+      }
+      
+      if (shouldShowNotification(`Serviço ${servicoTipo} ${concluido ? 'concluído' : 'reaberto'}`)) {
+        toast.success(`Serviço ${servicoTipo} ${concluido ? 'concluído' : 'reaberto'}`);
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar status do serviço:", error);
+      toast.error("Erro ao atualizar status do serviço");
+    }
+  }, [ordem, funcionario, onOrdemUpdate]);
+
+  const handleSubatividadeToggle = useCallback(async (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => {
+    if (!ordem?.id) return;
+    
+    if (funcionario?.nivelPermissao !== 'admin' && 
+        funcionario?.nivelPermissao !== 'gerente' && 
+        !funcionario?.especialidades.includes(servicoTipo)) {
+      toast.error("Você não tem permissão para gerenciar este tipo de serviço");
+      return;
+    }
+    
+    try {
+      console.log("Toggling subatividade in EtapasTracker:", { servicoTipo, subatividadeId, checked });
+      
+      // Create a deep clone of the services to avoid messing with React's state directly
+      const servicosAtualizados = ordem.servicos.map(servico => {
+        if (servico.tipo === servicoTipo && servico.subatividades) {
+          const subatividades = servico.subatividades.map(sub => {
+            if (sub.id === subatividadeId) {
+              console.log("Atualizando subatividade:", { id: sub.id, concluida: checked });
+              return { ...sub, concluida: checked };
+            }
+            return sub;
+          });
+          
+          return { 
+            ...servico, 
+            subatividades
+          };
+        }
+        return servico;
+      });
+      
+      // Corrigir o caminho do documento para "ordens_servico" ao invés de "ordens"
+      const ordemRef = doc(db, "ordens_servico", ordem.id);
+      await updateDoc(ordemRef, { servicos: servicosAtualizados });
+      
+      // Update local state
+      const ordemAtualizada = {
+        ...ordem,
+        servicos: servicosAtualizados
+      };
+      
+      // Notify parent component
+      if (onOrdemUpdate) {
+        onOrdemUpdate(ordemAtualizada);
+      }
+      
+      // Provide feedback to the user
+      if (shouldShowNotification(`Subatividade ${checked ? 'concluída' : 'reaberta'}`)) {
+        toast.success(`Subatividade ${checked ? 'concluída' : 'reaberta'}`);
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar subatividade:", error);
+      toast.error("Erro ao atualizar subatividade");
+    }
+  }, [ordem, funcionario, onOrdemUpdate]);
+
+  // Add the missing function for handling subatividade selecionada toggle
+  const handleSubatividadeSelecionadaToggle = useCallback(async (servicoTipo: TipoServico, subatividadeId: string, checked: boolean) => {
+    if (!ordem?.id) return;
+    
+    try {
+      console.log("Toggling subatividade selecionada:", { servicoTipo, subatividadeId, checked });
+      
+      // Update the services with the new selection status
+      const servicosAtualizados = ordem.servicos.map(servico => {
+        if (servico.tipo === servicoTipo && servico.subatividades) {
+          const subatividades = servico.subatividades.map(sub => {
+            if (sub.id === subatividadeId) {
+              return { ...sub, selecionada: checked };
+            }
+            return sub;
+          });
+          
+          return { 
+            ...servico, 
+            subatividades
+          };
+        }
+        return servico;
+      });
+      
+      const ordemRef = doc(db, "ordens_servico", ordem.id);
+      await updateDoc(ordemRef, { servicos: servicosAtualizados });
+      
+      // Update local state
+      const ordemAtualizada = {
+        ...ordem,
+        servicos: servicosAtualizados
+      };
+      
+      // Notify parent component
+      if (onOrdemUpdate) {
+        onOrdemUpdate(ordemAtualizada);
+      }
+      
+      // Provide user feedback
+      if (shouldShowNotification(`Subatividade ${checked ? 'selecionada' : 'removida'}`)) {
+        toast.success(`Subatividade ${checked ? 'selecionada' : 'removida'} com sucesso`);
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar seleção da subatividade:", error);
+      toast.error("Erro ao atualizar seleção da subatividade");
+    }
+  }, [ordem, onOrdemUpdate]);
+
+  const handleEtapaStatusChange = useCallback(async (
+    etapa: EtapaOS, 
+    concluida: boolean, 
+    funcionarioId?: string, 
+    funcionarioNome?: string,
+    servicoTipo?: TipoServico
+  ) => {
+    if (!ordem?.id) {
+      toast.error("ID da ordem não encontrado");
+      return;
+    }
+    
+    if (!funcionarioId) {
+      toast.error("É necessário selecionar um responsável");
+      return;
+    }
+    
+    try {
+      // Determinar a chave da etapa com base no tipo de serviço
+      const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo) 
+        ? `${etapa}_${servicoTipo}` 
+        : etapa;
+      
+      console.log(`Atualizando status da etapa ${etapaKey} para funcionário ${funcionarioNome} (${funcionarioId}), concluída: ${concluida}`);
+      
+      // Obter documento atual para garantir dados atualizados
+      const ordemRef = doc(db, "ordens_servico", ordem.id);
+      const ordemDoc = await getDoc(ordemRef);
+      
+      if (!ordemDoc.exists()) {
+        toast.error("Ordem de serviço não encontrada");
+        return;
+      }
+      
+      const dadosAtuais = ordemDoc.data();
+      const etapasAndamento = dadosAtuais.etapasAndamento || {};
+      const etapaAtual = etapasAndamento[etapaKey] || {};
+      
+      // Verificar se já está com os mesmos valores para evitar atualização desnecessária
+      if (etapaAtual.concluido === concluida && 
+          etapaAtual.funcionarioId === funcionarioId &&
+          etapaAtual.funcionarioNome === funcionarioNome) {
+        console.log("Etapa já está com os mesmos valores, ignorando atualização");
+        return;
+      }
+      
+      // Manter funcionários existentes e adicionar o novo se necessário
+      const funcionariosAtuais = Array.isArray(etapaAtual.funcionarios) ? etapaAtual.funcionarios : [];
+      const funcionarioJaExiste = funcionariosAtuais.some((f: any) => f.id === funcionarioId);
+      
+      // Preparar objeto para atualização, garantindo que nenhum campo seja undefined
+      const atualizacao: Record<string, any> = {
+        [`etapasAndamento.${etapaKey}`]: {
+          concluido: Boolean(concluida),
+          funcionarioId: funcionarioId || null,
+          funcionarioNome: funcionarioNome || "",
+          finalizado: concluida ? new Date() : null,
+          iniciado: etapaAtual.iniciado || new Date(),
+          servicoTipo: servicoTipo || null,
+          funcionarios: funcionarioJaExiste ? funcionariosAtuais : [
+            ...funcionariosAtuais,
+            {
+              id: funcionarioId,
+              nome: funcionarioNome,
+              inicio: new Date()
+            }
+          ]
+        }
+      };
+      
+      // Log para depuração
+      console.log("Dados a serem salvos:", atualizacao);
+      
+      // Atualizar no Firebase
+      await updateDoc(ordemRef, atualizacao);
+      
+      // IMPORTANTE: Atualizar o estado local com os novos dados
+      const etapasAndamentoAtualizado = { ...ordem.etapasAndamento || {} };
+      etapasAndamentoAtualizado[etapaKey] = atualizacao[`etapasAndamento.${etapaKey}`];
+      
+      const ordemAtualizada = {
+        ...ordem,
+        etapasAndamento: etapasAndamentoAtualizado
+      };
+      
+      // Atualizar estado local diretamente para refletir mudanças imediatamente
+      if (onOrdemUpdate) {
+        onOrdemUpdate(ordemAtualizada);
+      }
+      
+      const servicoMsg = servicoTipo ? ` - ${formatServicoTipo(servicoTipo)}` : '';
+      let acao;
+      
+      if (concluida) {
+        acao = 'concluída';
+      } else if (etapaAtual.funcionarioId !== funcionarioId) {
+        acao = 'atribuída';
+      } else {
+        acao = 'atualizada';
+      }
+      
+      if (shouldShowNotification(`Etapa ${etapaNomesBR[etapa] || etapa}${servicoMsg} ${acao}`)) {
+        toast.success(`Etapa ${etapaNomesBR[etapa] || etapa}${servicoMsg} ${acao}`);
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar status da etapa:", error);
+      toast.error("Erro ao atualizar status da etapa");
+    }
+  }, [ordem, onOrdemUpdate]);
+
+  // Handle funcionarios change para múltiplos funcionários
+  const handleFuncionariosChange = useCallback((
+    etapa: EtapaOS, 
+    funcionariosIds: string[], 
+    funcionariosNomes: string[], 
+    servicoTipo?: string
+  ) => {
+    console.log("handleFuncionariosChange em EtapasTracker:", { etapa, funcionariosIds, funcionariosNomes, servicoTipo });
+    
+    if (onFuncionariosChange) {
+      onFuncionariosChange(etapa, funcionariosIds, funcionariosNomes, servicoTipo);
+    }
+    
+    // Determinar a chave da etapa com base no tipo de serviço
+    const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo) 
+      ? `${etapa}_${servicoTipo}` 
+      : etapa;
+    
+    // Atualizar localmente as informações de funcionários para refletir imediatamente na interface
+    if (ordem.id) {
+      console.log("Atualizando funcionários para etapa:", etapaKey);
+      
+      // Atualizar no Firebase
+      const ordemRef = doc(db, "ordens_servico", ordem.id);
+      
+      // Preparar dados de funcionários
+      const funcionarios = funcionariosIds.map((id, index) => ({
+        id,
+        nome: funcionariosNomes[index] || "",
+        inicio: new Date()
+      }));
+      
+      // Verificar se a etapa já tem informações
+      const etapaAtual = ordem.etapasAndamento?.[etapaKey] || {};
+      
+      const atualizacao = {
+        [`etapasAndamento.${etapaKey}`]: {
+          ...etapaAtual,
+          funcionarioId: funcionariosIds[0] || null, // Manter compatibilidade com campos antigos
+          funcionarioNome: funcionariosNomes[0] || "",
+          funcionarios: funcionarios,
+          iniciado: etapaAtual.iniciado || new Date(),
+          servicoTipo: servicoTipo || null
+        }
+      };
+      
+      // Atualizar no Firebase
+      updateDoc(ordemRef, atualizacao).then(() => {
+        console.log("Funcionários atualizados com sucesso");
+        
+        // Atualizar estado local
+        const etapasAndamentoAtualizado = { ...ordem.etapasAndamento || {} };
+        etapasAndamentoAtualizado[etapaKey] = atualizacao[`etapasAndamento.${etapaKey}`];
+        
+        const ordemAtualizada = {
+          ...ordem,
+          etapasAndamento: etapasAndamentoAtualizado
+        };
+        
+        if (onOrdemUpdate) {
+          onOrdemUpdate(ordemAtualizada);
+        }
+      }).catch(error => {
+        console.error("Erro ao atualizar funcionários:", error);
+        toast.error("Erro ao atualizar funcionários");
+      });
+    }
+  }, [ordem, onOrdemUpdate, onFuncionariosChange]);
+
+  // Preparar os serviços para a etapa atual
+  const getServicosParaEtapaAtual = useMemo(() => {
+    if (!selectedEtapa) return [];
+
+    console.log("Obtendo serviços para etapa:", selectedEtapa);
+    
+    // Para etapa de retifica, mostrar todos os serviços de retifica
+    if (selectedEtapa === "retifica") {
+      return ordem.servicos.filter(s => 
+        ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo)
+      );
+    }
+    
+    // Para etapa de lavagem, mostrar serviços de lavagem
+    if (selectedEtapa === "lavagem") {
+      return ordem.servicos.filter(s => s.tipo === "lavagem");
+    }
+    
+    // Para outras etapas regulares, mostrar serviços do mesmo tipo
+    const servicosEtapa = ordem.servicos.filter(s => s.tipo === selectedEtapa);
+    
+    // Caso especial para inspeção inicial/final
+    if ((selectedEtapa === "inspecao_inicial" || selectedEtapa === "inspecao_final")) {
+      if (selectedServicoTipo) {
+        // Se um tipo específico foi selecionado, filtrar apenas por ele
+        return ordem.servicos.filter(s => s.tipo === selectedServicoTipo);
+      } else {
+        // Senão, mostrar todos os serviços de inspeção e outros serviços que precisam ser inspecionados
+        const tipos = ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"];
+        return ordem.servicos.filter(s => 
+          s.tipo === selectedEtapa || tipos.includes(s.tipo)
+        );
+      }
+    }
+    
+    return servicosEtapa;
+  }, [selectedEtapa, selectedServicoTipo, ordem.servicos]);
+
+  if (servicosAtivos.length === 0) {
+    // Garantir que estamos passando a etapa correta para EmptyServices
+    return <EmptyServices etapa={selectedEtapa || 'lavagem'} />;
+  }
+
+  // Memoize etapasDisponiveis for better performance
+  const etapasDisponiveis = verificarEtapasDisponiveis();
+  
+  const isRetificaHabilitada = () => ordem.status === 'fabricacao';
+  const isInspecaoFinalHabilitada = () => {
+    const { etapasAndamento } = ordem;
+    
+    const retificaConcluida = etapasAndamento?.['retifica']?.concluido === true;
+    const montagemConcluida = etapasAndamento?.['montagem']?.concluido === true;
+    const dinamometroConcluida = etapasAndamento?.['dinamometro']?.concluido === true;
+    
+    return retificaConcluida || montagemConcluida || dinamometroConcluida;
   };
-
-  const handleEtapaChange = (etapa: string, concluido: boolean) => {
-    onEtapaChange(etapa, concluido);
-  };
-
-  const etapas = [
-    { nome: "Lavagem", status: etapasAndamento?.lavagem?.concluido, value: "lavagem" },
-    { nome: "Inspeção Inicial", status: etapasAndamento?.inspecao_inicial?.concluido, value: "inspecao_inicial" },
-    { nome: "Retífica", status: etapasAndamento?.retifica?.concluido, value: "retifica" },
-    { nome: "Montagem", status: etapasAndamento?.montagem?.concluido, value: "montagem" },
-    { nome: "Dinamômetro", status: etapasAndamento?.dinamometro?.concluido, value: "dinamometro" },
-    { nome: "Inspeção Final", status: etapasAndamento?.inspecao_final?.concluido, value: "inspecao_final" },
-  ];
-
-  const statusOptions = [
-    { label: "Orçamento", value: "orcamento" },
-    { label: "Aguardando Aprovação", value: "aguardando_aprovacao" },
-    { label: "Autorizado", value: "autorizado" },
-    { label: "Executando Serviço", value: "executando_servico" },
-    { label: "Aguardando Peça (Cliente)", value: "aguardando_peca_cliente" },
-    { label: "Aguardando Peça (Interno)", value: "aguardando_peca_interno" },
-    { label: "Finalizado", value: "finalizado" },
-    { label: "Entregue", value: "entregue" },
-  ];
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Acompanhamento da Ordem de Serviço</CardTitle>
-        <CardDescription>
-          Visualize e gerencie o progresso da ordem de serviço.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold">Progresso Geral</h3>
-            <p className="text-sm text-muted-foreground">
-              Acompanhe o status geral da ordem.
-            </p>
+    <div className="space-y-6">
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Tracker de Serviços</CardTitle>
+          <CardDescription>
+            Acompanhe o progresso dos serviços e etapas desta ordem.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium">Progresso Total</span>
+              <span className="text-sm font-medium">{progressoTotal}%</span>
+            </div>
+            <Progress value={progressoTotal} className="h-3" />
           </div>
-          <ProgressCircle value={getStatusPercent(status)} />
-        </div>
-        <Separator />
-        <div>
-          <h3 className="text-lg font-semibold">Status</h3>
-          <p className="text-sm text-muted-foreground">
-            Altere o status da ordem de serviço.
-          </p>
-          <div className="mt-2 flex gap-2">
-            {statusOptions.map((option) => (
-              <Badge
-                key={option.value}
-                variant={status === option.value ? "secondary" : "outline"}
-                onClick={() => handleStatusClick(option.value)}
-                className="cursor-pointer"
-              >
-                {option.label}
-              </Badge>
-            ))}
-          </div>
-        </div>
-        <Separator />
-        <div>
-          <h3 className="text-lg font-semibold">Etapas</h3>
-          <p className="text-sm text-muted-foreground">
-            Marque as etapas concluídas da ordem de serviço.
-          </p>
-          <div className="mt-2 grid gap-2">
-            {etapas.map((etapa) => (
-              <div key={etapa.nome} className="flex items-center justify-between">
-                <Label htmlFor={etapa.nome} className="cursor-pointer">
-                  {etapa.nome}
-                </Label>
-                <Checkbox
-                  id={etapa.nome}
-                  checked={etapa.status === true}
-                  onCheckedChange={(checked) => handleEtapaChange(etapa.value, checked === true)}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      </CardContent>
-      <CardFooter>
-        <Button onClick={() => setIsDrawerOpen(true)}>
-          Mostrar Detalhes Avançados
-        </Button>
-      </CardFooter>
-
-      <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>Detalhes Avançados</DrawerTitle>
-            <DrawerDescription>
-              Informações detalhadas sobre a ordem de serviço.
-            </DrawerDescription>
-          </DrawerHeader>
-          <DrawerFooter>
-            <DrawerClose>Fechar</DrawerClose>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
-    </Card>
+          
+          <EtapasSelector 
+            etapasAtivas={etapasAtivas} 
+            selectedEtapa={selectedEtapa}
+            etapasDisponiveis={etapasDisponiveis}
+            onEtapaSelect={(etapa) => {
+              setSelectedEtapa(etapa);
+              setSelectedServicoTipo(null);
+            }}
+            isRetificaHabilitada={isRetificaHabilitada}
+            isInspecaoFinalHabilitada={isInspecaoFinalHabilitada}
+          />
+          
+          {selectedEtapa && (
+            <EtapaContent
+              ordemId={ordem.id}
+              etapa={selectedEtapa}
+              etapaInfo={ordem.etapasAndamento}
+              servicos={getServicosParaEtapaAtual}
+              servicoTipo={selectedServicoTipo || undefined}
+              onSubatividadeToggle={handleSubatividadeToggle}
+              onServicoStatusChange={handleServicoStatusChange}
+              onEtapaStatusChange={handleEtapaStatusChange}
+              onSubatividadeSelecionadaToggle={handleSubatividadeSelecionadaToggle}
+              onFuncionariosChange={handleFuncionariosChange}
+            />
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
+});
+
+EtapasTracker.displayName = "EtapasTracker";
+
+// Helper functions
+export const etapaNomesBR: Record<EtapaOS, string> = {
+  lavagem: "Lavagem",
+  inspecao_inicial: "Inspeção Inicial",
+  retifica: "Retífica",
+  montagem: "Montagem",
+  dinamometro: "Dinamômetro",
+  inspecao_final: "Inspeção Final"
+};
+
+export const formatServicoTipo = (tipo: TipoServico): string => {
+  const labels: Record<TipoServico, string> = {
+    bloco: "Bloco",
+    biela: "Biela",
+    cabecote: "Cabeçote",
+    virabrequim: "Virabrequim",
+    eixo_comando: "Eixo de Comando",
+    montagem: "Montagem",
+    dinamometro: "Dinamômetro",
+    lavagem: "Lavagem",
+    inspecao_inicial: "Inspeção Inicial",
+    inspecao_final: "Inspeção Final"
+  };
+  return labels[tipo] || tipo;
 };
 
 export default EtapasTracker;
