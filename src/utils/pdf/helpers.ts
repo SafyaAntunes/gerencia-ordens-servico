@@ -16,3 +16,15 @@ export const getStatusName = (status: string): string => {
   
   return statusMap[status] || status;
 };
+
+// Add statusLabels export for utils/pdf/sections.ts
+export const statusLabels = {
+  orcamento: "Orçamento",
+  aguardando_aprovacao: "Aguardando Aprovação",
+  autorizado: "Autorizado",
+  executando_servico: "Executando Serviço", 
+  aguardando_peca_cliente: "Aguardando Peça (Cliente)",
+  aguardando_peca_interno: "Aguardando Peça (Interno)",
+  finalizado: "Finalizado",
+  entregue: "Entregue"
+};

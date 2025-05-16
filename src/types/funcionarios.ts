@@ -1,5 +1,5 @@
 
-// Add atividadeAtual and status to the Funcionario type
+// Add missing types and exports to the funcionarios.ts file
 import { FuncionarioStatus, AtividadeAtual } from "@/utils/funcionarioTypes";
 
 export interface Funcionario {
@@ -8,7 +8,7 @@ export interface Funcionario {
   email?: string;
   telefone?: string;
   cargo?: string;
-  nivelPermissao: 'admin' | 'gerente' | 'tecnico' | 'visualizador';
+  nivelPermissao: NivelPermissao;
   especialidades?: string[];
   ativo?: boolean;
   codigoAcesso?: string;
@@ -24,6 +24,34 @@ export interface Funcionario {
   observacoes?: string;
   limitacao?: string;
   dataCriacao?: Date;
-  status?: string; // Status do funcionário (ativo, inativo, etc.)
-  atividadeAtual?: AtividadeAtual; // Atividade atual do funcionário
+  status?: string;
+  atividadeAtual?: AtividadeAtual;
+  // Add missing properties
+  nomeUsuario?: string;
+  senha?: string;
+  foto?: string;
 }
+
+export type NivelPermissao = 'admin' | 'gerente' | 'tecnico' | 'visualizacao' | 'visualizador';
+
+// Add the missing labels
+export const permissoesLabels: Record<string, string> = {
+  admin: 'Administrador',
+  gerente: 'Gerente',
+  tecnico: 'Técnico',
+  visualizacao: 'Visualizador',
+  visualizador: 'Visualizador'
+};
+
+export const tipoServicoLabels: Record<string, string> = {
+  bloco: 'Bloco',
+  biela: 'Biela',
+  cabecote: 'Cabeçote',
+  virabrequim: 'Virabrequim',
+  eixo_comando: 'Eixo Comando',
+  montagem: 'Montagem',
+  dinamometro: 'Dinamômetro',
+  lavagem: 'Lavagem',
+  inspecao_inicial: 'Inspeção Inicial',
+  inspecao_final: 'Inspeção Final'
+};

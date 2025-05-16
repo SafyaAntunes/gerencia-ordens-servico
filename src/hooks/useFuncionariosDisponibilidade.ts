@@ -5,9 +5,18 @@ import { db } from "@/lib/firebase";
 import { Funcionario } from "@/types/funcionarios";
 import { FuncionarioStatus, AtividadeAtual } from "@/utils/funcionarioTypes";
 
+// Re-export the FuncionarioStatus type
+export { FuncionarioStatus, AtividadeAtual };
+
 export const useFuncionariosDisponibilidade = () => {
   const [funcionarios, setFuncionarios] = useState<FuncionarioStatus[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+
+  // Computed properties for different status groups
+  const funcionariosStatus = funcionarios;
+  const funcionariosDisponiveis = funcionarios.filter(f => f.status === 'disponivel');
+  const funcionariosOcupados = funcionarios.filter(f => f.status === 'ocupado');
+  const funcionariosInativos = funcionarios.filter(f => f.status === 'inativo');
 
   useEffect(() => {
     const q = query(collection(db, "funcionarios"));
@@ -61,7 +70,8 @@ export const useFuncionariosDisponibilidade = () => {
               id: funcionario.id,
               nome: funcionario.nome,
               status,
-              atividadeAtual
+              atividadeAtual,
+              especialidades: funcionario.especialidades || []
             } as FuncionarioStatus;
           })
         );
@@ -77,5 +87,12 @@ export const useFuncionariosDisponibilidade = () => {
     return () => unsubscribe();
   }, []);
   
-  return { funcionarios, loading };
+  return { 
+    funcionarios, 
+    funcionariosStatus, 
+    funcionariosDisponiveis, 
+    funcionariosOcupados, 
+    funcionariosInativos, 
+    loading 
+  };
 };
