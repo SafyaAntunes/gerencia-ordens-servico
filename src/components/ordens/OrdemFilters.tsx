@@ -1,7 +1,6 @@
-
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, Calendar } from "lucide-react";
+import { Search, Filter, Calendar, Check, Activity } from "lucide-react";
 import { 
   Select, 
   SelectContent, 
@@ -57,7 +56,8 @@ export default function OrdemFilters({
             <SelectItem value="all">Todos os status</SelectItem>
             <SelectItem value="orcamento">Orçamento</SelectItem>
             <SelectItem value="aguardando_aprovacao">Aguardando Aprovação</SelectItem>
-            <SelectItem value="retifica">Retífica</SelectItem>
+            <SelectItem value="autorizado">Autorizado</SelectItem>
+            <SelectItem value="executando_servico">Executando Serviço</SelectItem>
             <SelectItem value="aguardando_peca_cliente">Aguardando Peça (Cliente)</SelectItem>
             <SelectItem value="aguardando_peca_interno">Aguardando Peça (Interno)</SelectItem>
             <SelectItem value="finalizado">Finalizado</SelectItem>

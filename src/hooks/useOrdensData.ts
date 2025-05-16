@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -35,6 +34,11 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
         const ordensWithClienteMotores = await Promise.all(
           querySnapshot.docs.map(async (doc) => {
             const data = doc.data();
+            
+            // Handle legacy "fabricacao" status
+            if (data.status === "fabricacao") {
+              data.status = "executando_servico";
+            }
             
             if (data.cliente && data.cliente.id) {
               try {

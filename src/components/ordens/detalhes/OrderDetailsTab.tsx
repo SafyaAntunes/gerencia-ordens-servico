@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -8,6 +7,7 @@ import { OrdemServico, StatusOS, EtapaOS } from "@/types/ordens";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ClienteMotorInfo } from "./ClienteMotorInfo";
 import { useEffect, useState } from "react";
+import { Check, Activity } from "lucide-react"; // Import icon for "Autorizado" status
 
 interface OrderDetailsTabProps {
   ordem: OrdemServico;
@@ -58,7 +58,8 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
   const statusLabels: Record<StatusOS, string> = {
     orcamento: "Orçamento",
     aguardando_aprovacao: "Aguardando Aprovação",
-    fabricacao: "Fabricação",
+    autorizado: "Autorizado",
+    executando_servico: "Executando Serviço",
     aguardando_peca_cliente: "Aguardando Peça (Cliente)",
     aguardando_peca_interno: "Aguardando Peça (Interno)",
     finalizado: "Finalizado",
