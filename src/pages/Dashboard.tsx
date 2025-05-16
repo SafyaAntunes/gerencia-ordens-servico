@@ -1,4 +1,3 @@
-
 import {
   FileText,
   Clock,
@@ -231,8 +230,9 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
     const statusCounts: Record<string, number> = {
       "Em Orçamento": 0,
       "Aguardando Aprovação": 0,
-      "Em Fabricação": 0,
-      "Em Espera": 0,
+      "Autorizado": 0,
+      "Executando Serviço": 0,
+      "Aguardando Peça": 0,
       "Finalizado": 0,
       "Entregue": 0,
     };
@@ -263,12 +263,15 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         case 'aguardando_aprovacao':
           statusCounts["Aguardando Aprovação"]++;
           break;
-        case 'fabricacao':
-          statusCounts["Em Fabricação"]++;
+        case 'autorizado':
+          statusCounts["Autorizado"]++;
+          break;
+        case 'executando_servico':
+          statusCounts["Executando Serviço"]++;
           break;
         case 'aguardando_peca_cliente':
         case 'aguardando_peca_interno':
-          statusCounts["Em Espera"]++;
+          statusCounts["Aguardando Peça"]++;
           break;
         case 'finalizado':
           statusCounts["Finalizado"]++;

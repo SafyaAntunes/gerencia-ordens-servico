@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { OrdemServico } from "@/types/ordens";
 import { toast } from "sonner";
 import { getOrdensByFuncionarioEspecialidades } from "@/services/funcionarioService";
+import { useAuth } from "@/hooks/useAuth";
 
 interface UseOrdensDataProps {
   isTecnico: boolean;
@@ -18,17 +19,121 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
   const [statusFilter, setStatusFilter] = useState("all");
   const [prioridadeFilter, setPrioridadeFilter] = useState("all");
   const [progressoFilter, setProgressoFilter] = useState("all");
+  const { funcionario } = useAuth();
 
   const fetchOrdens = useCallback(async () => {
     setLoading(true);
+
+    // Check if current user is "Tv" to enable real-time updates
+    const isTvUser = funcionario?.email === "tv@retificahidromar.com.br" || 
+                    funcionario?.nome?.toLowerCase() === "tv";
+    
     try {
-      let ordensData: OrdemServico[] = [];
-      
       if (isTecnico && especialidades.length) {
         const especialidadesOrdens = await getOrdensByFuncionarioEspecialidades(especialidades);
-        ordensData = especialidadesOrdens as OrdemServico[];
+        setOrdens(especialidadesOrdens as OrdemServico[]);
+        setLoading(false);
+        return;
+      }
+      
+      const q = query(collection(db, "ordens_servico"), orderBy("dataAbertura", "desc"));
+      
+      if (isTvUser) {
+        // Use real-time listener for TV user
+        return onSnapshot(q, async (querySnapshot) => {
+          try {
+            const ordensWithClienteMotores = await Promise.all(
+              querySnapshot.docs.map(async (doc) => {
+                const data = doc.data();
+                
+                // Handle legacy "fabricacao" status
+                if (data.status === "fabricacao") {
+                  data.status = "executando_servico";
+                }
+                
+                if (data.cliente && data.cliente.id) {
+                  try {
+                    const motoresRef = collection(db, `clientes/${data.cliente.id}/motores`);
+                    const motoresSnapshot = await getDocs(motoresRef);
+                    const motores = motoresSnapshot.docs.map(motorDoc => ({
+                      id: motorDoc.id,
+                      ...motorDoc.data()
+                    }));
+                    
+                    data.cliente.motores = motores;
+                  } catch (error) {
+                    console.error("Erro ao carregar motores do cliente:", error);
+                  }
+                }
+                
+                let progressoEtapas = data.progressoEtapas;
+                
+                if (progressoEtapas === undefined) {
+                  let etapas = ["lavagem", "inspecao_inicial"];
+                  
+                  if (data.servicos?.some((s: any) => 
+                    ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo))) {
+                    etapas.push("retifica");
+                  }
+                  
+                  if (data.servicos?.some((s: any) => s.tipo === "montagem")) {
+                    etapas.push("montagem");
+                  }
+                  
+                  if (data.servicos?.some((s: any) => s.tipo === "dinamometro")) {
+                    etapas.push("dinamometro");
+                  }
+                  
+                  etapas.push("inspecao_final");
+                  
+                  const etapasAndamento = data.etapasAndamento || {};
+                  const etapasConcluidas = etapas.filter(etapa => 
+                    etapasAndamento[etapa]?.concluido
+                  ).length;
+                  
+                  progressoEtapas = etapasConcluidas / etapas.length;
+                }
+                
+                return {
+                  ...data,
+                  id: doc.id,
+                  dataAbertura: data.dataAbertura?.toDate() || new Date(),
+                  dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
+                  progressoEtapas: progressoEtapas
+                } as OrdemServico;
+              })
+            );
+            
+            // Apply custom order from localStorage if available
+            const savedOrder = localStorage.getItem('ordens-custom-order');
+            if (savedOrder) {
+              try {
+                const orderMap = JSON.parse(savedOrder);
+                // Sort orders based on saved order
+                ordensWithClienteMotores.sort((a, b) => {
+                  const orderA = orderMap[a.id] !== undefined ? orderMap[a.id] : 999999;
+                  const orderB = orderMap[b.id] !== undefined ? orderMap[b.id] : 999999;
+                  return orderA - orderB;
+                });
+              } catch (error) {
+                console.error("Erro ao aplicar ordem personalizada:", error);
+              }
+            }
+            
+            setOrdens(ordensWithClienteMotores);
+          } catch (error) {
+            console.error("Error processing orders:", error);
+            toast.error("Erro ao processar ordens de serviço.");
+          } finally {
+            setLoading(false);
+          }
+        }, (error) => {
+          console.error("Error fetching orders:", error);
+          toast.error("Erro ao carregar ordens de serviço.");
+          setLoading(false);
+        });
       } else {
-        const q = query(collection(db, "ordens_servico"), orderBy("dataAbertura", "desc"));
+        // Regular fetch for other users
         const querySnapshot = await getDocs(q);
         
         const ordensWithClienteMotores = await Promise.all(
@@ -93,37 +198,42 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
           })
         );
         
-        ordensData = ordensWithClienteMotores;
-      }
-      
-      // Tenta recuperar a ordem personalizada do localStorage
-      const savedOrder = localStorage.getItem('ordens-custom-order');
-      if (savedOrder) {
-        try {
-          const orderMap = JSON.parse(savedOrder);
-          // Ordena as ordens conforme a ordem salva
-          ordensData.sort((a, b) => {
-            const orderA = orderMap[a.id] !== undefined ? orderMap[a.id] : 999999;
-            const orderB = orderMap[b.id] !== undefined ? orderMap[b.id] : 999999;
-            return orderA - orderB;
-          });
-        } catch (error) {
-          console.error("Erro ao aplicar ordem personalizada:", error);
+        // Tenta recuperar a ordem personalizada do localStorage
+        const savedOrder = localStorage.getItem('ordens-custom-order');
+        if (savedOrder) {
+          try {
+            const orderMap = JSON.parse(savedOrder);
+            // Ordena as ordens conforme a ordem salva
+            ordensWithClienteMotores.sort((a, b) => {
+              const orderA = orderMap[a.id] !== undefined ? orderMap[a.id] : 999999;
+              const orderB = orderMap[b.id] !== undefined ? orderMap[b.id] : 999999;
+              return orderA - orderB;
+            });
+          } catch (error) {
+            console.error("Erro ao aplicar ordem personalizada:", error);
+          }
         }
+        
+        setOrdens(ordensWithClienteMotores);
+        setLoading(false);
       }
-      
-      setOrdens(ordensData);
     } catch (error) {
       console.error("Error fetching orders:", error);
       toast.error("Erro ao carregar ordens de serviço.");
-    } finally {
       setLoading(false);
     }
-  }, [isTecnico, funcionarioId, especialidades]);
+  }, [isTecnico, funcionarioId, especialidades, funcionario]);
 
   // Carregar ordens quando o componente for montado
   useEffect(() => {
-    fetchOrdens();
+    const unsubscribe = fetchOrdens();
+    
+    // Clean up the snapshot listener if it exists when component unmounts
+    return () => {
+      if (unsubscribe && typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
   }, [fetchOrdens]);
 
   // Verificar se há um parâmetro "filter=atrasadas" na URL

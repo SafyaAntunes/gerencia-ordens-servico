@@ -1,182 +1,176 @@
-
-import React from "react";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { OrdemServico } from "@/types/ordens";
-import { formatDistance } from "date-fns";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Check, Calendar, DollarSign, AlertTriangle } from "lucide-react";
+import { OrderProgress } from "./OrderProgress";
 
-interface OrdemCardProps {
+type OrdemCardProps = {
   ordem: OrdemServico;
-  index?: number;
-  onReorder?: (dragIndex: number, dropIndex: number) => void;
   onClick?: () => void;
   isSelectable?: boolean;
   isSelected?: boolean;
-  onSelect?: (isSelected: boolean) => void;
+};
+
+export function OrdemCard({ 
+  ordem, 
+  onClick, 
+  isSelectable = false, 
+  isSelected = false 
+}: OrdemCardProps) {
+  const [isHovering, setIsHovering] = useState(false);
+  
+  if (!ordem) return <OrdemCardSkeleton />;
+  
+  const isAtrasada = new Date() > ordem.dataPrevistaEntrega && 
+    !['finalizado', 'entregue'].includes(ordem.status);
+    
+  // Calculate service types for display
+  const servicosAtivos = ordem.servicos
+    .filter(servico => !servico.concluido)
+    .map(servico => servico.tipo);
+
+  const servicosConcluidos = ordem.servicos
+    .filter(servico => servico.concluido)
+    .map(servico => servico.tipo);
+    
+  const isRetifica = ordem.servicos.some(servico => 
+    ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(servico.tipo)
+  );
+  
+  const isMontagem = ordem.servicos.some(servico => servico.tipo === "montagem");
+  
+  const isDinamometro = ordem.servicos.some(servico => servico.tipo === "dinamometro");
+  
+  // Estimate stage progress
+  const getProgressValue = () => {
+    // If ordem has progressoEtapas property, use it
+    if (typeof ordem.progressoEtapas === 'number') {
+      return ordem.progressoEtapas;
+    }
+    
+    // Otherwise calculate based on status
+    if (ordem.status === "orcamento") return 0.05;
+    if (ordem.status === "aguardando_aprovacao") return 0.1;
+    if (ordem.status === "autorizado") return 0.15;
+    if (ordem.status === "executando_servico") return 0.5; // Updated from "fabricacao"
+    if (ordem.status === "aguardando_peca_cliente" || ordem.status === "aguardando_peca_interno") return 0.7;
+    if (ordem.status === "finalizado") return 0.9;
+    if (ordem.status === "entregue") return 1;
+    
+    return 0;
+  };
+  
+  const progressBarValue = getProgressValue();
+  
+  return (
+    <Card
+      className={cn(
+        "cursor-pointer transition-all duration-200 h-full flex flex-col",
+        isHovering && "shadow-md transform -translate-y-1",
+        isSelectable && "border-2",
+        isSelected && "border-primary",
+        isAtrasada && "border-red-300"
+      )}
+      onClick={onClick}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+    >
+      <CardContent className="p-4 flex flex-col h-full">
+        <div className="flex justify-between items-start mb-2">
+          <h3 className="text-lg font-medium truncate max-w-[260px]">
+            {ordem.nome}
+          </h3>
+          <StatusBadge status={ordem.status} size="sm" />
+        </div>
+        
+        <div className="flex items-center mb-2 text-sm text-muted-foreground">
+          <Calendar className="h-4 w-4 mr-1" />
+          <span className="truncate">{
+            ordem.dataPrevistaEntrega 
+              ? format(ordem.dataPrevistaEntrega, "dd/MM/yy", { locale: ptBR })
+              : "Sem data"
+          }</span>
+          
+          {isAtrasada && (
+            <Badge variant="outline" className="ml-2 bg-red-100 text-red-700 border-red-200">
+              <AlertTriangle className="h-3 w-3 mr-1" />
+              Atrasada
+            </Badge>
+          )}
+        </div>
+        
+        <p className="text-sm mb-2 truncate">
+          {ordem.cliente?.nome || "Cliente não definido"}
+        </p>
+        
+        <div className="mt-auto">
+          <div className="mb-2">
+            <OrderProgress value={progressBarValue} />
+          </div>
+          
+          <div className="flex flex-wrap gap-1 mt-2">
+            {isRetifica && (
+              <Badge variant="outline" className="bg-gray-100">
+                Retífica
+              </Badge>
+            )}
+            
+            {isMontagem && (
+              <Badge variant="outline" className="bg-blue-100">
+                Montagem
+              </Badge>
+            )}
+            
+            {isDinamometro && (
+              <Badge variant="outline" className="bg-amber-100">
+                Dinamômetro
+              </Badge>
+            )}
+            
+            <Badge variant={ordem.prioridade === "alta" || ordem.prioridade === "urgente" ? "outline" : "outline"} 
+              className={cn("ml-auto",
+                ordem.prioridade === "baixa" && "bg-green-100 text-green-700", 
+                ordem.prioridade === "media" && "bg-blue-100 text-blue-700",
+                ordem.prioridade === "alta" && "bg-orange-100 text-orange-700",
+                ordem.prioridade === "urgente" && "bg-red-100 text-red-700"
+              )}
+            >
+              {ordem.prioridade === "baixa" && "Baixa"}
+              {ordem.prioridade === "media" && "Média"}
+              {ordem.prioridade === "alta" && "Alta"}
+              {ordem.prioridade === "urgente" && "Urgente"}
+            </Badge>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
-export default function OrdemCard({ 
-  ordem, 
-  index, 
-  onReorder, 
-  onClick,
-  isSelectable = false,
-  isSelected = false,
-  onSelect
-}: OrdemCardProps) {
-  const handleDragStart = (e: React.DragEvent) => {
-    if (index !== undefined && onReorder) {
-      e.dataTransfer.setData('text/plain', index.toString());
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (index !== undefined && onReorder) {
-      const dragIndex = parseInt(e.dataTransfer.getData('text/plain'));
-      onReorder(dragIndex, index);
-    }
-  };
-
-  const handleCheckboxClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onSelect) {
-      onSelect(!isSelected);
-    }
-  };
-
-  const handleCardClick = () => {
-    if (onClick) {
-      onClick();
-    }
-  };
-
-  // Calculate progress percentage
-  const progressPercentage = ordem.progressoEtapas !== undefined 
-    ? Math.round(ordem.progressoEtapas * 100) 
-    : 0;
-
-  // Calculate time until deadline
-  const timeUntilDeadline = ordem.dataPrevistaEntrega 
-    ? formatDistance(
-        new Date(ordem.dataPrevistaEntrega), 
-        new Date(),
-        { addSuffix: true, locale: ptBR }
-      )
-    : 'Data não definida';
-
-  // Verificar se a ordem está atrasada
-  const hoje = new Date();
-  const isAtrasada = ordem.dataPrevistaEntrega < hoje && 
-                     !['finalizado', 'entregue'].includes(ordem.status);
-
-  // Get status badge styling
-  const getStatusBadgeVariant = () => {
-    switch (ordem.status) {
-      case 'aguardando_aprovacao': return 'warning';
-      case 'fabricacao': return 'default';
-      case 'finalizado': return 'success';
-      case 'entregue': return 'success';
-      case 'aguardando_peca_cliente':
-      case 'aguardando_peca_interno': return 'warning';
-      default: return 'secondary';
-    }
-  };
-  
-  // Get status text
-  const getStatusText = () => {
-    switch (ordem.status) {
-      case 'orcamento': return 'Orçamento';
-      case 'aguardando_aprovacao': return 'Aguardando Aprovação';
-      case 'fabricacao': return 'Em Fabricação';
-      case 'aguardando_peca_cliente': return 'Aguardando Peça (Cliente)';
-      case 'aguardando_peca_interno': return 'Aguardando Peça (Interno)';
-      case 'finalizado': return 'Finalizado';
-      case 'entregue': return 'Entregue';
-      default: return ordem.status;
-    }
-  };
-  
-  // Get priority badge styling
-  const getPrioridadeBadgeVariant = () => {
-    switch (ordem.prioridade) {
-      case 'baixa': return 'outline';
-      case 'media': return 'secondary';
-      case 'alta': return 'warning';
-      case 'urgente': return 'destructive';
-      default: return 'outline';
-    }
-  };
-  
-  // Get priority text
-  const getPrioridadeText = () => {
-    switch (ordem.prioridade) {
-      case 'baixa': return 'Baixa';
-      case 'media': return 'Média';
-      case 'alta': return 'Alta';
-      case 'urgente': return 'Urgente';
-      default: return ordem.prioridade;
-    }
-  };
-
+export function OrdemCardSkeleton() {
   return (
-    <Card 
-      draggable={onReorder !== undefined}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-      onClick={handleCardClick}
-      className={`group hover:shadow-md transition-all duration-200 cursor-pointer ${isSelected ? 'ring-2 ring-primary' : ''} ${
-        isAtrasada ? 'bg-red-50 border-red-300' : ''
-      }`}
-    >
-      <CardHeader className={`pb-2 relative ${isAtrasada ? 'border-b border-red-200' : ''}`}>
-        {isSelectable && (
-          <div 
-            className="absolute left-2 top-2 z-10"
-            onClick={handleCheckboxClick}
-          >
-            <Checkbox checked={isSelected} />
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex justify-between items-start mb-2">
+          <Skeleton className="h-6 w-44" />
+          <Skeleton className="h-5 w-20" />
+        </div>
+        <Skeleton className="h-4 w-36 mb-2" />
+        <Skeleton className="h-4 w-40 mb-2" />
+        <div className="mt-auto">
+          <Skeleton className="h-2 w-full mb-2" />
+          <div className="flex justify-between">
+            <Skeleton className="h-5 w-16" />
+            <Skeleton className="h-5 w-16" />
           </div>
-        )}
-        <div className="flex justify-between items-start">
-          <div className={`font-semibold text-lg ${isSelectable ? 'ml-8' : ''} ${isAtrasada ? 'text-red-700' : ''}`}>
-            {ordem.nome}
-          </div>
-          <Badge variant={getStatusBadgeVariant()}>{getStatusText()}</Badge>
         </div>
-        <div className="text-sm text-muted-foreground">{ordem.cliente?.nome}</div>
-      </CardHeader>
-
-      <CardContent className="pb-2">
-        <div className={`text-sm mb-2 ${isAtrasada ? 'text-red-700 font-medium' : ''}`}>
-          <span className="font-medium">Entrega:</span> {timeUntilDeadline}
-        </div>
-
-        <div className="flex justify-between items-center mb-1">
-          <span className="text-xs font-medium">Progresso</span>
-          <span className="text-xs">{progressPercentage}%</span>
-        </div>
-        
-        <Progress value={progressPercentage} className={`h-2 ${isAtrasada ? 'bg-red-200' : ''}`} />
       </CardContent>
-      
-      <CardFooter className={`pt-2 flex justify-between ${isAtrasada ? 'border-t border-red-200' : ''}`}>
-        <Badge variant={getPrioridadeBadgeVariant()} className="capitalize">
-          {getPrioridadeText()}
-        </Badge>
-        
-        <div className="text-xs text-muted-foreground">
-          ID: {ordem.id.substring(0, 8)}
-        </div>
-      </CardFooter>
     </Card>
   );
 }
