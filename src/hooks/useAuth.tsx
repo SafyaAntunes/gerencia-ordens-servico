@@ -1,43 +1,46 @@
-import { useState, useEffect, createContext, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { auth, db } from '@/lib/firebase';
+import { useState, useEffect, createContext, useContext } from "react";
+import { useNavigate } from "react-router-dom";
+import { auth, db } from "@/lib/firebase";
 import { 
   createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
+  signInWithEmailAndPassword,
   signOut,
-  onAuthStateChanged 
-} from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { Funcionario, NivelPermissao } from '@/types/funcionarios';
-import { toast } from 'sonner';
+  onAuthStateChanged,
+  User
+} from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { Funcionario } from "@/types/funcionarios";
 
 interface AuthContextProps {
+  user: User | null;
   funcionario: Funcionario | null;
   loading: boolean;
-  signIn: (email: string, password?: string) => Promise<boolean>;
-  signUp: (email: string, password?: string) => Promise<boolean>;
-  signOutFunc: () => Promise<void>;
-  canEditOrder: (ordemId: string) => boolean;
-  checkPermission: (requiredPermission: string, userPermission: NivelPermissao) => boolean;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void;
+  hasPermission: (requiredPermission: string) => boolean;
+  canAccessRoute: (route: string) => boolean;
+  isAdmin: boolean;
+  isGerente: boolean;
+  isTecnico: boolean;
 }
 
 const AuthContext = createContext<AuthContextProps>({
+  user: null,
   funcionario: null,
   loading: true,
-  signIn: async () => false,
-  signUp: async () => false,
-  signOutFunc: async () => {},
-  canEditOrder: () => false,
-  checkPermission: () => false,
+  login: async () => {},
+  logout: () => {},
+  hasPermission: () => false,
+  canAccessRoute: () => true,
+  isAdmin: false,
+  isGerente: false,
+  isTecnico: false,
 });
 
 export const useAuth = () => useContext(AuthContext);
 
-interface AuthProviderProps {
-  children: React.ReactNode;
-}
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
   const [funcionario, setFuncionario] = useState<Funcionario | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -45,153 +48,114 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const userDoc = doc(db, 'users', user.email || '');
-        const docSnap = await getDoc(userDoc);
+        setUser(user);
         
-        if (docSnap.exists()) {
-          const userData = docSnap.data();
-          
-          if (userData && userData.funcionarioId) {
-            const funcionarioDoc = doc(db, 'funcionarios', userData.funcionarioId);
-            const funcionarioSnap = await getDoc(funcionarioDoc);
-            
-            if (funcionarioSnap.exists()) {
-              const funcionarioData = funcionarioSnap.data() as Funcionario;
-              
-              setFuncionario({
-                id: funcionarioSnap.id,
-                ...funcionarioData,
-                nivelPermissao: userData.role || 'visualizacao',
-                nomeUsuario: userData.nomeUsuario || '',
-              });
-            } else {
-              setFuncionario(null);
-            }
-          } else {
-            setFuncionario(null);
-          }
-        } else {
-          setFuncionario(null);
-        }
+        // Fetch funcionario data based on user's email
+        const funcionarioDoc = await getFuncionarioByEmail(user.email || '');
+        setFuncionario(funcionarioDoc);
       } else {
+        setUser(null);
         setFuncionario(null);
       }
       setLoading(false);
     });
     
     return () => unsubscribe();
-  }, [navigate]);
+  }, []);
   
-  const signIn = async (email: string, password?: string): Promise<boolean> => {
-    setLoading(true);
+  const login = async (email: string, password: string) => {
     try {
-      if (!password) {
-        toast.error('Por favor, insira a senha.');
-        return false;
-      }
-      
       await signInWithEmailAndPassword(auth, email, password);
-      toast.success('Login realizado com sucesso!');
-      return true;
+      
+      // Fetch funcionario data after login
+      const funcionarioDoc = await getFuncionarioByEmail(email);
+      setFuncionario(funcionarioDoc);
+      
+      navigate("/");
     } catch (error: any) {
-      console.error("Erro ao fazer login:", error);
-      
-      let errorMessage = 'Erro ao fazer login.';
-      if (error.code === 'auth/user-not-found') {
-        errorMessage = 'Usuário não encontrado. Verifique o email.';
-      } else if (error.code === 'auth/wrong-password') {
-        errorMessage = 'Senha incorreta. Verifique sua senha.';
-      } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = 'Acesso bloqueado devido a muitas tentativas. Tente novamente mais tarde.';
-      }
-      
-      toast.error(errorMessage);
-      return false;
-    } finally {
-      setLoading(false);
+      console.error("Login failed:", error.message);
+      throw error;
     }
   };
   
-  const signUp = async (email: string, password?: string): Promise<boolean> => {
-    setLoading(true);
-    try {
-      if (!password) {
-        toast.error('Por favor, insira a senha.');
-        return false;
-      }
-      
-      await createUserWithEmailAndPassword(auth, email, password);
-      toast.success('Conta criada com sucesso!');
-      return true;
-    } catch (error: any) {
-      console.error("Erro ao criar conta:", error);
-      
-      let errorMessage = 'Erro ao criar conta.';
-      if (error.code === 'auth/email-already-in-use') {
-        errorMessage = 'Este email já está em uso.';
-      } else if (error.code === 'auth/weak-password') {
-        errorMessage = 'A senha deve ter pelo menos 6 caracteres.';
-      }
-      
-      toast.error(errorMessage);
-      return false;
-    } finally {
-      setLoading(false);
-    }
+  const logout = () => {
+    signOut(auth).then(() => {
+      setUser(null);
+      setFuncionario(null);
+      navigate("/login");
+    });
   };
   
-  const signOutFunc = async (): Promise<void> => {
-    try {
-      await signOut(auth);
-      toast.success('Logout realizado com sucesso!');
-      navigate('/login');
-    } catch (error: any) {
-      console.error("Erro ao fazer logout:", error);
-      toast.error('Erro ao fazer logout.');
-    }
-  };
-  
-  const canEditOrder = (ordemId: string): boolean => {
-    if (!funcionario) return false;
+  const getFuncionarioByEmail = async (email: string): Promise<Funcionario | null> => {
+    if (!email) return null;
     
-    // Admin and Gerente can edit any order
-    if (funcionario.nivelPermissao === 'admin' || funcionario.nivelPermissao === 'gerente') {
-      return true;
+    try {
+      // Assuming you have a collection named 'funcionarios'
+      const snapshot = await getDocs(query(collection(db, 'funcionarios'), where('email', '==', email)));
+      
+      if (!snapshot.empty) {
+        const doc = snapshot.docs[0];
+        return {
+          id: doc.id,
+          ...doc.data()
+        } as Funcionario;
+      } else {
+        console.log("No matching documents.");
+        return null;
+      }
+    } catch (e) {
+      console.error("Error getting document:", e);
+      return null;
     }
-    
-    // Tecnico can edit if they are assigned to the order
-    // This requires fetching the order and checking assignments
-    // For simplicity, we'll skip this check for now
-    return funcionario.nivelPermissao === 'tecnico';
   };
 
-  // Or more generally, update the checkPermission function to handle both values
-  const checkPermission = (requiredPermission: string, userPermission: NivelPermissao): boolean => {
-    const permissionLevels = {
-      admin: 4,
-      gerente: 3,
-      tecnico: 2,
-      visualizacao: 1,
-      visualizador: 1 // Treat 'visualizador' the same as 'visualizacao'
-    };
+// Fix the visualizador vs visualizacao issue in any permission check functions
+const hasPermission = (requiredPermission: string): boolean => {
+  if (!funcionario) return false;
+  
+  const userLevel = funcionario.nivelPermissao;
+  
+  if (userLevel === 'admin') return true;
+  if (userLevel === 'gerente' && requiredPermission !== 'admin') return true;
+  if (userLevel === 'tecnico' && (requiredPermission === 'tecnico' || requiredPermission === 'visualizacao' || requiredPermission === 'visualizador')) return true;
+  if ((userLevel === 'visualizacao' || userLevel === 'visualizador') && (requiredPermission === 'visualizacao' || requiredPermission === 'visualizador')) return true;
+  
+  return false;
+};
+  
+  const canAccessRoute = (route: string): boolean => {
+    if (!funcionario) return false;
     
-    return (permissionLevels[userPermission as keyof typeof permissionLevels] || 0) >= 
-           (permissionLevels[requiredPermission as keyof typeof permissionLevels] || 0);
+    // Define route-specific permission checks here
+    if (route.startsWith('/funcionarios') && funcionario.nivelPermissao !== 'admin' && funcionario.nivelPermissao !== 'gerente') {
+      return false;
+    }
+    
+    return true;
   };
   
-  const value = {
+  const isAdmin = funcionario?.nivelPermissao === 'admin';
+  const isGerente = funcionario?.nivelPermissao === 'gerente';
+  const isTecnico = funcionario?.nivelPermissao === 'tecnico';
+  
+  const value: AuthContextProps = {
+    user,
     funcionario,
     loading,
-    signIn,
-    signUp,
-    signOutFunc,
-    canEditOrder,
-    checkPermission
+    login,
+    logout,
+    hasPermission,
+    canAccessRoute,
+    isAdmin,
+    isGerente,
+    isTecnico
   };
   
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
+
+import { collection, query, where, getDocs } from 'firebase/firestore';

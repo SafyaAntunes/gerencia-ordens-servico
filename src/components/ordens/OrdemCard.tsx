@@ -1,79 +1,94 @@
-import React from 'react';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { AlertCircle, ArrowRight, Calendar, Clock, User } from 'lucide-react';
-import { OrdemServico, StatusOS } from '@/types/ordens';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import OrderProgress from './OrderProgress';
-import { getStatusLabel } from '@/components/ordens/etapas-tracker/EtapasTracker';
-import { getStatusPercent } from '@/components/ordens/etapas-tracker/useEtapasProgress';
+import React from "react";
+import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import { OrdemServico } from "@/types/ordens";
+import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Button } from "@/components/ui/button";
+import { Eye, MoreVertical } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
+import { getStatusLabel } from "@/components/ordens/etapas-tracker";
+import OrderProgress from "./OrderProgress";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
-interface OrdemCardProps {
+export interface OrdemCardProps {
   ordem: OrdemServico;
-  onViewClick: (id: string) => void;
+  onClick: () => void;
+  isSelectable?: boolean;
+  isSelected?: boolean;
+  onSelect?: (selected: boolean) => void;
+  onReorder?: (dragIndex: number, dropIndex: number) => void;
+  index?: number; // Add index property to fix type error
 }
 
-export const OrdemCard = ({ ordem, onViewClick }: OrdemCardProps) => {
-  const statusColorMap: Record<StatusOS, string> = {
-    orcamento: 'text-gray-500',
-    aguardando_aprovacao: 'text-blue-500',
-    autorizado: 'text-purple-500',
-    executando_servico: 'text-yellow-500',
-    aguardando_peca_cliente: 'text-orange-500',
-    aguardando_peca_interno: 'text-orange-500',
-    finalizado: 'text-green-500',
-    entregue: 'text-green-600',
+export const OrdemCard: React.FC<OrdemCardProps> = ({
+  ordem,
+  onClick,
+  isSelectable = false,
+  isSelected = false,
+  onSelect,
+  onReorder,
+  index
+}) => {
+  const handleSelect = () => {
+    onSelect && onSelect(!isSelected);
   };
 
-  const statusColor = statusColorMap[ordem.status] || 'text-gray-500';
-  const percentComplete = getStatusPercent(ordem.status);
+  const formatDate = (date: Date | null) => {
+    if (!date) return "Sem data";
+    return format(date, "dd/MM/yyyy", { locale: ptBR });
+  };
 
   return (
-    <Card className="overflow-hidden transition-all duration-200 hover:shadow-md h-full flex flex-col">
+    <Card
+      className="cursor-pointer hover:bg-accent"
+      onClick={onClick}
+    >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div className="space-y-1">
-          <h4 className="text-sm font-semibold line-clamp-1">{ordem.nome}</h4>
-          <p className="text-xs text-muted-foreground">
-            Cliente: {ordem.cliente?.nome || 'Não especificado'}
-          </p>
+        <div className="flex items-center space-x-2">
+          {isSelectable && (
+            <Checkbox
+              id={`select-ordem-${ordem.id}`}
+              checked={isSelected}
+              onCheckedChange={handleSelect}
+              aria-label={`Selecionar ordem ${ordem.id}`}
+            />
+          )}
+          <CardTitle className="text-sm font-medium">{ordem.nome}</CardTitle>
         </div>
-        <Badge variant="secondary">{getStatusLabel(ordem.status)}</Badge>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <span className="sr-only">Abrir menu</span>
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onClick}>
+              <Eye className="mr-2 h-4 w-4" />
+              Ver detalhes
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </CardHeader>
-      
-      <CardContent className="grid gap-4 flex-1">
-        <div className="flex items-center gap-2 text-sm">
-          <Calendar className="h-4 w-4 opacity-70" />
-          Aberto há {formatDistanceToNow(new Date(ordem.dataAbertura), { addSuffix: true, locale: ptBR })}
-        </div>
-        
-        <div className="flex items-center gap-2 text-sm">
-          <Clock className="h-4 w-4 opacity-70" />
-          Entrega prevista para {formatDistanceToNow(new Date(ordem.dataPrevistaEntrega), { addSuffix: true, locale: ptBR })}
-        </div>
-        
-        <div className="flex items-center gap-2 text-sm">
-          <User className="h-4 w-4 opacity-70" />
-          Responsável: <span className="font-medium line-clamp-1">{ordem.etapasAndamento?.retifica?.funcionarioNome || 'Não atribuído'}</span>
-        </div>
-
-        <OrderProgress percentComplete={percentComplete} />
+      <CardContent>
+        <p className="text-sm text-muted-foreground">
+          {ordem.cliente?.nome || "Cliente não especificado"}
+        </p>
+        <StatusBadge status={ordem.status} />
+        <OrderProgress percentComplete={75} />
       </CardContent>
-
-      <CardFooter className="flex items-center justify-between">
-        <span className={`flex items-center gap-2 text-xs ${statusColor}`}>
-          <AlertCircle className="h-4 w-4" />
-          {getStatusLabel(ordem.status)}
-        </span>
-        <Button size="sm" onClick={() => onViewClick(ordem.id)}>
-          Visualizar
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
+      <CardFooter className="text-xs text-muted-foreground justify-between">
+        <div>
+          Aberto em: {formatDate(ordem.dataAbertura)}
+        </div>
+        <div>
+          Entrega: {formatDate(ordem.dataPrevistaEntrega)}
+        </div>
       </CardFooter>
     </Card>
   );
 };
 
-// Add default export to fix the import issue
 export default OrdemCard;

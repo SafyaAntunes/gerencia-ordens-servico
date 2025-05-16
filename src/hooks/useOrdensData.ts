@@ -1,5 +1,6 @@
+
 import { useState, useEffect, useCallback } from "react";
-import { collection, query, where, orderBy, getDocs, onSnapshot, Timestamp, limit } from "firebase/firestore";
+import { collection, query, where, orderBy, getDocs, onSnapshot, Timestamp, limit, DocumentData, Query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { OrdemServico, StatusOS } from "@/types/ordens";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,12 +14,20 @@ export type OrdemFiltros = {
   prioridade?: string;
   busca?: string;
   limite?: number;
+  isTecnico?: boolean;
+  funcionarioId?: string;
+  especialidades?: string[];
 };
 
 export const useOrdensData = (filtros: OrdemFiltros = {}) => {
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
+  const [filteredOrdens, setFilteredOrdens] = useState<OrdemServico[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('todas');
+  const [prioridadeFilter, setPrioridadeFilter] = useState<string>('todas');
+  const [progressoFilter, setProgressoFilter] = useState<number[]>([0, 100]);
   const { funcionario } = useAuth();
   
   // Determine if we can load data based on user permissions
@@ -106,21 +115,24 @@ export const useOrdensData = (filtros: OrdemFiltros = {}) => {
       return false;
     });
   }, []);
+
+  // Handle reordering of ordens
+  const handleReorder = useCallback((dragIndex: number, dropIndex: number) => {
+    const reorderedOrdens = [...filteredOrdens];
+    const draggedOrdem = reorderedOrdens[dragIndex];
+    reorderedOrdens.splice(dragIndex, 1);
+    reorderedOrdens.splice(dropIndex, 0, draggedOrdem);
+    setFilteredOrdens(reorderedOrdens);
+  }, [filteredOrdens]);
   
-  // Load ordens data
-  useEffect(() => {
-    if (!canLoad) {
-      setLoading(false);
-      return;
-    }
+  // Refresh ordens
+  const refreshOrdens = useCallback(async () => {
+    if (!canLoad) return;
     
     setLoading(true);
-    setError(null);
-    
     try {
-      // Build query based on filters
-      let q = collection(db, "ordens_servico");
-      let constraints = [];
+      // Build query constraints
+      const constraints = [];
       
       // Status filter
       if (filtros.status && filtros.status !== 'todas') {
@@ -154,46 +166,52 @@ export const useOrdensData = (filtros: OrdemFiltros = {}) => {
         constraints.push(limit(filtros.limite));
       }
       
-      // Create the query with all constraints
-      q = query(q, ...constraints);
+      // Execute the query
+      const q: Query<DocumentData> = query(collection(db, "ordens_servico"), ...constraints);
+      const querySnapshot = await getDocs(q);
       
-      // Execute the query with onSnapshot for real-time updates
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        try {
-          const ordensData: OrdemServico[] = [];
-          
-          querySnapshot.forEach((doc) => {
-            const ordem = convertToOrdemServico(doc);
-            ordensData.push(ordem);
-          });
-          
-          // Apply search filter client-side if needed
-          const filteredOrdens = filtros.busca 
-            ? filterOrdensBySearchTerm(ordensData, filtros.busca)
-            : ordensData;
-          
-          setOrdens(filteredOrdens);
-        } catch (err) {
-          console.error("Error processing ordens data:", err);
-          setError("Erro ao processar dados das ordens");
-        } finally {
-          setLoading(false);
-        }
-      }, (err) => {
-        console.error("Error fetching ordens:", err);
-        setError("Erro ao buscar ordens de serviço");
-        setLoading(false);
-        toast.error("Erro ao carregar ordens de serviço");
+      const ordensData: OrdemServico[] = [];
+      querySnapshot.forEach((doc) => {
+        const ordem = convertToOrdemServico(doc);
+        ordensData.push(ordem);
       });
       
-      return () => unsubscribe();
+      // Apply search filter client-side if needed
+      const filtered = filtros.busca 
+        ? filterOrdensBySearchTerm(ordensData, filtros.busca)
+        : ordensData;
+      
+      setOrdens(filtered);
+      setFilteredOrdens(filtered);
+      setError(null);
     } catch (err) {
-      console.error("Error setting up ordens query:", err);
-      setError("Erro ao configurar busca de ordens");
+      console.error("Error fetching ordens:", err);
+      setError("Erro ao buscar ordens de serviço");
+      toast.error("Erro ao carregar ordens de serviço");
+    } finally {
       setLoading(false);
-      toast.error("Erro ao configurar busca de ordens");
     }
   }, [filtros, canLoad, convertToOrdemServico, filterOrdensBySearchTerm]);
   
-  return { ordens, loading, error };
+  // Load ordens data
+  useEffect(() => {
+    refreshOrdens();
+  }, [refreshOrdens]);
+  
+  return { 
+    ordens, 
+    filteredOrdens, 
+    loading, 
+    error,
+    search,
+    setSearch,
+    statusFilter,
+    setStatusFilter,
+    prioridadeFilter,
+    setPrioridadeFilter,
+    progressoFilter,
+    setProgressoFilter,
+    handleReorder,
+    refreshOrdens
+  };
 };

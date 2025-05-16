@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
+
+import React, { useState } from "react";
 import {
   Card,
   CardContent,
@@ -8,124 +9,65 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { DateRange } from "react-day-picker";
-import { addDays, isWeekend } from "date-fns";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
-import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "@/components/ui/command";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { useToast } from "@/components/ui/use-toast";
-import { useFormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@/components/ui/form";
-import { ProgressCircle } from "./ProgressCircle";
+import { Progress } from "@/components/ui/progress";
 import { getStatusPercent } from "./useEtapasProgress";
+
+// Create a ProgressCircle component since it's missing
+const ProgressCircle = ({ value }: { value: number }) => {
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (value / 100) * circumference;
+
+  return (
+    <div className="relative inline-flex items-center justify-center">
+      <svg className="w-24 h-24" viewBox="0 0 100 100">
+        <circle
+          className="text-slate-200"
+          strokeWidth="8"
+          stroke="currentColor"
+          fill="transparent"
+          r={radius}
+          cx="50"
+          cy="50"
+        />
+        <circle
+          className="text-blue-500"
+          strokeWidth="8"
+          strokeLinecap="round"
+          stroke="currentColor"
+          fill="transparent"
+          r={radius}
+          cx="50"
+          cy="50"
+          style={{
+            strokeDasharray: circumference,
+            strokeDashoffset: strokeDashoffset,
+          }}
+        />
+      </svg>
+      <span className="absolute text-xl font-bold">{Math.round(value)}%</span>
+    </div>
+  );
+};
+
+// Export the getStatusLabel function to fix import issues
+export const getStatusLabel = (status: string): string => {
+  if (status === "orcamento") return "Orçamento";
+  if (status === "aguardando_aprovacao") return "Aguardando Aprovação";
+  if (status === "autorizado") return "Autorizado";
+  if (status === "executando_servico") return "Executando Serviço";
+  if (status === "aguardando_peca_cliente") return "Aguardando Peça (Cliente)";
+  if (status === "aguardando_peca_interno") return "Aguardando Peça (Interno)";
+  if (status === "finalizado") return "Finalizado";
+  if (status === "entregue") return "Entregue";
+  return status;
+};
 
 interface EtapasTrackerProps {
   status: string;
@@ -184,18 +126,6 @@ export const EtapasTracker: React.FC<EtapasTrackerProps> = ({
     { label: "Entregue", value: "entregue" },
   ];
 
-  const getStatusLabel = (status: string): string => {
-    if (status === "orcamento") return "Orçamento";
-    if (status === "aguardando_aprovacao") return "Aguardando Aprovação";
-    if (status === "autorizado") return "Autorizado";
-    if (status === "executando_servico") return "Executando Serviço";
-    if (status === "aguardando_peca_cliente") return "Aguardando Peça (Cliente)";
-    if (status === "aguardando_peca_interno") return "Aguardando Peça (Interno)";
-    if (status === "finalizado") return "Finalizado";
-    if (status === "entregue") return "Entregue";
-    return status;
-  };
-
   return (
     <Card className="w-full">
       <CardHeader>
@@ -248,7 +178,7 @@ export const EtapasTracker: React.FC<EtapasTrackerProps> = ({
                 <Checkbox
                   id={etapa.nome}
                   checked={etapa.status === true}
-                  onCheckedChange={(checked) => handleEtapaChange(etapa.value, checked || false)}
+                  onCheckedChange={(checked) => handleEtapaChange(etapa.value, checked === true)}
                 />
               </div>
             ))}

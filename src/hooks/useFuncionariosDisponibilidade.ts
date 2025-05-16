@@ -5,8 +5,8 @@ import { db } from "@/lib/firebase";
 import { Funcionario } from "@/types/funcionarios";
 import { FuncionarioStatus, AtividadeAtual } from "@/utils/funcionarioTypes";
 
-// Re-export the FuncionarioStatus type
-export { FuncionarioStatus, AtividadeAtual };
+// Use export type for types when isolatedModules is enabled
+export type { FuncionarioStatus, AtividadeAtual };
 
 export const useFuncionariosDisponibilidade = () => {
   const [funcionarios, setFuncionarios] = useState<FuncionarioStatus[]>([]);
@@ -71,7 +71,9 @@ export const useFuncionariosDisponibilidade = () => {
               nome: funcionario.nome,
               status,
               atividadeAtual,
-              especialidades: funcionario.especialidades || []
+              especialidades: funcionario.especialidades || [],
+              ativo: funcionario.ativo !== false, // Default to true if not specified
+              nivelPermissao: funcionario.nivelPermissao
             } as FuncionarioStatus;
           })
         );

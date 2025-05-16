@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { OrdemServico } from "@/types/ordens";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 
-interface UseOrdemFetchProps {
+export interface UseOrdemFetchProps {
   id: string | undefined;
 }
 
@@ -23,35 +24,38 @@ export const useOrdemFetch = ({ id }: UseOrdemFetchProps) => {
     
     const docRef = doc(db, "ordens_servico", id);
     
-    const unsubscribe = typeof onSnapshot === 'function' 
-    ? onSnapshot(docRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          const ordemData: OrdemServico = {
-            id: snapshot.id,
-            ...data,
-            dataAbertura: data.dataAbertura?.toDate() || new Date(),
-            dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
-            servicos: data.servicos || [],
-            nome: data.nome || '',
-            cliente: data.cliente || {},
-            status: data.status || 'orcamento',
-            prioridade: data.prioridade || 'media',
-            etapasAndamento: data.etapasAndamento || {},
-            tempoRegistros: data.tempoRegistros || [],
-            timers: data.timers || {}
-          };
-          setOrdem(ordemData);
-        } else {
-          setError("Ordem de serviço não encontrada.");
-          setOrdem(null);
-        }
-        setIsLoading(false);
-      })
-    : () => {};
+    // Fix the onSnapshot type issue
+    const unsubscribe = onSnapshot(docRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        const ordemData: OrdemServico = {
+          id: snapshot.id,
+          ...data,
+          dataAbertura: data.dataAbertura?.toDate() || new Date(),
+          dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
+          servicos: data.servicos || [],
+          nome: data.nome || '',
+          cliente: data.cliente || {},
+          status: data.status || 'orcamento',
+          prioridade: data.prioridade || 'media',
+          etapasAndamento: data.etapasAndamento || {},
+          tempoRegistros: data.tempoRegistros || [],
+          timers: data.timers || {}
+        };
+        setOrdem(ordemData);
+      } else {
+        setError("Ordem de serviço não encontrada.");
+        setOrdem(null);
+      }
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Error getting order:", error);
+      setError("Erro ao obter ordem de serviço.");
+      setIsLoading(false);
+    });
     
     return () => unsubscribe();
-  }, [id, db]);
+  }, [id]);
   
   return { ordem, isLoading, error };
 };

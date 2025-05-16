@@ -1,6 +1,7 @@
 
 // Create a new types file for funcionario status
 import { OrdemServico } from "@/types/ordens";
+import { NivelPermissao } from "@/types/funcionarios";
 
 export interface AtividadeAtual {
   ordemId: string;
@@ -16,4 +17,7 @@ export type FuncionarioStatus = {
   status: "disponivel" | "ocupado" | "inativo";
   atividadeAtual?: AtividadeAtual;
   ordem?: OrdemServico;
+  especialidades?: string[];
+  ativo?: boolean;
+  nivelPermissao?: NivelPermissao;
 };

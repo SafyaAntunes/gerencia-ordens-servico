@@ -28,3 +28,30 @@ export const statusLabels = {
   finalizado: "Finalizado",
   entregue: "Entregue"
 };
+
+// Add additional required exports
+export const etapasNomes = {
+  lavagem: "Lavagem",
+  inspecao_inicial: "Inspeção Inicial",
+  retifica: "Retífica",
+  montagem: "Montagem",
+  dinamometro: "Dinamômetro",
+  inspecao_final: "Inspeção Final"
+};
+
+export const formatarTempo = (segundos: number): string => {
+  if (isNaN(segundos) || segundos < 0) return "00:00:00";
+  
+  const horas = Math.floor(segundos / 3600);
+  const minutos = Math.floor((segundos % 3600) / 60);
+  const segs = Math.floor(segundos % 60);
+  
+  const formatado = [
+    horas.toString().padStart(2, '0'),
+    minutos.toString().padStart(2, '0'),
+    segs.toString().padStart(2, '0')
+  ].join(':');
+  
+  return formatado;
+};
+
