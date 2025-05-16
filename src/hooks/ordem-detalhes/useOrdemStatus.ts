@@ -15,8 +15,13 @@ export const useOrdemStatus = (id: string | undefined, setOrdem: SetOrdemFunctio
     try {
       setIsSubmitting(true);
       const orderRef = doc(db, "ordens_servico", id);
+      
+      // Atualizar o status no Firestore
       await updateDoc(orderRef, { status: newStatus });
       
+      // A atualização local não é mais necessária já que o listener em tempo real
+      // vai atualizar os dados automaticamente, mas mantemos para compatibilidade
+      // e para garantir que a UI seja atualizada imediatamente
       setOrdem((prevOrdem) => {
         if (!prevOrdem) return null;
         return {

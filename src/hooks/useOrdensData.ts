@@ -1,5 +1,6 @@
+
 import { useState, useEffect, useCallback } from "react";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { OrdemServico } from "@/types/ordens";
 import { toast } from "sonner";
@@ -19,82 +20,70 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
   const [prioridadeFilter, setPrioridadeFilter] = useState("all");
   const [progressoFilter, setProgressoFilter] = useState("all");
 
-  const fetchOrdens = useCallback(async () => {
-    setLoading(true);
+  // Função para processar os dados de ordens do Firestore
+  const processOrdens = useCallback(async (querySnapshot: any) => {
     try {
-      let ordensData: OrdemServico[] = [];
-      
-      if (isTecnico && especialidades.length) {
-        const especialidadesOrdens = await getOrdensByFuncionarioEspecialidades(especialidades);
-        ordensData = especialidadesOrdens as OrdemServico[];
-      } else {
-        const q = query(collection(db, "ordens_servico"), orderBy("dataAbertura", "desc"));
-        const querySnapshot = await getDocs(q);
-        
-        const ordensWithClienteMotores = await Promise.all(
-          querySnapshot.docs.map(async (doc) => {
-            const data = doc.data();
+      const ordensWithClienteMotores = await Promise.all(
+        querySnapshot.docs.map(async (doc: any) => {
+          const data = doc.data();
+          
+          // Handle legacy "fabricacao" status
+          if (data.status === "fabricacao") {
+            data.status = "executando_servico";
+          }
+          
+          if (data.cliente && data.cliente.id) {
+            try {
+              const motoresRef = collection(db, `clientes/${data.cliente.id}/motores`);
+              const motoresSnapshot = await getDocs(motoresRef);
+              const motores = motoresSnapshot.docs.map(motorDoc => ({
+                id: motorDoc.id,
+                ...motorDoc.data()
+              }));
+              
+              data.cliente.motores = motores;
+            } catch (error) {
+              console.error("Erro ao carregar motores do cliente:", error);
+            }
+          }
+          
+          let progressoEtapas = data.progressoEtapas;
+          
+          if (progressoEtapas === undefined) {
+            let etapas = ["lavagem", "inspecao_inicial"];
             
-            // Handle legacy "fabricacao" status
-            if (data.status === "fabricacao") {
-              data.status = "executando_servico";
+            if (data.servicos?.some((s: any) => 
+              ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo))) {
+              etapas.push("retifica");
             }
             
-            if (data.cliente && data.cliente.id) {
-              try {
-                const motoresRef = collection(db, `clientes/${data.cliente.id}/motores`);
-                const motoresSnapshot = await getDocs(motoresRef);
-                const motores = motoresSnapshot.docs.map(motorDoc => ({
-                  id: motorDoc.id,
-                  ...motorDoc.data()
-                }));
-                
-                data.cliente.motores = motores;
-              } catch (error) {
-                console.error("Erro ao carregar motores do cliente:", error);
-              }
+            if (data.servicos?.some((s: any) => s.tipo === "montagem")) {
+              etapas.push("montagem");
             }
             
-            let progressoEtapas = data.progressoEtapas;
-            
-            if (progressoEtapas === undefined) {
-              let etapas = ["lavagem", "inspecao_inicial"];
-              
-              if (data.servicos?.some((s: any) => 
-                ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo))) {
-                etapas.push("retifica");
-              }
-              
-              if (data.servicos?.some((s: any) => s.tipo === "montagem")) {
-                etapas.push("montagem");
-              }
-              
-              if (data.servicos?.some((s: any) => s.tipo === "dinamometro")) {
-                etapas.push("dinamometro");
-              }
-              
-              etapas.push("inspecao_final");
-              
-              const etapasAndamento = data.etapasAndamento || {};
-              const etapasConcluidas = etapas.filter(etapa => 
-                etapasAndamento[etapa]?.concluido
-              ).length;
-              
-              progressoEtapas = etapasConcluidas / etapas.length;
+            if (data.servicos?.some((s: any) => s.tipo === "dinamometro")) {
+              etapas.push("dinamometro");
             }
             
-            return {
-              ...data,
-              id: doc.id,
-              dataAbertura: data.dataAbertura?.toDate() || new Date(),
-              dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
-              progressoEtapas: progressoEtapas
-            } as OrdemServico;
-          })
-        );
-        
-        ordensData = ordensWithClienteMotores;
-      }
+            etapas.push("inspecao_final");
+            
+            const etapasAndamento = data.etapasAndamento || {};
+            const etapasConcluidas = etapas.filter(etapa => 
+              etapasAndamento[etapa]?.concluido
+            ).length;
+            
+            progressoEtapas = etapasConcluidas / etapas.length;
+          }
+          
+          return {
+            ...data,
+            id: doc.id,
+            dataAbertura: data.dataAbertura?.toDate() || new Date(),
+            dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
+            progressoEtapas: progressoEtapas
+          } as OrdemServico;
+        })
+      );
       
       // Tenta recuperar a ordem personalizada do localStorage
       const savedOrder = localStorage.getItem('ordens-custom-order');
@@ -102,7 +91,7 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
         try {
           const orderMap = JSON.parse(savedOrder);
           // Ordena as ordens conforme a ordem salva
-          ordensData.sort((a, b) => {
+          ordensWithClienteMotores.sort((a, b) => {
             const orderA = orderMap[a.id] !== undefined ? orderMap[a.id] : 999999;
             const orderB = orderMap[b.id] !== undefined ? orderMap[b.id] : 999999;
             return orderA - orderB;
@@ -112,19 +101,52 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
         }
       }
       
-      setOrdens(ordensData);
+      setOrdens(ordensWithClienteMotores);
+      setLoading(false);
     } catch (error) {
-      console.error("Error fetching orders:", error);
-      toast.error("Erro ao carregar ordens de serviço.");
-    } finally {
+      console.error("Error processing orders:", error);
+      toast.error("Erro ao processar ordens de serviço.");
       setLoading(false);
     }
-  }, [isTecnico, funcionarioId, especialidades]);
+  }, []);
 
-  // Carregar ordens quando o componente for montado
+  // Configurar o listener em tempo real
   useEffect(() => {
-    fetchOrdens();
-  }, [fetchOrdens]);
+    setLoading(true);
+    
+    // Função para configurar o listener baseado no tipo de usuário
+    const setupOrdensListener = async () => {
+      try {
+        if (isTecnico && especialidades?.length) {
+          // Para técnicos, continuamos usando a abordagem baseada em especialidades
+          const especialidadesOrdens = await getOrdensByFuncionarioEspecialidades(especialidades);
+          setOrdens(especialidadesOrdens as OrdemServico[]);
+          setLoading(false);
+        } else {
+          // Para outros usuários, configuramos um listener em tempo real
+          const q = query(collection(db, "ordens_servico"), orderBy("dataAbertura", "desc"));
+          
+          // Configurar o listener que atualiza em tempo real
+          const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            processOrdens(querySnapshot);
+          }, (error) => {
+            console.error("Erro ao ouvir mudanças nas ordens:", error);
+            toast.error("Erro ao atualizar ordens de serviço em tempo real.");
+            setLoading(false);
+          });
+          
+          // Limpar o listener quando o componente for desmontado
+          return () => unsubscribe();
+        }
+      } catch (error) {
+        console.error("Error setting up orders listener:", error);
+        toast.error("Erro ao configurar atualizações em tempo real.");
+        setLoading(false);
+      }
+    };
+    
+    setupOrdensListener();
+  }, [isTecnico, funcionarioId, especialidades, processOrdens]);
 
   // Verificar se há um parâmetro "filter=atrasadas" na URL
   useEffect(() => {
@@ -150,7 +172,20 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
   };
 
   const refreshOrdens = async () => {
-    await fetchOrdens();
+    // Esta função não é mais necessária para usuários não técnicos, pois o listener já atualiza
+    // Apenas mantemos para compatibilidade com código existente e para usuários técnicos
+    if (isTecnico && especialidades?.length) {
+      setLoading(true);
+      try {
+        const especialidadesOrdens = await getOrdensByFuncionarioEspecialidades(especialidades);
+        setOrdens(especialidadesOrdens as OrdemServico[]);
+      } catch (error) {
+        console.error("Error refreshing orders:", error);
+        toast.error("Erro ao atualizar ordens de serviço.");
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   const filteredOrdens = ordens.filter((ordem) => {
