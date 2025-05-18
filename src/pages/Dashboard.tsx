@@ -1,4 +1,3 @@
-
 import {
   FileText,
   Clock,
@@ -263,7 +262,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         case 'aguardando_aprovacao':
           statusCounts["Aguardando Aprovação"]++;
           break;
-        case 'fabricacao':
+        case 'executando_servico':
           statusCounts["Em Fabricação"]++;
           break;
         case 'aguardando_peca_cliente':

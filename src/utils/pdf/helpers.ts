@@ -5,7 +5,8 @@ import { StatusOS, EtapaOS } from "@/types/ordens";
 export const statusLabels: Record<StatusOS, string> = {
   orcamento: "Orçamento",
   aguardando_aprovacao: "Aguardando Aprovação",
-  fabricacao: "Fabricação",
+  autorizado: "Autorizado",
+  executando_servico: "Executando Serviço",
   aguardando_peca_cliente: "Aguardando Peça (Cliente)",
   aguardando_peca_interno: "Aguardando Peça (Interno)",
   finalizado: "Finalizado",
