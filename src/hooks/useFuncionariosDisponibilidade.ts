@@ -30,6 +30,7 @@ export const useFuncionariosDisponibilidade = () => {
         // Buscar todos os funcionários
         const funcionariosRef = collection(db, 'funcionarios');
         const unsubscribeFuncionarios = onSnapshot(funcionariosRef, async (snapshot) => {
+          console.log("Atualizando lista de funcionários...");
           const funcionariosData = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
@@ -56,9 +57,12 @@ export const useFuncionariosDisponibilidade = () => {
               const funcData = funcionarioDoc.data() || {};
               const statusAtividade = funcData.statusAtividade as 'disponivel' | 'ocupado' | undefined;
               
+              console.log(`Funcionário ${funcionario.nome} (${funcionario.id}): status do documento=${statusAtividade}, ordem encontrada=${ordemStatus ? 'sim' : 'não'}`);
+              
               // Se o funcionário estiver marcado como ocupado, mas não estiver em nenhuma ordem,
               // vamos liberá-lo automaticamente
               if (statusAtividade === 'ocupado' && !ordemStatus) {
+                console.log(`Funcionário ${funcionario.nome} está marcado como ocupado mas não está em nenhuma ordem! Corrigindo...`);
                 // Corrigir o status do funcionário no Firestore
                 await corrigirStatusFuncionario(funcionario.id);
                 return {
@@ -111,8 +115,11 @@ export const useFuncionariosDisponibilidade = () => {
                     const funcData = funcSnap.data() as any;
                     const statusAtividade = funcData.statusAtividade as 'disponivel' | 'ocupado' | undefined;
                     
+                    console.log(`Atualização em tempo real - Funcionário ${funcionario.nome}: status=${statusAtividade}, ordem=${ordemStatus ? 'sim' : 'não'}`);
+                    
                     // CORREÇÃO: Se estiver marcado como ocupado mas não estiver em nenhuma ordem, corrigir
                     if (statusAtividade === 'ocupado' && !ordemStatus) {
+                      console.log(`Corrigindo status do funcionário ${funcionario.nome} que está marcado como ocupado mas não está em nenhuma ordem`);
                       await corrigirStatusFuncionario(funcionario.id);
                       return {
                         ...funcionario,
@@ -170,6 +177,7 @@ export const useFuncionariosDisponibilidade = () => {
   // Nova função para corrigir o status de um funcionário no Firestore
   const corrigirStatusFuncionario = async (funcionarioId: string) => {
     try {
+      console.log(`Corrigindo status do funcionário ${funcionarioId}`);
       const funcionarioRef = doc(db, "funcionarios", funcionarioId);
       await corrigirRegistrosDeServico(funcionarioId);
       
@@ -194,6 +202,7 @@ export const useFuncionariosDisponibilidade = () => {
       const emServicoDoc = await getDoc(emServicoRef);
       
       if (emServicoDoc.exists()) {
+        console.log(`Corrigindo registro de serviço para funcionário ${funcionarioId}`);
         await updateDoc(emServicoRef, {
           finalizado: Timestamp.now(),
           status: "finalizado_auto",
@@ -276,6 +285,7 @@ export const useFuncionariosDisponibilidade = () => {
               servico.status === 'em_andamento' &&
               !servico.concluido
             ) {
+              console.log(`Funcionário ${funcionarioId} encontrado no serviço ${servico.tipo} da ordem ${ordem.id}`);
               return {
                 ordemId: ordem.id,
                 ordemNome: ordem.nome,

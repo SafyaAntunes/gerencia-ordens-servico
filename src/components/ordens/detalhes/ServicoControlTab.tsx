@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ServicoControl } from "@/components/ordens/servico/ServicoControl";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { marcarFuncionarioEmServico } from "@/services/funcionarioEmServicoService";
+import { marcarFuncionarioEmServico, liberarFuncionarioDeServico } from "@/services/funcionarioEmServicoService";
 
 interface ServicoControlTabProps {
   ordem: OrdemServico;
@@ -20,6 +20,8 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
     setIsUpdating(true);
 
     try {
+      console.log(`Alterando status do serviço ${servicoIndex} para ${status} com funcionário ${funcionarioId || 'não informado'}`);
+      
       // Clone the services array
       const servicosAtualizados = [...ordem.servicos];
       
@@ -29,6 +31,7 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
       // Se o status está mudando para "em_andamento" e temos um funcionário selecionado,
       // precisamos marcar o funcionário como ocupado
       if (status === 'em_andamento' && funcionarioId && status !== servico.status) {
+        console.log(`Marcando funcionário ${funcionarioId} como ocupado na ordem ${ordem.id}`);
         const marcadoComoOcupado = await marcarFuncionarioEmServico(
           funcionarioId,
           ordem.id,
@@ -41,6 +44,15 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
           setIsUpdating(false);
           return;
         }
+        
+        console.log(`Funcionário ${funcionarioId} marcado como ocupado com sucesso`);
+      }
+      
+      // Se o status atual é "em_andamento" e está mudando para outro, liberar o funcionário
+      if (servico.status === 'em_andamento' && status !== 'em_andamento' && servico.funcionarioId) {
+        console.log(`Liberando funcionário ${servico.funcionarioId} do serviço`);
+        await liberarFuncionarioDeServico(servico.funcionarioId);
+        console.log(`Funcionário ${servico.funcionarioId} liberado com sucesso`);
       }
       
       // Update service attributes based on status
@@ -54,6 +66,11 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
           funcionarioNome: funcionarioNome || servico.funcionarioNome || '',
           dataConclusao: new Date()
         };
+        
+        // Ao concluir, garantir que o funcionário seja liberado
+        if (funcionarioId) {
+          await liberarFuncionarioDeServico(funcionarioId);
+        }
       } else {
         // Para outros statuses, atualizar o status e manter os dados do funcionário
         servicosAtualizados[servicoIndex] = {

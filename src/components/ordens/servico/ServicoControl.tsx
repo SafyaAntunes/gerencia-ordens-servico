@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,12 +5,11 @@ import { Servico } from "@/types/ordens";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Play, Pause, CheckCircle2 } from "lucide-react";
-import { getFuncionarios } from "@/services/funcionarioService";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useFuncionariosDisponibilidade } from "@/hooks/useFuncionariosDisponibilidade";
-import { liberarFuncionarioDeServico } from "@/services/funcionarioEmServicoService";
+import { liberarFuncionarioDeServico, marcarFuncionarioEmServico } from "@/services/funcionarioEmServicoService";
 import { formatDateSafely } from "@/utils/dateUtils";
 
 interface ServicoControlProps {
@@ -79,13 +77,14 @@ export function ServicoControl({
       ) {
         // Liberar funcionário atual se houver um
         if (servico.funcionarioId) {
+          console.log(`Liberando funcionário ${servico.funcionarioId} do serviço`);
           await liberarFuncionarioDeServico(servico.funcionarioId);
         }
       }
       
-      // Validar se o funcionário está disponível quando o status muda para em_andamento
+      // IMPORTANTE: Quando mudamos para "em_andamento", marcar o funcionário como ocupado
       if (status === 'em_andamento' && servicoStatus !== 'em_andamento') {
-        // Se o funcionário não for o mesmo que já estava atribuído e não estiver disponível
+        // Validar se o funcionário está disponível (a menos que seja o mesmo já atribuído)
         if (responsavelId !== servico.funcionarioId) {
           const funcionario = funcionariosStatus.find(f => f.id === responsavelId);
           if (funcionario && funcionario.status !== 'disponivel') {
@@ -94,6 +93,23 @@ export function ServicoControl({
             return;
           }
         }
+        
+        // Marcar funcionário como ocupado no serviço
+        console.log(`Marcando funcionário ${responsavelId} como ocupado na ordem ${ordemId} para o serviço ${servico.tipo}`);
+        const marcado = await marcarFuncionarioEmServico(
+          responsavelId,
+          ordemId,
+          'retifica', // Assumindo etapa padrão, modificar se necessário
+          servico.tipo
+        );
+        
+        if (!marcado) {
+          toast.error("Erro ao marcar funcionário como ocupado");
+          setIsLoading(false);
+          return;
+        }
+        
+        console.log(`Funcionário ${responsavelId} marcado como ocupado com sucesso`);
       }
       
       onStatusChange(status, responsavelId, respNome);

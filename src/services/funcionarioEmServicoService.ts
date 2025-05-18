@@ -1,4 +1,3 @@
-
 import { db } from "@/lib/firebase";
 import { doc, updateDoc, getDoc, setDoc, Timestamp, collection, query, where, getDocs } from "firebase/firestore";
 import { EtapaOS, TipoServico } from "@/types/ordens";
@@ -73,6 +72,8 @@ export const marcarFuncionarioEmServico = async (
       atividadeAtual
     });
     
+    console.log(`Documento do funcionário atualizado para status 'ocupado'`);
+    
     // Registrar na coleção de tracking
     const emServicoRef = doc(db, "funcionarios_em_servico", funcionarioId);
     await setDoc(emServicoRef, {
@@ -120,6 +121,8 @@ export const liberarFuncionarioDeServico = async (
       atividadeAtual: null
     });
     
+    console.log(`Documento do funcionário atualizado para status 'disponivel'`);
+    
     // Atualizar registro da coleção de tracking
     try {
       const emServicoRef = doc(db, "funcionarios_em_servico", funcionarioId);
@@ -130,6 +133,7 @@ export const liberarFuncionarioDeServico = async (
           finalizado: Timestamp.now(),
           status: "finalizado"
         });
+        console.log(`Registro de tracking atualizado para funcionário ${funcionarioId}`);
       } else {
         console.warn("Registro de tracking não encontrado para o funcionário:", funcionarioId);
       }
@@ -234,6 +238,8 @@ export const verificarECorrigirTodosFuncionarios = async (): Promise<boolean> =>
     
     if (corrigidos > 0) {
       toast.success(`${corrigidos} funcionários tiveram o status corrigido`);
+    } else {
+      toast.success("Verificação concluída. Nenhuma correção necessária.");
     }
     
     return true;
