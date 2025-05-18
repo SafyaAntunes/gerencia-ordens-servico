@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, getDocs, DocumentData, getDoc, doc, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs, DocumentData, getDoc, doc, Timestamp, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Funcionario } from '@/types/funcionarios';
 
