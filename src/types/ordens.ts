@@ -69,6 +69,7 @@ export type Servico = {
   funcionarioId?: string; // ID do funcionário que concluiu o serviço
   funcionarioNome?: string; // Nome do funcionário que concluiu o serviço
   dataConclusao?: Date; // Data de conclusão do serviço
+  dataInicio?: Date; // Data de início do serviço
 };
 
 export type StatusOS = 
