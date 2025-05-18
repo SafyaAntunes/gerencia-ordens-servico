@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { FuncionarioStatus } from '@/hooks/useFuncionariosDisponibilidade';
 import { formatDistance } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Clock, CheckCircle, CircleX, Clock3, RefreshCw } from "lucide-react";
+import { Clock, CheckCircle, CircleX, Clock3, RefreshCw, AlertTriangle } from "lucide-react";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -30,7 +30,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { forcarLiberacaoFuncionario } from "@/services/funcionarioEmServicoService";
+import { 
+  forcarLiberacaoFuncionario, 
+  verificarECorrigirTodosFuncionarios 
+} from "@/services/funcionarioEmServicoService";
 import { toast } from "sonner";
 import { FuncionariosDisponibilidadeTable } from "./FuncionariosDisponibilidadeTable";
 
@@ -44,6 +47,11 @@ export default function FuncionarioStatusTab({ funcionariosStatus, loading }: Fu
   const [viewMode, setViewMode] = useState<"cards" | "table">("table");
   const [funcionarioParaLiberar, setFuncionarioParaLiberar] = useState<string | null>(null);
   const [isLiberando, setIsLiberando] = useState(false);
+  const [isCorrigindoTodos, setIsCorrigindoTodos] = useState(false);
+  const [showCorrigirDialog, setShowCorrigirDialog] = useState(false);
+  
+  // Número de funcionários ocupados (para mostrar o botão de correção se houver algum)
+  const funcionariosOcupadosCount = funcionariosStatus.filter(f => f.status === 'ocupado').length;
   
   const handleLiberarFuncionario = async () => {
     if (!funcionarioParaLiberar) return;
@@ -56,6 +64,16 @@ export default function FuncionarioStatusTab({ funcionariosStatus, loading }: Fu
       }
     } finally {
       setIsLiberando(false);
+    }
+  };
+  
+  const handleCorrigirTodos = async () => {
+    setIsCorrigindoTodos(true);
+    try {
+      await verificarECorrigirTodosFuncionarios();
+      setShowCorrigirDialog(false);
+    } finally {
+      setIsCorrigindoTodos(false);
     }
   };
   
@@ -78,6 +96,22 @@ export default function FuncionarioStatusTab({ funcionariosStatus, loading }: Fu
         <h2 className="text-xl font-bold">Status em Tempo Real</h2>
         
         <div className="flex gap-3 items-center">
+          {funcionariosOcupadosCount > 0 && (
+            <Button 
+              variant="outline"
+              onClick={() => setShowCorrigirDialog(true)}
+              className="flex gap-1 items-center"
+              disabled={isCorrigindoTodos}
+            >
+              {isCorrigindoTodos ? (
+                <RefreshCw className="h-4 w-4 animate-spin mr-1" />
+              ) : (
+                <AlertTriangle className="h-4 w-4 mr-1 text-amber-500" />
+              )}
+              Verificar Status
+            </Button>
+          )}
+          
           <Select
             value={statusFilter}
             onValueChange={(value) => setStatusFilter(value as "todos" | "disponivel" | "ocupado" | "inativo")}
@@ -229,6 +263,44 @@ export default function FuncionarioStatusTab({ funcionariosStatus, loading }: Fu
               className={isLiberando ? "opacity-50" : ""}
             >
               {isLiberando ? "Liberando..." : "Sim, liberar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Dialog para corrigir todos os funcionários */}
+      <AlertDialog
+        open={showCorrigirDialog}
+        onOpenChange={setShowCorrigirDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Verificar Status de Funcionários</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação verificará todos os funcionários que estão marcados como ocupados e
+              corrigirá aqueles que não estão realmente trabalhando em nenhuma ordem.
+              
+              Deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCorrigindoTodos}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCorrigirTodos}
+              disabled={isCorrigindoTodos}
+              className={isCorrigindoTodos ? "opacity-50" : ""}
+            >
+              {isCorrigindoTodos ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                  Verificando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Verificar Status
+                </>
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

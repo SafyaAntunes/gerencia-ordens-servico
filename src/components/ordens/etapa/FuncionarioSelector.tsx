@@ -34,11 +34,7 @@ export default function FuncionarioSelector({
   const [selectedValue, setSelectedValue] = useState<string>("");
   const [isMarkingAsBusy, setIsMarkingAsBusy] = useState(false);
   
-  // Debug logs
-  console.log("FuncionarioSelector - render com ID:", funcionarioSelecionadoId);
-  console.log("FuncionarioSelector - options:", funcionariosOptions);
-  
-  // Sync with parent component value - melhorado para garantir sincronização correta
+  // Sync with parent component value
   useEffect(() => {
     console.log("FuncionarioSelector - funcionarioSelecionadoId mudou:", funcionarioSelecionadoId);
     setSelectedValue(funcionarioSelecionadoId || "");
@@ -79,6 +75,7 @@ export default function FuncionarioSelector({
       
       if (!marcadoComoOcupado) {
         toast.error("Erro ao marcar funcionário como ocupado");
+        setIsMarkingAsBusy(false);
         return;
       }
       
