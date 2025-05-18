@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -69,21 +70,17 @@ export function ServicoControl({
       const funcionarioSelecionado = funcionariosStatus.find(f => f.id === responsavelId);
       const respNome = funcionarioSelecionado?.nome || funcionarioNome;
       
-      // Se o status atual é "em_andamento" e mudou para outro status
-      // OU se qualquer status mudou para "concluido", liberar o funcionário
-      if (
-        (servicoStatus === 'em_andamento' && status !== 'em_andamento') || 
-        status === 'concluido'
-      ) {
-        // Liberar funcionário atual se houver um
-        if (servico.funcionarioId) {
-          console.log(`Liberando funcionário ${servico.funcionarioId} do serviço`);
-          await liberarFuncionarioDeServico(servico.funcionarioId);
+      // IMPORTANTE: Se estamos alterando para "em_andamento", verificar e marcar o funcionário como ocupado
+      if (status === 'em_andamento') {
+        console.log(`Verificando e marcando funcionário ${responsavelId} como ocupado no serviço`);
+        
+        // Validar se temos um funcionário selecionado
+        if (!responsavelId) {
+          toast.error("Selecione um funcionário para iniciar o serviço");
+          setIsLoading(false);
+          return;
         }
-      }
-      
-      // IMPORTANTE: Quando mudamos para "em_andamento", marcar o funcionário como ocupado
-      if (status === 'em_andamento' && servicoStatus !== 'em_andamento') {
+        
         // Validar se o funcionário está disponível (a menos que seja o mesmo já atribuído)
         if (responsavelId !== servico.funcionarioId) {
           const funcionario = funcionariosStatus.find(f => f.id === responsavelId);
@@ -112,6 +109,16 @@ export function ServicoControl({
         console.log(`Funcionário ${responsavelId} marcado como ocupado com sucesso`);
       }
       
+      // Se o status atual é "em_andamento" e mudou para outro status
+      if (servicoStatus === 'em_andamento' && status !== 'em_andamento') {
+        // Liberar funcionário atual se houver um
+        if (servico.funcionarioId) {
+          console.log(`Liberando funcionário ${servico.funcionarioId} do serviço`);
+          await liberarFuncionarioDeServico(servico.funcionarioId);
+        }
+      }
+      
+      // Chamar a função para atualizar o status do serviço
       onStatusChange(status, responsavelId, respNome);
     } catch (error) {
       console.error("Erro ao mudar status:", error);

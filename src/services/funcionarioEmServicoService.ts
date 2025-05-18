@@ -1,3 +1,4 @@
+
 import { db } from "@/lib/firebase";
 import { doc, updateDoc, getDoc, setDoc, Timestamp, collection, query, where, getDocs } from "firebase/firestore";
 import { EtapaOS, TipoServico } from "@/types/ordens";
@@ -66,7 +67,9 @@ export const marcarFuncionarioEmServico = async (
       inicio: Timestamp.now()
     };
     
-    // Atualizar o documento do funcionário
+    console.log(`Atualizando status do funcionário para 'ocupado' com atividadeAtual:`, atividadeAtual);
+    
+    // Atualizar o documento do funcionário - IMPORTANTE: Garantir que esta operação seja concluída
     await updateDoc(funcionarioRef, {
       statusAtividade: "ocupado",
       atividadeAtual
@@ -88,6 +91,19 @@ export const marcarFuncionarioEmServico = async (
     });
     
     console.log(`Funcionário ${funcionarioId} marcado como ocupado na ordem ${ordemId}`);
+    
+    // Verificar se o status foi realmente atualizado
+    const funcionarioAtualizado = await getDoc(funcionarioRef);
+    if (funcionarioAtualizado.exists()) {
+      const dadosAtualizados = funcionarioAtualizado.data();
+      console.log(`Status atual do funcionário após atualização: ${dadosAtualizados.statusAtividade}`);
+      
+      if (dadosAtualizados.statusAtividade !== "ocupado") {
+        console.error("Falha ao atualizar status do funcionário. Status atual:", dadosAtualizados.statusAtividade);
+        return false;
+      }
+    }
+    
     return true;
   } catch (error) {
     console.error("Erro ao marcar funcionário como ocupado:", error);

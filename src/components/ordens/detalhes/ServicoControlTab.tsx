@@ -30,8 +30,10 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
       
       // Se o status está mudando para "em_andamento" e temos um funcionário selecionado,
       // precisamos marcar o funcionário como ocupado
-      if (status === 'em_andamento' && funcionarioId && status !== servico.status) {
+      if (status === 'em_andamento' && funcionarioId && (status !== servico.status || funcionarioId !== servico.funcionarioId)) {
         console.log(`Marcando funcionário ${funcionarioId} como ocupado na ordem ${ordem.id}`);
+        
+        // Garantimos que o funcionário é marcado como ocupado PRIMEIRO
         const marcadoComoOcupado = await marcarFuncionarioEmServico(
           funcionarioId,
           ordem.id,
@@ -78,7 +80,9 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
           status: status,
           // Persistir o funcionário mesmo para serviços não concluídos
           funcionarioId: funcionarioId || servico.funcionarioId,
-          funcionarioNome: funcionarioNome || servico.funcionarioNome
+          funcionarioNome: funcionarioNome || servico.funcionarioNome,
+          // Adicionar data de início quando o serviço começa
+          ...(status === 'em_andamento' && !servico.dataInicio ? { dataInicio: new Date() } : {})
         };
       }
       
