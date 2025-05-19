@@ -20,7 +20,7 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
     setIsUpdating(true);
 
     try {
-      console.log(`Alterando status do serviço ${servicoIndex} para ${status} com funcionário ${funcionarioId || 'não informado'}`);
+      console.log(`[ServicoControlTab] Alterando status do serviço ${servicoIndex} para ${status} com funcionário ${funcionarioId || 'não informado'}`);
       
       // Clone the services array
       const servicosAtualizados = [...ordem.servicos];
@@ -31,7 +31,7 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
       // Se o status está mudando para "em_andamento" e temos um funcionário selecionado,
       // precisamos marcar o funcionário como ocupado
       if (status === 'em_andamento' && funcionarioId && (status !== servico.status || funcionarioId !== servico.funcionarioId)) {
-        console.log(`Marcando funcionário ${funcionarioId} como ocupado na ordem ${ordem.id}`);
+        console.log(`[ServicoControlTab] Marcando funcionário ${funcionarioId} como ocupado na ordem ${ordem.id} e serviço ${servico.tipo}`);
         
         // Garantimos que o funcionário é marcado como ocupado PRIMEIRO
         const marcadoComoOcupado = await marcarFuncionarioEmServico(
@@ -42,19 +42,20 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
         );
         
         if (!marcadoComoOcupado) {
+          console.error(`[ServicoControlTab] Falha ao marcar funcionário ${funcionarioId} como ocupado`);
           toast.error("Não foi possível marcar o funcionário como ocupado");
           setIsUpdating(false);
           return;
         }
         
-        console.log(`Funcionário ${funcionarioId} marcado como ocupado com sucesso`);
+        console.log(`[ServicoControlTab] Funcionário ${funcionarioId} marcado como ocupado com sucesso`);
       }
       
       // Se o status atual é "em_andamento" e está mudando para outro, liberar o funcionário
       if (servico.status === 'em_andamento' && status !== 'em_andamento' && servico.funcionarioId) {
-        console.log(`Liberando funcionário ${servico.funcionarioId} do serviço`);
+        console.log(`[ServicoControlTab] Liberando funcionário ${servico.funcionarioId} do serviço`);
         await liberarFuncionarioDeServico(servico.funcionarioId);
-        console.log(`Funcionário ${servico.funcionarioId} liberado com sucesso`);
+        console.log(`[ServicoControlTab] Funcionário ${servico.funcionarioId} liberado com sucesso`);
       }
       
       // Update service attributes based on status
@@ -72,6 +73,7 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
         // Ao concluir, garantir que o funcionário seja liberado
         if (funcionarioId) {
           await liberarFuncionarioDeServico(funcionarioId);
+          console.log(`[ServicoControlTab] Liberado funcionário ${funcionarioId} após conclusão do serviço`);
         }
       } else {
         // Para outros statuses, atualizar o status e manter os dados do funcionário
@@ -94,6 +96,7 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
       
       // Call the parent function to update the ordem
       await onOrdemUpdate(ordemAtualizada);
+      console.log(`[ServicoControlTab] Ordem atualizada com sucesso após mudança de status para ${status}`);
       
       // Show success message
       let statusMsg = "";
@@ -104,7 +107,7 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
       
       toast.success(`Serviço ${servico.tipo} ${statusMsg}`);
     } catch (error) {
-      console.error("Erro ao atualizar serviço:", error);
+      console.error("[ServicoControlTab] Erro ao atualizar serviço:", error);
       toast.error("Erro ao atualizar o status do serviço");
     } finally {
       setIsUpdating(false);
