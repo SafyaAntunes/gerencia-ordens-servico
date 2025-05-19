@@ -1,5 +1,6 @@
+
 import { db } from "@/lib/firebase";
-import { doc, updateDoc, getDoc, setDoc, Timestamp, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, updateDoc, getDoc, setDoc, Timestamp } from "firebase/firestore";
 import { EtapaOS, TipoServico } from "@/types/ordens";
 import { toast } from "sonner";
 
@@ -11,19 +12,19 @@ export const marcarFuncionarioEmServico = async (
   servicoTipo?: TipoServico
 ): Promise<boolean> => {
   if (!funcionarioId || !ordemId) {
-    console.error("[FuncionarioEmServicoService] IDs de funcionário ou ordem inválidos");
+    console.error("IDs de funcionário ou ordem inválidos");
     return false;
   }
 
   try {
-    console.log(`[FuncionarioEmServicoService] Marcando funcionário ${funcionarioId} como ocupado na ordem ${ordemId}`);
+    console.log(`Marcando funcionário ${funcionarioId} como ocupado na ordem ${ordemId}`);
     
     // Verificar se o funcionário existe
     const funcionarioRef = doc(db, "funcionarios", funcionarioId);
     const funcionarioDoc = await getDoc(funcionarioRef);
     
     if (!funcionarioDoc.exists()) {
-      console.error("[FuncionarioEmServicoService] Funcionário não encontrado:", funcionarioId);
+      console.error("Funcionário não encontrado:", funcionarioId);
       return false;
     }
     
@@ -32,18 +33,8 @@ export const marcarFuncionarioEmServico = async (
     if (funcionarioData.statusAtividade === "ocupado" && 
         funcionarioData.atividadeAtual && 
         funcionarioData.atividadeAtual.ordemId !== ordemId) {
-      console.warn(`[FuncionarioEmServicoService] Funcionário ${funcionarioId} já está ocupado em outra ordem: ${funcionarioData.atividadeAtual.ordemId}`);
+      console.warn("Funcionário já está ocupado em outra ordem:", funcionarioData.atividadeAtual.ordemId);
       return false;
-    }
-    
-    // Verificar se o funcionário está realmente trabalhando nesta ordem
-    // Se sim, apenas atualizar - Se não, liberar primeiro antes de marcar para nova atividade
-    if (funcionarioData.statusAtividade === "ocupado" && 
-        funcionarioData.atividadeAtual && 
-        funcionarioData.atividadeAtual.ordemId !== ordemId) {
-      // Liberar da atividade anterior antes de atribuir a nova
-      console.log(`[FuncionarioEmServicoService] Liberando funcionário ${funcionarioId} de atividade anterior antes de atribuir nova`);
-      await liberarFuncionarioDeServico(funcionarioId);
     }
     
     // Buscar o nome da ordem para salvar na atividade atual
@@ -55,10 +46,10 @@ export const marcarFuncionarioEmServico = async (
         ordemNome = ordemDoc.data().nome || "";
       }
     } catch (e) {
-      console.warn("[FuncionarioEmServicoService] Erro ao buscar nome da ordem:", e);
+      console.warn("Erro ao buscar nome da ordem:", e);
     }
     
-    // Registrar a atividade atual do funcionário com todos os campos necessários
+    // Registrar a atividade atual do funcionário
     const atividadeAtual = {
       ordemId,
       ordemNome,
@@ -67,58 +58,29 @@ export const marcarFuncionarioEmServico = async (
       inicio: Timestamp.now()
     };
     
-    console.log(`[FuncionarioEmServicoService] Atualizando status do funcionário para 'ocupado' com:`, atividadeAtual);
-    
-    // Atualizar o documento do funcionário - IMPORTANTE: Garantir que esta operação seja concluída
-    try {
-      await updateDoc(funcionarioRef, {
-        statusAtividade: "ocupado",
-        atividadeAtual
-      });
-      console.log(`[FuncionarioEmServicoService] Documento do funcionário atualizado para status 'ocupado'`);
-    } catch (error) {
-      console.error("[FuncionarioEmServicoService] Erro ao atualizar status do funcionário:", error);
-      return false;
-    }
+    // Atualizar o documento do funcionário
+    await updateDoc(funcionarioRef, {
+      statusAtividade: "ocupado",
+      atividadeAtual
+    });
     
     // Registrar na coleção de tracking
-    try {
-      const emServicoRef = doc(db, "funcionarios_em_servico", funcionarioId);
-      await setDoc(emServicoRef, {
-        funcionarioId,
-        ordemId,
-        ordemNome,
-        etapa,
-        servicoTipo: servicoTipo || null,
-        inicio: Timestamp.now(),
-        timestamp: Timestamp.now(),
-        status: "em_andamento"
-      });
-      console.log(`[FuncionarioEmServicoService] Registro de tracking criado para funcionário ${funcionarioId}`);
-    } catch (error) {
-      console.error("[FuncionarioEmServicoService] Erro ao criar registro de tracking:", error);
-      // Não falhar completamente se apenas o tracking falhar
-    }
+    const emServicoRef = doc(db, "funcionarios_em_servico", funcionarioId);
+    await setDoc(emServicoRef, {
+      funcionarioId,
+      ordemId,
+      ordemNome,
+      etapa,
+      servicoTipo: servicoTipo || null,
+      inicio: Timestamp.now(),
+      timestamp: Timestamp.now(),
+      status: "em_andamento"
+    });
     
-    // Verificar se o status foi realmente atualizado
-    try {
-      const funcionarioAtualizado = await getDoc(funcionarioRef);
-      if (funcionarioAtualizado.exists()) {
-        const dadosAtualizados = funcionarioAtualizado.data();
-        console.log(`[FuncionarioEmServicoService] Status atual do funcionário após atualização: ${dadosAtualizados.statusAtividade}`);
-        
-        if (dadosAtualizados.statusAtividade !== "ocupado") {
-          console.error(`[FuncionarioEmServicoService] Falha ao atualizar status do funcionário. Status atual: ${dadosAtualizados.statusAtividade}`);
-          return false;
-        }
-      }
-    } catch (error) {
-      console.error("[FuncionarioEmServicoService] Erro ao verificar status atualizado:", error);
-    }
-    
+    console.log(`Funcionário ${funcionarioId} marcado como ocupado na ordem ${ordemId}`);
     return true;
   } catch (error) {
-    console.error("[FuncionarioEmServicoService] Erro ao marcar funcionário como ocupado:", error);
+    console.error("Erro ao marcar funcionário como ocupado:", error);
     return false;
   }
 };
@@ -128,32 +90,26 @@ export const liberarFuncionarioDeServico = async (
   funcionarioId: string
 ): Promise<boolean> => {
   if (!funcionarioId) {
-    console.error("[FuncionarioEmServicoService] ID de funcionário inválido");
+    console.error("ID de funcionário inválido");
     return false;
   }
   
   try {
-    console.log(`[FuncionarioEmServicoService] Liberando funcionário ${funcionarioId} do serviço`);
+    console.log(`Liberando funcionário ${funcionarioId} do serviço`);
     
     // Atualizar o documento do funcionário para registrar que está disponível
     const funcionarioRef = doc(db, "funcionarios", funcionarioId);
     const funcionarioDoc = await getDoc(funcionarioRef);
     
     if (!funcionarioDoc.exists()) {
-      console.error("[FuncionarioEmServicoService] Funcionário não encontrado:", funcionarioId);
+      console.error("Funcionário não encontrado:", funcionarioId);
       return false;
     }
     
-    try {
-      await updateDoc(funcionarioRef, {
-        statusAtividade: "disponivel",
-        atividadeAtual: null
-      });
-      console.log(`[FuncionarioEmServicoService] Documento do funcionário atualizado para status 'disponivel'`);
-    } catch (error) {
-      console.error("[FuncionarioEmServicoService] Erro ao atualizar status para disponível:", error);
-      return false;
-    }
+    await updateDoc(funcionarioRef, {
+      statusAtividade: "disponivel",
+      atividadeAtual: null
+    });
     
     // Atualizar registro da coleção de tracking
     try {
@@ -165,34 +121,18 @@ export const liberarFuncionarioDeServico = async (
           finalizado: Timestamp.now(),
           status: "finalizado"
         });
-        console.log(`[FuncionarioEmServicoService] Registro de tracking atualizado para funcionário ${funcionarioId}`);
       } else {
-        console.warn("[FuncionarioEmServicoService] Registro de tracking não encontrado para o funcionário:", funcionarioId);
+        console.warn("Registro de tracking não encontrado para o funcionário:", funcionarioId);
       }
     } catch (err) {
-      console.warn("[FuncionarioEmServicoService] Aviso: Não foi possível atualizar registro de tracking", err);
+      console.warn("Aviso: Não foi possível atualizar registro de tracking", err);
       // Não falhar completamente se apenas o tracking falhar
     }
     
-    // Verificar se o status foi realmente atualizado
-    try {
-      const funcionarioAtualizado = await getDoc(funcionarioRef);
-      if (funcionarioAtualizado.exists()) {
-        const dadosAtualizados = funcionarioAtualizado.data();
-        console.log(`[FuncionarioEmServicoService] Status atual do funcionário após liberação: ${dadosAtualizados.statusAtividade}`);
-        
-        if (dadosAtualizados.statusAtividade !== "disponivel") {
-          console.error(`[FuncionarioEmServicoService] Falha ao atualizar status do funcionário para disponível. Status atual: ${dadosAtualizados.statusAtividade}`);
-          return false;
-        }
-      }
-    } catch (error) {
-      console.error("[FuncionarioEmServicoService] Erro ao verificar status atualizado após liberação:", error);
-    }
-    
+    console.log(`Funcionário ${funcionarioId} liberado do serviço`);
     return true;
   } catch (error) {
-    console.error("[FuncionarioEmServicoService] Erro ao liberar funcionário do serviço:", error);
+    console.error("Erro ao liberar funcionário do serviço:", error);
     return false;
   }
 };
@@ -218,15 +158,11 @@ export const forcarLiberacaoFuncionario = async (
     // Atualizar o registro de tracking
     try {
       const emServicoRef = doc(db, "funcionarios_em_servico", funcionarioId);
-      const emServicoSnap = await getDoc(emServicoRef);
-      
-      if (emServicoSnap.exists()) {
-        await updateDoc(emServicoRef, {
-          finalizado: Timestamp.now(),
-          status: "finalizado_forcado",
-          observacao: "Liberação forçada pelo sistema"
-        });
-      }
+      await updateDoc(emServicoRef, {
+        finalizado: Timestamp.now(),
+        status: "finalizado_forcado",
+        observacao: "Liberação forçada pelo sistema"
+      });
     } catch (err) {
       // Se não encontrar o documento de tracking, não é um problema crítico
       console.warn("Aviso: Não foi possível atualizar registro de tracking", err);
@@ -238,107 +174,6 @@ export const forcarLiberacaoFuncionario = async (
   } catch (error) {
     console.error("Erro ao forçar liberação do funcionário:", error);
     toast.error("Erro ao liberar funcionário");
-    return false;
-  }
-};
-
-// Nova função para verificar e corrigir todos os funcionários com status incorreto
-export const verificarECorrigirTodosFuncionarios = async (): Promise<boolean> => {
-  try {
-    // Buscar funcionários marcados como ocupados
-    const funcionariosRef = collection(db, "funcionarios");
-    const q = query(funcionariosRef, where("statusAtividade", "==", "ocupado"));
-    const snapshot = await getDocs(q);
-    
-    let corrigidos = 0;
-    
-    // Para cada funcionário ocupado, verificar se realmente está em alguma ordem
-    for (const docSnap of snapshot.docs) {
-      const funcionarioId = docSnap.id;
-      const funcionarioData = docSnap.data();
-      
-      // Verificar se o funcionário está realmente em alguma ordem
-      const estaEmAlgumaOrdem = await verificarFuncionarioEmOrdens(funcionarioId);
-      
-      if (!estaEmAlgumaOrdem) {
-        // Se não estiver em nenhuma ordem, corrigir o status
-        await updateDoc(doc(db, "funcionarios", funcionarioId), {
-          statusAtividade: "disponivel",
-          atividadeAtual: null
-        });
-        
-        // Também corrigir qualquer registro pendente em funcionarios_em_servico
-        const emServicoRef = doc(db, "funcionarios_em_servico", funcionarioId);
-        const emServicoSnap = await getDoc(emServicoRef);
-        
-        if (emServicoSnap.exists()) {
-          await updateDoc(emServicoRef, {
-            finalizado: Timestamp.now(),
-            status: "finalizado_correcao",
-            observacao: "Correção automática - funcionário sem atividade real"
-          });
-        }
-        
-        corrigidos++;
-      }
-    }
-    
-    if (corrigidos > 0) {
-      toast.success(`${corrigidos} funcionários tiveram o status corrigido`);
-    } else {
-      toast.success("Verificação concluída. Nenhuma correção necessária.");
-    }
-    
-    return true;
-  } catch (error) {
-    console.error("Erro ao verificar e corrigir status dos funcionários:", error);
-    toast.error("Erro na verificação de status dos funcionários");
-    return false;
-  }
-};
-
-// Função auxiliar para verificar se um funcionário está realmente trabalhando em alguma ordem
-const verificarFuncionarioEmOrdens = async (funcionarioId: string): Promise<boolean> => {
-  try {
-    // Buscar ordens em andamento
-    const ordensRef = collection(db, "ordens_servico");
-    const q = query(
-      ordensRef,
-      where("status", "in", ["executando_servico", "orcamento", "aguardando_aprovacao"])
-    );
-    const snapshot = await getDocs(q);
-    
-    // Verificar cada ordem
-    for (const docSnap of snapshot.docs) {
-      const ordem = { 
-        id: docSnap.id, 
-        ...docSnap.data(),
-        etapasAndamento: docSnap.data().etapasAndamento || {}
-      } as any;
-      
-      // Verificar etapas
-      if (ordem.etapasAndamento) {
-        for (const [_, etapaInfo] of Object.entries(ordem.etapasAndamento)) {
-          const info = etapaInfo as any;
-          if (info.funcionarioId === funcionarioId && !info.concluido && info.iniciado && !info.finalizado) {
-            return true;
-          }
-        }
-      }
-      
-      // Verificar serviços
-      if (Array.isArray(ordem.servicos)) {
-        for (const servico of ordem.servicos) {
-          if (servico.funcionarioId === funcionarioId && servico.status === "em_andamento" && !servico.concluido) {
-            return true;
-          }
-        }
-      }
-    }
-    
-    return false;
-  } catch (err) {
-    console.error("Erro ao verificar funcionário em ordens:", err);
     return false;
   }
 };

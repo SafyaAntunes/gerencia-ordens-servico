@@ -76,7 +76,7 @@ export function useEtapasProgress({ ordem, onOrdemUpdate }: UseEtapasProgressPro
     const todosServicosRetificaConcluidos = 
       servicosRetifica.length > 0 && 
       servicosRetifica.every(s => s.concluido) &&
-      ordemAtual.status === 'executando_servico'; // Changed from 'fabricacao'
+      ordemAtual.status === 'fabricacao';
     
     // Se todos os serviços de retífica estão concluídos mas a etapa não está marcada como concluída
     if (todosServicosRetificaConcluidos && 

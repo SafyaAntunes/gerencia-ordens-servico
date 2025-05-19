@@ -90,8 +90,6 @@ export function useServicoTracker({
   }, [responsavelSelecionadoId, funcionario, funcionariosOptions, onServicoStatusChange, servico.status, servico.funcionarioId]);
 
   const handleStatusChange = useCallback(async (newStatus: ServicoStatus) => {
-    console.log(`Alterando status do serviço de ${servicoStatus} para ${newStatus}`);
-    
     if (!responsavelSelecionadoId && (newStatus === 'em_andamento' || newStatus === 'concluido')) {
       toast.error("Selecione um funcionário para continuar");
       return;
@@ -100,8 +98,6 @@ export function useServicoTracker({
     try {
       // Se estamos alterando para "em_andamento", verificar se o funcionário está disponível
       if (newStatus === 'em_andamento' && servicoStatus !== 'em_andamento') {
-        console.log(`Iniciando serviço com funcionário ${responsavelSelecionadoId}`);
-        
         // Verificar se o funcionário selecionado está disponível (a menos que seja o mesmo já atribuído)
         if (responsavelSelecionadoId !== servico.funcionarioId) {
           const funcionarioSelecionado = funcionariosStatus.find(f => f.id === responsavelSelecionadoId);
@@ -119,21 +115,13 @@ export function useServicoTracker({
             return;
           }
           
-          // Marcar funcionário como ocupado - IMPORTANTE: Garantir que isso seja chamado
-          console.log(`Marcando funcionário ${responsavelSelecionadoId} como ocupado na ordem ${ordemId}`);
-          const marcado = await marcarFuncionarioEmServico(
+          // Marcar funcionário como ocupado
+          await marcarFuncionarioEmServico(
             responsavelSelecionadoId,
             ordemId,
             etapa || 'retifica',
             servico.tipo
           );
-          
-          if (!marcado) {
-            toast.error("Erro ao marcar funcionário como ocupado");
-            return;
-          }
-          
-          console.log(`Funcionário ${responsavelSelecionadoId} marcado como ocupado com sucesso`);
         }
       }
       
@@ -141,7 +129,6 @@ export function useServicoTracker({
       if (servicoStatus === 'em_andamento' && newStatus !== 'em_andamento') {
         // Liberar o funcionário atual se houver um
         if (servico.funcionarioId) {
-          console.log(`Liberando funcionário ${servico.funcionarioId} do serviço`);
           await liberarFuncionarioDeServico(servico.funcionarioId);
         }
       }
