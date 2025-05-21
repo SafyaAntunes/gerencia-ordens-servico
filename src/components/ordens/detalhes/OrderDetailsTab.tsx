@@ -56,6 +56,8 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
   };
 
   const statusLabels: Record<StatusOS, string> = {
+    desmontagem: "Desmontagem",
+    inspecao_inicial: "Inspeção Inicial",
     orcamento: "Orçamento",
     aguardando_aprovacao: "Aguardando Aprovação",
     autorizado: "Autorizado",

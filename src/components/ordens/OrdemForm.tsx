@@ -372,12 +372,12 @@ export default function OrdemForm({
                 name="nome"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome da Ordem de Serviço</FormLabel>
+                    <FormLabel>Observação</FormLabel>
                     <FormControl>
-                      <Input placeholder="Motor Ford Ka 2019" {...field} />
+                      <Input placeholder="Digite aqui uma observação para a OS" {...field} />
                     </FormControl>
                     <FormDescription>
-                      Nome ou identificação da OS
+                      Observação para a OS
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -660,6 +660,7 @@ export default function OrdemForm({
                                           handleServicoDescricaoChange(tipo.value, e.target.value)
                                         }
                                         className="resize-none"
+                                        aria-label="Observação do serviço"
                                       />
                                     </div>
                                   )}

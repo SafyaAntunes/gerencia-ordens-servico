@@ -1,19 +1,13 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, Calendar, Check, Activity } from "lucide-react";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
+import Select from 'react-select';
 
 interface OrdemFiltersProps {
   search: string;
   setSearch: (value: string) => void;
-  statusFilter: string;
-  setStatusFilter: (value: string) => void;
+  statusFilter: string[];
+  setStatusFilter: (value: string[]) => void;
   prioridadeFilter: string;
   setPrioridadeFilter: (value: string) => void;
   progressoFilter: string;
@@ -34,86 +28,126 @@ export default function OrdemFilters({
   prazoFilter = "all",
   setPrazoFilter = () => {}
 }: OrdemFiltersProps) {
+  const [filtrosVisiveis, setFiltrosVisiveis] = useState(true);
+
+  const statusOptions = [
+    { value: "all", label: "Todos os status" },
+    { value: "desmontagem", label: "Desmontagem" },
+    { value: "inspecao_inicial", label: "Inspeção Inicial" },
+    { value: "orcamento", label: "Orçamento" },
+    { value: "aguardando_aprovacao", label: "Aguardando Aprovação" },
+    { value: "autorizado", label: "Autorizado" },
+    { value: "executando_servico", label: "Executando Serviço" },
+    { value: "aguardando_peca_cliente", label: "Aguardando Peça (Cliente)" },
+    { value: "aguardando_peca_interno", label: "Aguardando Peça (Interno)" },
+    { value: "finalizado", label: "Finalizado" },
+    { value: "entregue", label: "Entregue" },
+  ];
+
   return (
-    <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 mb-6">
-      <div className="flex items-center space-x-2">
-        <Input
-          type="search"
-          placeholder="Buscar ordem..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <Search className="h-5 w-5 text-muted-foreground -ml-8" />
+    <div>
+      <div className="flex justify-end mb-2">
+        <button
+          type="button"
+          className="text-blue-600 hover:underline text-sm"
+          onClick={() => setFiltrosVisiveis(v => !v)}
+        >
+          {filtrosVisiveis ? "Ocultar filtros" : "Mostrar filtros"}
+        </button>
       </div>
+      {filtrosVisiveis && (
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 mb-6">
+          <div className="flex items-center space-x-2">
+            <Input
+              type="search"
+              placeholder="Buscar ordem..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <Search className="h-5 w-5 text-muted-foreground -ml-8" />
+          </div>
 
-      <div className="flex items-center space-x-2">
-        <Filter className="h-5 w-5 text-muted-foreground mr-2" />
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Filtrar por status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os status</SelectItem>
-            <SelectItem value="orcamento">Orçamento</SelectItem>
-            <SelectItem value="aguardando_aprovacao">Aguardando Aprovação</SelectItem>
-            <SelectItem value="autorizado">Autorizado</SelectItem>
-            <SelectItem value="executando_servico">Executando Serviço</SelectItem>
-            <SelectItem value="aguardando_peca_cliente">Aguardando Peça (Cliente)</SelectItem>
-            <SelectItem value="aguardando_peca_interno">Aguardando Peça (Interno)</SelectItem>
-            <SelectItem value="finalizado">Finalizado</SelectItem>
-            <SelectItem value="entregue">Entregue</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <div className="flex items-center space-x-2">
-        <Select value={prioridadeFilter} onValueChange={setPrioridadeFilter}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Filtrar por prioridade" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas as prioridades</SelectItem>
-            <SelectItem value="alta">Alta</SelectItem>
-            <SelectItem value="media">Média</SelectItem>
-            <SelectItem value="baixa">Baixa</SelectItem>
-            <SelectItem value="urgente">Urgente</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex items-center space-x-2">
-        <div className="grid grid-cols-2 gap-2 w-full">
-          <Select value={progressoFilter} onValueChange={setProgressoFilter}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Filtrar por progresso" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os progressos</SelectItem>
-              <SelectItem value="nao_iniciado">Não iniciado (0%)</SelectItem>
-              <SelectItem value="em_andamento">Em andamento</SelectItem>
-              <SelectItem value="quase_concluido">Quase concluído (≥75%)</SelectItem>
-              <SelectItem value="concluido">Concluído (100%)</SelectItem>
-              <SelectItem value="atrasadas">Atrasadas</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center space-x-2">
+            <Filter className="h-5 w-5 text-muted-foreground mr-2" />
+            <div className="w-full">
+              <Select
+                isMulti
+                options={statusOptions}
+                placeholder="Filtrar por status"
+                value={
+                  statusFilter.length === 0
+                    ? [statusOptions[0]]
+                    : statusOptions.filter(opt => statusFilter.includes(opt.value))
+                }
+                onChange={selected => {
+                  if (!selected || selected.length === 0) {
+                    setStatusFilter([]);
+                    return;
+                  }
+                  if (selected.some(opt => opt.value === "all")) {
+                    setStatusFilter([]);
+                    return;
+                  }
+                  setStatusFilter(selected.map(opt => opt.value).filter(v => v !== "all"));
+                }}
+                classNamePrefix="react-select"
+              />
+            </div>
+          </div>
           
-          <Select value={prazoFilter} onValueChange={setPrazoFilter}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Filtrar por prazo">
-                <div className="flex items-center">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  <span>Prazo</span>
-                </div>
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os prazos</SelectItem>
-              <SelectItem value="no_prazo">Dentro do prazo</SelectItem>
-              <SelectItem value="atrasada">Atrasadas</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center space-x-2">
+            <div className="w-full">
+              <Select
+                options={[
+                  { value: "all", label: "Todas as prioridades" },
+                  { value: "alta", label: "Alta" },
+                  { value: "media", label: "Média" },
+                  { value: "baixa", label: "Baixa" },
+                  { value: "urgente", label: "Urgente" },
+                ]}
+                value={{ value: prioridadeFilter, label: prioridadeFilter === "all" ? "Todas as prioridades" : prioridadeFilter.charAt(0).toUpperCase() + prioridadeFilter.slice(1) }}
+                onChange={option => setPrioridadeFilter(option?.value || "all")}
+                placeholder="Filtrar por prioridade"
+                classNamePrefix="react-select"
+                isSearchable={false}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <div className="grid grid-cols-2 gap-2 w-full">
+              <Select
+                options={[
+                  { value: "all", label: "Todos os progressos" },
+                  { value: "nao_iniciado", label: "Não iniciado (0%)" },
+                  { value: "em_andamento", label: "Em andamento" },
+                  { value: "quase_concluido", label: "Quase concluído (≥75%)" },
+                  { value: "concluido", label: "Concluído (100%)" },
+                  { value: "atrasadas", label: "Atrasadas" },
+                ]}
+                value={{ value: progressoFilter, label: progressoFilter === "all" ? "Todos os progressos" : progressoFilter.charAt(0).toUpperCase() + progressoFilter.slice(1).replace('_', ' ') }}
+                onChange={option => setProgressoFilter(option?.value || "all")}
+                placeholder="Filtrar por progresso"
+                classNamePrefix="react-select"
+                isSearchable={false}
+              />
+              
+              <Select
+                options={[
+                  { value: "all", label: "Todos os prazos" },
+                  { value: "no_prazo", label: "Dentro do prazo" },
+                  { value: "atrasada", label: "Atrasadas" },
+                ]}
+                value={{ value: prazoFilter, label: prazoFilter === "all" ? "Todos os prazos" : prazoFilter === "no_prazo" ? "Dentro do prazo" : "Atrasadas" }}
+                onChange={option => setPrazoFilter(option?.value || "all")}
+                placeholder="Filtrar por prazo"
+                classNamePrefix="react-select"
+                isSearchable={false}
+              />
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

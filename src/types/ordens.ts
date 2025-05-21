@@ -72,6 +72,8 @@ export type Servico = {
 };
 
 export type StatusOS = 
+  | 'desmontagem'
+  | 'inspecao_inicial'
   | 'orcamento'
   | 'aguardando_aprovacao'
   | 'autorizado'  // Added new status

@@ -1,4 +1,3 @@
-
 import {
   FileText,
   Clock,
@@ -230,6 +229,8 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
   const calcularDadosGraficos = (ordensData: OrdemServico[]) => {
     const statusCounts: Record<string, number> = {
       "Em Orçamento": 0,
+      "Desmontagem": 0,
+      "Inspeção Inicial": 0,
       "Aguardando Aprovação": 0,
       "Em Fabricação": 0,
       "Em Espera": 0,
@@ -260,10 +261,16 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         case 'orcamento':
           statusCounts["Em Orçamento"]++;
           break;
+        case 'desmontagem':
+          statusCounts["Desmontagem"]++;
+          break;
+        case 'inspecao_inicial':
+          statusCounts["Inspeção Inicial"]++;
+          break;
         case 'aguardando_aprovacao':
           statusCounts["Aguardando Aprovação"]++;
           break;
-        case 'fabricacao':
+        case 'executando_servico':
           statusCounts["Em Fabricação"]++;
           break;
         case 'aguardando_peca_cliente':
