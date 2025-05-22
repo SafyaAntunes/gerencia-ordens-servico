@@ -197,8 +197,11 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
       (ordem.cliente?.nome || '').toLowerCase().includes(search.toLowerCase()) ||
       (ordem.id || '').toLowerCase().includes(search.toLowerCase());
     
-    // Corrigindo o comportamento do filtro de status
-    const statusMatch = statusFilter.length === 0 ? true : statusFilter.includes(ordem.status);
+    // Tratamento especial para o status fabricacao no filtro
+    const statusMatch = statusFilter.length === 0 
+      ? true 
+      : statusFilter.includes(ordem.status) || 
+        (ordem.status === "executando_servico" && statusFilter.includes("fabricacao"));
     
     const prioridadeMatch = prioridadeFilter === "all" ? true : ordem.prioridade === prioridadeFilter;
     

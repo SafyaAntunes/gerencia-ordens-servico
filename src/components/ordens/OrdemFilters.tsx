@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, Calendar, Check, Activity } from "lucide-react";
 import Select from 'react-select';
+import { StatusOS } from "@/types/ordens";
 
 interface OrdemFiltersProps {
   search: string;
@@ -39,6 +40,7 @@ export default function OrdemFilters({
     { value: "aguardando_aprovacao", label: "Aguardando Aprovação" },
     { value: "autorizado", label: "Autorizado" },
     { value: "executando_servico", label: "Executando Serviço" },
+    { value: "fabricacao", label: "Executando Serviço (Legado)" },
     { value: "aguardando_peca_cliente", label: "Aguardando Peça (Cliente)" },
     { value: "aguardando_peca_interno", label: "Aguardando Peça (Interno)" },
     { value: "finalizado", label: "Finalizado" },
@@ -51,7 +53,9 @@ export default function OrdemFilters({
       return [statusOptions[0]]; // "Todos os status"
     }
     
-    return statusOptions.filter(opt => statusFilter.includes(opt.value));
+    return statusFilter.includes("all") 
+      ? [statusOptions[0]]
+      : statusOptions.filter(opt => statusFilter.includes(opt.value));
   };
 
   return (
@@ -102,6 +106,17 @@ export default function OrdemFilters({
                   setStatusFilter(selectedValues.filter(v => v !== "all"));
                 }}
                 classNamePrefix="react-select"
+                styles={{
+                  control: (base) => ({
+                    ...base,
+                    backgroundColor: 'white',
+                  }),
+                  menu: (base) => ({
+                    ...base,
+                    backgroundColor: 'white',
+                    zIndex: 50,
+                  }),
+                }}
               />
             </div>
           </div>
@@ -121,6 +136,17 @@ export default function OrdemFilters({
                 placeholder="Filtrar por prioridade"
                 classNamePrefix="react-select"
                 isSearchable={false}
+                styles={{
+                  control: (base) => ({
+                    ...base,
+                    backgroundColor: 'white',
+                  }),
+                  menu: (base) => ({
+                    ...base,
+                    backgroundColor: 'white',
+                    zIndex: 50,
+                  }),
+                }}
               />
             </div>
           </div>
@@ -141,6 +167,17 @@ export default function OrdemFilters({
                 placeholder="Filtrar por progresso"
                 classNamePrefix="react-select"
                 isSearchable={false}
+                styles={{
+                  control: (base) => ({
+                    ...base,
+                    backgroundColor: 'white',
+                  }),
+                  menu: (base) => ({
+                    ...base,
+                    backgroundColor: 'white',
+                    zIndex: 50,
+                  }),
+                }}
               />
               
               <Select
@@ -154,6 +191,17 @@ export default function OrdemFilters({
                 placeholder="Filtrar por prazo"
                 classNamePrefix="react-select"
                 isSearchable={false}
+                styles={{
+                  control: (base) => ({
+                    ...base,
+                    backgroundColor: 'white',
+                  }),
+                  menu: (base) => ({
+                    ...base,
+                    backgroundColor: 'white',
+                    zIndex: 50,
+                  }),
+                }}
               />
             </div>
           </div>
