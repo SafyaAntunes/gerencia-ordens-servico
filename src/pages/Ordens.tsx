@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -54,14 +53,18 @@ export default function Ordens({ onLogout }: OrdensProps) {
     especialidades: funcionario?.especialidades
   });
 
-  // Aplicar filtro de prazo às ordens já filtradas
+  const [statusServicoFilter, setStatusServicoFilter] = useState<string[]>([]);
+
+  // Aplicar filtro de prazo e status do serviço às ordens já filtradas
   const ordensFiltradas = filteredOrdens.filter(ordem => {
-    if (prazoFilter === "all") return true;
-    
+    if (prazoFilter === "all") {
+      return statusServicoFilter.length === 0 || statusServicoFilter.includes(ordem.status);
+    }
     const hoje = new Date();
     const isAtrasada = ordem.dataPrevistaEntrega < hoje && !['finalizado', 'entregue'].includes(ordem.status);
-    
-    return prazoFilter === "atrasada" ? isAtrasada : !isAtrasada;
+    const prazoOk = prazoFilter === "atrasada" ? isAtrasada : !isAtrasada;
+    const statusOk = statusServicoFilter.length === 0 || statusServicoFilter.includes(ordem.status);
+    return prazoOk && statusOk;
   });
 
   const handleNovaOrdem = () => {
@@ -118,8 +121,8 @@ export default function Ordens({ onLogout }: OrdensProps) {
       <OrdemFilters
         search={search}
         setSearch={setSearch}
-        statusFilter={statusFilter}
-        setStatusFilter={setStatusFilter}
+        statusServicoFilter={statusServicoFilter}
+        setStatusServicoFilter={setStatusServicoFilter}
         prioridadeFilter={prioridadeFilter}
         setPrioridadeFilter={setPrioridadeFilter}
         progressoFilter={progressoFilter}
