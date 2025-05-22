@@ -5,7 +5,8 @@ import {
   LayoutDashboard, 
   FileText, 
   Users, 
-  UserCircle, 
+  UserCircle,
+  Wrench,
   Calendar, 
   BarChart2,
   Settings 
@@ -55,6 +56,14 @@ const NavigationLinks = ({ isCollapsed }: NavigationLinksProps) => {
             icon={<UserCircle className="h-5 w-5" />}
             label="Clientes"
             isActive={isActive('/clientes')}
+            isCollapsed={isCollapsed}
+          />
+          
+          <NavItem 
+            href="/motores" 
+            icon={<Wrench className="h-5 w-5" />}
+            label="Motores"
+            isActive={isActive('/motores')}
             isCollapsed={isCollapsed}
           />
           
