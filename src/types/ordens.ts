@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -81,7 +80,8 @@ export type StatusOS =
   | 'aguardando_peca_cliente'
   | 'aguardando_peca_interno'
   | 'finalizado'
-  | 'entregue';
+  | 'entregue'
+  | 'fabricacao'; // Added legacy status type for backward compatibility
 
 export type EtapaOS = 
   | 'lavagem' 

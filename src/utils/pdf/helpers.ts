@@ -1,4 +1,3 @@
-
 import { StatusOS, EtapaOS } from "@/types/ordens";
 
 // Status labels para PDF
@@ -12,7 +11,8 @@ export const statusLabels: Record<StatusOS, string> = {
   aguardando_peca_cliente: "Aguardando Peça (Cliente)",
   aguardando_peca_interno: "Aguardando Peça (Interno)",
   finalizado: "Finalizado",
-  entregue: "Entregue"
+  entregue: "Entregue",
+  fabricacao: "Executando Serviço" // Added legacy status with same label as executando_servico
 };
 
 // Etapa labels para PDF

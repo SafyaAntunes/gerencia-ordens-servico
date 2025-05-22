@@ -26,8 +26,9 @@ export default function OrdemListRowHeader({ ordem, index, isAtrasada = false }:
     }
   };
 
-  // Conversão de status legado - usando Type Assertion para evitar erro de tipo
-  const normalizedStatus = ordem.status === 'fabricacao' ? 
+  // Conversão de status legado - usando as const para definir o tipo correto
+  // Verificamos se é uma string antes, por segurança
+  const normalizedStatus = typeof ordem.status === 'string' && ordem.status === 'fabricacao' ? 
     'executando_servico' as const : 
     ordem.status;
   

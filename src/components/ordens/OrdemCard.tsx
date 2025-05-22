@@ -77,8 +77,8 @@ export default function OrdemCard({
   const isAtrasada = ordem.dataPrevistaEntrega < hoje && 
                      !['finalizado', 'entregue'].includes(ordem.status);
 
-  // Normalizar status legado
-  const normalizedStatus: StatusOS = ordem.status === 'fabricacao' ? 
+  // Normalizar status legado - verificando o tipo de status e usando as const
+  const normalizedStatus: StatusOS = typeof ordem.status === 'string' && ordem.status === 'fabricacao' ? 
     'executando_servico' as const : 
     ordem.status;
 
