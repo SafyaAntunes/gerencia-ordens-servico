@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, Calendar, Check, Activity } from "lucide-react";
@@ -44,6 +45,15 @@ export default function OrdemFilters({
     { value: "entregue", label: "Entregue" },
   ];
 
+  // Helper para converter array de status para formato do react-select
+  const getSelectedStatusOptions = () => {
+    if (statusFilter.length === 0) {
+      return [statusOptions[0]]; // "Todos os status"
+    }
+    
+    return statusOptions.filter(opt => statusFilter.includes(opt.value));
+  };
+
   return (
     <div>
       <div className="flex justify-end mb-2">
@@ -74,21 +84,22 @@ export default function OrdemFilters({
                 isMulti
                 options={statusOptions}
                 placeholder="Filtrar por status"
-                value={
-                  statusFilter.length === 0
-                    ? [statusOptions[0]]
-                    : statusOptions.filter(opt => statusFilter.includes(opt.value))
-                }
-                onChange={selected => {
+                value={getSelectedStatusOptions()}
+                onChange={(selected) => {
                   if (!selected || selected.length === 0) {
                     setStatusFilter([]);
                     return;
                   }
+                  
+                  // Se "Todos os status" foi selecionado, limpar outros filtros
                   if (selected.some(opt => opt.value === "all")) {
                     setStatusFilter([]);
                     return;
                   }
-                  setStatusFilter(selected.map(opt => opt.value).filter(v => v !== "all"));
+                  
+                  // Caso contrário, aplicar os filtros selecionados
+                  const selectedValues = selected.map(opt => opt.value);
+                  setStatusFilter(selectedValues.filter(v => v !== "all"));
                 }}
                 classNamePrefix="react-select"
               />

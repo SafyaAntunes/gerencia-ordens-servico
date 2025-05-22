@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { collection, getDocs, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -15,7 +16,7 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [prioridadeFilter, setPrioridadeFilter] = useState("all");
   const [progressoFilter, setProgressoFilter] = useState("all");
 
@@ -195,7 +196,9 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
       (ordem.cliente?.nome || '').toLowerCase().includes(search.toLowerCase()) ||
       (ordem.id || '').toLowerCase().includes(search.toLowerCase());
     
+    // Corrigindo o comportamento do filtro de status
     const statusMatch = statusFilter.length === 0 ? true : statusFilter.includes(ordem.status);
+    
     const prioridadeMatch = prioridadeFilter === "all" ? true : ordem.prioridade === prioridadeFilter;
     
     let progressoMatch = true;
