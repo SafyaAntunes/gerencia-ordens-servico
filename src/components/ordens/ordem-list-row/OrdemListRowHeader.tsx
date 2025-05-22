@@ -26,8 +26,10 @@ export default function OrdemListRowHeader({ ordem, index, isAtrasada = false }:
     }
   };
 
-  // Conversão de status legado
-  const normalizedStatus = ordem.status === 'fabricacao' ? 'executando_servico' : ordem.status;
+  // Conversão de status legado - usando Type Assertion para evitar erro de tipo
+  const normalizedStatus = ordem.status === 'fabricacao' ? 
+    'executando_servico' as const : 
+    ordem.status;
   
   // Log para debug
   console.log(`Ordem ${ordem.id} - Status: ${normalizedStatus}`);

@@ -42,18 +42,18 @@ export const useFuncionariosDisponibilidade = () => {
               if (funcionario.ativo === false) {
                 return {
                   ...funcionario,
-                  status: 'inativo',
+                  status: 'inativo' as const,
                   atividadeAtual: undefined
                 };
               }
 
               // MODIFICADO: Primeiro verificar statusAtividade diretamente do documento
-              const statusAtividade = funcionario.statusAtividade as 'disponivel' | 'ocupado' | undefined;
+              const statusAtividade = funcionario.statusAtividade;
               
               // Se o funcionário já está marcado como ocupado no documento
               if (statusAtividade === 'ocupado') {
                 // Buscar informações detalhadas da atividade atual, se disponível
-                let atividadeAtual = funcionario.atividadeAtual as any;
+                let atividadeAtual = funcionario.atividadeAtual;
                 
                 // Se tiver informações da atividade atual, tentar buscar o nome da ordem
                 if (atividadeAtual && atividadeAtual.ordemId) {
@@ -74,7 +74,7 @@ export const useFuncionariosDisponibilidade = () => {
                 
                 return {
                   ...funcionario,
-                  status: 'ocupado',
+                  status: 'ocupado' as const,
                   atividadeAtual: atividadeAtual
                 };
               }
@@ -83,7 +83,7 @@ export const useFuncionariosDisponibilidade = () => {
               const ordemStatus = await verificarStatusFuncionario(funcionario.id);
               
               // Determinar status final com base nas verificações
-              const status: 'disponivel' | 'ocupado' | 'inativo' = ordemStatus ? 'ocupado' : 'disponivel';
+              const status = ordemStatus ? 'ocupado' as const : 'disponivel' as const;
               
               return {
                 ...funcionario,
@@ -111,7 +111,7 @@ export const useFuncionariosDisponibilidade = () => {
               funcionariosStatus.map(async (funcionario) => {
                 // Pular funcionários inativos
                 if (funcionario.ativo === false) {
-                  return { ...funcionario, status: 'inativo' };
+                  return { ...funcionario, status: 'inativo' as const };
                 }
                 
                 // Buscar status atual diretamente do documento do funcionário
@@ -120,7 +120,7 @@ export const useFuncionariosDisponibilidade = () => {
                   const funcSnap = await getDoc(funcRef);
                   if (funcSnap.exists()) {
                     const funcData = funcSnap.data();
-                    const statusAtividade = funcData.statusAtividade as 'disponivel' | 'ocupado' | undefined;
+                    const statusAtividade = funcData.statusAtividade;
                     
                     if (statusAtividade === 'ocupado') {
                       let atividadeAtual = funcData.atividadeAtual as any;
@@ -144,7 +144,7 @@ export const useFuncionariosDisponibilidade = () => {
                       
                       return {
                         ...funcionario,
-                        status: 'ocupado',
+                        status: 'ocupado' as const,
                         atividadeAtual: atividadeAtual
                       };
                     }
@@ -155,7 +155,7 @@ export const useFuncionariosDisponibilidade = () => {
                 
                 // Se não estiver ocupado no documento, verificar ordens
                 const ordemStatus = await verificarStatusFuncionario(funcionario.id);
-                const status = ordemStatus ? 'ocupado' : 'disponivel';
+                const status = ordemStatus ? 'ocupado' as const : 'disponivel' as const;
                 
                 return {
                   ...funcionario,
@@ -165,7 +165,7 @@ export const useFuncionariosDisponibilidade = () => {
               })
             );
             
-            setFuncionariosStatus(funcionariosAtualizados);
+            setFuncionariosStatus(funcionariosAtualizados as FuncionarioStatus[]);
           }
         });
         
@@ -241,7 +241,7 @@ export const useFuncionariosDisponibilidade = () => {
       const ordensRef = collection(db, 'ordens_servico');
       const q = query(
         ordensRef,
-        where('status', 'in', ['fabricacao', 'orcamento', 'aguardando_aprovacao']),
+        where('status', 'in', ['executando_servico', 'orcamento', 'aguardando_aprovacao']),
       );
       
       const snapshot = await getDocs(q);

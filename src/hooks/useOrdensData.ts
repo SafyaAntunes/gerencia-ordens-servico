@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { collection, getDocs, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { OrdemServico } from "@/types/ordens";
+import { OrdemServico, StatusOS } from "@/types/ordens";
 import { toast } from "sonner";
 import { getOrdensByFuncionarioEspecialidades } from "@/services/funcionarioService";
 
@@ -28,9 +28,9 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
           const data = doc.data();
           
           // Handle legacy "fabricacao" status
-          if (data.status === "fabricacao") {
-            data.status = "executando_servico";
-          }
+          const status = data.status === "fabricacao" ? 
+            "executando_servico" as StatusOS : 
+            data.status as StatusOS;
           
           if (data.cliente && data.cliente.id) {
             try {
@@ -77,6 +77,7 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
           
           return {
             ...data,
+            status, // Use the normalized status
             id: doc.id,
             dataAbertura: data.dataAbertura?.toDate() || new Date(),
             dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),

@@ -76,8 +76,8 @@ export type StatusOS =
   | 'inspecao_inicial'
   | 'orcamento'
   | 'aguardando_aprovacao'
-  | 'autorizado'  // Added new status
-  | 'executando_servico'  // Changed from 'fabricacao'
+  | 'autorizado'
+  | 'executando_servico'
   | 'aguardando_peca_cliente'
   | 'aguardando_peca_interno'
   | 'finalizado'

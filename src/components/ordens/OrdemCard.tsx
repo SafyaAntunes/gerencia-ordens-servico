@@ -3,7 +3,7 @@ import React from "react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { OrdemServico } from "@/types/ordens";
+import { OrdemServico, StatusOS } from "@/types/ordens";
 import { formatDistance } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -77,11 +77,16 @@ export default function OrdemCard({
   const isAtrasada = ordem.dataPrevistaEntrega < hoje && 
                      !['finalizado', 'entregue'].includes(ordem.status);
 
+  // Normalizar status legado
+  const normalizedStatus: StatusOS = ordem.status === 'fabricacao' ? 
+    'executando_servico' as const : 
+    ordem.status;
+
   // Get status badge styling
   const getStatusBadgeVariant = () => {
-    switch (ordem.status) {
+    switch (normalizedStatus) {
       case 'aguardando_aprovacao': return 'warning';
-      case 'fabricacao': return 'default';
+      case 'executando_servico': return 'default';
       case 'finalizado': return 'success';
       case 'entregue': return 'success';
       case 'aguardando_peca_cliente':
@@ -92,15 +97,15 @@ export default function OrdemCard({
   
   // Get status text
   const getStatusText = () => {
-    switch (ordem.status) {
+    switch (normalizedStatus) {
       case 'orcamento': return 'Orçamento';
       case 'aguardando_aprovacao': return 'Aguardando Aprovação';
-      case 'fabricacao': return 'Em Fabricação';
+      case 'executando_servico': return 'Em Fabricação';
       case 'aguardando_peca_cliente': return 'Aguardando Peça (Cliente)';
       case 'aguardando_peca_interno': return 'Aguardando Peça (Interno)';
       case 'finalizado': return 'Finalizado';
       case 'entregue': return 'Entregue';
-      default: return ordem.status;
+      default: return normalizedStatus;
     }
   };
   
