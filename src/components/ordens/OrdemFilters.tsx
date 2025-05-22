@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, Calendar, Check, Activity } from "lucide-react";
@@ -40,7 +39,6 @@ export default function OrdemFilters({
     { value: "aguardando_aprovacao", label: "Aguardando Aprovação" },
     { value: "autorizado", label: "Autorizado" },
     { value: "executando_servico", label: "Executando Serviço" },
-    { value: "fabricacao", label: "Executando Serviço (Legado)" },
     { value: "aguardando_peca_cliente", label: "Aguardando Peça (Cliente)" },
     { value: "aguardando_peca_interno", label: "Aguardando Peça (Interno)" },
     { value: "finalizado", label: "Finalizado" },
