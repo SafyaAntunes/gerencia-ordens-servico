@@ -1,3 +1,4 @@
+
 import { useLocation } from 'react-router-dom';
 import NavItem from './NavItem';
 import { 
@@ -8,8 +9,7 @@ import {
   Wrench,
   Calendar, 
   BarChart2,
-  Settings,
-  Cog
+  Settings 
 } from 'lucide-react';
 
 interface NavigationLinksProps {
@@ -58,14 +58,6 @@ const NavigationLinks = ({ isCollapsed }: NavigationLinksProps) => {
             isActive={isActive('/clientes')}
             isCollapsed={isCollapsed}
           />
-
-          <NavItem 
-            href="/motores" 
-            icon={<Cog className="h-5 w-5" />}
-            label="Motores"
-            isActive={isActive('/motores')}
-            isCollapsed={isCollapsed}
-          />
           
           <NavItem 
             href="/motores" 
@@ -91,13 +83,15 @@ const NavigationLinks = ({ isCollapsed }: NavigationLinksProps) => {
             isCollapsed={isCollapsed}
           />
           
-          <NavItem 
-            href="/configuracoes" 
-            icon={<Settings className="h-5 w-5" />}
-            label="Configurações"
-            isActive={isActive('/configuracoes')}
-            isCollapsed={isCollapsed}
-          />
+          <div className="mt-2 border-t border-sidebar-muted pt-2">
+            <NavItem 
+              href="/configuracoes" 
+              icon={<Settings className="h-5 w-5" />}
+              label="Configurações"
+              isActive={isActive('/configuracoes')}
+              isCollapsed={isCollapsed}
+            />
+          </div>
         </div>
       </nav>
     </div>

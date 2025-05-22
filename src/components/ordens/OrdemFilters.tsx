@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, Calendar, Check, Activity } from "lucide-react";
 import Select from 'react-select';
@@ -7,8 +7,8 @@ import { StatusOS } from "@/types/ordens";
 interface OrdemFiltersProps {
   search: string;
   setSearch: (value: string) => void;
-  statusServicoFilter: string[];
-  setStatusServicoFilter: (value: string[]) => void;
+  statusFilter: string[];
+  setStatusFilter: (value: string[]) => void;
   prioridadeFilter: string;
   setPrioridadeFilter: (value: string) => void;
   progressoFilter: string;
@@ -20,8 +20,8 @@ interface OrdemFiltersProps {
 export default function OrdemFilters({
   search,
   setSearch,
-  statusServicoFilter,
-  setStatusServicoFilter,
+  statusFilter,
+  setStatusFilter,
   prioridadeFilter,
   setPrioridadeFilter,
   progressoFilter,
@@ -30,19 +30,6 @@ export default function OrdemFilters({
   setPrazoFilter = () => {}
 }: OrdemFiltersProps) {
   const [filtrosVisiveis, setFiltrosVisiveis] = useState(true);
-
-  const statusServicoOptions = useMemo(() => [
-    { value: "desmontagem", label: "Desmontagem" },
-    { value: "inspecao_inicial", label: "Inspeção Inicial" },
-    { value: "orcamento", label: "Orçamento" },
-    { value: "aguardando_aprovacao", label: "Aguardando Aprovação" },
-    { value: "autorizado", label: "Autorizado" },
-    { value: "executando_servico", label: "Executando Serviço" },
-    { value: "aguardando_peca_cliente", label: "Aguardando Peça (Cliente)" },
-    { value: "aguardando_peca_interno", label: "Aguardando Peça (Interno)" },
-    { value: "finalizado", label: "Finalizado" },
-    { value: "entregue", label: "Entregue" },
-  ], []);
 
   const statusOptions = [
     { value: "all", label: "Todos os status" },
@@ -93,26 +80,28 @@ export default function OrdemFilters({
           </div>
 
           <div className="flex items-center space-x-2">
+            <Filter className="h-5 w-5 text-muted-foreground mr-2" />
             <div className="w-full">
               <Select
                 isMulti
                 options={statusOptions}
                 placeholder="Filtrar por status"
-                value={
-                  statusFilter.length === 0
-                    ? [statusOptions[0]]
-                    : statusOptions.filter(opt => statusFilter.includes(opt.value))
-                }
-                onChange={selected => {
+                value={getSelectedStatusOptions()}
+                onChange={(selected) => {
                   if (!selected || selected.length === 0) {
-                    setStatusServicoFilter([]);
+                    setStatusFilter([]);
                     return;
                   }
+                  
+                  // Se "Todos os status" foi selecionado, limpar outros filtros
                   if (selected.some(opt => opt.value === "all")) {
                     setStatusFilter([]);
                     return;
                   }
-                  setStatusFilter(selected.map(opt => opt.value).filter(v => v !== "all"));
+                  
+                  // Caso contrário, aplicar os filtros selecionados
+                  const selectedValues = selected.map(opt => opt.value);
+                  setStatusFilter(selectedValues.filter(v => v !== "all"));
                 }}
                 classNamePrefix="react-select"
                 styles={{
@@ -129,7 +118,7 @@ export default function OrdemFilters({
               />
             </div>
           </div>
-
+          
           <div className="flex items-center space-x-2">
             <div className="w-full">
               <Select
