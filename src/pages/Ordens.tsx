@@ -102,12 +102,6 @@ export default function Ordens({ onLogout }: OrdensProps) {
     ? `Ordens de Serviço - Minhas Especialidades`
     : 'Ordens de Serviço';
 
-  // Adapt the status filter to be array-compatible
-  const statusFilterArray = statusFilter ? [statusFilter] : [];
-  const handleStatusChange = (newStatus: string[]) => {
-    setStatusFilter(newStatus[0] || '');
-  };
-
   return (
     <Layout onLogout={onLogout}>
       <OrdensHeader
@@ -121,8 +115,8 @@ export default function Ordens({ onLogout }: OrdensProps) {
       <OrdemFilters
         search={search}
         setSearch={setSearch}
-        statusFilter={statusFilterArray}
-        setStatusFilter={handleStatusChange}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
         prioridadeFilter={prioridadeFilter}
         setPrioridadeFilter={setPrioridadeFilter}
         progressoFilter={progressoFilter}

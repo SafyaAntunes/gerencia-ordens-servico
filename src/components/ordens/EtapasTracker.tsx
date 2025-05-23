@@ -29,13 +29,13 @@ export default function EtapasTracker({ ordem, onOrdemUpdate, onFuncionariosChan
 
   const etapasAtivas: EtapaOS[] = ["lavagem", "inspecao_inicial", "retifica", "montagem", "dinamometro", "inspecao_final"];
   const etapasDisponiveis = {
-    montagem: ordem.servicos.some(s => s.tipo === "montagem"),
-    dinamometro: ordem.servicos.some(s => s.tipo === "dinamometro")
+    montagem: ordem.servicos.some(s => s.tipo === TipoServico.MONTAGEM),
+    dinamometro: ordem.servicos.some(s => s.tipo === TipoServico.DINAMOMETRO)
   };
 
   const isRetificaHabilitada = () => {
     return ordem.servicos.some(s => 
-      ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo)
+      [TipoServico.BLOCO, TipoServico.BIELA, TipoServico.CABECOTE, TipoServico.VIRABREQUIM, TipoServico.EIXO_COMANDO].includes(s.tipo)
     );
   };
 
@@ -51,17 +51,17 @@ export default function EtapasTracker({ ordem, onOrdemUpdate, onFuncionariosChan
     
     ordem.servicos.forEach(servico => {
       let etapa: EtapaOS;
-      if (servico.tipo === 'lavagem') {
+      if (servico.tipo === TipoServico.LAVAGEM) {
         etapa = 'lavagem';
-      } else if (servico.tipo === 'inspecao_inicial') {
+      } else if (servico.tipo === TipoServico.INSPECAO_INICIAL) {
         etapa = 'inspecao_inicial';
-      } else if (servico.tipo === 'inspecao_final') {
+      } else if (servico.tipo === TipoServico.INSPECAO_FINAL) {
         etapa = 'inspecao_final';
-      } else if (['bloco', 'biela', 'cabecote', 'virabrequim', 'eixo_comando'].includes(servico.tipo)) {
+      } else if ([TipoServico.BLOCO, TipoServico.BIELA, TipoServico.CABECOTE, TipoServico.VIRABREQUIM, TipoServico.EIXO_COMANDO].includes(servico.tipo)) {
         etapa = 'retifica';
-      } else if (servico.tipo === 'montagem') {
+      } else if (servico.tipo === TipoServico.MONTAGEM) {
         etapa = 'montagem';
-      } else if (servico.tipo === 'dinamometro') {
+      } else if (servico.tipo === TipoServico.DINAMOMETRO) {
         etapa = 'dinamometro';
       } else {
         return;
@@ -121,7 +121,7 @@ export default function EtapasTracker({ ordem, onOrdemUpdate, onFuncionariosChan
         <div className="w-full md:w-2/3">
           {precisaEscolherServico && (
             <InspecaoServicosSelector 
-              servicosTipo={["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"]}
+              servicosTipo={[TipoServico.BLOCO, TipoServico.BIELA, TipoServico.CABECOTE, TipoServico.VIRABREQUIM, TipoServico.EIXO_COMANDO]}
               etapa={etapaAtual}
               selectedServicoTipo={servicoTipo}
               onServicoTipoSelect={handleServicoTipoSelect}

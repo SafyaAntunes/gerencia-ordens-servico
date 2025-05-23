@@ -1,8 +1,11 @@
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, Calendar, Check, Activity } from "lucide-react";
 import Select from 'react-select';
+import { MultiSelect } from "@/components/ui/multi-select";
+import { Badge } from "@/components/ui/badge";
+import { TipoServico } from "@/types/ordens";
 
 interface OrdemFiltersProps {
   search: string;
@@ -31,15 +34,45 @@ export default function OrdemFilters({
 }: OrdemFiltersProps) {
   const [filtrosVisiveis, setFiltrosVisiveis] = useState(true);
 
+  // Calculate how many active filters are being applied
+  const filtrosAtivos = useMemo(() => {
+    let count = 0;
+    if (search) count++;
+    if (prioridadeFilter !== "all") count++;
+    if (progressoFilter !== "all") count++;
+    if (prazoFilter !== "all") count++;
+    if (statusFilter.length > 0) count++;
+    return count;
+  }, [search, prioridadeFilter, progressoFilter, prazoFilter, statusFilter]);
+
+  // Status options for the MultiSelect component
+  const statusOptions = [
+    { value: "desmontagem", label: "Desmontagem" },
+    { value: "inspecao_inicial", label: "Inspeção Inicial" },
+    { value: "orcamento", label: "Orçamento" },
+    { value: "aguardando_aprovacao", label: "Aguardando Aprovação" },
+    { value: "autorizado", label: "Autorizado" },
+    { value: "executando_servico", label: "Executando Serviço" },
+    { value: "aguardando_peca_cliente", label: "Aguardando Peça Cliente" },
+    { value: "aguardando_peca_interno", label: "Aguardando Peça Interno" },
+    { value: "finalizado", label: "Finalizado" },
+    { value: "entregue", label: "Entregue" },
+  ];
+
   return (
     <div>
       <div className="flex justify-end mb-2">
         <button
           type="button"
-          className="text-blue-600 hover:underline text-sm"
+          className="text-blue-600 hover:underline text-sm flex items-center gap-1"
           onClick={() => setFiltrosVisiveis(v => !v)}
         >
           {filtrosVisiveis ? "Ocultar filtros" : "Mostrar filtros"}
+          {filtrosAtivos > 0 && (
+            <Badge variant="secondary" className="ml-1">
+              {filtrosAtivos}
+            </Badge>
+          )}
         </button>
       </div>
       {filtrosVisiveis && (
@@ -73,8 +106,20 @@ export default function OrdemFilters({
             </div>
           </div>
 
+          <div className="flex items-center space-x-2 col-span-1">
+            <div className="w-full">
+              <MultiSelect
+                options={statusOptions}
+                selected={statusFilter}
+                onChange={setStatusFilter}
+                placeholder="Filtrar por status"
+                emptyMessage="Nenhum status encontrado"
+              />
+            </div>
+          </div>
+
           <div className="flex items-center space-x-2">
-            <div className="grid grid-cols-2 gap-2 w-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 w-full">
               <Select
                 options={[
                   { value: "all", label: "Todos os progressos" },
