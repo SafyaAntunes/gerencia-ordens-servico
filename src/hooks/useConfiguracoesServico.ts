@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { getDocs, collection, query, where, updateDoc, doc } from "firebase/firestore";
+import { getDocs, collection, query, where, updateDoc, doc, addDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { SubAtividade, TipoServico, TipoAtividade } from "@/types/ordens";
 
@@ -135,8 +135,8 @@ export const useConfiguracoesServico = (tipoAtividade?: TipoAtividade) => {
             updatedAt: new Date()
           });
         } else {
-          // Criar nova configuração
-          await doc(collection(db, "configuracoes_atividades"), {
+          // Criar nova configuração - Corrigido o método de criação de documento
+          await addDoc(collection(db, "configuracoes_atividades"), {
             tipoAtividade,
             tipo: item.tipo,
             nome: item.nome,
