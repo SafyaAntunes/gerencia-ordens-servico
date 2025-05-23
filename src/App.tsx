@@ -53,7 +53,13 @@ function App() {
                 <Route path="/agenda" element={<Agenda onLogout={logout} />} />
                 <Route path="/relatorios/producao" element={<RelatoriosProducao onLogout={logout} />} />
                 <Route path="/configuracoes" element={<Configuracoes onLogout={logout} />} />
-                <Route path="/configuracoes/atividades" element={<ConfiguracoesAtividades />} />
+                <Route path="/configuracoes/atividades" element={
+                  <ConfiguracoesAtividades 
+                    tipoAtividade="inspecao_inicial" 
+                    titulo="Configuração de Atividades" 
+                    descricao="Configure os tempos padrão para as atividades" 
+                  />
+                } />
                 <Route path="/configuracoes/subatividades" element={<SubatividadesConfig />} />
                 <Route path="/configuracoes/reset-subatividades" element={<SubatividadesReset />} />
               </>

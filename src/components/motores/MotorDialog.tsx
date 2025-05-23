@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { addMotor, updateMotor } from "@/services/motorService";
+import { saveMotor } from "@/services/motorService";
 import { toast } from "sonner";
 import { Motor } from "@/types/motores";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -78,11 +78,11 @@ const MotorDialog = ({ motor, open, onClose }: MotorDialogProps) => {
       
       if (motor) {
         // Atualização
-        await updateMotor(motor.id, formData);
+        await saveMotor({...formData, id: motor.id} as Motor);
         toast.success('Motor atualizado com sucesso!');
       } else {
         // Novo motor
-        await addMotor(formData);
+        await saveMotor(formData as Motor);
         toast.success('Motor adicionado com sucesso!');
       }
       
