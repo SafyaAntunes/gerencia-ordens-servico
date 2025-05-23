@@ -19,7 +19,7 @@ export function useAtribuirFuncionariosDialog({
   onConfirm,
   isOpen = false
 }: UseAtribuirFuncionariosDialogProps) {
-  const { funcionariosStatus, funcionariosDisponiveis, loading } = useFuncionariosDisponibilidade();
+  const { funcionariosStatus, loading } = useFuncionariosDisponibilidade();
   const [funcionariosSelecionados, setFuncionariosSelecionados] = useState<string[]>(funcionariosSelecionadosIds);
   const previousIdsRef = useRef<string[]>(funcionariosSelecionadosIds);
 
