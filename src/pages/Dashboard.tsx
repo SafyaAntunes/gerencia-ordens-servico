@@ -27,7 +27,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format, startOfMonth, endOfMonth, isWithinInterval, addMonths, subMonths, isAfter, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useFuncionariosDisponibilidade } from "@/hooks/useFuncionariosDisponibilidade";
+import useFuncionariosDisponibilidade from '@/hooks/useFuncionariosDisponibilidade';
 
 interface DashboardProps extends LogoutProps {}
 

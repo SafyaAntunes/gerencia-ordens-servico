@@ -5,7 +5,7 @@ import { Servico, SubAtividade, TipoServico, EtapaOS } from "@/types/ordens";
 import { Funcionario } from "@/types/funcionarios";
 import { useAuth } from "@/hooks/useAuth";
 import { UseServicoTrackerProps, UseServicoTrackerResult, ServicoStatus } from "./types/servicoTrackerTypes";
-import { useFuncionariosDisponibilidade, FuncionarioStatus } from "@/hooks/useFuncionariosDisponibilidade";
+import { useFuncionariosDisponibilidade } from "@/hooks/useFuncionariosDisponibilidade";
 import { marcarFuncionarioEmServico, liberarFuncionarioDeServico } from "@/services/funcionarioEmServicoService";
 
 export function useServicoTracker({

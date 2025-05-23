@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useFuncionariosDisponibilidade } from '@/hooks/useFuncionariosDisponibilidade';
+import useFuncionariosDisponibilidade from '@/hooks/useFuncionariosDisponibilidade';
 import { TipoServico } from '@/types/ordens';
 import { toast } from "sonner";
 

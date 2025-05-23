@@ -2,7 +2,7 @@
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useFuncionariosDisponibilidade, FuncionarioStatus } from '@/hooks/useFuncionariosDisponibilidade';
+import useFuncionariosDisponibilidade, { FuncionarioStatus } from '@/hooks/useFuncionariosDisponibilidade';
 import { format, formatDistance, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CircleCheck, Clock, CircleDashed, CircleX } from "lucide-react";

@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getFuncionarios } from '@/services/funcionarioService';
 import { getOrdens } from '@/services/ordemService';
 import { StatusOS, OrdemServico, EtapaOS } from '@/types/ordens';
-import { Funcionario } from '@/types/funcionario';
+import { Funcionario } from '@/types/funcionarios';
 import { format, isSameDay, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -20,7 +21,7 @@ export type FuncionarioStatus = Funcionario & {
   tempoDisponivel?: number;
 };
 
-const useFuncionariosDisponibilidade = () => {
+export const useFuncionariosDisponibilidade = () => {
   const [funcionariosStatus, setFuncionariosStatus] = useState<FuncionarioStatus[]>([]);
   const [isLoadingFuncionariosStatus, setIsLoadingFuncionariosStatus] = useState(false);
   const [errorFuncionariosStatus, setErrorFuncionariosStatus] = useState<Error | null>(null);
@@ -70,7 +71,7 @@ const useFuncionariosDisponibilidade = () => {
         // Encontrar a atividade atual de cada funcionário
         const funcionariosAtualizados = funcionariosComStatus.map(funcionario => {
           // Filtrar registros de tempo para o funcionário e para o dia selecionado
-          const registrosDeTempoDoDia = ordens.flatMap(ordem =>
+          const registrosDeTempoDoDia = (ordens as OrdemServico[]).flatMap(ordem =>
             ordem.tempoRegistros.filter(
               registro =>
                 registro.funcionarioId === funcionario.id &&
@@ -89,7 +90,7 @@ const useFuncionariosDisponibilidade = () => {
             funcionario.statusAtividade = 'em_servico';
             funcionario.ordemAtual = {
               id: registroAberto.etapa,
-              nome: ordens.find(ordem =>
+              nome: (ordens as OrdemServico[]).find(ordem =>
                 ordem.tempoRegistros.some(tempo => tempo === registroAberto)
               )?.nome || 'Ordem Desconhecida',
               etapa: registroAberto.etapa,
@@ -118,7 +119,7 @@ const useFuncionariosDisponibilidade = () => {
               funcionario.statusAtividade = 'em_pausa';
               funcionario.ordemAtual = {
                 id: pausaMaisRecente.etapa,
-                nome: ordens.find(ordem =>
+                nome: (ordens as OrdemServico[]).find(ordem =>
                   ordem.tempoRegistros.some(tempo => tempo === pausaMaisRecente)
                 )?.nome || 'Ordem Desconhecida',
                 etapa: pausaMaisRecente.etapa,
@@ -173,8 +174,16 @@ const useFuncionariosDisponibilidade = () => {
     }
   };
 
+  // Calculate conveniente variables for consuming components
+  const funcionariosDisponiveis = funcionariosStatus.filter(f => f.statusAtividade === 'disponivel' && f.ativo !== false);
+  const funcionariosOcupados = funcionariosStatus.filter(f => f.statusAtividade !== 'disponivel' && f.ativo !== false);
+  const funcionariosInativos = funcionariosStatus.filter(f => f.ativo === false);
+
   return {
     funcionariosStatus,
+    funcionariosDisponiveis,
+    funcionariosOcupados,
+    funcionariosInativos,
     isLoading: isLoadingFuncionarios || isLoadingOrdens || isLoadingFuncionariosStatus,
     error: errorFuncionarios || errorOrdens || errorFuncionariosStatus,
     refetch: () => {

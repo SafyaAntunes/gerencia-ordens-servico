@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useFuncionariosDisponibilidade } from '@/hooks/useFuncionariosDisponibilidade';
+import useFuncionariosDisponibilidade from '@/hooks/useFuncionariosDisponibilidade';
 import { Funcionario } from '@/types/funcionarios';
 import { TipoServico } from '@/types/ordens';
 import { CircleCheck, Clock } from "lucide-react";

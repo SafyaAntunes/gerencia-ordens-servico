@@ -1,228 +1,207 @@
-
-import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Servico } from "@/types/ordens";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Play, Pause, CheckCircle2 } from "lucide-react";
-import { getFuncionarios } from "@/services/funcionarioService";
-import { useAuth } from "@/hooks/useAuth";
-import { cn } from "@/lib/utils";
+import { Plus, Trash2 } from 'lucide-react';
+import { TipoServico } from '@/types/ordens';
+import { SubAtividade } from '@/types/ordens';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import { toast } from "sonner";
-import { useFuncionariosDisponibilidade } from "@/hooks/useFuncionariosDisponibilidade";
-import { liberarFuncionarioDeServico } from "@/services/funcionarioEmServicoService";
-import { formatDateSafely } from "@/utils/dateUtils";
+import { SimpleFuncionarioSelector } from '@/components/funcionarios/SimpleFuncionarioSelector';
+import useFuncionariosDisponibilidade from "@/hooks/useFuncionariosDisponibilidade";
 
 interface ServicoControlProps {
-  servico: Servico;
-  ordemId: string;
-  isDisabled?: boolean;
-  funcionarioId?: string;
-  funcionarioNome?: string;
-  onStatusChange: (status: 'em_andamento' | 'pausado' | 'concluido', funcionarioId?: string, funcionarioNome?: string) => void;
+  tipo: TipoServico;
+  descricao: string;
+  subatividades: SubAtividade[];
+  onChange: (tipo: TipoServico, descricao: string, subatividades: SubAtividade[]) => void;
+  onSubatividadeToggle: (servicoTipo: string, subatividadeId: string, checked: boolean) => void;
+  atividadesEspecificas?: Record<string, SubAtividade[]>;
+  onAtividadeEspecificaToggle?: (servicoTipo: string, tipoAtividade: string, subatividadeId: string, checked: boolean) => void;
 }
 
+const toTitleCase = (str: string) => {
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
 export function ServicoControl({
-  servico,
-  ordemId,
-  isDisabled = false,
-  funcionarioId = '',
-  funcionarioNome = '',
-  onStatusChange
+  tipo,
+  descricao,
+  subatividades,
+  onChange,
+  onSubatividadeToggle,
+  atividadesEspecificas,
+  onAtividadeEspecificaToggle
 }: ServicoControlProps) {
-  const { canEditOrder } = useAuth();
-  const { funcionariosStatus, funcionariosDisponiveis } = useFuncionariosDisponibilidade();
-  const [responsavelId, setResponsavelId] = useState(servico.funcionarioId || funcionarioId);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  const temPermissao = canEditOrder(ordemId);
-  
-  // Usar o status do serviço ou "nao_iniciado" se não estiver definido
-  const servicoStatus = servico.concluido 
-    ? 'concluido' 
-    : servico.status || 'nao_iniciado';
+  const [localDescricao, setLocalDescricao] = useState(descricao);
+  const [localSubatividades, setLocalSubatividades] = useState(subatividades);
+  const [novaAtividadeNome, setNovaAtividadeNome] = useState('');
+  const [novaAtividadeTempoEstimado, setNovaAtividadeTempoEstimado] = useState<number | undefined>(undefined);
+  const [funcionarioResponsavelId, setFuncionarioResponsavelId] = useState<string | null>(null);
+  const [funcionarioResponsavelNome, setFuncionarioResponsavelNome] = useState<string | null>(null);
 
-  // Filtrar apenas os funcionários disponíveis + o funcionário já atribuído a este serviço específico
-  const funcionariosOptions = funcionariosStatus.filter(funcionario => {
-    // Sempre incluir o funcionário atual do serviço, mesmo que ocupado
-    if (funcionario.id === servico.funcionarioId) {
-      return true;
-    }
-    
-    // Para outros funcionários, incluir somente os disponíveis e ativos
-    return funcionario.status === 'disponivel' && funcionario.ativo !== false;
-  });
+  const handleFuncionarioSelecionado = useCallback((id: string, nome: string) => {
+    setFuncionarioResponsavelId(id);
+    setFuncionarioResponsavelNome(nome);
+  }, []);
 
-  // Update responsavelId when servico.funcionarioId changes
   useEffect(() => {
-    if (servico.funcionarioId) {
-      setResponsavelId(servico.funcionarioId);
-    }
-  }, [servico.funcionarioId]);
+    setLocalDescricao(descricao);
+    setLocalSubatividades(subatividades);
+  }, [tipo, descricao, subatividades]);
 
-  const handleStatusChange = async (status: 'em_andamento' | 'pausado' | 'concluido') => {
-    if (!temPermissao || isDisabled || isLoading) return;
-    
-    setIsLoading(true);
-    
-    try {
-      // Find responsável nome
-      const funcionarioSelecionado = funcionariosStatus.find(f => f.id === responsavelId);
-      const respNome = funcionarioSelecionado?.nome || funcionarioNome;
-      
-      // Se o status atual é "em_andamento" e mudou para outro status
-      // OU se qualquer status mudou para "concluido", liberar o funcionário
-      if (
-        (servicoStatus === 'em_andamento' && status !== 'em_andamento') || 
-        status === 'concluido'
-      ) {
-        // Liberar funcionário atual se houver um
-        if (servico.funcionarioId) {
-          await liberarFuncionarioDeServico(servico.funcionarioId);
-        }
-      }
-      
-      // Validar se o funcionário está disponível quando o status muda para em_andamento
-      if (status === 'em_andamento' && servicoStatus !== 'em_andamento') {
-        // Se o funcionário não for o mesmo que já estava atribuído e não estiver disponível
-        if (responsavelId !== servico.funcionarioId) {
-          const funcionario = funcionariosStatus.find(f => f.id === responsavelId);
-          if (funcionario && funcionario.status !== 'disponivel') {
-            toast.error("Este funcionário já está ocupado em outro serviço");
-            setIsLoading(false);
-            return;
-          }
-        }
-      }
-      
-      onStatusChange(status, responsavelId, respNome);
-    } catch (error) {
-      console.error("Erro ao mudar status:", error);
-      toast.error("Erro ao atualizar status do serviço");
-    } finally {
-      setIsLoading(false);
-    }
+  useEffect(() => {
+    onChange(tipo, localDescricao, localSubatividades);
+  }, [tipo, localDescricao, localSubatividades, onChange]);
+
+  const handleDescricaoChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setLocalDescricao(e.target.value);
   };
 
-  const getServicoStatusBadge = () => {
-    if (servico.concluido) {
-      return <Badge variant="success">Concluído</Badge>;
-    } else if (servicoStatus === 'pausado') {
-      return <Badge variant="warning">Pausado</Badge>;
-    } else if (servicoStatus === 'em_andamento') {
-      return <Badge variant="secondary">Em andamento</Badge>;
-    } else {
-      return <Badge variant="outline">Não iniciado</Badge>;
-    }
+  const handleSubatividadeToggle = (id: string, checked: boolean) => {
+    const updatedSubatividades = localSubatividades.map(sub =>
+      sub.id === id ? { ...sub, selecionada: checked } : sub
+    );
+    setLocalSubatividades(updatedSubatividades);
+    onSubatividadeToggle(tipo, id, checked);
   };
 
-  const formatServiceType = (type: string) => {
-    return type
-      .replace(/_/g, ' ')
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+  const handleAddAtividadeEspecifica = (tipoAtividade: string) => {
+    if (!novaAtividadeNome.trim()) {
+      toast.error("Nome da atividade não pode estar vazio");
+      return;
+    }
+
+    const novaAtividade: SubAtividade = {
+      id: Date.now().toString(),
+      nome: toTitleCase(novaAtividadeNome.trim()),
+      selecionada: true,
+      tempoEstimado: novaAtividadeTempoEstimado,
+      servicoTipo: tipo,
+      tipoAtividade: tipoAtividade,
+    };
+
+    // Lógica para adicionar a nova atividade ao estado
+    onChange(tipo, localDescricao, [...localSubatividades, novaAtividade]);
+
+    setNovaAtividadeNome('');
+    setNovaAtividadeTempoEstimado(undefined);
+  };
+
+  const handleRemoveAtividadeEspecifica = (tipoAtividade: string, id: string) => {
+    const updatedSubatividades = localSubatividades.filter(sub => sub.id !== id);
+    onChange(tipo, localDescricao, updatedSubatividades);
+  };
+
+  const handleAtividadeEspecificaToggle = (tipoAtividade: string, id: string, checked: boolean) => {
+    if (onAtividadeEspecificaToggle) {
+      onAtividadeEspecificaToggle(tipo, tipoAtividade, id, checked);
+    }
   };
 
   return (
-    <Card className="w-full overflow-hidden">
-      <CardContent className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Etapa column */}
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium">Serviço</h4>
-            <div className="p-3 bg-slate-50 rounded-md flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold">{formatServiceType(servico.tipo)}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{servico.descricao || 'Sem descrição'}</p>
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle>{tipo}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <Label htmlFor={`${tipo}-descricao`}>Descrição do Serviço</Label>
+          <Textarea
+            id={`${tipo}-descricao`}
+            placeholder="Detalhes sobre o serviço a ser realizado..."
+            value={localDescricao}
+            onChange={handleDescricaoChange}
+          />
+        </div>
+
+        <div>
+          <Label>Subatividades Padrão</Label>
+          <div className="pl-4 space-y-2">
+            {localSubatividades.map(sub => (
+              <div key={sub.id} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`${tipo}-subatividade-${sub.id}`}
+                  checked={sub.selecionada}
+                  onCheckedChange={(checked) => handleSubatividadeToggle(sub.id, !!checked)}
+                />
+                <Label htmlFor={`${tipo}-subatividade-${sub.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed">
+                  {sub.nome}
+                </Label>
               </div>
-              <div>{getServicoStatusBadge()}</div>
-            </div>
+            ))}
           </div>
-          
-          {/* Funcionário column */}
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium">Funcionário</h4>
-            <div className="p-3 bg-slate-50 rounded-md">
-              {servico.concluido ? (
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium">Responsável:</span>
-                  <span className="text-sm">{servico.funcionarioNome || 'Não atribuído'}</span>
-                  {servico.dataConclusao && (
-                    <span className="text-xs text-gray-500 mt-1">
-                      Concluído em: {formatDateSafely(servico.dataConclusao)}
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <Select 
-                  value={responsavelId} 
-                  onValueChange={setResponsavelId}
-                  disabled={!temPermissao || isDisabled || isLoading}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione um funcionário" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {funcionariosOptions.length === 0 ? (
-                      <div className="p-2 text-center text-sm text-muted-foreground">
-                        Nenhum funcionário disponível
+        </div>
+
+        <div>
+          <Label>Atividades Especificas</Label>
+          <Accordion type="multiple" className="w-full">
+            <AccordionItem value="retifica">
+              <AccordionTrigger>Retífica</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-2">
+                  {localSubatividades
+                    .filter(sub => sub.tipoAtividade === 'retifica')
+                    .map(sub => (
+                      <div key={sub.id} className="flex items-center space-x-2 pl-4">
+                        <Checkbox
+                          id={`${tipo}-retifica-${sub.id}`}
+                          checked={sub.selecionada}
+                          onCheckedChange={(checked) => handleAtividadeEspecificaToggle('retifica', sub.id, !!checked)}
+                        />
+                        <Label htmlFor={`${tipo}-retifica-${sub.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed">
+                          {sub.nome}
+                        </Label>
+                        <Button variant="ghost" size="icon" onClick={() => handleRemoveAtividadeEspecifica('retifica', sub.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                    ) : (
-                      funcionariosOptions.map((func) => (
-                        <SelectItem key={func.id} value={func.id}>
-                          {func.nome} {func.status === 'ocupado' && func.id !== servico.funcionarioId ? " (Ocupado)" : ""}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-          </div>
-          
-          {/* Status column */}
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium">Status</h4>
-            <div className={cn(
-              "grid grid-cols-3 gap-2",
-              (!temPermissao || isDisabled) && "opacity-70 pointer-events-none"
-            )}>
-              <Button 
-                variant={servicoStatus === "em_andamento" ? "default" : "outline"} 
-                size="sm" 
-                onClick={() => handleStatusChange("em_andamento")}
-                className={servicoStatus === "em_andamento" ? "bg-blue-500 hover:bg-blue-600" : ""}
-                disabled={!temPermissao || isDisabled || isLoading || servico.concluido || !responsavelId}
-                title={!responsavelId ? "Selecione um responsável" : ""}
-              >
-                <Play className="h-4 w-4 mr-1" />
-                Em Andamento
-              </Button>
-              <Button 
-                variant={servicoStatus === "pausado" ? "default" : "outline"} 
-                size="sm" 
-                onClick={() => handleStatusChange("pausado")}
-                className={servicoStatus === "pausado" ? "bg-orange-400 hover:bg-orange-500" : ""}
-                disabled={!temPermissao || isDisabled || isLoading || servico.concluido || servicoStatus === "nao_iniciado"}
-              >
-                <Pause className="h-4 w-4 mr-1" />
-                Pausado
-              </Button>
-              <Button 
-                variant={servico.concluido ? "default" : "outline"} 
-                size="sm" 
-                onClick={() => handleStatusChange("concluido")}
-                className={servico.concluido ? "bg-green-600 hover:bg-green-700" : ""}
-                disabled={!temPermissao || isDisabled || isLoading || servico.concluido || !responsavelId}
-                title={!responsavelId ? "Selecione um responsável" : servico.concluido ? "Serviço já concluído" : "Marcar como concluído"}
-              >
-                <CheckCircle2 className="h-4 w-4 mr-1" />
-                Concluído
-              </Button>
-            </div>
-          </div>
+                    ))}
+
+                  <div className="flex items-center space-x-2 pl-4">
+                    <Input
+                      type="text"
+                      placeholder="Nova atividade de retífica"
+                      value={novaAtividadeNome}
+                      onChange={(e) => setNovaAtividadeNome(e.target.value)}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Tempo estimado (horas)"
+                      value={novaAtividadeTempoEstimado === undefined ? '' : novaAtividadeTempoEstimado.toString()}
+                      onChange={(e) => setNovaAtividadeTempoEstimado(e.target.value === '' ? undefined : Number(e.target.value))}
+                    />
+                    <Button variant="outline" size="icon" onClick={() => handleAddAtividadeEspecifica('retifica')}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+
+        <div>
+          <SimpleFuncionarioSelector
+            label="Responsável"
+            especialidadeRequerida={tipo}
+            funcionarioAtualId={funcionarioResponsavelId || undefined}
+            funcionarioAtualNome={funcionarioResponsavelNome || undefined}
+            onFuncionarioSelecionado={handleFuncionarioSelecionado}
+            mostrarCancelar={false}
+          />
         </div>
       </CardContent>
     </Card>

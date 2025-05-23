@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { PlusCircle, Filter, Search, Users, CheckCircle2, FilterX, Clock, ListFilter } from "lucide-react";
 import Layout from "@/components/layout/Layout";
@@ -35,7 +36,7 @@ import FuncionarioForm from "@/components/funcionarios/FuncionarioForm";
 import FuncionarioDetalhes from "@/components/funcionarios/FuncionarioDetalhes";
 import FuncionarioStatusTab from "@/components/funcionarios/FuncionarioStatusTab";
 import FuncionarioProdutividadeTab from "@/components/funcionarios/FuncionarioProdutividadeTab";
-import { useFuncionariosDisponibilidade } from "@/hooks/useFuncionariosDisponibilidade";
+import useFuncionariosDisponibilidade from "@/hooks/useFuncionariosDisponibilidade";
 import { toast } from "sonner";
 import { getFuncionarios, saveFuncionario, deleteFuncionario, getFuncionario } from "@/services/funcionarioService";
 import { useAuth } from "@/hooks/useAuth";

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useFuncionariosDisponibilidade, FuncionarioStatus } from '@/hooks/useFuncionariosDisponibilidade';
+import useFuncionariosDisponibilidade, { FuncionarioStatus } from '@/hooks/useFuncionariosDisponibilidade';
 import { CircleCheck, Clock, CircleX } from "lucide-react";
 import { format, formatDistance, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
