@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound";
 import OrdemDetalhes from "./pages/OrdemDetalhes";
 import Clientes from "./pages/Clientes";
 import ClienteCadastro from "./pages/ClienteCadastro";
+import Motores from "./pages/Motores"; // Import the new Motores page
 import Agenda from "./pages/Agenda";
 import RelatoriosProducao from "./pages/RelatoriosProducao";
 import RelatoriosFinanceiro from "./pages/RelatoriosFinanceiro";
@@ -132,6 +133,13 @@ const AppRoutes = () => {
       <Route path="/clientes/editar/:id" element={
         <PrivateRoute requiredPermission="gerente">
           <ClienteCadastro onLogout={handleLogout} />
+        </PrivateRoute>
+      } />
+      
+      {/* Motores - gerentes ou superior */}
+      <Route path="/motores" element={
+        <PrivateRoute requiredPermission="gerente">
+          <Motores onLogout={handleLogout} />
         </PrivateRoute>
       } />
       

@@ -8,7 +8,8 @@ import {
   UserCircle, 
   Calendar, 
   BarChart2,
-  Settings 
+  Settings,
+  Engine
 } from 'lucide-react';
 
 interface NavigationLinksProps {
@@ -55,6 +56,14 @@ const NavigationLinks = ({ isCollapsed }: NavigationLinksProps) => {
             icon={<UserCircle className="h-5 w-5" />}
             label="Clientes"
             isActive={isActive('/clientes')}
+            isCollapsed={isCollapsed}
+          />
+          
+          <NavItem 
+            href="/motores" 
+            icon={<Engine className="h-5 w-5" />}
+            label="Motores"
+            isActive={isActive('/motores')}
             isCollapsed={isCollapsed}
           />
           
