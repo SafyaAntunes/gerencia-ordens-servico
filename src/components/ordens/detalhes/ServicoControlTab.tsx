@@ -1,132 +1,156 @@
 
-import { useState } from "react";
-import { OrdemServico, Servico } from "@/types/ordens";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useCallback, useEffect, useState } from "react";
+import { TabsContent } from "@/components/ui/tabs";
+import { OrdemServico, Servico, SubAtividade, TipoServico } from "@/types/ordens";
 import { ServicoControl } from "@/components/ordens/servico/ServicoControl";
-import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { marcarFuncionarioEmServico } from "@/services/funcionarioEmServicoService";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { useForm } from "react-hook-form";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
-interface ServicoControlTabProps {
+type ServicoControlTabProps = {
   ordem: OrdemServico;
-  onOrdemUpdate: (ordemAtualizada: OrdemServico) => void;
-}
+  onOrdemUpdate?: (ordem: OrdemServico) => void;
+};
 
 export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabProps) {
-  const { funcionario } = useAuth();
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [funcionarioId, setFuncionarioId] = useState<string>("");
+  const [funcionarioNome, setFuncionarioNome] = useState<string>("");
 
-  const handleServicoStatusChange = async (servicoIndex: number, status: 'em_andamento' | 'pausado' | 'concluido', funcionarioId?: string, funcionarioNome?: string) => {
-    setIsUpdating(true);
+  const form = useForm();
 
-    try {
-      // Clone the services array
-      const servicosAtualizados = [...ordem.servicos];
-      
-      // Update the specific service
-      const servico = servicosAtualizados[servicoIndex];
-      
-      // Se o status está mudando para "em_andamento" e temos um funcionário selecionado,
-      // precisamos marcar o funcionário como ocupado
-      if (status === 'em_andamento' && funcionarioId && status !== servico.status) {
-        const marcadoComoOcupado = await marcarFuncionarioEmServico(
-          funcionarioId,
-          ordem.id,
-          'retifica', // Default etapa - isso poderia ser um parâmetro mais específico
-          servico.tipo
-        );
-        
-        if (!marcadoComoOcupado) {
-          toast.error("Não foi possível marcar o funcionário como ocupado");
-          setIsUpdating(false);
-          return;
-        }
-      }
-      
-      // Update service attributes based on status
-      if (status === 'concluido') {
-        servicosAtualizados[servicoIndex] = {
-          ...servico,
-          concluido: true,
-          status: status,
-          // Usar o funcionário atribuído para este serviço
-          funcionarioId: funcionarioId || servico.funcionarioId || '',
-          funcionarioNome: funcionarioNome || servico.funcionarioNome || '',
-          dataConclusao: new Date()
-        };
-      } else {
-        // Para outros statuses, atualizar o status e manter os dados do funcionário
-        servicosAtualizados[servicoIndex] = {
-          ...servico,
-          status: status,
-          // Persistir o funcionário mesmo para serviços não concluídos
-          funcionarioId: funcionarioId || servico.funcionarioId,
-          funcionarioNome: funcionarioNome || servico.funcionarioNome
-        };
-      }
-      
-      // Update the complete ordem
-      const ordemAtualizada = {
-        ...ordem,
-        servicos: servicosAtualizados
-      };
-      
-      // Call the parent function to update the ordem
-      await onOrdemUpdate(ordemAtualizada);
-      
-      // Show success message
-      let statusMsg = "";
-      if (status === 'concluido') statusMsg = "concluído";
-      else if (status === 'pausado') statusMsg = "pausado";
-      else if (status === 'em_andamento') statusMsg = "em andamento";
-      else statusMsg = status;
-      
-      toast.success(`Serviço ${servico.tipo} ${statusMsg}`);
-    } catch (error) {
-      console.error("Erro ao atualizar serviço:", error);
-      toast.error("Erro ao atualizar o status do serviço");
-    } finally {
-      setIsUpdating(false);
+  useEffect(() => {
+    // Initialize form with servicos subatividades
+    if (ordem.servicos) {
+      const servicosSubatividades = ordem.servicos.reduce((acc: any, servico) => {
+        acc[servico.tipo] = servico.subatividades || [];
+        return acc;
+      }, {});
+
+      form.setValue("servicosSubatividades", servicosSubatividades);
+
+      // Initialize servicosDescricoes
+      const servicosDescricoes = ordem.servicos.reduce((acc: any, servico) => {
+        acc[servico.tipo] = servico.descricao || '';
+        return acc;
+      }, {});
+
+      form.setValue("servicosDescricoes", servicosDescricoes);
     }
-  };
+  }, [ordem, form]);
 
-  if (!ordem.servicos || ordem.servicos.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Controle de Serviços</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">Esta ordem não possui serviços registrados.</p>
-        </CardContent>
-      </Card>
+  const handleSubatividadeToggle = useCallback((servicoTipo: string, subatividadeId: string, checked: boolean) => {
+    const servicosSubatividades = form.getValues("servicosSubatividades") || {};
+    const subatividades = servicosSubatividades[servicoTipo] || [];
+    
+    const updatedSubatividades = subatividades.map((sub: any) => 
+      sub.id === subatividadeId ? { ...sub, selecionada: checked } : sub
     );
-  }
+    
+    form.setValue("servicosSubatividades", { 
+      ...servicosSubatividades, 
+      [servicoTipo]: updatedSubatividades 
+    });
+  }, [form]);
+
+  const handleAtividadeEspecificaToggle = useCallback((servicoTipo: string, tipoAtividade: string, subatividadeId: string, checked: boolean) => {
+    const atividadesEspecificas = form.getValues("atividadesEspecificas") || {};
+    const atividadesDoServico = atividadesEspecificas[servicoTipo] || {};
+    const atividadesTipo = atividadesDoServico[tipoAtividade] || [];
+    
+    const updatedAtividades = atividadesTipo.map((ativ: any) => 
+      ativ.id === subatividadeId ? { ...ativ, selecionada: checked } : ativ
+    );
+    
+    form.setValue("atividadesEspecificas", {
+      ...atividadesEspecificas,
+      [servicoTipo]: {
+        ...atividadesDoServico,
+        [tipoAtividade]: updatedAtividades
+      }
+    });
+  }, [form]);
+
+  const handleStatusChange = useCallback(async (status: string, funcId: string, funcNome: string) => {
+    try {
+      setIsSubmitting(true);
+      
+      // Update the status in Firestore
+      const ordemRef = doc(db, "ordens_servico", ordem.id);
+      await updateDoc(ordemRef, {
+        status: status
+      });
+      
+      // If the callback is provided, update the local state
+      if (onOrdemUpdate) {
+        onOrdemUpdate({
+          ...ordem,
+          status: status as any
+        });
+      }
+      
+      toast.success("Status da ordem atualizado com sucesso!");
+    } catch (error) {
+      console.error("Erro ao atualizar status:", error);
+      toast.error("Erro ao atualizar status da ordem");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [ordem, onOrdemUpdate]);
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Controle de Serviços</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {ordem.servicos.map((servico, index) => (
-              <ServicoControl
-                key={`${servico.tipo}-${index}`}
-                servico={servico}
-                ordemId={ordem.id}
-                isDisabled={isUpdating}
-                funcionarioId={servico.funcionarioId}
-                funcionarioNome={servico.funcionarioNome}
-                onStatusChange={(status, funcId, funcNome) => 
-                  handleServicoStatusChange(index, status, funcId, funcNome)
-                }
-              />
-            ))}
+    <TabsContent value="servicos" className="space-y-4 py-4">
+      <h2 className="text-xl font-semibold">Serviços da Ordem</h2>
+      
+      {ordem.servicos.length > 0 ? (
+        <div className="space-y-6">
+          {ordem.servicos.map((servico) => {
+            return (
+              <div key={servico.tipo} className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-medium">{servico.tipo}</h3>
+                  <Badge variant={servico.concluido ? "success" : "default"}>
+                    {servico.concluido ? "Concluído" : "Em andamento"}
+                  </Badge>
+                </div>
+                
+                {/* Pass the necessary props to ServicoControl */}
+                <ServicoControl
+                  key={servico.tipo}
+                  tipo={servico.tipo}
+                  form={form}
+                  handleSubatividadeToggle={handleSubatividadeToggle}
+                  handleAtividadeEspecificaToggle={handleAtividadeEspecificaToggle}
+                  descricao={servico.descricao}
+                  subatividades={servico.subatividades || []}
+                />
+                
+                <Separator className="my-4" />
+              </div>
+            );
+          })}
+          
+          <div className="flex justify-end gap-2 mt-6">
+            <Button
+              onClick={() => handleStatusChange("autorizado", funcionarioId, funcionarioNome)}
+              disabled={isSubmitting}
+            >
+              Autorizar Serviços
+            </Button>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-muted-foreground">Nenhum serviço encontrado para esta ordem.</p>
+          </CardContent>
+        </Card>
+      )}
+    </TabsContent>
   );
 }

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -197,7 +198,7 @@ export function ServicoControl({
                         <Checkbox
                           id={`${tipo}-retifica-${sub.id}`}
                           checked={sub.selecionada}
-                          onCheckedChange={(checked) => handleAtividadeEspecificaToggle('retifica', sub.id, !!checked)}
+                          onCheckedChange={(checked) => handleAtividadeEspecificaToggle(tipo, 'retifica', sub.id, !!checked)}
                         />
                         <Label htmlFor={`${tipo}-retifica-${sub.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed">
                           {sub.nome}

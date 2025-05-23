@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -192,7 +193,7 @@ export default function OrdemForm({
     setValue("prioridade", prioridade);
   };
   
-  const handleServicoToggle = (tipo: TipoServico, checked: boolean) => {
+  const handleServicoToggle = (tipo: string, checked: boolean) => {
     const currentServicos = form.getValues("servicosTipos") || [];
     let newServicos = [...currentServicos];
     
@@ -309,8 +310,8 @@ export default function OrdemForm({
     return currentUser?.nivelPermissao === 'admin' || currentUser?.nivelPermissao === 'gerente';
   };
   
-  // Fix the enum values usage in the JSX
-  const tipoServicoValues = Object.values(TipoServico) as TipoServico[];
+  // Use the Object.values of the TipoServico enum
+  const tipoServicoValues = Object.values(TipoServico);
   
   return (
     <Form {...form}>
@@ -598,10 +599,10 @@ export default function OrdemForm({
           
           {values.servicosTipos && values.servicosTipos.length > 0 && (
             <div className="space-y-4">
-              {values.servicosTipos.map((tipo) => (
+              {values.servicosTipos.map((tipo: string) => (
                 <ServicoControl
                   key={tipo}
-                  tipo={tipo}
+                  tipo={tipo as TipoServico}
                   form={form}
                   handleSubatividadeToggle={handleSubatividadeToggle}
                   handleAtividadeEspecificaToggle={handleAtividadeEspecificaToggle}

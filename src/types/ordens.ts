@@ -24,19 +24,23 @@ export type Motor = {
   numeroSerie?: string;
   cilindradas?: string;
   observacoes?: string;
+  clienteId?: string; // Add this property
+  clienteNome?: string; // Add this property
 };
 
-export type TipoServico = 
-  | 'bloco' 
-  | 'biela' 
-  | 'cabecote' 
-  | 'virabrequim' 
-  | 'eixo_comando'
-  | 'montagem'
-  | 'dinamometro'
-  | 'lavagem'         // Adicionado como serviço 
-  | 'inspecao_inicial' // Adicionado como serviço
-  | 'inspecao_final';  // Adicionado como serviço
+// Define TipoServico as an enum so it can be used as a value
+export enum TipoServico {
+  BLOCO = 'bloco',
+  BIELA = 'biela',
+  CABECOTE = 'cabecote',
+  VIRABREQUIM = 'virabrequim',
+  EIXO_COMANDO = 'eixo_comando',
+  MONTAGEM = 'montagem',
+  DINAMOMETRO = 'dinamometro',
+  LAVAGEM = 'lavagem',
+  INSPECAO_INICIAL = 'inspecao_inicial',
+  INSPECAO_FINAL = 'inspecao_final'
+}
 
 export type TipoAtividade =
   | 'lavagem'

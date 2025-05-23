@@ -1,3 +1,4 @@
+
 import { getClientes } from "./clienteService";
 import { Cliente } from "@/types/clientes";
 import { toast } from "sonner";
@@ -45,7 +46,7 @@ export const getOrdens = async () => {
       };
     });
     
-    return ordens;
+    return ordens as OrdemServico[];
   } catch (error) {
     console.error("Erro ao buscar ordens:", error);
     throw error;
