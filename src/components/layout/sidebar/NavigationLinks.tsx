@@ -9,7 +9,7 @@ import {
   Calendar, 
   BarChart2,
   Settings,
-  Wrench // Changed from Engine which doesn't exist to Wrench
+  Wrench 
 } from 'lucide-react';
 
 interface NavigationLinksProps {

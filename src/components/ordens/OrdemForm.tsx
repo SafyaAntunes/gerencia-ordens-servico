@@ -169,6 +169,7 @@ type OrdemFormProps = {
   defaultFotosSaida?: any[];
   onCancel?: () => void;
   clientes?: Cliente[];
+  allMotores?: Motor[]; // Add all motors from the Motores list
   isLoadingClientes?: boolean;
 };
 
@@ -193,6 +194,7 @@ export default function OrdemForm({
   defaultFotosSaida = [],
   onCancel,
   clientes = [],
+  allMotores = [], // New prop for all motors
   isLoadingClientes = false,
 }: OrdemFormProps) {
   const [servicosDescricoes, setServicosDescricoes] = useState<Record<string, string>>({});
@@ -204,6 +206,7 @@ export default function OrdemForm({
   const [isNovoClienteOpen, setIsNovoClienteOpen] = useState(false);
   const [isSubmittingCliente, setIsSubmittingCliente] = useState(false);
   const [isLoadingMotores, setIsLoadingMotores] = useState(false);
+  const [clienteMotores, setClienteMotores] = useState<Motor[]>([]);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -228,25 +231,22 @@ export default function OrdemForm({
   
   useEffect(() => {
     if (selectedClienteId) {
-      const fetchMotores = async () => {
-        setIsLoadingMotores(true);
-        try {
-          const motoresData = await getMotores(selectedClienteId);
-          setMotores(motoresData);
-        } catch (error) {
-          console.error("Erro ao buscar motores:", error);
-          toast.error("Não foi possível carregar os motores deste cliente");
-          setMotores([]);
-        } finally {
-          setIsLoadingMotores(false);
-        }
-      };
-      
-      fetchMotores();
+      setIsLoadingMotores(true);
+      try {
+        // Filter motors by selected client
+        const clientMotors = allMotores.filter(motor => motor.clienteId === selectedClienteId);
+        setClienteMotores(clientMotors);
+      } catch (error) {
+        console.error("Erro ao filtrar motores:", error);
+        toast.error("Não foi possível filtrar os motores deste cliente");
+        setClienteMotores([]);
+      } finally {
+        setIsLoadingMotores(false);
+      }
     } else {
-      setMotores([]);
+      setClienteMotores([]);
     }
-  }, [selectedClienteId]);
+  }, [selectedClienteId, allMotores]);
   
   useEffect(() => {
     const processDefaultFotos = () => {
@@ -454,7 +454,7 @@ export default function OrdemForm({
                   <Select 
                     onValueChange={field.onChange} 
                     defaultValue={field.value}
-                    disabled={!selectedClienteId || isLoadingMotores || motores.length === 0}
+                    disabled={!selectedClienteId || isLoadingMotores}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -463,7 +463,7 @@ export default function OrdemForm({
                             ? "Selecione um cliente primeiro" 
                             : isLoadingMotores 
                               ? "Carregando motores..." 
-                              : motores.length === 0 
+                              : clienteMotores.length === 0 
                                 ? "Nenhum motor cadastrado para este cliente" 
                                 : "Selecione um motor"
                         } />
@@ -476,7 +476,7 @@ export default function OrdemForm({
                           <p className="text-xs mt-1">Carregando...</p>
                         </div>
                       ) : (
-                        motores.map((motor) => (
+                        clienteMotores.map((motor) => (
                           <SelectItem 
                             key={motor.id} 
                             value={motor.id}

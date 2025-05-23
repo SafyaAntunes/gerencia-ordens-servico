@@ -7,8 +7,10 @@ import { Prioridade, TipoServico, OrdemServico, SubAtividade, EtapaOS, TipoAtivi
 import { collection, addDoc, doc, setDoc, getDoc, getDocs, query, where, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getClientes } from "@/services/clienteService";
+import { getMotores as getMotoresService } from "@/services/motorService";
 import { getSubatividadesByTipo } from "@/services/subatividadeService";
-import { Cliente, Motor } from "@/types/clientes";
+import { Cliente } from "@/types/clientes";
+import { Motor } from "@/types/motor";
 import { useStorage } from "@/hooks/useStorage";
 
 const toTitleCase = (str: string) => {
@@ -28,23 +30,29 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedServices, setSelectedServices] = useState<TipoServico[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [allMotores, setAllMotores] = useState<Motor[]>([]); // All motors from Motores list
   const [loading, setLoading] = useState(true);
   const { uploadFile } = useStorage();
   
   useEffect(() => {
-    const fetchClientes = async () => {
+    const fetchData = async () => {
       try {
-        const clientesData = await getClientes();
+        const [clientesData, motoresData] = await Promise.all([
+          getClientes(),
+          getMotoresService()
+        ]);
+        
         setClientes(clientesData);
+        setAllMotores(motoresData);
       } catch (error) {
-        console.error("Erro ao buscar clientes:", error);
-        toast.error("Erro ao carregar lista de clientes");
+        console.error("Erro ao buscar dados:", error);
+        toast.error("Erro ao carregar dados necessários");
       } finally {
         setLoading(false);
       }
     };
     
-    fetchClientes();
+    fetchData();
   }, []);
   
   // Handle subatividade toggle - empty implementation to satisfy TypeScript
@@ -280,6 +288,7 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         isLoading={isSubmitting}
         onCancel={() => navigate("/ordens")}
         clientes={clientes}
+        allMotores={allMotores}  // Pass all motors to the form
         isLoadingClientes={loading}
       />
     </Layout>

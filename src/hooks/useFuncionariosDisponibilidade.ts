@@ -1,322 +1,189 @@
-
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, getDocs, DocumentData, getDoc, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { Funcionario } from '@/types/funcionarios';
+import { useQuery } from '@tanstack/react-query';
+import { getFuncionarios } from '@/services/funcionarioService';
+import { getOrdens } from '@/services/ordemService';
+import { StatusOS, OrdemServico, EtapaOS } from '@/types/ordens';
+import { Funcionario } from '@/types/funcionario';
+import { format, isSameDay, parseISO } from 'date-fns';
+import { toast } from 'sonner';
 
-// Extended Funcionario interface with status fields
-interface FuncionarioWithStatus extends Funcionario {
-  statusAtividade?: 'disponivel' | 'ocupado';
-  atividadeAtual?: {
-    ordemId: string;
-    ordemNome?: string;
-    etapa: string;
-    servicoTipo?: string;
+// Define um tipo para representar o status de atividade de um funcionário
+export type FuncionarioStatus = Funcionario & {
+  statusAtividade: 'disponivel' | 'em_servico' | 'em_pausa' | 'indisponivel';
+  ordemAtual?: {
+    id: string;
+    nome: string;
+    etapa: EtapaOS;
+    tempoTotal: number;
     inicio: Date;
   };
-}
+  tempoDisponivel?: number;
+};
 
-export interface FuncionarioStatus extends FuncionarioWithStatus {
-  status: 'disponivel' | 'ocupado' | 'inativo';
-}
-
-export const useFuncionariosDisponibilidade = () => {
+const useFuncionariosDisponibilidade = () => {
   const [funcionariosStatus, setFuncionariosStatus] = useState<FuncionarioStatus[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoadingFuncionariosStatus, setIsLoadingFuncionariosStatus] = useState(false);
+  const [errorFuncionariosStatus, setErrorFuncionariosStatus] = useState<Error | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  // Fetch all funcionarios
+  const {
+    data: funcionarios,
+    isLoading: isLoadingFuncionarios,
+    error: errorFuncionarios,
+    refetch: refetchFuncionarios,
+  } = useQuery({
+    queryKey: ['funcionarios'],
+    queryFn: getFuncionarios,
+  });
+
+  // Fetch all ordens
+  const {
+    data: ordens,
+    isLoading: isLoadingOrdens,
+    error: errorOrdens,
+    refetch: refetchOrdens,
+  } = useQuery({
+    queryKey: ['ordens'],
+    queryFn: getOrdens,
+  });
 
   useEffect(() => {
-    setLoading(true);
-    setError(null);
+    const updateFuncionariosStatus = async () => {
+      if (!funcionarios || !ordens) return;
 
-    // Primeiro: carregar todos os funcionários
-    const carregarFuncionarios = async () => {
+      setIsLoadingFuncionariosStatus(true);
+      setErrorFuncionariosStatus(null);
+
       try {
-        // Buscar todos os funcionários
-        const funcionariosRef = collection(db, 'funcionarios');
-        const unsubscribeFuncionarios = onSnapshot(funcionariosRef, async (snapshot) => {
-          const funcionariosData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })) as FuncionarioWithStatus[];
+        // Mapear os funcionários para incluir o status de atividade
+        const funcionariosComStatus = funcionarios.map(funcionario => {
+          const funcionarioComStatus: FuncionarioStatus = {
+            ...funcionario,
+            statusAtividade: 'disponivel', // Inicialmente, todos estão disponíveis
+            ordemAtual: undefined,
+            tempoDisponivel: 0,
+          };
+          return funcionarioComStatus;
+        });
 
-          // Para cada funcionário, verificar status atual
-          const funcionariosComStatus: FuncionarioStatus[] = await Promise.all(
-            funcionariosData.map(async (funcionario) => {
-              // Verificar primeiro se o funcionário está ativo
-              if (funcionario.ativo === false) {
-                return {
-                  ...funcionario,
-                  status: 'inativo' as const,
-                  atividadeAtual: undefined
-                };
-              }
-
-              // MODIFICADO: Primeiro verificar statusAtividade diretamente do documento
-              const statusAtividade = funcionario.statusAtividade as 'disponivel' | 'ocupado' | undefined;
-              
-              // Se o funcionário já está marcado como ocupado no documento
-              if (statusAtividade === 'ocupado') {
-                // Buscar informações detalhadas da atividade atual, se disponível
-                let atividadeAtual = funcionario.atividadeAtual as any;
-                
-                // Se tiver informações da atividade atual, tentar buscar o nome da ordem
-                if (atividadeAtual && atividadeAtual.ordemId) {
-                  try {
-                    const ordemRef = doc(db, "ordens_servico", atividadeAtual.ordemId);
-                    const ordemSnap = await getDoc(ordemRef);
-                    if (ordemSnap.exists()) {
-                      const ordemData = ordemSnap.data();
-                      atividadeAtual = {
-                        ...atividadeAtual,
-                        ordemNome: ordemData.nome || `Ordem ${atividadeAtual.ordemId}`
-                      };
-                    }
-                  } catch (err) {
-                    console.warn("Erro ao buscar detalhes da ordem:", err);
-                  }
-                }
-                
-                return {
-                  ...funcionario,
-                  status: 'ocupado' as const,
-                  atividadeAtual: atividadeAtual
-                };
-              }
-              
-              // Se não estiver marcado como ocupado diretamente, verificar se está em alguma ordem ativa
-              const ordemStatus = await verificarStatusFuncionario(funcionario.id);
-              
-              // Determinar status final com base nas verificações
-              const status: 'disponivel' | 'ocupado' | 'inativo' = ordemStatus ? 'ocupado' : 'disponivel';
-              
-              return {
-                ...funcionario,
-                status,
-                atividadeAtual: ordemStatus || undefined
-              };
-            })
+        // Encontrar a atividade atual de cada funcionário
+        const funcionariosAtualizados = funcionariosComStatus.map(funcionario => {
+          // Filtrar registros de tempo para o funcionário e para o dia selecionado
+          const registrosDeTempoDoDia = ordens.flatMap(ordem =>
+            ordem.tempoRegistros.filter(
+              registro =>
+                registro.funcionarioId === funcionario.id &&
+                isSameDay(new Date(registro.inicio), selectedDate)
+            )
           );
-          
-          setFuncionariosStatus(funcionariosComStatus);
-          setLoading(false);
-        }, (err) => {
-          console.error("Erro ao monitorar funcionários:", err);
-          setError("Falha ao obter dados de funcionários");
-          setLoading(false);
-        });
 
-        // Monitorar também a coleção funcionarios_em_servico para atualizações em tempo real
-        const emServicoRef = collection(db, 'funcionarios_em_servico');
-        const unsubscribeEmServico = onSnapshot(emServicoRef, async () => {
-          // Quando houver mudanças na coleção de serviços, atualizar status
-          if (funcionariosStatus.length > 0) {
-            console.log("Detectada alteração em funcionarios_em_servico, atualizando status...");
-            const funcionariosAtualizados = await Promise.all(
-              funcionariosStatus.map(async (funcionario) => {
-                // Pular funcionários inativos
-                if (funcionario.ativo === false) {
-                  return { ...funcionario, status: 'inativo' };
-                }
-                
-                // Buscar status atual diretamente do documento do funcionário
-                try {
-                  const funcRef = doc(db, "funcionarios", funcionario.id);
-                  const funcSnap = await getDoc(funcRef);
-                  if (funcSnap.exists()) {
-                    const funcData = funcSnap.data();
-                    const statusAtividade = funcData.statusAtividade as 'disponivel' | 'ocupado' | undefined;
-                    
-                    if (statusAtividade === 'ocupado') {
-                      let atividadeAtual = funcData.atividadeAtual as any;
-                      
-                      // Tentar buscar nome da ordem se tiver ordemId
-                      if (atividadeAtual && atividadeAtual.ordemId) {
-                        try {
-                          const ordemRef = doc(db, "ordens_servico", atividadeAtual.ordemId);
-                          const ordemSnap = await getDoc(ordemRef);
-                          if (ordemSnap.exists()) {
-                            const ordemData = ordemSnap.data();
-                            atividadeAtual = {
-                              ...atividadeAtual,
-                              ordemNome: ordemData.nome || `Ordem ${atividadeAtual.ordemId}`
-                            };
-                          }
-                        } catch (err) {
-                          console.warn("Erro ao buscar detalhes da ordem:", err);
-                        }
-                      }
-                      
-                      return {
-                        ...funcionario,
-                        status: 'ocupado',
-                        atividadeAtual: atividadeAtual
-                      };
-                    }
-                  }
-                } catch (err) {
-                  console.warn("Erro ao verificar status direto do funcionário:", err);
-                }
-                
-                // Se não estiver ocupado no documento, verificar ordens
-                const ordemStatus = await verificarStatusFuncionario(funcionario.id);
-                const status = ordemStatus ? 'ocupado' : 'disponivel';
-                
-                return {
-                  ...funcionario,
-                  status,
-                  atividadeAtual: ordemStatus || undefined
-                };
-              })
+          // Ordenar os registros por data de início para encontrar o mais recente
+          registrosDeTempoDoDia.sort((a, b) => new Date(b.inicio).getTime() - new Date(a.inicio).getTime());
+
+          // Verificar se o funcionário tem um registro de tempo "aberto" (sem data de fim)
+          const registroAberto = registrosDeTempoDoDia.find(registro => !registro.fim);
+
+          if (registroAberto) {
+            // Se houver um registro aberto, o funcionário está "em serviço"
+            funcionario.statusAtividade = 'em_servico';
+            funcionario.ordemAtual = {
+              id: registroAberto.etapa,
+              nome: ordens.find(ordem =>
+                ordem.tempoRegistros.some(tempo => tempo === registroAberto)
+              )?.nome || 'Ordem Desconhecida',
+              etapa: registroAberto.etapa,
+              tempoTotal: 0, // Será atualizado abaixo
+              inicio: new Date(registroAberto.inicio),
+            };
+
+            // Calcular o tempo total gasto na etapa atual
+            const tempoTotalNaEtapa = registrosDeTempoDoDia.reduce((total, registro) => {
+              const inicio = new Date(registro.inicio).getTime();
+              const fim = registro.fim ? new Date(registro.fim).getTime() : new Date().getTime(); // Use a data atual se não houver data de fim
+              return total + (fim - inicio);
+            }, 0);
+
+            if (funcionario.ordemAtual) {
+              funcionario.ordemAtual.tempoTotal = tempoTotalNaEtapa;
+            }
+          } else {
+            // Se não houver registro aberto, verificar se há pausas
+            const pausaMaisRecente = registrosDeTempoDoDia.find(registro =>
+              registro.pausas && registro.pausas.length > 0 && !registro.pausas[registro.pausas.length - 1].fim
             );
-            
-            setFuncionariosStatus(funcionariosAtualizados);
+
+            if (pausaMaisRecente) {
+              // Se houver uma pausa não finalizada, o funcionário está "em pausa"
+              funcionario.statusAtividade = 'em_pausa';
+              funcionario.ordemAtual = {
+                id: pausaMaisRecente.etapa,
+                nome: ordens.find(ordem =>
+                  ordem.tempoRegistros.some(tempo => tempo === pausaMaisRecente)
+                )?.nome || 'Ordem Desconhecida',
+                etapa: pausaMaisRecente.etapa,
+                tempoTotal: 0, // Será atualizado abaixo
+                inicio: new Date(pausaMaisRecente.inicio),
+              };
+
+              // Calcular o tempo total gasto na etapa atual (antes da pausa)
+              const tempoTotalNaEtapa = registrosDeTempoDoDia.reduce((total, registro) => {
+                const inicio = new Date(registro.inicio).getTime();
+                const fim = registro.fim ? new Date(registro.fim).getTime() : new Date().getTime(); // Use a data atual se não houver data de fim
+                return total + (fim - inicio);
+              }, 0);
+
+              if (funcionario.ordemAtual) {
+                funcionario.ordemAtual.tempoTotal = tempoTotalNaEtapa;
+              }
+            } else {
+              // Se não houver registro aberto nem pausa, o funcionário está "disponível"
+              funcionario.statusAtividade = 'disponivel';
+
+              // Calcular o tempo disponível do funcionário
+              const tempoTotalTrabalhado = registrosDeTempoDoDia.reduce((total, registro) => {
+                const inicio = new Date(registro.inicio).getTime();
+                const fim = registro.fim ? new Date(registro.fim).getTime() : new Date().getTime(); // Use a data atual se não houver data de fim
+                return total + (fim - inicio);
+              }, 0);
+
+              funcionario.tempoDisponivel = 8 * 60 * 60 * 1000 - tempoTotalTrabalhado; // 8 horas em milissegundos
+            }
           }
-        });
-        
-        // Monitorar mudanças em ordens de serviço para atualizar status em tempo real
-        const ordensRef = collection(db, 'ordens_servico');
-        const unsubscribeOrdens = onSnapshot(ordensRef, async () => {
-          // Quando qualquer ordem mudar, atualizar status de todos funcionários
-          if (funcionariosStatus.length > 0) {
-            console.log("Detectada alteração em ordens_servico, atualizando status...");
-            // Lógica similar à atualização da coleção funcionarios_em_servico
-            // Omitindo duplicação para manter o código mais limpo
-          }
-        }, (err) => {
-          console.error("Erro ao monitorar ordens:", err);
+
+          return funcionario;
         });
 
-        return () => {
-          unsubscribeFuncionarios();
-          // Unsubscribe other listeners as needed
-        };
-      } catch (err) {
-        console.error("Erro ao carregar funcionários:", err);
-        setError("Falha ao carregar dados");
-        setLoading(false);
+        setFuncionariosStatus(funcionariosAtualizados as FuncionarioStatus[]);
+      } catch (error: any) {
+        console.error('Erro ao atualizar o status dos funcionários:', error);
+        setErrorFuncionariosStatus(error);
+        toast.error('Erro ao atualizar o status dos funcionários');
+      } finally {
+        setIsLoadingFuncionariosStatus(false);
       }
     };
 
-    carregarFuncionarios();
-  }, []);
+    updateFuncionariosStatus();
+  }, [funcionarios, ordens, selectedDate]);
 
-  // Função auxiliar para verificar se um funcionário está atribuído a alguma etapa em andamento
-  const verificarStatusFuncionario = async (funcionarioId: string) => {
-    try {
-      // MODIFICADO: Verificar primeiro diretamente no documento do funcionário
-      const funcionarioRef = doc(db, "funcionarios", funcionarioId);
-      const funcionarioSnap = await getDoc(funcionarioRef);
-      
-      if (funcionarioSnap.exists()) {
-        const funcionarioData = funcionarioSnap.data() as FuncionarioWithStatus;
-        const statusAtividade = funcionarioData.statusAtividade;
-        
-        // Se estiver marcado como ocupado, retornar as informações da atividade
-        if (statusAtividade === 'ocupado' && funcionarioData.atividadeAtual) {
-          const atividadeAtual = funcionarioData.atividadeAtual;
-          
-          // Buscar nome da ordem, se disponível
-          let ordemNome = "";
-          if (atividadeAtual.ordemId) {
-            try {
-              const ordemRef = doc(db, "ordens_servico", atividadeAtual.ordemId);
-              const ordemSnap = await getDoc(ordemRef);
-              if (ordemSnap.exists()) {
-                ordemNome = ordemSnap.data().nome || "";
-              }
-            } catch (e) {
-              console.warn("Erro ao buscar nome da ordem:", e);
-            }
-          }
-          
-          return {
-            ordemId: atividadeAtual.ordemId || "",
-            ordemNome: ordemNome || atividadeAtual.ordemNome || "",
-            etapa: atividadeAtual.etapa || "",
-            servicoTipo: atividadeAtual.servicoTipo || undefined,
-            inicio: new Date(atividadeAtual.inicio?.toDate?.() || atividadeAtual.inicio || new Date())
-          };
-        }
-      }
-      
-      // Se não estiver marcado como ocupado, verificar ordens de serviço
-      // Buscar ordens que tenham o funcionário como responsável e que estejam em andamento
-      const ordensRef = collection(db, 'ordens_servico');
-      const q = query(
-        ordensRef,
-        where('status', 'in', ['fabricacao', 'orcamento', 'aguardando_aprovacao']),
-      );
-      
-      const snapshot = await getDocs(q);
-      
-      // Verificar cada ordem
-      for (const docSnap of snapshot.docs) {
-        const ordem = { 
-          id: docSnap.id, 
-          ...docSnap.data(),
-          etapasAndamento: docSnap.data().etapasAndamento || {}
-        } as { 
-          id: string; 
-          nome: string;
-          etapasAndamento: Record<string, any>;
-          [key: string]: any;
-        };
-        
-        // Verificar etapas em andamento
-        if (ordem.etapasAndamento) {
-          for (const [etapaKey, etapaInfo] of Object.entries(ordem.etapasAndamento)) {
-            const info = etapaInfo as DocumentData;
-            // Se o funcionário estiver atribuído a esta etapa e ela não estiver concluída
-            if (
-              info.funcionarioId === funcionarioId && 
-              !info.concluido && 
-              info.iniciado && 
-              !info.finalizado
-            ) {
-              // Extrair nome da etapa e serviço
-              let etapaNome = etapaKey;
-              let servicoTipo;
-              
-              // Se for uma etapa composta (ex: "inspecao_inicial_bloco"), separar
-              if (etapaKey.includes('_')) {
-                const partes = etapaKey.split('_');
-                if (partes.length >= 3) {
-                  etapaNome = `${partes[0]}_${partes[1]}`;
-                  servicoTipo = partes[2];
-                }
-              }
-              
-              return {
-                ordemId: ordem.id,
-                ordemNome: ordem.nome,
-                etapa: etapaNome,
-                servicoTipo,
-                inicio: new Date(info.iniciado)
-              };
-            }
-          }
-        }
-      }
-      
-      return null;
-    } catch (err) {
-      console.error("Erro ao verificar status do funcionário:", err);
-      return null;
+  const handleDateChange = (date: Date | undefined) => {
+    if (date) {
+      setSelectedDate(date);
     }
   };
 
-  // Dados agregados
-  const funcionariosDisponiveis = funcionariosStatus.filter(f => f.status === 'disponivel' && f.ativo !== false);
-  const funcionariosOcupados = funcionariosStatus.filter(f => f.status === 'ocupado');
-  const funcionariosInativos = funcionariosStatus.filter(f => f.status === 'inativo' || f.ativo === false);
-
   return {
     funcionariosStatus,
-    funcionariosDisponiveis,
-    funcionariosOcupados,
-    funcionariosInativos,
-    loading,
-    error
+    isLoading: isLoadingFuncionarios || isLoadingOrdens || isLoadingFuncionariosStatus,
+    error: errorFuncionarios || errorOrdens || errorFuncionariosStatus,
+    refetch: () => {
+      refetchFuncionarios();
+      refetchOrdens();
+    },
+    selectedDate,
+    handleDateChange,
   };
 };
+
+export default useFuncionariosDisponibilidade;

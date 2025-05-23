@@ -13,9 +13,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from '@/components/ui/badge';
 
 interface MotoresListProps {
   motores: Motor[];
@@ -78,21 +86,9 @@ export function MotoresList({ motores, onEdit, onDelete, onAdd, isLoading }: Mot
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-3">
             {[...Array(6)].map((_, i) => (
-              <Card key={i} className="overflow-hidden">
-                <CardHeader>
-                  <Skeleton className="h-5 w-32" />
-                  <Skeleton className="h-4 w-24" />
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                </CardContent>
-                <CardFooter>
-                  <Skeleton className="h-9 w-24" />
-                </CardFooter>
-              </Card>
+              <Skeleton key={i} className="h-12 w-full" />
             ))}
           </div>
         ) : filteredMotores.length === 0 ? (
@@ -110,40 +106,54 @@ export function MotoresList({ motores, onEdit, onDelete, onAdd, isLoading }: Mot
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredMotores.map((motor) => (
-              <Card key={motor.id}>
-                <CardHeader>
-                  <CardTitle>{motor.marca} {motor.modelo}</CardTitle>
-                  <CardDescription>
-                    {motor.clienteNome ? `Cliente: ${motor.clienteNome}` : 'Motor sem cliente associado'}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-1 text-sm">
-                    {motor.numeroCilindros && <p>Cilindros: {motor.numeroCilindros}</p>}
-                    {motor.combustivel && <p>Combustível: {motor.combustivel}</p>}
-                    {motor.cilindrada && <p>Cilindrada: {motor.cilindrada}</p>}
-                    {motor.ano && <p>Ano: {motor.ano}</p>}
-                    {motor.numeroSerie && <p>Nº Série: {motor.numeroSerie}</p>}
-                  </div>
-                </CardContent>
-                <CardFooter className="flex justify-between">
-                  <Button variant="outline" size="sm" onClick={() => onEdit(motor)}>
-                    <EditIcon className="h-4 w-4 mr-2" />
-                    Editar
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setMotorToDelete(motor.id)}
-                  >
-                    <Trash2Icon className="h-4 w-4 mr-2" />
-                    Excluir
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Marca</TableHead>
+                  <TableHead>Modelo</TableHead>
+                  <TableHead>Cilindros</TableHead>
+                  <TableHead>Combustível</TableHead>
+                  <TableHead>Nº Série</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredMotores.map((motor) => (
+                  <TableRow key={motor.id}>
+                    <TableCell className="font-medium">{motor.marca}</TableCell>
+                    <TableCell>{motor.modelo}</TableCell>
+                    <TableCell>{motor.numeroCilindros || "-"}</TableCell>
+                    <TableCell>
+                      {motor.combustivel ? (
+                        <Badge variant="outline">
+                          {motor.combustivel.charAt(0).toUpperCase() + motor.combustivel.slice(1)}
+                        </Badge>
+                      ) : "-"}
+                    </TableCell>
+                    <TableCell>{motor.numeroSerie || "-"}</TableCell>
+                    <TableCell>{motor.clienteNome || "Sem cliente"}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => onEdit(motor)}>
+                          <EditIcon className="h-4 w-4" />
+                          <span className="sr-only">Editar</span>
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => setMotorToDelete(motor.id)}
+                        >
+                          <Trash2Icon className="h-4 w-4" />
+                          <span className="sr-only">Excluir</span>
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         )}
       </div>
