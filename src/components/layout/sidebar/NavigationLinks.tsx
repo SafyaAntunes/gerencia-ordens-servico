@@ -9,7 +9,7 @@ import {
   Calendar, 
   BarChart2,
   Settings,
-  Engine
+  Wrench // Changed from Engine which doesn't exist to Wrench
 } from 'lucide-react';
 
 interface NavigationLinksProps {
@@ -61,7 +61,7 @@ const NavigationLinks = ({ isCollapsed }: NavigationLinksProps) => {
           
           <NavItem 
             href="/motores" 
-            icon={<Engine className="h-5 w-5" />}
+            icon={<Wrench className="h-5 w-5" />} 
             label="Motores"
             isActive={isActive('/motores')}
             isCollapsed={isCollapsed}

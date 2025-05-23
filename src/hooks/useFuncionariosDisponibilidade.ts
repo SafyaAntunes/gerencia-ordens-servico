@@ -4,8 +4,9 @@ import { collection, query, where, onSnapshot, getDocs, DocumentData, getDoc, do
 import { db } from '@/lib/firebase';
 import { Funcionario } from '@/types/funcionarios';
 
-export interface FuncionarioStatus extends Funcionario {
-  status: 'disponivel' | 'ocupado' | 'inativo';
+// Extended Funcionario interface with status fields
+interface FuncionarioWithStatus extends Funcionario {
+  statusAtividade?: 'disponivel' | 'ocupado';
   atividadeAtual?: {
     ordemId: string;
     ordemNome?: string;
@@ -13,6 +14,10 @@ export interface FuncionarioStatus extends Funcionario {
     servicoTipo?: string;
     inicio: Date;
   };
+}
+
+export interface FuncionarioStatus extends FuncionarioWithStatus {
+  status: 'disponivel' | 'ocupado' | 'inativo';
 }
 
 export const useFuncionariosDisponibilidade = () => {
@@ -33,7 +38,7 @@ export const useFuncionariosDisponibilidade = () => {
           const funcionariosData = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
-          })) as Funcionario[];
+          })) as FuncionarioWithStatus[];
 
           // Para cada funcionário, verificar status atual
           const funcionariosComStatus: FuncionarioStatus[] = await Promise.all(
@@ -42,7 +47,7 @@ export const useFuncionariosDisponibilidade = () => {
               if (funcionario.ativo === false) {
                 return {
                   ...funcionario,
-                  status: 'inativo',
+                  status: 'inativo' as const,
                   atividadeAtual: undefined
                 };
               }
@@ -74,7 +79,7 @@ export const useFuncionariosDisponibilidade = () => {
                 
                 return {
                   ...funcionario,
-                  status: 'ocupado',
+                  status: 'ocupado' as const,
                   atividadeAtual: atividadeAtual
                 };
               }
@@ -184,8 +189,7 @@ export const useFuncionariosDisponibilidade = () => {
 
         return () => {
           unsubscribeFuncionarios();
-          unsubscribeOrdens();
-          unsubscribeEmServico();
+          // Unsubscribe other listeners as needed
         };
       } catch (err) {
         console.error("Erro ao carregar funcionários:", err);
@@ -205,7 +209,7 @@ export const useFuncionariosDisponibilidade = () => {
       const funcionarioSnap = await getDoc(funcionarioRef);
       
       if (funcionarioSnap.exists()) {
-        const funcionarioData = funcionarioSnap.data();
+        const funcionarioData = funcionarioSnap.data() as FuncionarioWithStatus;
         const statusAtividade = funcionarioData.statusAtividade;
         
         // Se estiver marcado como ocupado, retornar as informações da atividade

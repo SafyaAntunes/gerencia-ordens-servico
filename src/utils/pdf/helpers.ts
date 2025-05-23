@@ -5,11 +5,14 @@ import { StatusOS, EtapaOS } from "@/types/ordens";
 export const statusLabels: Record<StatusOS, string> = {
   orcamento: "Orçamento",
   aguardando_aprovacao: "Aguardando Aprovação",
-  fabricacao: "Fabricação",
+  executando_servico: "Fabricação", // Changed from "fabricacao" to match StatusOS type
   aguardando_peca_cliente: "Aguardando Peça (Cliente)",
   aguardando_peca_interno: "Aguardando Peça (Interno)",
   finalizado: "Finalizado",
-  entregue: "Entregue"
+  entregue: "Entregue",
+  desmontagem: "Desmontagem",
+  inspecao_inicial: "Inspeção Inicial",
+  autorizado: "Autorizado"
 };
 
 // Etapa labels para PDF

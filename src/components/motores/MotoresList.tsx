@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Motor } from '@/types/motor';
 import { Button } from '@/components/ui/button';
-import { EditIcon, Trash2Icon, PlusIcon, EngineIcon } from 'lucide-react';
+import { EditIcon, Trash2Icon, PlusIcon, Wrench } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -97,7 +97,7 @@ export function MotoresList({ motores, onEdit, onDelete, onAdd, isLoading }: Mot
           </div>
         ) : filteredMotores.length === 0 ? (
           <div className="text-center py-12">
-            <EngineIcon className="mx-auto h-12 w-12 text-gray-400" />
+            <Wrench className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-lg font-medium text-gray-900">Nenhum motor encontrado</h3>
             <p className="mt-1 text-gray-500">
               {searchTerm ? 'Tente outra busca ou cadastre um novo motor.' : 'Cadastre um novo motor para começar.'}

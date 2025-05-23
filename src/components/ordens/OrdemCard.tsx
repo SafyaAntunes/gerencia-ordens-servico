@@ -81,7 +81,7 @@ export default function OrdemCard({
   const getStatusBadgeVariant = () => {
     switch (ordem.status) {
       case 'aguardando_aprovacao': return 'warning';
-      case 'fabricacao': return 'default';
+      case 'executando_servico': return 'default'; // Updated to match StatusOS type
       case 'finalizado': return 'success';
       case 'entregue': return 'success';
       case 'aguardando_peca_cliente':
@@ -95,7 +95,7 @@ export default function OrdemCard({
     switch (ordem.status) {
       case 'orcamento': return 'Orçamento';
       case 'aguardando_aprovacao': return 'Aguardando Aprovação';
-      case 'fabricacao': return 'Em Fabricação';
+      case 'executando_servico': return 'Em Fabricação'; // Updated to match StatusOS type
       case 'aguardando_peca_cliente': return 'Aguardando Peça (Cliente)';
       case 'aguardando_peca_interno': return 'Aguardando Peça (Interno)';
       case 'finalizado': return 'Finalizado';
