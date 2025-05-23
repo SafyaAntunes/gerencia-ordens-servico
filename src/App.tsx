@@ -53,9 +53,9 @@ function App() {
                 <Route path="/agenda" element={<Agenda onLogout={logout} />} />
                 <Route path="/relatorios/producao" element={<RelatoriosProducao onLogout={logout} />} />
                 <Route path="/configuracoes" element={<Configuracoes onLogout={logout} />} />
-                <Route path="/configuracoes/atividades" element={<ConfiguracoesAtividades onLogout={logout} />} />
-                <Route path="/configuracoes/subatividades" element={<SubatividadesConfig onLogout={logout} />} />
-                <Route path="/configuracoes/reset-subatividades" element={<SubatividadesReset onLogout={logout} />} />
+                <Route path="/configuracoes/atividades" element={<ConfiguracoesAtividades />} />
+                <Route path="/configuracoes/subatividades" element={<SubatividadesConfig />} />
+                <Route path="/configuracoes/reset-subatividades" element={<SubatividadesReset />} />
               </>
             ) : (
               <Route path="*" element={<Navigate to="/login" replace />} />
