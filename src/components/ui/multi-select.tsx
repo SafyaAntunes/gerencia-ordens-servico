@@ -50,13 +50,20 @@ export function MultiSelect({
   // Map of selected values to their labels
   const selectedLabelsMap = React.useMemo(() => {
     const map = new Map<string, string>();
-    options.forEach((option) => {
-      if (selected.includes(option.value)) {
-        map.set(option.value, option.label);
-      }
-    });
+    if (options && Array.isArray(options)) { // Add check to ensure options is an array
+      options.forEach((option) => {
+        if (selected.includes(option.value)) {
+          map.set(option.value, option.label);
+        }
+      });
+    }
     return map;
   }, [selected, options]);
+
+  // Ensure options is always an array
+  const safeOptions = React.useMemo(() => 
+    Array.isArray(options) ? options : [], 
+  [options]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -115,7 +122,7 @@ export function MultiSelect({
           <CommandInput placeholder="Procurar item..." />
           <CommandEmpty>{emptyMessage}</CommandEmpty>
           <CommandGroup className="max-h-64 overflow-auto">
-            {options.map((option) => (
+            {safeOptions.map((option) => (
               <CommandItem
                 key={option.value}
                 onSelect={() => {

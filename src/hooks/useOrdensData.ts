@@ -188,6 +188,11 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
     }
   };
 
+  // Garanta que statusFilter seja sempre um array
+  const safeSetStatusFilter = (value: string[]) => {
+    setStatusFilter(Array.isArray(value) ? value : []);
+  };
+
   const filteredOrdens = ordens.filter((ordem) => {
     if (!ordem) return false;
     
@@ -233,7 +238,7 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
     search,
     setSearch,
     statusFilter,
-    setStatusFilter,
+    setStatusFilter: safeSetStatusFilter,
     prioridadeFilter,
     setPrioridadeFilter,
     progressoFilter,

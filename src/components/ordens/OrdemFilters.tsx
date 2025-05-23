@@ -1,11 +1,10 @@
 
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, Calendar, Check, Activity } from "lucide-react";
+import { Search } from "lucide-react";
 import Select from 'react-select';
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Badge } from "@/components/ui/badge";
-import { TipoServico } from "@/types/ordens";
 
 interface OrdemFiltersProps {
   search: string;
@@ -108,13 +107,16 @@ export default function OrdemFilters({
 
           <div className="flex items-center space-x-2 col-span-1">
             <div className="w-full">
-              <MultiSelect
-                options={statusOptions}
-                selected={statusFilter}
-                onChange={setStatusFilter}
-                placeholder="Filtrar por status"
-                emptyMessage="Nenhum status encontrado"
-              />
+              {/* Add a check to ensure options is defined and is an array */}
+              {statusOptions && Array.isArray(statusOptions) && (
+                <MultiSelect
+                  options={statusOptions}
+                  selected={statusFilter}
+                  onChange={setStatusFilter}
+                  placeholder="Filtrar por status"
+                  emptyMessage="Nenhum status encontrado"
+                />
+              )}
             </div>
           </div>
 

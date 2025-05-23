@@ -54,6 +54,9 @@ export default function Ordens({ onLogout }: OrdensProps) {
     especialidades: funcionario?.especialidades
   });
 
+  // Garantir que statusFilter é sempre um array
+  const safeStatusFilter = Array.isArray(statusFilter) ? statusFilter : [];
+
   // Aplicar filtro de prazo às ordens já filtradas
   const ordensFiltradas = filteredOrdens.filter(ordem => {
     if (prazoFilter === "all") return true;
@@ -115,7 +118,7 @@ export default function Ordens({ onLogout }: OrdensProps) {
       <OrdemFilters
         search={search}
         setSearch={setSearch}
-        statusFilter={statusFilter}
+        statusFilter={safeStatusFilter}
         setStatusFilter={setStatusFilter}
         prioridadeFilter={prioridadeFilter}
         setPrioridadeFilter={setPrioridadeFilter}
