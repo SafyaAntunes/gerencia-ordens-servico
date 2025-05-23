@@ -3,7 +3,7 @@ import React from "react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { OrdemServico, StatusOS } from "@/types/ordens";
+import { OrdemServico } from "@/types/ordens";
 import { formatDistance } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -77,16 +77,11 @@ export default function OrdemCard({
   const isAtrasada = ordem.dataPrevistaEntrega < hoje && 
                      !['finalizado', 'entregue'].includes(ordem.status);
 
-  // Normalizar status legado - verificando o tipo de status e usando as const
-  const normalizedStatus: StatusOS = typeof ordem.status === 'string' && ordem.status === 'fabricacao' ? 
-    'executando_servico' as const : 
-    ordem.status;
-
   // Get status badge styling
   const getStatusBadgeVariant = () => {
-    switch (normalizedStatus) {
+    switch (ordem.status) {
       case 'aguardando_aprovacao': return 'warning';
-      case 'executando_servico': return 'default';
+      case 'fabricacao': return 'default';
       case 'finalizado': return 'success';
       case 'entregue': return 'success';
       case 'aguardando_peca_cliente':
@@ -97,15 +92,15 @@ export default function OrdemCard({
   
   // Get status text
   const getStatusText = () => {
-    switch (normalizedStatus) {
+    switch (ordem.status) {
       case 'orcamento': return 'Orçamento';
       case 'aguardando_aprovacao': return 'Aguardando Aprovação';
-      case 'executando_servico': return 'Em Fabricação';
+      case 'fabricacao': return 'Em Fabricação';
       case 'aguardando_peca_cliente': return 'Aguardando Peça (Cliente)';
       case 'aguardando_peca_interno': return 'Aguardando Peça (Interno)';
       case 'finalizado': return 'Finalizado';
       case 'entregue': return 'Entregue';
-      default: return normalizedStatus;
+      default: return ordem.status;
     }
   };
   

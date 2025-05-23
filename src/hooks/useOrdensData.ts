@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { collection, getDocs, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { OrdemServico, StatusOS } from "@/types/ordens";
+import { OrdemServico } from "@/types/ordens";
 import { toast } from "sonner";
 import { getOrdensByFuncionarioEspecialidades } from "@/services/funcionarioService";
 
@@ -15,7 +15,7 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState("all");
   const [prioridadeFilter, setPrioridadeFilter] = useState("all");
   const [progressoFilter, setProgressoFilter] = useState("all");
 
@@ -27,9 +27,9 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
           const data = doc.data();
           
           // Handle legacy "fabricacao" status
-          const status = data.status === "fabricacao" ? 
-            "executando_servico" as StatusOS : 
-            data.status as StatusOS;
+          if (data.status === "fabricacao") {
+            data.status = "executando_servico";
+          }
           
           if (data.cliente && data.cliente.id) {
             try {
@@ -46,13 +46,40 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
             }
           }
           
+          let progressoEtapas = data.progressoEtapas;
+          
+          if (progressoEtapas === undefined) {
+            let etapas = ["lavagem", "inspecao_inicial"];
+            
+            if (data.servicos?.some((s: any) => 
+              ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo))) {
+              etapas.push("retifica");
+            }
+            
+            if (data.servicos?.some((s: any) => s.tipo === "montagem")) {
+              etapas.push("montagem");
+            }
+            
+            if (data.servicos?.some((s: any) => s.tipo === "dinamometro")) {
+              etapas.push("dinamometro");
+            }
+            
+            etapas.push("inspecao_final");
+            
+            const etapasAndamento = data.etapasAndamento || {};
+            const etapasConcluidas = etapas.filter(etapa => 
+              etapasAndamento[etapa]?.concluido
+            ).length;
+            
+            progressoEtapas = etapasConcluidas / etapas.length;
+          }
+          
           return {
             ...data,
-            status, // Use the normalized status
             id: doc.id,
             dataAbertura: data.dataAbertura?.toDate() || new Date(),
             dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
-            progressoEtapas: data.progressoEtapas !== undefined ? data.progressoEtapas : 0
+            progressoEtapas: progressoEtapas
           } as OrdemServico;
         })
       );
@@ -163,19 +190,12 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
   const filteredOrdens = ordens.filter((ordem) => {
     if (!ordem) return false;
     
-    // Debug logs
-    console.log(`Filtrando ordem ${ordem.id}: status=${ordem.status}, filtros=${statusFilter.join(',')}`);
-    
     const searchMatch = 
       (ordem.nome || '').toLowerCase().includes(search.toLowerCase()) ||
       (ordem.cliente?.nome || '').toLowerCase().includes(search.toLowerCase()) ||
       (ordem.id || '').toLowerCase().includes(search.toLowerCase());
     
-    // Simplificar o filtro para usar apenas o status normalizado (fabricacao já foi convertido para executando_servico)
-    const statusMatch = statusFilter.length === 0 
-      ? true 
-      : statusFilter.includes(ordem.status);
-    
+    const statusMatch = statusFilter.length === 0 ? true : statusFilter.includes(ordem.status);
     const prioridadeMatch = prioridadeFilter === "all" ? true : ordem.prioridade === prioridadeFilter;
     
     let progressoMatch = true;

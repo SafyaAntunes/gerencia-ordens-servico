@@ -65,8 +65,7 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
     aguardando_peca_cliente: "Aguardando Peça (Cliente)",
     aguardando_peca_interno: "Aguardando Peça (Interno)",
     finalizado: "Finalizado",
-    entregue: "Entregue",
-    fabricacao: "Executando Serviço" // Added the missing fabricacao status with same label as executando_servico
+    entregue: "Entregue"
   };
 
   const etapasNomes: Record<string, string> = {

@@ -20,15 +20,6 @@ export interface Funcionario {
   especialidades: string[];
   nivelPermissao: NivelPermissao;
   dataCriacao?: Date;
-  // Adicionados para compatibilidade com sistema de status
-  statusAtividade?: 'disponivel' | 'ocupado' | 'inativo';
-  atividadeAtual?: {
-    ordemId: string;
-    ordemNome?: string;
-    etapa: string;
-    servicoTipo?: string;
-    inicio: Date;
-  };
 }
 
 // Define NivelPermissao type com descrições claras

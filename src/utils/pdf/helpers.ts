@@ -1,18 +1,15 @@
+
 import { StatusOS, EtapaOS } from "@/types/ordens";
 
 // Status labels para PDF
 export const statusLabels: Record<StatusOS, string> = {
   orcamento: "Orçamento",
   aguardando_aprovacao: "Aguardando Aprovação",
-  desmontagem: "Desmontagem",
-  inspecao_inicial: "Inspeção Inicial",
-  autorizado: "Autorizado", 
-  executando_servico: "Executando Serviço",
+  fabricacao: "Fabricação",
   aguardando_peca_cliente: "Aguardando Peça (Cliente)",
   aguardando_peca_interno: "Aguardando Peça (Interno)",
   finalizado: "Finalizado",
-  entregue: "Entregue",
-  fabricacao: "Executando Serviço" // Added legacy status with same label as executando_servico
+  entregue: "Entregue"
 };
 
 // Etapa labels para PDF

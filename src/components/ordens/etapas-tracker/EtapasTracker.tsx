@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
-import { OrdemServico, EtapaOS, TipoServico, StatusOS } from "@/types/ordens";
+import { OrdemServico, EtapaOS, TipoServico } from "@/types/ordens";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -373,45 +374,45 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate, onFuncionariosChange }
     }
   }, [ordem, onOrdemUpdate]);
 
-  // Handle funcionarios change for multiple employees
+  // Handle funcionarios change para múltiplos funcionários
   const handleFuncionariosChange = useCallback((
     etapa: EtapaOS, 
     funcionariosIds: string[], 
     funcionariosNomes: string[], 
     servicoTipo?: string
   ) => {
-    console.log("handleFuncionariosChange in EtapasTracker:", { etapa, funcionariosIds, funcionariosNomes, servicoTipo });
+    console.log("handleFuncionariosChange em EtapasTracker:", { etapa, funcionariosIds, funcionariosNomes, servicoTipo });
     
     if (onFuncionariosChange) {
       onFuncionariosChange(etapa, funcionariosIds, funcionariosNomes, servicoTipo);
     }
     
-    // Determine the key for the etapa based on the service type
+    // Determinar a chave da etapa com base no tipo de serviço
     const etapaKey = ((etapa === 'inspecao_inicial' || etapa === 'inspecao_final' || etapa === 'lavagem') && servicoTipo) 
       ? `${etapa}_${servicoTipo}` 
       : etapa;
     
-    // Update locally the employee information to reflect changes immediately in the interface
+    // Atualizar localmente as informações de funcionários para refletir imediatamente na interface
     if (ordem.id) {
-      console.log("Updating employees for etapa:", etapaKey);
+      console.log("Atualizando funcionários para etapa:", etapaKey);
       
-      // Update in Firebase
+      // Atualizar no Firebase
       const ordemRef = doc(db, "ordens_servico", ordem.id);
       
-      // Prepare employee data
+      // Preparar dados de funcionários
       const funcionarios = funcionariosIds.map((id, index) => ({
         id,
         nome: funcionariosNomes[index] || "",
         inicio: new Date()
       }));
       
-      // Check if the etapa already has information
+      // Verificar se a etapa já tem informações
       const etapaAtual = ordem.etapasAndamento?.[etapaKey] || {};
       
       const atualizacao = {
         [`etapasAndamento.${etapaKey}`]: {
           ...etapaAtual,
-          funcionarioId: funcionariosIds[0] || null, // Maintain compatibility with old fields
+          funcionarioId: funcionariosIds[0] || null, // Manter compatibilidade com campos antigos
           funcionarioNome: funcionariosNomes[0] || "",
           funcionarios: funcionarios,
           iniciado: etapaAtual.iniciado || new Date(),
@@ -419,11 +420,11 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate, onFuncionariosChange }
         }
       };
       
-      // Update in Firebase
+      // Atualizar no Firebase
       updateDoc(ordemRef, atualizacao).then(() => {
-        console.log("Employees updated successfully");
+        console.log("Funcionários atualizados com sucesso");
         
-        // Update local state
+        // Atualizar estado local
         const etapasAndamentoAtualizado = { ...ordem.etapasAndamento || {} };
         etapasAndamentoAtualizado[etapaKey] = atualizacao[`etapasAndamento.${etapaKey}`];
         
@@ -436,40 +437,40 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate, onFuncionariosChange }
           onOrdemUpdate(ordemAtualizada);
         }
       }).catch(error => {
-        console.error("Error updating employees:", error);
-        toast.error("Error updating employees");
+        console.error("Erro ao atualizar funcionários:", error);
+        toast.error("Erro ao atualizar funcionários");
       });
     }
   }, [ordem, onOrdemUpdate, onFuncionariosChange]);
 
-  // Prepare the services for the current etapa
+  // Preparar os serviços para a etapa atual
   const getServicosParaEtapaAtual = useMemo(() => {
     if (!selectedEtapa) return [];
 
-    console.log("Obtaining services for etapa:", selectedEtapa);
+    console.log("Obtendo serviços para etapa:", selectedEtapa);
     
-    // For retifica, show all retifica services
+    // Para etapa de retifica, mostrar todos os serviços de retifica
     if (selectedEtapa === "retifica") {
       return ordem.servicos.filter(s => 
         ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"].includes(s.tipo)
       );
     }
     
-    // For lavagem, show lavagem services
+    // Para etapa de lavagem, mostrar serviços de lavagem
     if (selectedEtapa === "lavagem") {
       return ordem.servicos.filter(s => s.tipo === "lavagem");
     }
     
-    // For regular etapas, show services of the same type
+    // Para outras etapas regulares, mostrar serviços do mesmo tipo
     const servicosEtapa = ordem.servicos.filter(s => s.tipo === selectedEtapa);
     
-    // Special case for inspection initial/final
+    // Caso especial para inspeção inicial/final
     if ((selectedEtapa === "inspecao_inicial" || selectedEtapa === "inspecao_final")) {
       if (selectedServicoTipo) {
-        // If a specific type was selected, filter only by it
+        // Se um tipo específico foi selecionado, filtrar apenas por ele
         return ordem.servicos.filter(s => s.tipo === selectedServicoTipo);
       } else {
-        // Otherwise, show all inspection services and other services that need inspection
+        // Senão, mostrar todos os serviços de inspeção e outros serviços que precisam ser inspecionados
         const tipos = ["bloco", "biela", "cabecote", "virabrequim", "eixo_comando"];
         return ordem.servicos.filter(s => 
           s.tipo === selectedEtapa || tipos.includes(s.tipo)
@@ -481,18 +482,14 @@ const EtapasTracker = React.memo(({ ordem, onOrdemUpdate, onFuncionariosChange }
   }, [selectedEtapa, selectedServicoTipo, ordem.servicos]);
 
   if (servicosAtivos.length === 0) {
-    // Ensure we are passing the correct etapa to EmptyServices
+    // Garantir que estamos passando a etapa correta para EmptyServices
     return <EmptyServices etapa={selectedEtapa || 'lavagem'} />;
   }
 
   // Memoize etapasDisponiveis for better performance
   const etapasDisponiveis = verificarEtapasDisponiveis();
   
-  const isRetificaHabilitada = () => {
-    const statusStr = ordem.status as string;
-    return statusStr === 'executando_servico' || statusStr === 'fabricacao';
-  };
-  
+  const isRetificaHabilitada = () => ordem.status === 'fabricacao';
   const isInspecaoFinalHabilitada = () => {
     const { etapasAndamento } = ordem;
     

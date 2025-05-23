@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -75,13 +76,12 @@ export type StatusOS =
   | 'inspecao_inicial'
   | 'orcamento'
   | 'aguardando_aprovacao'
-  | 'autorizado'
-  | 'executando_servico'
+  | 'autorizado'  // Added new status
+  | 'executando_servico'  // Changed from 'fabricacao'
   | 'aguardando_peca_cliente'
   | 'aguardando_peca_interno'
   | 'finalizado'
-  | 'entregue'
-  | 'fabricacao'; // Added legacy status type for backward compatibility
+  | 'entregue';
 
 export type EtapaOS = 
   | 'lavagem' 

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, Calendar, Check, Activity } from "lucide-react";
 import Select from 'react-select';
-import { StatusOS } from "@/types/ordens";
 
 interface OrdemFiltersProps {
   search: string;
@@ -45,17 +44,6 @@ export default function OrdemFilters({
     { value: "entregue", label: "Entregue" },
   ];
 
-  // Helper para converter array de status para formato do react-select
-  const getSelectedStatusOptions = () => {
-    if (statusFilter.length === 0) {
-      return [statusOptions[0]]; // "Todos os status"
-    }
-    
-    return statusFilter.includes("all") 
-      ? [statusOptions[0]]
-      : statusOptions.filter(opt => statusFilter.includes(opt.value));
-  };
-
   return (
     <div>
       <div className="flex justify-end mb-2">
@@ -86,35 +74,23 @@ export default function OrdemFilters({
                 isMulti
                 options={statusOptions}
                 placeholder="Filtrar por status"
-                value={getSelectedStatusOptions()}
-                onChange={(selected) => {
+                value={
+                  statusFilter.length === 0
+                    ? [statusOptions[0]]
+                    : statusOptions.filter(opt => statusFilter.includes(opt.value))
+                }
+                onChange={selected => {
                   if (!selected || selected.length === 0) {
                     setStatusFilter([]);
                     return;
                   }
-                  
-                  // Se "Todos os status" foi selecionado, limpar outros filtros
                   if (selected.some(opt => opt.value === "all")) {
                     setStatusFilter([]);
                     return;
                   }
-                  
-                  // Caso contrário, aplicar os filtros selecionados
-                  const selectedValues = selected.map(opt => opt.value);
-                  setStatusFilter(selectedValues.filter(v => v !== "all"));
+                  setStatusFilter(selected.map(opt => opt.value).filter(v => v !== "all"));
                 }}
                 classNamePrefix="react-select"
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    backgroundColor: 'white',
-                  }),
-                  menu: (base) => ({
-                    ...base,
-                    backgroundColor: 'white',
-                    zIndex: 50,
-                  }),
-                }}
               />
             </div>
           </div>
@@ -134,17 +110,6 @@ export default function OrdemFilters({
                 placeholder="Filtrar por prioridade"
                 classNamePrefix="react-select"
                 isSearchable={false}
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    backgroundColor: 'white',
-                  }),
-                  menu: (base) => ({
-                    ...base,
-                    backgroundColor: 'white',
-                    zIndex: 50,
-                  }),
-                }}
               />
             </div>
           </div>
@@ -165,17 +130,6 @@ export default function OrdemFilters({
                 placeholder="Filtrar por progresso"
                 classNamePrefix="react-select"
                 isSearchable={false}
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    backgroundColor: 'white',
-                  }),
-                  menu: (base) => ({
-                    ...base,
-                    backgroundColor: 'white',
-                    zIndex: 50,
-                  }),
-                }}
               />
               
               <Select
@@ -189,17 +143,6 @@ export default function OrdemFilters({
                 placeholder="Filtrar por prazo"
                 classNamePrefix="react-select"
                 isSearchable={false}
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    backgroundColor: 'white',
-                  }),
-                  menu: (base) => ({
-                    ...base,
-                    backgroundColor: 'white',
-                    zIndex: 50,
-                  }),
-                }}
               />
             </div>
           </div>

@@ -102,9 +102,6 @@ export default function Ordens({ onLogout }: OrdensProps) {
     ? `Ordens de Serviço - Minhas Especialidades`
     : 'Ordens de Serviço';
 
-  // Log para debug dos filtros
-  console.log("Status filters aplicados:", statusFilter);
-
   return (
     <Layout onLogout={onLogout}>
       <OrdensHeader
