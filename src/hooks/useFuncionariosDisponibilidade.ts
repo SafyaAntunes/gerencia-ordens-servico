@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getFuncionarios } from '@/services/funcionarioService';
 import { getOrdens } from '@/services/ordemService';
-import { StatusOS, OrdemServico, EtapaOS } from '@/types/ordens';
+import { StatusOS, OrdemServico, EtapaOS, TempoRegistro } from '@/types/ordens';
 import { Funcionario } from '@/types/funcionarios';
 import { format, isSameDay, parseISO } from 'date-fns';
 import { toast } from 'sonner';
@@ -71,7 +71,8 @@ export const useFuncionariosDisponibilidade = () => {
         // Encontrar a atividade atual de cada funcionário
         const funcionariosAtualizados = funcionariosComStatus.map(funcionario => {
           // Filtrar registros de tempo para o funcionário e para o dia selecionado
-          const registrosDeTempoDoDia = (ordens as OrdemServico[]).flatMap(ordem =>
+          const ordensArray = (ordens as OrdemServico[] || []);
+          const registrosDeTempoDoDia = ordensArray.flatMap(ordem =>
             ordem.tempoRegistros ? ordem.tempoRegistros.filter(
               registro =>
                 registro.funcionarioId === funcionario.id &&
@@ -88,11 +89,17 @@ export const useFuncionariosDisponibilidade = () => {
           if (registroAberto) {
             // Se houver um registro aberto, o funcionário está "ocupado"
             funcionario.status = 'ocupado';
+            // Find the corresponding ordem
+            const ordemRelacionada = ordensArray.find(ordem =>
+              ordem.tempoRegistros && ordem.tempoRegistros.some(tempo => 
+                tempo.funcionarioId === registroAberto.funcionarioId && 
+                tempo.inicio === registroAberto.inicio
+              )
+            );
+            
             funcionario.atividadeAtual = {
               ordemId: registroAberto.ordemId || '',
-              ordemNome: (ordens as OrdemServico[]).find(ordem =>
-                ordem.tempoRegistros && ordem.tempoRegistros.some(tempo => tempo === registroAberto)
-              )?.nome || 'Ordem Desconhecida',
+              ordemNome: ordemRelacionada?.nome || 'Ordem Desconhecida',
               etapa: registroAberto.etapa,
               servicoTipo: registroAberto.servicoTipo,
               inicio: new Date(registroAberto.inicio),
@@ -115,11 +122,17 @@ export const useFuncionariosDisponibilidade = () => {
             if (pausaMaisRecente) {
               // Se houver uma pausa não finalizada, o funcionário ainda está "ocupado"
               funcionario.status = 'ocupado';
+              // Find the corresponding ordem
+              const ordemRelacionada = ordensArray.find(ordem =>
+                ordem.tempoRegistros && ordem.tempoRegistros.some(tempo => 
+                  tempo.funcionarioId === pausaMaisRecente.funcionarioId && 
+                  tempo.inicio === pausaMaisRecente.inicio
+                )
+              );
+              
               funcionario.atividadeAtual = {
                 ordemId: pausaMaisRecente.ordemId || '',
-                ordemNome: (ordens as OrdemServico[]).find(ordem =>
-                  ordem.tempoRegistros && ordem.tempoRegistros.some(tempo => tempo === pausaMaisRecente)
-                )?.nome || 'Ordem Desconhecida',
+                ordemNome: ordemRelacionada?.nome || 'Ordem Desconhecida',
                 etapa: pausaMaisRecente.etapa,
                 servicoTipo: pausaMaisRecente.servicoTipo,
                 inicio: new Date(pausaMaisRecente.inicio),

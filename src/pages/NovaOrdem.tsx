@@ -290,6 +290,7 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         clientes={clientes}
         allMotores={allMotores}  // Pass all motors to the form
         isLoadingClientes={loading}
+        initialData={{}}  // Use initialData instead of defaultValues
       />
     </Layout>
   );

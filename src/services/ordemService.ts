@@ -25,16 +25,29 @@ export const loadOrderFormData = async (): Promise<{
   }
 };
 
-export const getOrdens = async (): Promise<OrdemServico[]> => {
+export const getOrdens = async () => {
   try {
-    const ordensRef = collection(db, 'ordens_servico');
+    const ordensRef = collection(db, "ordens_servico");
     const snapshot = await getDocs(ordensRef);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as OrdemServico));
+    
+    const ordens = snapshot.docs.map(doc => {
+      const data = doc.data();
+      
+      // Convert Firestore timestamps to JavaScript Dates
+      const dataAbertura = data.dataAbertura?.toDate ? data.dataAbertura.toDate() : data.dataAbertura;
+      const dataPrevistaEntrega = data.dataPrevistaEntrega?.toDate ? data.dataPrevistaEntrega.toDate() : data.dataPrevistaEntrega;
+      
+      return {
+        ...data,
+        id: doc.id,
+        dataAbertura,
+        dataPrevistaEntrega
+      };
+    });
+    
+    return ordens;
   } catch (error) {
-    console.error('Error fetching ordens:', error);
+    console.error("Erro ao buscar ordens:", error);
     throw error;
   }
 };

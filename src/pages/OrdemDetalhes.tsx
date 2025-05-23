@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { LogoutProps } from "@/types/props";
@@ -109,25 +108,21 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
         <OrdemForm 
           onSubmit={handleSubmit}
           isLoading={isSubmitting}
-          defaultValues={{
+          onCancel={() => setIsEditando(false)}
+          clientes={clientes}
+          isLoadingClientes={isLoadingClientes}
+          initialData={{
             id: ordem.id,
             nome: ordem.nome,
-            clienteId: ordem.cliente?.id || "",
+            cliente: ordem.cliente,
             motorId: ordem.motorId || "",
             dataAbertura: ordem.dataAbertura ? new Date(ordem.dataAbertura) : new Date(),
             dataPrevistaEntrega: ordem.dataPrevistaEntrega ? new Date(ordem.dataPrevistaEntrega) : new Date(),
             prioridade: ordem.prioridade || "media",
-            servicosTipos: ordem.servicos?.map(s => s.tipo) || [],
-            servicosDescricoes: ordem.servicos?.reduce((acc, s) => {
-              acc[s.tipo] = s.descricao;
-              return acc;
-            }, {} as Record<string, string>) || {}
+            servicos: ordem.servicos || [],
+            fotosEntrada: ordem?.fotosEntrada || [],
+            fotosSaida: ordem?.fotosSaida || []
           }}
-          defaultFotosEntrada={ordem?.fotosEntrada || []}
-          defaultFotosSaida={ordem?.fotosSaida || []}
-          onCancel={() => setIsEditando(false)}
-          clientes={clientes}
-          isLoadingClientes={isLoadingClientes}
         />
       ) : (
         <OrdemTabs

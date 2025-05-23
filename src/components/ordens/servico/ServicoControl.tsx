@@ -6,8 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from 'lucide-react';
-import { TipoServico } from '@/types/ordens';
-import { SubAtividade } from '@/types/ordens';
+import { TipoServico, SubAtividade } from '@/types/ordens';
 import {
   Accordion,
   AccordionContent,
@@ -20,10 +19,12 @@ import useFuncionariosDisponibilidade from "@/hooks/useFuncionariosDisponibilida
 
 interface ServicoControlProps {
   tipo: TipoServico;
-  descricao: string;
-  subatividades: SubAtividade[];
-  onChange: (tipo: TipoServico, descricao: string, subatividades: SubAtividade[]) => void;
-  onSubatividadeToggle: (servicoTipo: string, subatividadeId: string, checked: boolean) => void;
+  form: any;
+  handleSubatividadeToggle: (servicoTipo: string, subatividadeId: string, checked: boolean) => void;
+  handleAtividadeEspecificaToggle: (servicoTipo: string, tipoAtividade: string, subatividadeId: string, checked: boolean) => void;
+  descricao?: string;
+  subatividades?: SubAtividade[];
+  onChange?: (tipo: TipoServico, descricao: string, subatividades: SubAtividade[]) => void;
   atividadesEspecificas?: Record<string, SubAtividade[]>;
   onAtividadeEspecificaToggle?: (servicoTipo: string, tipoAtividade: string, subatividadeId: string, checked: boolean) => void;
 }
@@ -38,10 +39,12 @@ const toTitleCase = (str: string) => {
 
 export function ServicoControl({
   tipo,
-  descricao,
-  subatividades,
+  form,
+  handleSubatividadeToggle,
+  handleAtividadeEspecificaToggle,
+  descricao = '',
+  subatividades = [],
   onChange,
-  onSubatividadeToggle,
   atividadesEspecificas,
   onAtividadeEspecificaToggle
 }: ServicoControlProps) {
@@ -58,24 +61,28 @@ export function ServicoControl({
   }, []);
 
   useEffect(() => {
-    setLocalDescricao(descricao);
-    setLocalSubatividades(subatividades);
-  }, [tipo, descricao, subatividades]);
+    if (onChange) {
+      setLocalDescricao(descricao);
+      setLocalSubatividades(subatividades);
+    }
+  }, [tipo, descricao, subatividades, onChange]);
 
   useEffect(() => {
-    onChange(tipo, localDescricao, localSubatividades);
+    if (onChange) {
+      onChange(tipo, localDescricao, localSubatividades);
+    }
   }, [tipo, localDescricao, localSubatividades, onChange]);
 
   const handleDescricaoChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setLocalDescricao(e.target.value);
   };
 
-  const handleSubatividadeToggle = (id: string, checked: boolean) => {
+  const handleSubatividadeToggleLocal = (id: string, checked: boolean) => {
     const updatedSubatividades = localSubatividades.map(sub =>
       sub.id === id ? { ...sub, selecionada: checked } : sub
     );
     setLocalSubatividades(updatedSubatividades);
-    onSubatividadeToggle(tipo, id, checked);
+    handleSubatividadeToggle(tipo, id, checked);
   };
 
   const handleAddAtividadeEspecifica = (tipoAtividade: string) => {
@@ -93,28 +100,52 @@ export function ServicoControl({
       tipoAtividade: tipoAtividade,
     };
 
-    // Lógica para adicionar a nova atividade ao estado
-    onChange(tipo, localDescricao, [...localSubatividades, novaAtividade]);
+    if (onChange) {
+      // If onChange is provided, use it
+      onChange(tipo, localDescricao, [...localSubatividades, novaAtividade]);
+    } else {
+      // Otherwise use the form methods directly
+      const servicosSubatividades = form.getValues("servicosSubatividades") || {};
+      const currentSubatividades = servicosSubatividades[tipo] || [];
+      form.setValue("servicosSubatividades", { 
+        ...servicosSubatividades, 
+        [tipo]: [...currentSubatividades, novaAtividade] 
+      });
+    }
 
     setNovaAtividadeNome('');
     setNovaAtividadeTempoEstimado(undefined);
   };
 
   const handleRemoveAtividadeEspecifica = (tipoAtividade: string, id: string) => {
-    const updatedSubatividades = localSubatividades.filter(sub => sub.id !== id);
-    onChange(tipo, localDescricao, updatedSubatividades);
+    if (onChange) {
+      const updatedSubatividades = localSubatividades.filter(sub => sub.id !== id);
+      onChange(tipo, localDescricao, updatedSubatividades);
+    } else {
+      // Use form methods directly
+      const servicosSubatividades = form.getValues("servicosSubatividades") || {};
+      const currentSubatividades = servicosSubatividades[tipo] || [];
+      form.setValue("servicosSubatividades", {
+        ...servicosSubatividades,
+        [tipo]: currentSubatividades.filter((sub: SubAtividade) => sub.id !== id)
+      });
+    }
   };
 
-  const handleAtividadeEspecificaToggle = (tipoAtividade: string, id: string, checked: boolean) => {
-    if (onAtividadeEspecificaToggle) {
-      onAtividadeEspecificaToggle(tipo, tipoAtividade, id, checked);
-    }
+  // Filter subatividades by tipoAtividade
+  const getSubatividadesByTipo = (tipoAtividade: string) => {
+    if (!form) return [];
+    
+    const servicosSubatividades = form.getValues("servicosSubatividades") || {};
+    const allSubatividades = servicosSubatividades[tipo] || [];
+    
+    return allSubatividades.filter((sub: SubAtividade) => sub.tipoAtividade === tipoAtividade);
   };
 
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>{tipo}</CardTitle>
+        <CardTitle>{toTitleCase(tipo)}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
@@ -122,8 +153,15 @@ export function ServicoControl({
           <Textarea
             id={`${tipo}-descricao`}
             placeholder="Detalhes sobre o serviço a ser realizado..."
-            value={localDescricao}
-            onChange={handleDescricaoChange}
+            value={form ? form.getValues(`servicosDescricoes.${tipo}`) || '' : localDescricao}
+            onChange={(e) => {
+              if (form) {
+                const descricoes = form.getValues('servicosDescricoes') || {};
+                form.setValue('servicosDescricoes', { ...descricoes, [tipo]: e.target.value });
+              } else {
+                handleDescricaoChange(e);
+              }
+            }}
           />
         </div>
 
@@ -135,7 +173,7 @@ export function ServicoControl({
                 <Checkbox
                   id={`${tipo}-subatividade-${sub.id}`}
                   checked={sub.selecionada}
-                  onCheckedChange={(checked) => handleSubatividadeToggle(sub.id, !!checked)}
+                  onCheckedChange={(checked) => handleSubatividadeToggleLocal(sub.id, !!checked)}
                 />
                 <Label htmlFor={`${tipo}-subatividade-${sub.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed">
                   {sub.nome}

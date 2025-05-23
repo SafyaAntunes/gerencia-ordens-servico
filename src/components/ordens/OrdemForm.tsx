@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -48,7 +49,7 @@ import { arrayMove } from "@dnd-kit/sortable";
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { SortableItem } from "@/components/ui/sortable-item";
-import { ServicoControl } from "./ordens/servico/ServicoControl";
+import { ServicoControl } from "@/components/ordens/servico/ServicoControl";
 
 interface OrdemFormProps {
   onSubmit: (values: any) => void;
@@ -56,7 +57,11 @@ interface OrdemFormProps {
   isLoading: boolean;
   initialData?: any;
   clientes: Cliente[];
-  allMotores: Motor[];
+  allMotores?: Motor[];
+  isLoadingClientes?: boolean;
+  defaultValues?: any;
+  defaultFotosEntrada?: any[];
+  defaultFotosSaida?: any[];
 }
 
 const formSchema = z.object({
@@ -97,7 +102,11 @@ export default function OrdemForm({
   isLoading,
   initialData,
   clientes,
-  allMotores
+  allMotores = [],
+  isLoadingClientes = false,
+  defaultValues,
+  defaultFotosEntrada,
+  defaultFotosSaida
 }: OrdemFormProps) {
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [filteredMotores, setFilteredMotores] = useState<Motor[]>([]);
@@ -112,7 +121,7 @@ export default function OrdemForm({
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
+    defaultValues: defaultValues || {
       id: initialData?.id || generateId(),
       nome: initialData?.nome || "",
       clienteId: initialData?.cliente?.id || "",
@@ -167,7 +176,7 @@ export default function OrdemForm({
   useEffect(() => {
     if (initialData?.servicos) {
       const initialServicos = initialData.servicos.map((servico: any) => servico.tipo);
-      setServicos(initialServicos);
+      setServicos(initialServicos as TipoServico[]);
     }
   }, [initialData?.servicos]);
   
@@ -194,7 +203,7 @@ export default function OrdemForm({
     }
     
     setValue("servicosTipos", newServicos);
-    setServicos(newServicos);
+    setServicos(newServicos as TipoServico[]);
   };
   
   const handleDescricaoChange = (tipo: TipoServico, descricao: string) => {
@@ -299,6 +308,9 @@ export default function OrdemForm({
   const isFuncionarioAllowed = () => {
     return currentUser?.nivelPermissao === 'admin' || currentUser?.nivelPermissao === 'gerente';
   };
+  
+  // Fix the enum values usage in the JSX
+  const tipoServicoValues = Object.values(TipoServico) as TipoServico[];
   
   return (
     <Form {...form}>
@@ -539,14 +551,14 @@ export default function OrdemForm({
               strategy={verticalListSortingStrategy}
             >
               <div className="flex flex-col gap-2">
-                {Object.values(TipoServico).map((tipo) => (
+                {tipoServicoValues.map((tipo) => (
                   <SortableItem key={tipo} id={tipo}>
                     <div className="flex items-center justify-between rounded-md border p-4">
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id={tipo}
                           checked={servicos.includes(tipo)}
-                          onCheckedChange={(checked) => handleServicoToggle(tipo, checked)}
+                          onCheckedChange={(checked) => handleServicoToggle(tipo, !!checked)}
                         />
                         <Label htmlFor={tipo} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                           {toTitleCase(tipo)}

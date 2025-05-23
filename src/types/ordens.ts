@@ -50,6 +50,7 @@ export type SubAtividade = {
   concluida?: boolean;
   tempoEstimado?: number; // Tempo estimado em horas
   servicoTipo?: TipoServico | null; // A qual tipo de serviço esta subatividade se relaciona
+  tipoAtividade?: string; // Added this property
   descricao?: string; // Descrição opcional da subatividade
 };
 
@@ -99,6 +100,9 @@ export type TempoRegistro = {
   funcionarioId: string;
   funcionarioNome?: string;
   etapa: EtapaOS;
+  ordemId?: string;  // Added this property
+  ordemNome?: string; // Added for completeness
+  servicoTipo?: string; // Added this property
   pausas: { inicio: Date; fim?: Date }[];
 };
 
