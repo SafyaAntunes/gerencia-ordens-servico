@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -7,7 +8,7 @@ import { Prioridade, TipoServico, OrdemServico, SubAtividade, EtapaOS, TipoAtivi
 import { collection, addDoc, doc, setDoc, getDoc, getDocs, query, where, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getClientes } from "@/services/clienteService";
-import { getMotores as getMotoresService } from "@/services/motorService";
+import { getMotores } from "@/services/motorService";
 import { getSubatividadesByTipo } from "@/services/subatividadeService";
 import { Cliente } from "@/types/clientes";
 import { Motor } from "@/types/motor";
@@ -39,7 +40,7 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
       try {
         const [clientesData, motoresData] = await Promise.all([
           getClientes(),
-          getMotoresService()
+          getMotores()
         ]);
         
         setClientes(clientesData);

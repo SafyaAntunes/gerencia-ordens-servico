@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, Calendar, Check, Activity } from "lucide-react";
@@ -30,20 +31,6 @@ export default function OrdemFilters({
 }: OrdemFiltersProps) {
   const [filtrosVisiveis, setFiltrosVisiveis] = useState(true);
 
-  const statusOptions = [
-    { value: "all", label: "Todos os status" },
-    { value: "desmontagem", label: "Desmontagem" },
-    { value: "inspecao_inicial", label: "Inspeção Inicial" },
-    { value: "orcamento", label: "Orçamento" },
-    { value: "aguardando_aprovacao", label: "Aguardando Aprovação" },
-    { value: "autorizado", label: "Autorizado" },
-    { value: "executando_servico", label: "Executando Serviço" },
-    { value: "aguardando_peca_cliente", label: "Aguardando Peça (Cliente)" },
-    { value: "aguardando_peca_interno", label: "Aguardando Peça (Interno)" },
-    { value: "finalizado", label: "Finalizado" },
-    { value: "entregue", label: "Entregue" },
-  ];
-
   return (
     <div>
       <div className="flex justify-end mb-2">
@@ -56,7 +43,7 @@ export default function OrdemFilters({
         </button>
       </div>
       {filtrosVisiveis && (
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 mb-6">
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-6">
           <div className="flex items-center space-x-2">
             <Input
               type="search"
@@ -65,34 +52,6 @@ export default function OrdemFilters({
               onChange={(e) => setSearch(e.target.value)}
             />
             <Search className="h-5 w-5 text-muted-foreground -ml-8" />
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Filter className="h-5 w-5 text-muted-foreground mr-2" />
-            <div className="w-full">
-              <Select
-                isMulti
-                options={statusOptions}
-                placeholder="Filtrar por status"
-                value={
-                  statusFilter.length === 0
-                    ? [statusOptions[0]]
-                    : statusOptions.filter(opt => statusFilter.includes(opt.value))
-                }
-                onChange={selected => {
-                  if (!selected || selected.length === 0) {
-                    setStatusFilter([]);
-                    return;
-                  }
-                  if (selected.some(opt => opt.value === "all")) {
-                    setStatusFilter([]);
-                    return;
-                  }
-                  setStatusFilter(selected.map(opt => opt.value).filter(v => v !== "all"));
-                }}
-                classNamePrefix="react-select"
-              />
-            </div>
           </div>
           
           <div className="flex items-center space-x-2">

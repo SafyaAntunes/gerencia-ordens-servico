@@ -37,20 +37,16 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { DatePicker } from "@/components/ui/date-picker";
-import ImageUpload from "@/components/common/ImageUpload";
-import { MultiSelect } from "@/components/ui/multi-select";
 import { Prioridade, TipoServico, SubAtividade, TipoAtividade } from "@/types/ordens";
 import { Cliente } from "@/types/clientes";
 import { Motor } from "@/types/motor";
 import { SimpleFuncionarioSelector } from "@/components/funcionarios/SimpleFuncionarioSelector";
 import { useAuth } from "@/hooks/useAuth";
-import { AtribuirFuncionariosDialog } from "@/components/funcionarios/AtribuirFuncionariosDialog";
 import { arrayMove } from "@dnd-kit/sortable";
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { SortableItem } from "@/components/ui/sortable-item";
-import { ServicoControl } from "@/components/ordens/servico/ServicoControl";
+import { ServicoControl } from "./servico/ServicoControl";
 
 interface OrdemFormProps {
   onSubmit: (values: any) => void;
@@ -60,9 +56,6 @@ interface OrdemFormProps {
   clientes: Cliente[];
   allMotores?: Motor[];
   isLoadingClientes?: boolean;
-  defaultValues?: any;
-  defaultFotosEntrada?: any[];
-  defaultFotosSaida?: any[];
 }
 
 const formSchema = z.object({
@@ -104,16 +97,13 @@ export default function OrdemForm({
   initialData,
   clientes,
   allMotores = [],
-  isLoadingClientes = false,
-  defaultValues,
-  defaultFotosEntrada,
-  defaultFotosSaida
+  isLoadingClientes = false
 }: OrdemFormProps) {
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [filteredMotores, setFilteredMotores] = useState<Motor[]>([]);
   const [isAtribuirDialogOpen, setIsAtribuirDialogOpen] = useState(false);
   const [isReordenandoServicos, setIsReordenandoServicos] = useState(false);
-  const [servicos, setServicos] = useState<TipoServico[]>([]);
+  const [servicos, setServicos] = useState<string[]>([]); // Changed from TipoServico[] to string[]
   const [selectedFuncionarioId, setSelectedFuncionarioId] = useState<string | undefined>(initialData?.funcionarioId);
   const [selectedFuncionarioNome, setSelectedFuncionarioNome] = useState<string | undefined>(initialData?.funcionarioNome);
   
@@ -122,7 +112,7 @@ export default function OrdemForm({
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: defaultValues || {
+    defaultValues: {
       id: initialData?.id || generateId(),
       nome: initialData?.nome || "",
       clienteId: initialData?.cliente?.id || "",
@@ -144,7 +134,7 @@ export default function OrdemForm({
       fotosSaida: initialData?.fotosSaida || [],
       funcionarioId: initialData?.funcionarioId || "",
       funcionarioNome: initialData?.funcionarioNome || "",
-    },
+    }
   });
   
   const { watch, setValue } = form;
@@ -156,42 +146,20 @@ export default function OrdemForm({
       setSelectedCliente(cliente || null);
     } else {
       setSelectedCliente(null);
-      setFilteredMotores([]);
     }
   }, [values.clienteId, clientes]);
   
+  // Update to set all motors available, regardless of client
   useEffect(() => {
-    if (selectedCliente) {
-      // Check if allMotores is defined before filtering
-      if (allMotores) {
-        // Check if the motor has a clienteId or is associated with the currently selected client
-        setFilteredMotores(allMotores.filter(motor => {
-          return motor.clienteNome === selectedCliente?.nome || motor.clienteId === values.clienteId;
-        }));
-      } else {
-        setFilteredMotores([]);
-      }
-    }
-  }, [selectedCliente, allMotores, values.clienteId]);
+    setFilteredMotores(allMotores || []);
+  }, [allMotores]);
   
   useEffect(() => {
     if (initialData?.servicos) {
       const initialServicos = initialData.servicos.map((servico: any) => servico.tipo);
-      setServicos(initialServicos as TipoServico[]);
+      setServicos(initialServicos);
     }
   }, [initialData?.servicos]);
-  
-  const handleClienteChange = (clienteId: string) => {
-    setValue("clienteId", clienteId);
-  };
-  
-  const handleMotorChange = (motorId: string) => {
-    setValue("motorId", motorId);
-  };
-  
-  const handlePrioridadeChange = (prioridade: Prioridade) => {
-    setValue("prioridade", prioridade);
-  };
   
   const handleServicoToggle = (tipo: string, checked: boolean) => {
     const currentServicos = form.getValues("servicosTipos") || [];
@@ -204,10 +172,10 @@ export default function OrdemForm({
     }
     
     setValue("servicosTipos", newServicos);
-    setServicos(newServicos as TipoServico[]);
+    setServicos(newServicos);
   };
   
-  const handleDescricaoChange = (tipo: TipoServico, descricao: string) => {
+  const handleDescricaoChange = (tipo: string, descricao: string) => {
     const currentDescricoes = form.getValues("servicosDescricoes") || {};
     setValue("servicosDescricoes", { ...currentDescricoes, [tipo]: descricao });
   };
@@ -250,35 +218,7 @@ export default function OrdemForm({
     
     setValue("atividadesEspecificas", { ...currentAtividadesEspecificas });
   };
-  
-  const handleFotosEntradaChange = (files: File[]) => {
-    setValue("fotosEntrada", files);
-  };
-  
-  const handleFotosSaidaChange = (files: File[]) => {
-    setValue("fotosSaida", files);
-  };
-  
-  const handleAtribuirFuncionario = () => {
-    setIsAtribuirDialogOpen(true);
-  };
-  
-  const handleConfirmarAtribuicao = (ids: string[], nomes: string[]) => {
-    if (ids.length > 0) {
-      setValue("funcionarioId", ids[0]);
-      setValue("funcionarioNome", nomes[0]);
-      setSelectedFuncionarioId(ids[0]);
-      setSelectedFuncionarioNome(nomes[0]);
-      toast.success(`Funcionário ${nomes[0]} atribuído à ordem`);
-    }
-    
-    setIsAtribuirDialogOpen(false);
-  };
-  
-  const handleCancelarAtribuicao = () => {
-    setIsAtribuirDialogOpen(false);
-  };
-  
+
   const handleLimparFuncionario = () => {
     setValue("funcionarioId", "");
     setValue("funcionarioNome", "");
@@ -297,8 +237,8 @@ export default function OrdemForm({
       return;
     }
     
-    const oldIndex = servicos.indexOf(active.id as TipoServico);
-    const newIndex = servicos.indexOf(over.id as TipoServico);
+    const oldIndex = servicos.indexOf(active.id as string);
+    const newIndex = servicos.indexOf(over.id as string);
     
     const reorderedServicos = arrayMove(servicos, oldIndex, newIndex);
     
@@ -310,9 +250,9 @@ export default function OrdemForm({
     return currentUser?.nivelPermissao === 'admin' || currentUser?.nivelPermissao === 'gerente';
   };
   
-  // Use the Object.values of the TipoServico enum
+  // Convert TipoServico enum to an array of values
   const tipoServicoValues = Object.values(TipoServico);
-  
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -391,7 +331,6 @@ export default function OrdemForm({
                 <Select 
                   onValueChange={field.onChange} 
                   defaultValue={field.value}
-                  disabled={!values.clienteId}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -399,9 +338,9 @@ export default function OrdemForm({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {filteredMotores.map((motor) => (
+                    {allMotores.map((motor) => (
                       <SelectItem key={motor.id} value={motor.id}>
-                        {motor.marca} - {motor.modelo} ({motor.numeroSerie})
+                        {motor.marca} - {motor.modelo} ({motor.numeroSerie || "Sem Nº de série"})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -612,26 +551,7 @@ export default function OrdemForm({
           )}
         </div>
         
-        {/* Fotos */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div>
-            <FormLabel>Fotos de Entrada</FormLabel>
-            <FormDescription>
-              Adicione fotos do motor/peças no momento da entrada.
-            </FormDescription>
-            <ImageUpload onChange={handleFotosEntradaChange} />
-          </div>
-          
-          <div>
-            <FormLabel>Fotos de Saída</FormLabel>
-            <FormDescription>
-              Adicione fotos do motor/peças após a realização do serviço.
-            </FormDescription>
-            <ImageUpload onChange={handleFotosSaidaChange} />
-          </div>
-        </div>
-        
-        {/* Atribuição de Funcionário */}
+        {/* Funcionário */}
         <div>
           <FormLabel>Atribuir Funcionário</FormLabel>
           <FormDescription>
@@ -653,17 +573,6 @@ export default function OrdemForm({
               mostrarCancelar={!!values.funcionarioId}
               disabled={!isFuncionarioAllowed()}
             />
-            
-            {isFuncionarioAllowed() && (
-              <AtribuirFuncionariosDialog
-                isOpen={isAtribuirDialogOpen}
-                onOpenChange={setIsAtribuirDialogOpen}
-                onConfirm={handleConfirmarAtribuicao}
-                onCancel={handleCancelarAtribuicao}
-                especialidadeRequerida={values.servicosTipos && values.servicosTipos.length > 0 ? values.servicosTipos[0] as TipoServico : undefined}
-                funcionariosSelecionadosIds={selectedFuncionarioId ? [selectedFuncionarioId] : []}
-              />
-            )}
           </div>
         </div>
         
