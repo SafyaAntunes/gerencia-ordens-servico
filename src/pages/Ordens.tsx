@@ -1,4 +1,5 @@
-import { useState, useEffect, React } from "react";
+
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { useAuth } from "@/hooks/useAuth";
@@ -63,24 +64,30 @@ export default function Ordens({ onLogout }: OrdensProps) {
   }, [statusFilter]);
 
   // Garantir que statusFilter é sempre um array com verificação adicional
-  const safeStatusFilter = React.useMemo(() => {
+  const safeStatusFilter = useMemo(() => {
     const safe = Array.isArray(statusFilter) ? statusFilter : [];
     console.log("Ordens.tsx safeStatusFilter:", safe);
     return safe;
   }, [statusFilter]);
 
-  // Robust status filter setter with additional validation
-  const handleStatusFilterChange = React.useCallback((newStatusFilter: string[]) => {
+  // Enhanced status filter validation with callback
+  const handleStatusFilterChange = useCallback((newStatusFilter: string[]) => {
     console.log("Ordens.tsx handleStatusFilterChange called with:", newStatusFilter);
     
-    // Additional safety check
+    // Additional safety check with detailed validation
     if (!Array.isArray(newStatusFilter)) {
       console.error("handleStatusFilterChange: received non-array value:", newStatusFilter);
       setStatusFilter([]);
       return;
     }
     
-    setStatusFilter(newStatusFilter);
+    // Validate each item in the array
+    const validatedFilter = newStatusFilter.filter(item => 
+      item != null && typeof item === 'string' && item.trim() !== ''
+    );
+    
+    console.log("Ordens.tsx validated filter:", validatedFilter);
+    setStatusFilter(validatedFilter);
   }, [setStatusFilter]);
 
   // Aplicar filtro de prazo às ordens já filtradas
