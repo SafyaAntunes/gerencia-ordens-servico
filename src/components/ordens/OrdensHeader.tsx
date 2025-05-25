@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { ViewToggle } from "./ViewToggle";
+import ViewToggle from "./ViewToggle";
 import OrdensStatusFilter from "./OrdensStatusFilter";
 
 interface OrdensHeaderProps {
