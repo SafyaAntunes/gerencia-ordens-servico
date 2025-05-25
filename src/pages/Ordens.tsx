@@ -1,10 +1,10 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrdensData } from "@/hooks/useOrdensData";
 import OrdensHeader from "@/components/ordens/OrdensHeader";
-import OrdemFilters from "@/components/ordens/OrdemFilters";
 import OrdensContent from "@/components/ordens/OrdensContent";
 import { doc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -25,78 +25,21 @@ export default function Ordens({ onLogout }: OrdensProps) {
     return (savedViewType as "grid" | "list") || "grid";
   });
 
-  // Define prazo filter state
-  const [prazoFilter, setPrazoFilter] = useState<string>("all");
-
   // Save view preference to localStorage when it changes
   useEffect(() => {
     localStorage.setItem("ordens-view-type", viewType);
   }, [viewType]);
 
-  // Use custom hook for ordem data and filtering
+  // Use custom hook for ordem data
   const {
     filteredOrdens,
     loading,
-    search,
-    setSearch,
-    statusFilter,
-    setStatusFilter,
-    prioridadeFilter,
-    setPrioridadeFilter,
-    progressoFilter,
-    setProgressoFilter,
     handleReorder,
     refreshOrdens
   } = useOrdensData({
     isTecnico,
     funcionarioId: funcionario?.id,
     especialidades: funcionario?.especialidades
-  });
-
-  // Add debugging for statusFilter
-  useEffect(() => {
-    console.log("Ordens.tsx statusFilter:", {
-      statusFilter,
-      isArray: Array.isArray(statusFilter),
-      length: statusFilter?.length
-    });
-  }, [statusFilter]);
-
-  // Garantir que statusFilter é sempre um array com verificação adicional
-  const safeStatusFilter = useMemo(() => {
-    const safe = Array.isArray(statusFilter) ? statusFilter : [];
-    console.log("Ordens.tsx safeStatusFilter:", safe);
-    return safe;
-  }, [statusFilter]);
-
-  // Enhanced status filter validation with callback
-  const handleStatusFilterChange = useCallback((newStatusFilter: string[]) => {
-    console.log("Ordens.tsx handleStatusFilterChange called with:", newStatusFilter);
-    
-    // Additional safety check with detailed validation
-    if (!Array.isArray(newStatusFilter)) {
-      console.error("handleStatusFilterChange: received non-array value:", newStatusFilter);
-      setStatusFilter([]);
-      return;
-    }
-    
-    // Validate each item in the array
-    const validatedFilter = newStatusFilter.filter(item => 
-      item != null && typeof item === 'string' && item.trim() !== ''
-    );
-    
-    console.log("Ordens.tsx validated filter:", validatedFilter);
-    setStatusFilter(validatedFilter);
-  }, [setStatusFilter]);
-
-  // Aplicar filtro de prazo às ordens já filtradas
-  const ordensFiltradas = filteredOrdens.filter(ordem => {
-    if (prazoFilter === "all") return true;
-    
-    const hoje = new Date();
-    const isAtrasada = ordem.dataPrevistaEntrega < hoje && !['finalizado', 'entregue'].includes(ordem.status);
-    
-    return prazoFilter === "atrasada" ? isAtrasada : !isAtrasada;
   });
 
   const handleNovaOrdem = () => {
@@ -147,22 +90,9 @@ export default function Ordens({ onLogout }: OrdensProps) {
         onNovaOrdem={handleNovaOrdem}
       />
 
-      <OrdemFilters
-        search={search}
-        setSearch={setSearch}
-        statusFilter={safeStatusFilter}
-        setStatusFilter={handleStatusFilterChange}
-        prioridadeFilter={prioridadeFilter}
-        setPrioridadeFilter={setPrioridadeFilter}
-        progressoFilter={progressoFilter}
-        setProgressoFilter={setProgressoFilter}
-        prazoFilter={prazoFilter}
-        setPrazoFilter={setPrazoFilter}
-      />
-
       <OrdensContent
         loading={loading}
-        filteredOrdens={ordensFiltradas}
+        filteredOrdens={filteredOrdens}
         isTecnico={isTecnico}
         viewType={viewType}
         onReorder={handleReorder}

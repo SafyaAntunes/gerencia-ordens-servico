@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { collection, getDocs, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -14,38 +15,6 @@ interface UseOrdensDataProps {
 export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }: UseOrdensDataProps) => {
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  // Initialize statusFilter as empty array with additional safety
-  const [statusFilter, setStatusFilterInternal] = useState<string[]>([]);
-  const [prioridadeFilter, setPrioridadeFilter] = useState("all");
-  const [progressoFilter, setProgressoFilter] = useState("all");
-
-  // Add debugging for statusFilter changes
-  useEffect(() => {
-    console.log("useOrdensData statusFilter changed:", {
-      statusFilter,
-      isArray: Array.isArray(statusFilter),
-      length: statusFilter?.length
-    });
-  }, [statusFilter]);
-
-  // Enhanced safety function that ensures statusFilter is always an array
-  const safeSetStatusFilter = useCallback((value: string[] | undefined | null) => {
-    console.log("safeSetStatusFilter called with:", value);
-    
-    // Ensure we always set a valid array
-    let safeValue: string[] = [];
-    
-    if (Array.isArray(value)) {
-      // Filter out any invalid values
-      safeValue = value.filter(item => item != null && typeof item === 'string');
-    } else if (value != null) {
-      console.warn("safeSetStatusFilter: value is not an array, using empty array:", value);
-    }
-    
-    console.log("safeSetStatusFilter setting value:", safeValue);
-    setStatusFilterInternal(safeValue);
-  }, []);
 
   // Função para processar os dados de ordens do Firestore
   const processOrdens = useCallback(async (querySnapshot: any) => {
@@ -175,15 +144,6 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
     setupOrdensListener();
   }, [isTecnico, funcionarioId, especialidades, processOrdens]);
 
-  // Verificar se há um parâmetro "filter=atrasadas" na URL
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const filterParam = params.get('filter');
-    if (filterParam === 'atrasadas') {
-      setProgressoFilter('atrasadas');
-    }
-  }, []);
-
   const handleReorder = (dragIndex: number, dropIndex: number) => {
     const reorderedOrdens = [...ordens];
     const [draggedItem] = reorderedOrdens.splice(dragIndex, 1);
@@ -215,56 +175,15 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
     }
   };
 
+  // Nova lógica de filtragem simplificada - apenas retorna todas as ordens
   const filteredOrdens = ordens.filter((ordem) => {
-    if (!ordem) return false;
-    
-    const searchMatch = 
-      (ordem.nome || '').toLowerCase().includes(search.toLowerCase()) ||
-      (ordem.cliente?.nome || '').toLowerCase().includes(search.toLowerCase()) ||
-      (ordem.id || '').toLowerCase().includes(search.toLowerCase());
-    
-    const statusMatch = statusFilter.length === 0 ? true : statusFilter.includes(ordem.status);
-    const prioridadeMatch = prioridadeFilter === "all" ? true : ordem.prioridade === prioridadeFilter;
-    
-    let progressoMatch = true;
-    const progresso = ordem.progressoEtapas !== undefined ? ordem.progressoEtapas * 100 : 0;
-    
-    switch (progressoFilter) {
-      case "nao_iniciado":
-        progressoMatch = progresso === 0;
-        break;
-      case "em_andamento":
-        progressoMatch = progresso > 0 && progresso < 100;
-        break;
-      case "quase_concluido":
-        progressoMatch = progresso >= 75 && progresso < 100;
-        break;
-      case "concluido":
-        progressoMatch = progresso === 100;
-        break;
-      case "atrasadas":
-        const hoje = new Date();
-        progressoMatch = ordem.dataPrevistaEntrega < hoje && !['finalizado', 'entregue'].includes(ordem.status);
-        break;
-      default:
-        progressoMatch = true;
-    }
-
-    return searchMatch && statusMatch && prioridadeMatch && progressoMatch;
+    return ordem ? true : false;
   });
 
   return {
     ordens,
     filteredOrdens,
     loading,
-    search,
-    setSearch,
-    statusFilter,
-    setStatusFilter: safeSetStatusFilter,
-    prioridadeFilter,
-    setPrioridadeFilter,
-    progressoFilter,
-    setProgressoFilter,
     handleReorder,
     refreshOrdens
   };
