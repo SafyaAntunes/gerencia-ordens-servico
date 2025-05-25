@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, React } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { useAuth } from "@/hooks/useAuth";
@@ -54,8 +53,35 @@ export default function Ordens({ onLogout }: OrdensProps) {
     especialidades: funcionario?.especialidades
   });
 
-  // Garantir que statusFilter é sempre um array
-  const safeStatusFilter = Array.isArray(statusFilter) ? statusFilter : [];
+  // Add debugging for statusFilter
+  useEffect(() => {
+    console.log("Ordens.tsx statusFilter:", {
+      statusFilter,
+      isArray: Array.isArray(statusFilter),
+      length: statusFilter?.length
+    });
+  }, [statusFilter]);
+
+  // Garantir que statusFilter é sempre um array com verificação adicional
+  const safeStatusFilter = React.useMemo(() => {
+    const safe = Array.isArray(statusFilter) ? statusFilter : [];
+    console.log("Ordens.tsx safeStatusFilter:", safe);
+    return safe;
+  }, [statusFilter]);
+
+  // Robust status filter setter with additional validation
+  const handleStatusFilterChange = React.useCallback((newStatusFilter: string[]) => {
+    console.log("Ordens.tsx handleStatusFilterChange called with:", newStatusFilter);
+    
+    // Additional safety check
+    if (!Array.isArray(newStatusFilter)) {
+      console.error("handleStatusFilterChange: received non-array value:", newStatusFilter);
+      setStatusFilter([]);
+      return;
+    }
+    
+    setStatusFilter(newStatusFilter);
+  }, [setStatusFilter]);
 
   // Aplicar filtro de prazo às ordens já filtradas
   const ordensFiltradas = filteredOrdens.filter(ordem => {
@@ -119,7 +145,7 @@ export default function Ordens({ onLogout }: OrdensProps) {
         search={search}
         setSearch={setSearch}
         statusFilter={safeStatusFilter}
-        setStatusFilter={setStatusFilter}
+        setStatusFilter={handleStatusFilterChange}
         prioridadeFilter={prioridadeFilter}
         setPrioridadeFilter={setPrioridadeFilter}
         progressoFilter={progressoFilter}

@@ -43,14 +43,42 @@ export function MultiSelect({
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
 
-  // Ensure selected is always an array
-  const safeSelected = React.useMemo(() => 
-    Array.isArray(selected) ? selected : [], 
-  [selected]);
+  // Add debugging for tracking props
+  React.useEffect(() => {
+    console.log("MultiSelect props:", {
+      options: options,
+      selected: selected,
+      hasOptions: Array.isArray(options),
+      hasSelected: Array.isArray(selected),
+      optionsLength: options?.length,
+      selectedLength: selected?.length
+    });
+  }, [options, selected]);
+
+  // Ensure selected is always an array with additional safety
+  const safeSelected = React.useMemo(() => {
+    if (!selected) {
+      console.warn("MultiSelect: selected prop is undefined/null, using empty array");
+      return [];
+    }
+    if (!Array.isArray(selected)) {
+      console.warn("MultiSelect: selected prop is not an array, converting:", selected);
+      return [];
+    }
+    // Filter out any invalid values
+    return selected.filter(item => item != null && typeof item === 'string');
+  }, [selected]);
 
   // Ensure options is always an array and filter out invalid entries
   const safeOptions = React.useMemo(() => {
-    if (!Array.isArray(options)) return [];
+    if (!options) {
+      console.warn("MultiSelect: options prop is undefined/null, using empty array");
+      return [];
+    }
+    if (!Array.isArray(options)) {
+      console.warn("MultiSelect: options prop is not an array, using empty array:", options);
+      return [];
+    }
     return options.filter(option => 
       option && 
       typeof option === 'object' && 
@@ -59,11 +87,32 @@ export function MultiSelect({
     );
   }, [options]);
 
+  // Robust onChange wrapper
+  const handleOnChange = React.useCallback((newSelected: string[]) => {
+    if (!onChange || typeof onChange !== 'function') {
+      console.error("MultiSelect: onChange prop is not a function");
+      return;
+    }
+    
+    // Ensure we always pass a valid array
+    const validSelected = Array.isArray(newSelected) ? newSelected : [];
+    console.log("MultiSelect onChange called with:", validSelected);
+    
+    try {
+      onChange(validSelected);
+    } catch (error) {
+      console.error("MultiSelect: Error in onChange callback:", error);
+    }
+  }, [onChange]);
+
   const handleUnselect = React.useCallback((value: string) => {
-    if (!value || typeof value !== 'string') return;
+    if (!value || typeof value !== 'string') {
+      console.warn("MultiSelect: handleUnselect called with invalid value:", value);
+      return;
+    }
     const newSelected = safeSelected.filter((item) => item !== value);
-    onChange(newSelected);
-  }, [safeSelected, onChange]);
+    handleOnChange(newSelected);
+  }, [safeSelected, handleOnChange]);
 
   // Map of selected values to their labels
   const selectedLabelsMap = React.useMemo(() => {
@@ -79,13 +128,57 @@ export function MultiSelect({
   }, [safeSelected, safeOptions]);
 
   const handleSelect = React.useCallback((optionValue: string) => {
-    if (!optionValue || typeof optionValue !== 'string') return;
+    if (!optionValue || typeof optionValue !== 'string') {
+      console.warn("MultiSelect: handleSelect called with invalid value:", optionValue);
+      return;
+    }
     
     const newSelected = safeSelected.includes(optionValue)
       ? safeSelected.filter((item) => item !== optionValue)
       : [...safeSelected, optionValue];
-    onChange(newSelected);
-  }, [safeSelected, onChange]);
+    handleOnChange(newSelected);
+  }, [safeSelected, handleOnChange]);
+
+  // Error boundary wrapper for the Command component
+  const renderCommandContent = React.useCallback(() => {
+    try {
+      return (
+        <>
+          <CommandInput placeholder="Procurar item..." />
+          <CommandEmpty>{emptyMessage}</CommandEmpty>
+          <CommandGroup className="max-h-64 overflow-auto">
+            {safeOptions.length > 0 ? safeOptions.map((option) => (
+              <CommandItem
+                key={option.value}
+                onSelect={() => handleSelect(option.value)}
+              >
+                <Check
+                  className={cn(
+                    "mr-2 h-4 w-4",
+                    safeSelected.includes(option.value)
+                      ? "opacity-100"
+                      : "opacity-0"
+                  )}
+                />
+                {option.label}
+              </CommandItem>
+            )) : (
+              <div className="p-2 text-sm text-muted-foreground">
+                Nenhuma opção disponível
+              </div>
+            )}
+          </CommandGroup>
+        </>
+      );
+    } catch (error) {
+      console.error("MultiSelect: Error rendering command content:", error);
+      return (
+        <div className="p-4 text-center text-red-500">
+          Erro ao carregar opções
+        </div>
+      );
+    }
+  }, [safeOptions, safeSelected, handleSelect, emptyMessage]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -141,26 +234,7 @@ export function MultiSelect({
       </PopoverTrigger>
       <PopoverContent className="w-full p-0">
         <Command>
-          <CommandInput placeholder="Procurar item..." />
-          <CommandEmpty>{emptyMessage}</CommandEmpty>
-          <CommandGroup className="max-h-64 overflow-auto">
-            {safeOptions.length > 0 && safeOptions.map((option) => (
-              <CommandItem
-                key={option.value}
-                onSelect={() => handleSelect(option.value)}
-              >
-                <Check
-                  className={cn(
-                    "mr-2 h-4 w-4",
-                    safeSelected.includes(option.value)
-                      ? "opacity-100"
-                      : "opacity-0"
-                  )}
-                />
-                {option.label}
-              </CommandItem>
-            ))}
-          </CommandGroup>
+          {renderCommandContent()}
         </Command>
       </PopoverContent>
     </Popover>

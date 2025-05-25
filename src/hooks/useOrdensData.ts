@@ -15,10 +15,37 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  // Initialize statusFilter as empty array to prevent undefined issues
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  // Initialize statusFilter as empty array with additional safety
+  const [statusFilter, setStatusFilterInternal] = useState<string[]>([]);
   const [prioridadeFilter, setPrioridadeFilter] = useState("all");
   const [progressoFilter, setProgressoFilter] = useState("all");
+
+  // Add debugging for statusFilter changes
+  useEffect(() => {
+    console.log("useOrdensData statusFilter changed:", {
+      statusFilter,
+      isArray: Array.isArray(statusFilter),
+      length: statusFilter?.length
+    });
+  }, [statusFilter]);
+
+  // Enhanced safety function that ensures statusFilter is always an array
+  const safeSetStatusFilter = useCallback((value: string[] | undefined | null) => {
+    console.log("safeSetStatusFilter called with:", value);
+    
+    // Ensure we always set a valid array
+    let safeValue: string[] = [];
+    
+    if (Array.isArray(value)) {
+      // Filter out any invalid values
+      safeValue = value.filter(item => item != null && typeof item === 'string');
+    } else if (value != null) {
+      console.warn("safeSetStatusFilter: value is not an array, using empty array:", value);
+    }
+    
+    console.log("safeSetStatusFilter setting value:", safeValue);
+    setStatusFilterInternal(safeValue);
+  }, []);
 
   // Função para processar os dados de ordens do Firestore
   const processOrdens = useCallback(async (querySnapshot: any) => {
@@ -186,13 +213,6 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
         setLoading(false);
       }
     }
-  };
-
-  // Enhanced safety function that ensures statusFilter is always an array
-  const safeSetStatusFilter = (value: string[] | undefined | null) => {
-    // Ensure we always set a valid array
-    const safeValue = Array.isArray(value) ? value : [];
-    setStatusFilter(safeValue);
   };
 
   const filteredOrdens = ordens.filter((ordem) => {
