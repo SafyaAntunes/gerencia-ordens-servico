@@ -43,27 +43,33 @@ export function MultiSelect({
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
 
-  const handleUnselect = (value: string) => {
-    onChange(selected.filter((item) => item !== value));
-  };
-
-  // Map of selected values to their labels
-  const selectedLabelsMap = React.useMemo(() => {
-    const map = new Map<string, string>();
-    if (options && Array.isArray(options)) { // Add check to ensure options is an array
-      options.forEach((option) => {
-        if (selected.includes(option.value)) {
-          map.set(option.value, option.label);
-        }
-      });
-    }
-    return map;
-  }, [selected, options]);
+  // Ensure selected is always an array
+  const safeSelected = React.useMemo(() => 
+    Array.isArray(selected) ? selected : [], 
+  [selected]);
 
   // Ensure options is always an array
   const safeOptions = React.useMemo(() => 
     Array.isArray(options) ? options : [], 
   [options]);
+
+  const handleUnselect = (value: string) => {
+    const newSelected = safeSelected.filter((item) => item !== value);
+    onChange(newSelected);
+  };
+
+  // Map of selected values to their labels
+  const selectedLabelsMap = React.useMemo(() => {
+    const map = new Map<string, string>();
+    if (safeOptions.length > 0) {
+      safeOptions.forEach((option) => {
+        if (safeSelected.includes(option.value)) {
+          map.set(option.value, option.label);
+        }
+      });
+    }
+    return map;
+  }, [safeSelected, safeOptions]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -81,12 +87,12 @@ export function MultiSelect({
           disabled={disabled}
         >
           <div className="flex flex-wrap gap-1 items-center">
-            {selected.length === 0 && (
+            {safeSelected.length === 0 && (
               <span className="text-muted-foreground">{placeholder}</span>
             )}
-            {selected.length > 0 && (
+            {safeSelected.length > 0 && (
               <>
-                {selected.slice(0, 2).map((value) => (
+                {safeSelected.slice(0, 2).map((value) => (
                   <Badge
                     key={value}
                     variant="secondary"
@@ -106,9 +112,9 @@ export function MultiSelect({
                     />
                   </Badge>
                 ))}
-                {selected.length > 2 && (
+                {safeSelected.length > 2 && (
                   <Badge variant="secondary">
-                    + {selected.length - 2} mais
+                    + {safeSelected.length - 2} mais
                   </Badge>
                 )}
               </>
@@ -126,17 +132,16 @@ export function MultiSelect({
               <CommandItem
                 key={option.value}
                 onSelect={() => {
-                  onChange(
-                    selected.includes(option.value)
-                      ? selected.filter((item) => item !== option.value)
-                      : [...selected, option.value]
-                  );
+                  const newSelected = safeSelected.includes(option.value)
+                    ? safeSelected.filter((item) => item !== option.value)
+                    : [...safeSelected, option.value];
+                  onChange(newSelected);
                 }}
               >
                 <Check
                   className={cn(
                     "mr-2 h-4 w-4",
-                    selected.includes(option.value)
+                    safeSelected.includes(option.value)
                       ? "opacity-100"
                       : "opacity-0"
                   )}

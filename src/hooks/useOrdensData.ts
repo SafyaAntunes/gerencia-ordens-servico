@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { collection, getDocs, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -16,6 +15,7 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  // Initialize statusFilter as empty array to prevent undefined issues
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [prioridadeFilter, setPrioridadeFilter] = useState("all");
   const [progressoFilter, setProgressoFilter] = useState("all");
@@ -188,9 +188,11 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
     }
   };
 
-  // Garanta que statusFilter seja sempre um array
-  const safeSetStatusFilter = (value: string[]) => {
-    setStatusFilter(Array.isArray(value) ? value : []);
+  // Enhanced safety function that ensures statusFilter is always an array
+  const safeSetStatusFilter = (value: string[] | undefined | null) => {
+    // Ensure we always set a valid array
+    const safeValue = Array.isArray(value) ? value : [];
+    setStatusFilter(safeValue);
   };
 
   const filteredOrdens = ordens.filter((ordem) => {
