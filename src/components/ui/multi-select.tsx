@@ -48,15 +48,22 @@ export function MultiSelect({
     Array.isArray(selected) ? selected : [], 
   [selected]);
 
-  // Ensure options is always an array
-  const safeOptions = React.useMemo(() => 
-    Array.isArray(options) ? options : [], 
-  [options]);
+  // Ensure options is always an array and filter out invalid entries
+  const safeOptions = React.useMemo(() => {
+    if (!Array.isArray(options)) return [];
+    return options.filter(option => 
+      option && 
+      typeof option === 'object' && 
+      typeof option.value === 'string' && 
+      typeof option.label === 'string'
+    );
+  }, [options]);
 
-  const handleUnselect = (value: string) => {
+  const handleUnselect = React.useCallback((value: string) => {
+    if (!value || typeof value !== 'string') return;
     const newSelected = safeSelected.filter((item) => item !== value);
     onChange(newSelected);
-  };
+  }, [safeSelected, onChange]);
 
   // Map of selected values to their labels
   const selectedLabelsMap = React.useMemo(() => {
@@ -70,6 +77,15 @@ export function MultiSelect({
     }
     return map;
   }, [safeSelected, safeOptions]);
+
+  const handleSelect = React.useCallback((optionValue: string) => {
+    if (!optionValue || typeof optionValue !== 'string') return;
+    
+    const newSelected = safeSelected.includes(optionValue)
+      ? safeSelected.filter((item) => item !== optionValue)
+      : [...safeSelected, optionValue];
+    onChange(newSelected);
+  }, [safeSelected, onChange]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -128,15 +144,10 @@ export function MultiSelect({
           <CommandInput placeholder="Procurar item..." />
           <CommandEmpty>{emptyMessage}</CommandEmpty>
           <CommandGroup className="max-h-64 overflow-auto">
-            {safeOptions.map((option) => (
+            {safeOptions.length > 0 && safeOptions.map((option) => (
               <CommandItem
                 key={option.value}
-                onSelect={() => {
-                  const newSelected = safeSelected.includes(option.value)
-                    ? safeSelected.filter((item) => item !== option.value)
-                    : [...safeSelected, option.value];
-                  onChange(newSelected);
-                }}
+                onSelect={() => handleSelect(option.value)}
               >
                 <Check
                   className={cn(
