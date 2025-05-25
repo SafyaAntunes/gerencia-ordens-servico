@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -25,6 +24,9 @@ export default function Ordens({ onLogout }: OrdensProps) {
     return (savedViewType as "grid" | "list") || "grid";
   });
 
+  // Status filter state
+  const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
+
   // Save view preference to localStorage when it changes
   useEffect(() => {
     localStorage.setItem("ordens-view-type", viewType);
@@ -39,7 +41,8 @@ export default function Ordens({ onLogout }: OrdensProps) {
   } = useOrdensData({
     isTecnico,
     funcionarioId: funcionario?.id,
-    especialidades: funcionario?.especialidades
+    especialidades: funcionario?.especialidades,
+    selectedStatus
   });
 
   const handleNovaOrdem = () => {
@@ -88,6 +91,8 @@ export default function Ordens({ onLogout }: OrdensProps) {
         viewType={viewType}
         onViewTypeChange={setViewType}
         onNovaOrdem={handleNovaOrdem}
+        selectedStatus={selectedStatus}
+        onStatusChange={setSelectedStatus}
       />
 
       <OrdensContent

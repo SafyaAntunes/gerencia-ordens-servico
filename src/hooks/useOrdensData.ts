@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { collection, getDocs, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -10,9 +9,15 @@ interface UseOrdensDataProps {
   isTecnico: boolean;
   funcionarioId?: string;
   especialidades?: string[];
+  selectedStatus?: string[];
 }
 
-export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }: UseOrdensDataProps) => {
+export const useOrdensData = ({ 
+  isTecnico, 
+  funcionarioId, 
+  especialidades = [], 
+  selectedStatus = [] 
+}: UseOrdensDataProps) => {
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -175,9 +180,17 @@ export const useOrdensData = ({ isTecnico, funcionarioId, especialidades = [] }:
     }
   };
 
-  // Nova lógica de filtragem simplificada - apenas retorna todas as ordens
+  // Updated filtering logic with status filter
   const filteredOrdens = ordens.filter((ordem) => {
-    return ordem ? true : false;
+    if (!ordem) return false;
+    
+    // If no status selected, show all orders
+    if (selectedStatus.length === 0) {
+      return true;
+    }
+    
+    // Filter by selected status
+    return selectedStatus.includes(ordem.status);
   });
 
   return {

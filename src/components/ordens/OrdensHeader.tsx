@@ -1,34 +1,50 @@
 
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
-import ViewToggle from "./ViewToggle";
+import { Plus } from "lucide-react";
+import { ViewToggle } from "./ViewToggle";
+import OrdensStatusFilter from "./OrdensStatusFilter";
 
 interface OrdensHeaderProps {
   title: string;
   isTecnico: boolean;
   viewType: "grid" | "list";
-  onViewTypeChange: (value: "grid" | "list") => void;
+  onViewTypeChange: (type: "grid" | "list") => void;
   onNovaOrdem: () => void;
+  selectedStatus: string[];
+  onStatusChange: (status: string[]) => void;
 }
 
-export default function OrdensHeader({ 
-  title, 
-  isTecnico, 
-  viewType, 
-  onViewTypeChange, 
-  onNovaOrdem 
+export default function OrdensHeader({
+  title,
+  isTecnico,
+  viewType,
+  onViewTypeChange,
+  onNovaOrdem,
+  selectedStatus,
+  onStatusChange
 }: OrdensHeaderProps) {
   return (
-    <div className="flex justify-between items-center mb-6">
-      <h1 className="text-2xl font-bold">{title}</h1>
-      <div className="flex items-center gap-4">
-        <ViewToggle viewType={viewType} onViewTypeChange={onViewTypeChange} />
-        {!isTecnico && (
-          <Button onClick={onNovaOrdem}>
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Nova Ordem
-          </Button>
-        )}
+    <div className="mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+        
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <OrdensStatusFilter
+            selectedStatus={selectedStatus}
+            onStatusChange={onStatusChange}
+          />
+          
+          <div className="flex items-center gap-2">
+            <ViewToggle viewType={viewType} onViewTypeChange={onViewTypeChange} />
+            
+            {!isTecnico && (
+              <Button onClick={onNovaOrdem}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Ordem
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
