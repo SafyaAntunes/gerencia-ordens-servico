@@ -1,13 +1,17 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { format, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { OrdemServico, StatusOS, EtapaOS } from "@/types/ordens";
+import { OrdemServico, StatusOS, EtapaOS, Prioridade } from "@/types/ordens";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ClienteMotorInfo } from "./ClienteMotorInfo";
 import { useEffect, useState } from "react";
-import { Check, Activity } from "lucide-react"; // Import icon for "Autorizado" status
+import { Check, Activity } from "lucide-react";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { toast } from "sonner";
 
 interface OrderDetailsTabProps {
   ordem: OrdemServico;
@@ -17,6 +21,7 @@ interface OrderDetailsTabProps {
 export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps) {
   const [temposPorEtapa, setTemposPorEtapa] = useState<Record<string, number>>({});
   const [tempoTotal, setTempoTotal] = useState<number>(0);
+  const [isUpdatingPrioridade, setIsUpdatingPrioridade] = useState(false);
 
   useEffect(() => {
     if (ordem) {
@@ -55,6 +60,25 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
     setTempoTotal(total);
   };
 
+  const handlePrioridadeChange = async (novaPrioridade: Prioridade) => {
+    if (isUpdatingPrioridade) return;
+    
+    setIsUpdatingPrioridade(true);
+    try {
+      const ordemRef = doc(db, "ordens_servico", ordem.id);
+      await updateDoc(ordemRef, {
+        prioridade: novaPrioridade
+      });
+      
+      toast.success("Prioridade atualizada com sucesso!");
+    } catch (error) {
+      console.error("Erro ao atualizar prioridade:", error);
+      toast.error("Erro ao atualizar prioridade");
+    } finally {
+      setIsUpdatingPrioridade(false);
+    }
+  };
+
   const statusLabels: Record<StatusOS, string> = {
     desmontagem: "Desmontagem",
     inspecao_inicial: "Inspeção Inicial",
@@ -66,6 +90,20 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
     aguardando_peca_interno: "Aguardando Peça (Interno)",
     finalizado: "Finalizado",
     entregue: "Entregue"
+  };
+
+  const prioridadeLabels: Record<Prioridade, string> = {
+    baixa: "Baixa",
+    media: "Média",
+    alta: "Alta",
+    urgente: "Urgente"
+  };
+
+  const prioridadeColors: Record<Prioridade, string> = {
+    baixa: "bg-green-500",
+    media: "bg-blue-500", 
+    alta: "bg-orange-500",
+    urgente: "bg-red-500"
   };
 
   const etapasNomes: Record<string, string> = {
@@ -159,18 +197,28 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
           </div>
           
           <div>
-            <p className="text-sm text-muted-foreground">Prioridade</p>
-            <Badge className={
-              ordem.prioridade === 'baixa' ? 'bg-green-500' :
-              ordem.prioridade === 'media' ? 'bg-blue-500' :
-              ordem.prioridade === 'alta' ? 'bg-orange-500' :
-              ordem.prioridade === 'urgente' ? 'bg-red-500' : 'bg-gray-500'
-            }>
-              {ordem.prioridade === 'baixa' && 'Baixa'}
-              {ordem.prioridade === 'media' && 'Média'}
-              {ordem.prioridade === 'alta' && 'Alta'}
-              {ordem.prioridade === 'urgente' && 'Urgente'}
+            <p className="text-sm text-muted-foreground mb-2">Prioridade atual</p>
+            <Badge className={prioridadeColors[ordem.prioridade || 'media']}>
+              {prioridadeLabels[ordem.prioridade || 'media']}
             </Badge>
+          </div>
+
+          <div className="flex justify-between items-center">
+            <span className="font-medium">Alterar prioridade:</span>
+            <Select
+              value={ordem.prioridade || 'media'}
+              onValueChange={(value) => handlePrioridadeChange(value as Prioridade)}
+              disabled={isUpdatingPrioridade}
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Selecione a prioridade" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(prioridadeLabels).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
           <Separator />
