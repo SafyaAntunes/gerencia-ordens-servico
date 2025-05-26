@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useOrdensData } from "@/hooks/useOrdensData";
 import OrdensHeader from "@/components/ordens/OrdensHeader";
 import OrdensContent from "@/components/ordens/OrdensContent";
+import { FilterCriteria } from "@/components/ordens/OrdensAdvancedFilter";
 import { doc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
@@ -24,8 +25,15 @@ export default function Ordens({ onLogout }: OrdensProps) {
     return (savedViewType as "grid" | "list") || "grid";
   });
 
-  // Status filter state
-  const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
+  // Advanced filters state
+  const [filters, setFilters] = useState<FilterCriteria>({
+    numeroOS: "",
+    cliente: "",
+    selectedStatus: [],
+    selectedPrioridade: [],
+    dataInicio: undefined,
+    dataFim: undefined
+  });
 
   // Save view preference to localStorage when it changes
   useEffect(() => {
@@ -42,7 +50,7 @@ export default function Ordens({ onLogout }: OrdensProps) {
     isTecnico,
     funcionarioId: funcionario?.id,
     especialidades: funcionario?.especialidades,
-    selectedStatus
+    filters
   });
 
   const handleNovaOrdem = () => {
@@ -91,8 +99,8 @@ export default function Ordens({ onLogout }: OrdensProps) {
         viewType={viewType}
         onViewTypeChange={setViewType}
         onNovaOrdem={handleNovaOrdem}
-        selectedStatus={selectedStatus}
-        onStatusChange={setSelectedStatus}
+        filters={filters}
+        onFiltersChange={setFilters}
       />
 
       <OrdensContent

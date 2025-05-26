@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import ViewToggle from "./ViewToggle";
-import OrdensStatusFilter from "./OrdensStatusFilter";
+import OrdensAdvancedFilter, { FilterCriteria } from "./OrdensAdvancedFilter";
 
 interface OrdensHeaderProps {
   title: string;
@@ -10,8 +10,8 @@ interface OrdensHeaderProps {
   viewType: "grid" | "list";
   onViewTypeChange: (type: "grid" | "list") => void;
   onNovaOrdem: () => void;
-  selectedStatus: string[];
-  onStatusChange: (status: string[]) => void;
+  filters: FilterCriteria;
+  onFiltersChange: (filters: FilterCriteria) => void;
 }
 
 export default function OrdensHeader({
@@ -20,8 +20,8 @@ export default function OrdensHeader({
   viewType,
   onViewTypeChange,
   onNovaOrdem,
-  selectedStatus,
-  onStatusChange
+  filters,
+  onFiltersChange
 }: OrdensHeaderProps) {
   return (
     <div className="mb-6">
@@ -29,9 +29,9 @@ export default function OrdensHeader({
         <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
         
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <OrdensStatusFilter
-            selectedStatus={selectedStatus}
-            onStatusChange={onStatusChange}
+          <OrdensAdvancedFilter
+            filters={filters}
+            onFiltersChange={onFiltersChange}
           />
           
           <div className="flex items-center gap-2">

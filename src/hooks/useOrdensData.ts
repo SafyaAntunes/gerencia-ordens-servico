@@ -4,19 +4,20 @@ import { db } from "@/lib/firebase";
 import { OrdemServico } from "@/types/ordens";
 import { toast } from "sonner";
 import { getOrdensByFuncionarioEspecialidades } from "@/services/funcionarioService";
+import { FilterCriteria } from "@/components/ordens/OrdensAdvancedFilter";
 
 interface UseOrdensDataProps {
   isTecnico: boolean;
   funcionarioId?: string;
   especialidades?: string[];
-  selectedStatus?: string[];
+  filters?: FilterCriteria;
 }
 
 export const useOrdensData = ({ 
   isTecnico, 
   funcionarioId, 
   especialidades = [], 
-  selectedStatus = [] 
+  filters 
 }: UseOrdensDataProps) => {
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
   const [loading, setLoading] = useState(true);
@@ -180,17 +181,71 @@ export const useOrdensData = ({
     }
   };
 
-  // Updated filtering logic with status filter
+  // Updated filtering logic with advanced filters
   const filteredOrdens = ordens.filter((ordem) => {
     if (!ordem) return false;
     
-    // If no status selected, show all orders
-    if (selectedStatus.length === 0) {
+    // If no filters provided, use legacy selectedStatus for backward compatibility
+    if (!filters) {
       return true;
     }
     
-    // Filter by selected status
-    return selectedStatus.includes(ordem.status);
+    // Filter by número da OS
+    if (filters.numeroOS && filters.numeroOS.trim()) {
+      const searchTerm = filters.numeroOS.toLowerCase().trim();
+      if (!ordem.id.toLowerCase().includes(searchTerm) && 
+          !ordem.nome?.toLowerCase().includes(searchTerm)) {
+        return false;
+      }
+    }
+    
+    // Filter by cliente
+    if (filters.cliente && filters.cliente.trim()) {
+      const searchTerm = filters.cliente.toLowerCase().trim();
+      if (!ordem.cliente?.nome?.toLowerCase().includes(searchTerm)) {
+        return false;
+      }
+    }
+    
+    // Filter by status
+    if (filters.selectedStatus.length > 0) {
+      if (!filters.selectedStatus.includes(ordem.status)) {
+        return false;
+      }
+    }
+    
+    // Filter by prioridade
+    if (filters.selectedPrioridade.length > 0) {
+      if (!filters.selectedPrioridade.includes(ordem.prioridade)) {
+        return false;
+      }
+    }
+    
+    // Filter by data início
+    if (filters.dataInicio) {
+      const dataAbertura = new Date(ordem.dataAbertura);
+      const dataInicio = new Date(filters.dataInicio);
+      dataInicio.setHours(0, 0, 0, 0);
+      dataAbertura.setHours(0, 0, 0, 0);
+      
+      if (dataAbertura < dataInicio) {
+        return false;
+      }
+    }
+    
+    // Filter by data fim
+    if (filters.dataFim) {
+      const dataAbertura = new Date(ordem.dataAbertura);
+      const dataFim = new Date(filters.dataFim);
+      dataFim.setHours(23, 59, 59, 999);
+      dataAbertura.setHours(0, 0, 0, 0);
+      
+      if (dataAbertura > dataFim) {
+        return false;
+      }
+    }
+    
+    return true;
   });
 
   return {
