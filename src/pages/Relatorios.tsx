@@ -11,11 +11,10 @@ import {
   XAxis, 
   YAxis, 
   Tooltip, 
-  Legend,
-  PieChart,
-  Pie,
-  Cell
+  Legend
 } from "recharts";
+import { ProducaoTab } from "@/components/relatorios/ProducaoTab";
+import { RankingClientesTab } from "@/components/relatorios/RankingClientesTab";
 
 interface RelatoriosProps extends LogoutProps {}
 
@@ -35,31 +34,6 @@ const Relatorios = ({ onLogout }: RelatoriosProps) => {
     { ano: 2023, receita: 700000, despesas: 400000 },
   ];
   
-  const servicosPorTipo = [
-    { nome: "Bloco", quantidade: 32, percentual: 25 },
-    { nome: "Biela", quantidade: 28, percentual: 22 },
-    { nome: "Cabeçote", quantidade: 40, percentual: 31 },
-    { nome: "Virabrequim", quantidade: 18, percentual: 14 },
-    { nome: "Eixo de Comando", quantidade: 10, percentual: 8 },
-  ];
-  
-  const ordensPorStatus = [
-    { nome: "Orçamento", quantidade: 12 },
-    { nome: "Aguardando", quantidade: 5 },
-    { nome: "Em Fabricação", quantidade: 18 },
-    { nome: "Finalizado", quantidade: 25 },
-    { nome: "Entregue", quantidade: 45 },
-  ];
-  
-  const produtividadeMensal = [
-    { mes: "Janeiro", ordens: 28, tempo_medio: 2.5 },
-    { mes: "Fevereiro", ordens: 35, tempo_medio: 2.3 },
-    { mes: "Março", ordens: 42, tempo_medio: 2.1 },
-    { mes: "Abril", ordens: 38, tempo_medio: 2.2 },
-    { mes: "Maio", ordens: 45, tempo_medio: 2.0 },
-    { mes: "Junho", ordens: 50, tempo_medio: 1.9 },
-  ];
-  
   const calcularLucro = (receita: number, despesas: number) => receita - despesas;
   
   const calcularTotal = (dados: any[], chave: string) => {
@@ -73,14 +47,6 @@ const Relatorios = ({ onLogout }: RelatoriosProps) => {
   const totalReceitasAnuais = calcularTotal(dadosAnuais, "receita");
   const totalDespesasAnuais = calcularTotal(dadosAnuais, "despesas");
   const lucroAnual = calcularLucro(totalReceitasAnuais, totalDespesasAnuais);
-  
-  const totalServicos = servicosPorTipo.reduce((sum, item) => sum + item.quantidade, 0);
-  const totalOrdens = ordensPorStatus.reduce((sum, item) => sum + item.quantidade, 0);
-  const totalOrdensFinalizadas = ordensPorStatus.find(item => item.nome === "Finalizado")?.quantidade || 0;
-  const totalOrdensEntregues = ordensPorStatus.find(item => item.nome === "Entregue")?.quantidade || 0;
-  const taxaFinalizacao = ((totalOrdensFinalizadas + totalOrdensEntregues) / totalOrdens) * 100;
-  
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
   
   return (
     <Layout onLogout={onLogout}>
@@ -96,6 +62,7 @@ const Relatorios = ({ onLogout }: RelatoriosProps) => {
           <TabsList className="mb-6">
             <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
             <TabsTrigger value="producao">Produção</TabsTrigger>
+            <TabsTrigger value="clientes">Ranking de Clientes</TabsTrigger>
           </TabsList>
           
           <TabsContent value="financeiro">
@@ -266,149 +233,11 @@ const Relatorios = ({ onLogout }: RelatoriosProps) => {
           </TabsContent>
           
           <TabsContent value="producao">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Total de Serviços</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center">
-                    <Wrench className="h-5 w-5 mr-2 text-muted-foreground" />
-                    <p className="text-2xl font-bold">{totalServicos}</p>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Total de Ordens</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center">
-                    <FileBarChart className="h-5 w-5 mr-2 text-muted-foreground" />
-                    <p className="text-2xl font-bold">{totalOrdens}</p>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Ordens Finalizadas</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center">
-                    <ActivitySquare className="h-5 w-5 mr-2 text-muted-foreground" />
-                    <p className="text-2xl font-bold">{totalOrdensFinalizadas + totalOrdensEntregues}</p>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Taxa de Finalização</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center">
-                    <BarChart className="h-5 w-5 mr-2 text-muted-foreground" />
-                    <p className="text-2xl font-bold">{taxaFinalizacao.toFixed(2)}%</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Serviços por Tipo</CardTitle>
-                  <CardDescription>
-                    Distribuição dos serviços por tipo
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={servicosPorTipo}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={true}
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="quantidade"
-                      >
-                        {servicosPorTipo.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => [value, "Quantidade"]} />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Ordens por Status</CardTitle>
-                  <CardDescription>
-                    Distribuição das ordens de serviço por status
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={ordensPorStatus}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={true}
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="quantidade"
-                      >
-                        {ordensPorStatus.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => [value, "Quantidade"]} />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-              
-              <Card className="md:col-span-2">
-                <CardHeader>
-                  <CardTitle>Produtividade Mensal</CardTitle>
-                  <CardDescription>
-                    Ordens concluídas e tempo médio por mês
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RechartsBarChart
-                      data={produtividadeMensal}
-                      margin={{
-                        top: 20,
-                        right: 30,
-                        left: 20,
-                        bottom: 5,
-                      }}
-                    >
-                      <XAxis dataKey="mes" />
-                      <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
-                      <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
-                      <Tooltip />
-                      <Legend />
-                      <Bar yAxisId="left" dataKey="ordens" name="Ordens Concluídas" fill="#8884d8" />
-                      <Bar yAxisId="right" dataKey="tempo_medio" name="Tempo Médio (dias)" fill="#82ca9d" />
-                    </RechartsBarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
+            <ProducaoTab />
+          </TabsContent>
+
+          <TabsContent value="clientes">
+            <RankingClientesTab />
           </TabsContent>
         </Tabs>
       </div>
