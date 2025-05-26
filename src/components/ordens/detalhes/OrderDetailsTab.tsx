@@ -70,7 +70,7 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
         prioridade: novaPrioridade
       });
       
-      toast.success("Prioridade atualizada com sucesso!");
+      toast.success("Prioridade atualizada com sucesso! A ordem foi reorganizada na lista.");
     } catch (error) {
       console.error("Erro ao atualizar prioridade:", error);
       toast.error("Erro ao atualizar prioridade");

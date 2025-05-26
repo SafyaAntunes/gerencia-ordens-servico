@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { collection, getDocs, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -21,6 +22,29 @@ export const useOrdensData = ({
 }: UseOrdensDataProps) => {
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Função para ordenar por prioridade
+  const sortByPriority = useCallback((ordensArray: OrdemServico[]) => {
+    const priorityOrder = {
+      urgente: 1,
+      alta: 2,
+      media: 3,
+      baixa: 4
+    };
+
+    return ordensArray.sort((a, b) => {
+      const priorityA = priorityOrder[a.prioridade || 'media'];
+      const priorityB = priorityOrder[b.prioridade || 'media'];
+      
+      // Se as prioridades são diferentes, ordena por prioridade
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+      
+      // Se as prioridades são iguais, ordena por data de abertura (mais recente primeiro)
+      return new Date(b.dataAbertura).getTime() - new Date(a.dataAbertura).getTime();
+    });
+  }, []);
 
   // Função para processar os dados de ordens do Firestore
   const processOrdens = useCallback(async (querySnapshot: any) => {
@@ -87,30 +111,17 @@ export const useOrdensData = ({
         })
       );
       
-      // Tenta recuperar a ordem personalizada do localStorage
-      const savedOrder = localStorage.getItem('ordens-custom-order');
-      if (savedOrder) {
-        try {
-          const orderMap = JSON.parse(savedOrder);
-          // Ordena as ordens conforme a ordem salva
-          ordensWithClienteMotores.sort((a, b) => {
-            const orderA = orderMap[a.id] !== undefined ? orderMap[a.id] : 999999;
-            const orderB = orderMap[b.id] !== undefined ? orderMap[b.id] : 999999;
-            return orderA - orderB;
-          });
-        } catch (error) {
-          console.error("Erro ao aplicar ordem personalizada:", error);
-        }
-      }
+      // Ordena automaticamente por prioridade
+      const ordensOrdenadas = sortByPriority(ordensWithClienteMotores);
       
-      setOrdens(ordensWithClienteMotores);
+      setOrdens(ordensOrdenadas);
       setLoading(false);
     } catch (error) {
       console.error("Error processing orders:", error);
       toast.error("Erro ao processar ordens de serviço.");
       setLoading(false);
     }
-  }, []);
+  }, [sortByPriority]);
 
   // Configurar o listener em tempo real
   useEffect(() => {
@@ -122,7 +133,8 @@ export const useOrdensData = ({
         if (isTecnico && especialidades?.length) {
           // Para técnicos, continuamos usando a abordagem baseada em especialidades
           const especialidadesOrdens = await getOrdensByFuncionarioEspecialidades(especialidades);
-          setOrdens(especialidadesOrdens as OrdemServico[]);
+          const ordensOrdenadas = sortByPriority(especialidadesOrdens as OrdemServico[]);
+          setOrdens(ordensOrdenadas);
           setLoading(false);
         } else {
           // Para outros usuários, configuramos um listener em tempo real
@@ -148,7 +160,7 @@ export const useOrdensData = ({
     };
     
     setupOrdensListener();
-  }, [isTecnico, funcionarioId, especialidades, processOrdens]);
+  }, [isTecnico, funcionarioId, especialidades, processOrdens, sortByPriority]);
 
   const handleReorder = (dragIndex: number, dropIndex: number) => {
     const reorderedOrdens = [...ordens];
@@ -171,7 +183,8 @@ export const useOrdensData = ({
       setLoading(true);
       try {
         const especialidadesOrdens = await getOrdensByFuncionarioEspecialidades(especialidades);
-        setOrdens(especialidadesOrdens as OrdemServico[]);
+        const ordensOrdenadas = sortByPriority(especialidadesOrdens as OrdemServico[]);
+        setOrdens(ordensOrdenadas);
       } catch (error) {
         console.error("Error refreshing orders:", error);
         toast.error("Erro ao atualizar ordens de serviço.");
