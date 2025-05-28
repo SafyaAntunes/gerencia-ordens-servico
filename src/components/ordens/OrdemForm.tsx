@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,8 +9,7 @@ import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, Plus, Trash2 } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
+import { CalendarIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -25,8 +25,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -36,16 +34,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Prioridade, TipoServico, SubAtividade, TipoAtividade } from "@/types/ordens";
+import { Prioridade, TipoServico } from "@/types/ordens";
 import { Cliente } from "@/types/clientes";
 import { Motor } from "@/types/motor";
-import { SimpleFuncionarioSelector } from "@/components/funcionarios/SimpleFuncionarioSelector";
-import { useAuth } from "@/hooks/useAuth";
-import { arrayMove } from "@dnd-kit/sortable";
-import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { SortableItem } from "@/components/ui/sortable-item";
-import { ServicoControl } from "./servico/ServicoControl";
+import { SimpleServicoSelector } from "./SimpleServicoSelector";
 
 interface OrdemFormProps {
   onSubmit: (values: any) => void;
@@ -73,19 +65,7 @@ const formSchema = z.object({
   prioridade: z.enum(["baixa", "media", "alta", "urgente"]).default("media"),
   servicosTipos: z.array(z.string()).optional(),
   servicosDescricoes: z.record(z.string(), z.string()).optional(),
-  servicosSubatividades: z.record(z.string(), z.array(z.any())).optional(),
-  atividadesEspecificas: z.record(z.string(), z.record(z.string(), z.array(z.any()))).optional(),
-  fotosEntrada: z.array(z.any()).optional(),
-  fotosSaida: z.array(z.any()).optional(),
 });
-
-const toTitleCase = (str: string) => {
-  return str
-    .toLowerCase()
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-};
 
 // Lista dos tipos de serviços disponíveis
 const TIPOS_SERVICO = [
@@ -112,11 +92,9 @@ export default function OrdemForm({
 }: OrdemFormProps) {
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [filteredMotores, setFilteredMotores] = useState<Motor[]>([]);
-  const [isAtribuirDialogOpen, setIsAtribuirDialogOpen] = useState(false);
-  const [isReordenandoServicos, setIsReordenandoServicos] = useState(false);
   const [servicos, setServicos] = useState<string[]>([]);
+  const [servicosDescricoes, setServicosDescricoes] = useState<Record<string, string>>({});
   
-  const { funcionario: currentUser } = useAuth();
   const navigate = useNavigate();
   
   const form = useForm<z.infer<typeof formSchema>>({
@@ -134,13 +112,6 @@ export default function OrdemForm({
         acc[servico.tipo] = servico.descricao;
         return acc;
       }, {}) || {},
-      servicosSubatividades: initialData?.servicos?.reduce((acc: any, servico: any) => {
-        acc[servico.tipo] = servico.subatividades;
-        return acc;
-      }, {}) || {},
-      atividadesEspecificas: initialData?.atividadesEspecificas || {},
-      fotosEntrada: initialData?.fotosEntrada || [],
-      fotosSaida: initialData?.fotosSaida || [],
     }
   });
   
@@ -163,13 +134,18 @@ export default function OrdemForm({
   useEffect(() => {
     if (initialData?.servicos) {
       const initialServicos = initialData.servicos.map((servico: any) => servico.tipo);
+      const initialDescricoes = initialData.servicos.reduce((acc: any, servico: any) => {
+        acc[servico.tipo] = servico.descricao || '';
+        return acc;
+      }, {});
+      
       setServicos(initialServicos);
+      setServicosDescricoes(initialDescricoes);
     }
   }, [initialData?.servicos]);
   
   const handleServicoToggle = (tipo: string, checked: boolean) => {
-    const currentServicos = form.getValues("servicosTipos") || [];
-    let newServicos = [...currentServicos];
+    let newServicos = [...servicos];
     
     if (checked) {
       if (!newServicos.includes(tipo)) {
@@ -177,70 +153,22 @@ export default function OrdemForm({
       }
     } else {
       newServicos = newServicos.filter(s => s !== tipo);
+      // Remove descrição quando desmarcar serviço
+      const newDescricoes = { ...servicosDescricoes };
+      delete newDescricoes[tipo];
+      setServicosDescricoes(newDescricoes);
+      setValue("servicosDescricoes", newDescricoes);
     }
     
-    setValue("servicosTipos", newServicos);
     setServicos(newServicos);
+    setValue("servicosTipos", newServicos);
   };
   
   const handleDescricaoChange = (tipo: string, descricao: string) => {
-    const currentDescricoes = form.getValues("servicosDescricoes") || {};
-    setValue("servicosDescricoes", { ...currentDescricoes, [tipo]: descricao });
+    const newDescricoes = { ...servicosDescricoes, [tipo]: descricao };
+    setServicosDescricoes(newDescricoes);
+    setValue("servicosDescricoes", newDescricoes);
   };
-  
-  const handleSubatividadeToggle = (servicoTipo: string, subatividadeId: string, checked: boolean) => {
-    const currentSubatividades = form.getValues("servicosSubatividades") || {};
-    const subatividades = currentSubatividades[servicoTipo] || [];
-    
-    let newSubatividades = [...subatividades];
-    
-    if (checked) {
-      newSubatividades.push({ id: subatividadeId, selecionada: true });
-    } else {
-      newSubatividades = newSubatividades.filter((sub: any) => sub.id !== subatividadeId);
-    }
-    
-    setValue("servicosSubatividades", { ...currentSubatividades, [servicoTipo]: newSubatividades });
-  };
-  
-  const handleAtividadeEspecificaToggle = (servicoTipo: string, tipoAtividade: string, subatividadeId: string, checked: boolean) => {
-    const currentAtividadesEspecificas = form.getValues("atividadesEspecificas") || {};
-    let atividadesDoServico = currentAtividadesEspecificas[servicoTipo] || {};
-    let subatividadesDoTipo = atividadesDoServico[tipoAtividade] || [];
-    
-    let novasSubatividades = [...subatividadesDoTipo];
-    
-    if (checked) {
-      novasSubatividades.push({ id: subatividadeId, selecionada: true });
-    } else {
-      novasSubatividades = novasSubatividades.filter((sub: any) => sub.id !== subatividadeId);
-    }
-    
-    atividadesDoServico = { ...atividadesDoServico, [tipoAtividade]: novasSubatividades };
-    currentAtividadesEspecificas[servicoTipo] = atividadesDoServico;
-    
-    setValue("atividadesEspecificas", { ...currentAtividadesEspecificas });
-  };
-  
-  const sensors = useSensors(
-    useSensor(PointerSensor)
-  );
-  
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    
-    if (!over || active.id === over.id) {
-      return;
-    }
-    
-    const oldIndex = servicos.indexOf(active.id as string);
-    const newIndex = servicos.indexOf(over.id as string);
-    
-    const reorderedServicos = arrayMove(servicos, oldIndex, newIndex);
-    
-    setServicos(reorderedServicos);
-    setValue("servicosTipos", reorderedServicos);
-  }, [servicos, setValue]);
 
   return (
     <Form {...form}>
@@ -460,43 +388,25 @@ export default function OrdemForm({
           )}
         />
         
-        {/* Serviços */}
+        {/* Serviços Simplificados */}
         <div>
           <FormLabel>Serviços</FormLabel>
           <FormDescription>
-            Selecione os serviços a serem realizados nesta ordem.
+            Selecione os serviços a serem realizados. A atribuição de funcionários e controle detalhado será feita na página de detalhes da ordem.
           </FormDescription>
           
-          <div className="space-y-2 mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             {TIPOS_SERVICO.map((tipo) => (
-              <div key={tipo} className="flex items-center space-x-2 p-3 border rounded-md">
-                <Checkbox
-                  id={tipo}
-                  checked={servicos.includes(tipo)}
-                  onCheckedChange={(checked) => handleServicoToggle(tipo, !!checked)}
-                />
-                <Label htmlFor={tipo} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 capitalize">
-                  {toTitleCase(tipo.replace('_', ' '))}
-                </Label>
-              </div>
+              <SimpleServicoSelector
+                key={tipo}
+                tipo={tipo}
+                isSelected={servicos.includes(tipo)}
+                descricao={servicosDescricoes[tipo] || ''}
+                onToggle={handleServicoToggle}
+                onDescricaoChange={handleDescricaoChange}
+              />
             ))}
           </div>
-          
-          <Separator className="my-4" />
-          
-          {values.servicosTipos && values.servicosTipos.length > 0 && (
-            <div className="space-y-4">
-              {values.servicosTipos.map((tipo: string) => (
-                <ServicoControl
-                  key={tipo}
-                  tipo={tipo as TipoServico}
-                  form={form}
-                  handleSubatividadeToggle={handleSubatividadeToggle}
-                  handleAtividadeEspecificaToggle={handleAtividadeEspecificaToggle}
-                />
-              ))}
-            </div>
-          )}
         </div>
         
         <div className="flex justify-end gap-2">
