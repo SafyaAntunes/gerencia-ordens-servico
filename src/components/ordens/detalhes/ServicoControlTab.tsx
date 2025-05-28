@@ -35,6 +35,22 @@ const getStatusLabel = (status: ServicoStatus) => {
   }
 };
 
+const getStatusButtonStyle = (currentStatus: ServicoStatus, buttonStatus: ServicoStatus) => {
+  if (currentStatus === buttonStatus) {
+    switch (buttonStatus) {
+      case 'em_andamento':
+        return 'bg-blue-500 hover:bg-blue-600 text-white';
+      case 'pausado':
+        return 'bg-orange-500 hover:bg-orange-600 text-white';
+      case 'concluido':
+        return 'bg-green-600 hover:bg-green-700 text-white';
+      default:
+        return '';
+    }
+  }
+  return '';
+};
+
 export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -115,27 +131,37 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
   };
 
   return (
-    <TabsContent value="servicos" className="space-y-4 py-4">
-      <h2 className="text-xl font-semibold">Controle de Serviços</h2>
+    <TabsContent value="controle-servicos" className="space-y-4 py-4">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold">Controle de Serviços</h2>
+        <p className="text-muted-foreground">Gerencie os funcionários responsáveis e status de cada serviço</p>
+      </div>
       
       {ordem.servicos && ordem.servicos.length > 0 ? (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {ordem.servicos.map((servico, index) => (
-            <Card key={`${servico.tipo}-${index}`}>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-lg capitalize">
-                    {servico.tipo.replace('_', ' ')}
-                  </CardTitle>
-                  <Badge variant={getStatusBadgeVariant(servico.status || 'nao_iniciado')}>
+            <Card key={`${servico.tipo}-${index}`} className="shadow-sm">
+              <CardHeader className="pb-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-xl capitalize mb-2">
+                      {servico.tipo.replace('_', ' ')}
+                    </CardTitle>
+                    {servico.descricao && (
+                      <p className="text-sm text-muted-foreground">
+                        {servico.descricao}
+                      </p>
+                    )}
+                  </div>
+                  <Badge variant={getStatusBadgeVariant(servico.status || 'nao_iniciado')} className="text-sm">
                     {getStatusLabel(servico.status || 'nao_iniciado')}
                   </Badge>
                 </div>
               </CardHeader>
               
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 {/* Funcionário Responsável */}
-                <div>
+                <div className="space-y-2">
                   <SimpleFuncionarioSelector
                     label="Funcionário Responsável"
                     especialidadeRequerida={servico.tipo}
@@ -147,55 +173,50 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
                 </div>
 
                 {/* Botões de Status */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Status do Serviço</label>
-                  <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold text-gray-700">Status do Serviço</h4>
+                  <div className="grid grid-cols-2 gap-3">
                     <Button 
                       variant={(servico.status || 'nao_iniciado') === 'nao_iniciado' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleStatusChange(servico.tipo, 'nao_iniciado')}
                       disabled={isSubmitting}
+                      className={`h-10 ${getStatusButtonStyle(servico.status || 'nao_iniciado', 'nao_iniciado')}`}
                     >
                       Não Iniciado
                     </Button>
+                    
                     <Button 
                       variant={(servico.status || 'nao_iniciado') === 'em_andamento' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleStatusChange(servico.tipo, 'em_andamento')}
                       disabled={isSubmitting}
-                      className={(servico.status || 'nao_iniciado') === 'em_andamento' ? 'bg-blue-500 hover:bg-blue-600' : ''}
+                      className={`h-10 ${getStatusButtonStyle(servico.status || 'nao_iniciado', 'em_andamento')}`}
                     >
                       Em Andamento
                     </Button>
+                    
                     <Button 
                       variant={(servico.status || 'nao_iniciado') === 'pausado' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleStatusChange(servico.tipo, 'pausado')}
                       disabled={isSubmitting}
-                      className={(servico.status || 'nao_iniciado') === 'pausado' ? 'bg-orange-400 hover:bg-orange-500' : ''}
+                      className={`h-10 ${getStatusButtonStyle(servico.status || 'nao_iniciado', 'pausado')}`}
                     >
                       Pausado
                     </Button>
+                    
                     <Button 
                       variant={(servico.status || 'nao_iniciado') === 'concluido' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleStatusChange(servico.tipo, 'concluido')}
                       disabled={isSubmitting}
-                      className={(servico.status || 'nao_iniciado') === 'concluido' ? 'bg-green-600 hover:bg-green-700' : ''}
+                      className={`h-10 ${getStatusButtonStyle(servico.status || 'nao_iniciado', 'concluido')}`}
                     >
-                      Concluído
+                      Finalizado
                     </Button>
                   </div>
                 </div>
-
-                {/* Descrição do Serviço (se houver) */}
-                {servico.descricao && (
-                  <div className="pt-2 border-t">
-                    <p className="text-sm text-muted-foreground">
-                      <strong>Descrição:</strong> {servico.descricao}
-                    </p>
-                  </div>
-                )}
               </CardContent>
             </Card>
           ))}
@@ -203,9 +224,15 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
       ) : (
         <Card>
           <CardContent className="pt-6">
-            <div className="text-center py-8">
-              <p className="text-muted-foreground mb-4">Nenhum serviço encontrado para esta ordem.</p>
-              <p className="text-sm text-muted-foreground">
+            <div className="text-center py-12">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum serviço encontrado</h3>
+              <p className="text-gray-600 mb-4">Esta ordem não possui serviços configurados.</p>
+              <p className="text-sm text-gray-500">
                 Para adicionar serviços, edite a ordem e selecione os serviços desejados.
               </p>
             </div>
