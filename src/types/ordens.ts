@@ -24,8 +24,8 @@ export type Motor = {
   numeroSerie?: string;
   cilindradas?: string;
   observacoes?: string;
-  clienteId?: string; // Add this property
-  clienteNome?: string; // Add this property
+  clienteId?: string;
+  clienteNome?: string;
 };
 
 // Define TipoServico as an enum so it can be used as a value
@@ -52,10 +52,10 @@ export type SubAtividade = {
   nome: string;
   selecionada: boolean;
   concluida?: boolean;
-  tempoEstimado?: number; // Tempo estimado em horas
-  servicoTipo?: TipoServico | null; // A qual tipo de serviço esta subatividade se relaciona
-  tipoAtividade?: string; // Added this property
-  descricao?: string; // Descrição opcional da subatividade
+  tempoEstimado?: number;
+  servicoTipo?: TipoServico | null;
+  tipoAtividade?: string;
+  descricao?: string;
 };
 
 export type ServicoStatus = 'nao_iniciado' | 'em_andamento' | 'pausado' | 'concluido';
@@ -71,9 +71,9 @@ export type Servico = {
     inspecao_inicial?: SubAtividade[];
     inspecao_final?: SubAtividade[];
   };
-  funcionarioId?: string; // ID do funcionário que concluiu o serviço
-  funcionarioNome?: string; // Nome do funcionário que concluiu o serviço
-  dataConclusao?: Date; // Data de conclusão do serviço
+  funcionarioId?: string;
+  funcionarioNome?: string;
+  dataConclusao?: Date;
 };
 
 export type StatusOS = 
@@ -81,8 +81,8 @@ export type StatusOS =
   | 'inspecao_inicial'
   | 'orcamento'
   | 'aguardando_aprovacao'
-  | 'autorizado'  // Added new status
-  | 'executando_servico'  // Changed from 'fabricacao'
+  | 'autorizado'
+  | 'executando_servico'
   | 'aguardando_peca_cliente'
   | 'aguardando_peca_interno'
   | 'finalizado'
@@ -104,9 +104,9 @@ export type TempoRegistro = {
   funcionarioId: string;
   funcionarioNome?: string;
   etapa: EtapaOS;
-  ordemId?: string;  // Added this property
-  ordemNome?: string; // Added for completeness
-  servicoTipo?: string; // Added this property
+  ordemId?: string;
+  ordemNome?: string;
+  servicoTipo?: string;
   pausas: { inicio: Date; fim?: Date }[];
 };
 
@@ -123,20 +123,19 @@ export type PausaRegistro = {
   motivo?: string;
 };
 
-// Importar tipo TimerState para o tipo timers
 import { TimerState } from '@/types/timer';
 
 export type OrdemServico = {
   id: string;
   nome: string;
   cliente: Cliente;
-  motorId?: string; // Referência ao motor selecionado
+  motorId?: string;
   dataAbertura: Date;
   dataPrevistaEntrega: Date;
   prioridade: Prioridade;
   servicos: Servico[];
   status: StatusOS;
-  progressoEtapas?: number; // Valor entre 0 e 1 representando o percentual de conclusão
+  progressoEtapas?: number;
   etapasAndamento: {
     [key in EtapaOS]?: {
       concluido: boolean;
@@ -146,15 +145,14 @@ export type OrdemServico = {
       finalizado?: Date;
       usarCronometro?: boolean;
       pausas?: PausaRegistro[];
-      tempoEstimado?: number; // Tempo estimado para esta etapa
-      servicoTipo?: TipoServico; // Para associar etapas específicas a serviços
+      tempoEstimado?: number;
+      servicoTipo?: TipoServico;
     }
   };
   tempoRegistros: TempoRegistro[];
   fotosEntrada?: FotoBase64[] | any[];
   fotosSaida?: FotoBase64[] | any[];
-  tempoTotalEstimado?: number; // Tempo total estimado para todas as etapas e subatividades
-  // Adicionar propriedade timers para armazenar estado dos timers de serviços
+  tempoTotalEstimado?: number;
   timers?: {
     [key: string]: TimerState;
   };

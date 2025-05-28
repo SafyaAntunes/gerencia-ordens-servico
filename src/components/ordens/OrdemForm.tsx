@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -78,8 +77,6 @@ const formSchema = z.object({
   atividadesEspecificas: z.record(z.string(), z.record(z.string(), z.array(z.any()))).optional(),
   fotosEntrada: z.array(z.any()).optional(),
   fotosSaida: z.array(z.any()).optional(),
-  funcionarioId: z.string().optional(),
-  funcionarioNome: z.string().optional(),
 });
 
 const toTitleCase = (str: string) => {
@@ -89,6 +86,20 @@ const toTitleCase = (str: string) => {
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 };
+
+// Lista dos tipos de serviços disponíveis
+const TIPOS_SERVICO = [
+  'bloco',
+  'biela', 
+  'cabecote',
+  'virabrequim',
+  'eixo_comando',
+  'montagem',
+  'dinamometro',
+  'lavagem',
+  'inspecao_inicial',
+  'inspecao_final'
+];
 
 export default function OrdemForm({
   onSubmit,
@@ -103,9 +114,7 @@ export default function OrdemForm({
   const [filteredMotores, setFilteredMotores] = useState<Motor[]>([]);
   const [isAtribuirDialogOpen, setIsAtribuirDialogOpen] = useState(false);
   const [isReordenandoServicos, setIsReordenandoServicos] = useState(false);
-  const [servicos, setServicos] = useState<string[]>([]); // Changed from TipoServico[] to string[]
-  const [selectedFuncionarioId, setSelectedFuncionarioId] = useState<string | undefined>(initialData?.funcionarioId);
-  const [selectedFuncionarioNome, setSelectedFuncionarioNome] = useState<string | undefined>(initialData?.funcionarioNome);
+  const [servicos, setServicos] = useState<string[]>([]);
   
   const { funcionario: currentUser } = useAuth();
   const navigate = useNavigate();
@@ -132,8 +141,6 @@ export default function OrdemForm({
       atividadesEspecificas: initialData?.atividadesEspecificas || {},
       fotosEntrada: initialData?.fotosEntrada || [],
       fotosSaida: initialData?.fotosSaida || [],
-      funcionarioId: initialData?.funcionarioId || "",
-      funcionarioNome: initialData?.funcionarioNome || "",
     }
   });
   
@@ -149,7 +156,6 @@ export default function OrdemForm({
     }
   }, [values.clienteId, clientes]);
   
-  // Update to set all motors available, regardless of client
   useEffect(() => {
     setFilteredMotores(allMotores || []);
   }, [allMotores]);
@@ -166,7 +172,9 @@ export default function OrdemForm({
     let newServicos = [...currentServicos];
     
     if (checked) {
-      newServicos.push(tipo);
+      if (!newServicos.includes(tipo)) {
+        newServicos.push(tipo);
+      }
     } else {
       newServicos = newServicos.filter(s => s !== tipo);
     }
@@ -187,10 +195,8 @@ export default function OrdemForm({
     let newSubatividades = [...subatividades];
     
     if (checked) {
-      // Find the subatividade by ID and mark it as selected
       newSubatividades.push({ id: subatividadeId, selecionada: true });
     } else {
-      // Unselect the subatividade
       newSubatividades = newSubatividades.filter((sub: any) => sub.id !== subatividadeId);
     }
     
@@ -205,25 +211,15 @@ export default function OrdemForm({
     let novasSubatividades = [...subatividadesDoTipo];
     
     if (checked) {
-      // Find the subatividade by ID and mark it as selected
       novasSubatividades.push({ id: subatividadeId, selecionada: true });
     } else {
-      // Unselect the subatividade
       novasSubatividades = novasSubatividades.filter((sub: any) => sub.id !== subatividadeId);
     }
     
-    // Update the state
     atividadesDoServico = { ...atividadesDoServico, [tipoAtividade]: novasSubatividades };
     currentAtividadesEspecificas[servicoTipo] = atividadesDoServico;
     
     setValue("atividadesEspecificas", { ...currentAtividadesEspecificas });
-  };
-
-  const handleLimparFuncionario = () => {
-    setValue("funcionarioId", "");
-    setValue("funcionarioNome", "");
-    setSelectedFuncionarioId(undefined);
-    setSelectedFuncionarioNome(undefined);
   };
   
   const sensors = useSensors(
@@ -245,19 +241,11 @@ export default function OrdemForm({
     setServicos(reorderedServicos);
     setValue("servicosTipos", reorderedServicos);
   }, [servicos, setValue]);
-  
-  const isFuncionarioAllowed = () => {
-    return currentUser?.nivelPermissao === 'admin' || currentUser?.nivelPermissao === 'gerente';
-  };
-  
-  // Convert TipoServico enum to an array of values
-  const tipoServicoValues = Object.values(TipoServico);
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Código e Nome */}
           <FormField
             control={form.control}
             name="id"
@@ -293,7 +281,6 @@ export default function OrdemForm({
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Cliente e Motor */}
           <FormField
             control={form.control}
             name="clienteId"
@@ -355,7 +342,6 @@ export default function OrdemForm({
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Data Abertura e Data Prevista */}
           <FormField
             control={form.control}
             name="dataAbertura"
@@ -447,7 +433,6 @@ export default function OrdemForm({
           />
         </div>
         
-        {/* Prioridade */}
         <FormField
           control={form.control}
           name="prioridade"
@@ -482,57 +467,20 @@ export default function OrdemForm({
             Selecione os serviços a serem realizados nesta ordem.
           </FormDescription>
           
-          <DndContext
-            sensors={sensors}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={servicos}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className="flex flex-col gap-2">
-                {tipoServicoValues.map((tipo) => (
-                  <SortableItem key={tipo} id={tipo}>
-                    <div className="flex items-center justify-between rounded-md border p-4">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id={tipo}
-                          checked={servicos.includes(tipo)}
-                          onCheckedChange={(checked) => handleServicoToggle(tipo, !!checked)}
-                        />
-                        <Label htmlFor={tipo} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                          {toTitleCase(tipo)}
-                        </Label>
-                      </div>
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => setIsReordenandoServicos(!isReordenandoServicos)}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="h-4 w-4"
-                        >
-                          <line x1="3" x2="21" y1="4" y2="4" />
-                          <line x1="3" x2="21" y1="12" y2="12" />
-                          <line x1="3" x2="21" y1="20" y2="20" />
-                        </svg>
-                      </Button>
-                    </div>
-                  </SortableItem>
-                ))}
+          <div className="space-y-2 mt-4">
+            {TIPOS_SERVICO.map((tipo) => (
+              <div key={tipo} className="flex items-center space-x-2 p-3 border rounded-md">
+                <Checkbox
+                  id={tipo}
+                  checked={servicos.includes(tipo)}
+                  onCheckedChange={(checked) => handleServicoToggle(tipo, !!checked)}
+                />
+                <Label htmlFor={tipo} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 capitalize">
+                  {toTitleCase(tipo.replace('_', ' '))}
+                </Label>
               </div>
-            </SortableContext>
-          </DndContext>
+            ))}
+          </div>
           
           <Separator className="my-4" />
           
@@ -549,31 +497,6 @@ export default function OrdemForm({
               ))}
             </div>
           )}
-        </div>
-        
-        {/* Funcionário */}
-        <div>
-          <FormLabel>Atribuir Funcionário</FormLabel>
-          <FormDescription>
-            Selecione o funcionário responsável por esta ordem de serviço.
-          </FormDescription>
-          
-          <div className="flex items-center justify-between">
-            <SimpleFuncionarioSelector
-              especialidadeRequerida={values.servicosTipos && values.servicosTipos.length > 0 ? values.servicosTipos[0] as TipoServico : undefined}
-              funcionarioAtualId={selectedFuncionarioId}
-              funcionarioAtualNome={selectedFuncionarioNome}
-              onFuncionarioSelecionado={(id, nome) => {
-                setValue("funcionarioId", id);
-                setValue("funcionarioNome", nome);
-                setSelectedFuncionarioId(id);
-                setSelectedFuncionarioNome(nome);
-              }}
-              onCancelar={handleLimparFuncionario}
-              mostrarCancelar={!!values.funcionarioId}
-              disabled={!isFuncionarioAllowed()}
-            />
-          </div>
         </div>
         
         <div className="flex justify-end gap-2">
