@@ -1,4 +1,3 @@
-
 import { db } from "@/lib/firebase";
 import { doc, updateDoc, getDoc, setDoc, Timestamp } from "firebase/firestore";
 import { EtapaOS, TipoServico } from "@/types/ordens";
@@ -12,12 +11,13 @@ export const marcarFuncionarioEmServico = async (
   servicoTipo?: TipoServico
 ): Promise<boolean> => {
   if (!funcionarioId || !ordemId) {
-    console.error("IDs de funcionário ou ordem inválidos");
+    console.error("IDs de funcionário ou ordem inválidos", { funcionarioId, ordemId });
+    toast.error("Dados inválidos para marcar funcionário como ocupado");
     return false;
   }
 
   try {
-    console.log(`Marcando funcionário ${funcionarioId} como ocupado na ordem ${ordemId}`);
+    console.log(`Iniciando processo para marcar funcionário ${funcionarioId} como ocupado na ordem ${ordemId}`);
     
     // Verificar se o funcionário existe
     const funcionarioRef = doc(db, "funcionarios", funcionarioId);
@@ -25,16 +25,36 @@ export const marcarFuncionarioEmServico = async (
     
     if (!funcionarioDoc.exists()) {
       console.error("Funcionário não encontrado:", funcionarioId);
+      toast.error("Funcionário não encontrado no sistema");
       return false;
     }
     
-    // Verificar se o funcionário já está ocupado
     const funcionarioData = funcionarioDoc.data();
+    console.log("Dados do funcionário:", { 
+      id: funcionarioId, 
+      nome: funcionarioData.nome,
+      statusAtividade: funcionarioData.statusAtividade,
+      atividadeAtual: funcionarioData.atividadeAtual
+    });
+    
+    // Verificar se o funcionário já está ocupado em outra ordem
     if (funcionarioData.statusAtividade === "ocupado" && 
         funcionarioData.atividadeAtual && 
         funcionarioData.atividadeAtual.ordemId !== ordemId) {
-      console.warn("Funcionário já está ocupado em outra ordem:", funcionarioData.atividadeAtual.ordemId);
+      console.warn("Funcionário já está ocupado em outra ordem:", {
+        funcionarioId,
+        ordemAtual: funcionarioData.atividadeAtual.ordemId,
+        novaOrdem: ordemId
+      });
+      toast.error(`Funcionário ${funcionarioData.nome} já está ocupado em outra ordem`);
       return false;
+    }
+    
+    // Se já está ocupado na mesma ordem, permitir (pode ser mudança de serviço)
+    if (funcionarioData.statusAtividade === "ocupado" && 
+        funcionarioData.atividadeAtual && 
+        funcionarioData.atividadeAtual.ordemId === ordemId) {
+      console.log("Funcionário já está ocupado na mesma ordem, atualizando serviço");
     }
     
     // Buscar o nome da ordem para salvar na atividade atual
@@ -44,6 +64,7 @@ export const marcarFuncionarioEmServico = async (
       const ordemDoc = await getDoc(ordemRef);
       if (ordemDoc.exists()) {
         ordemNome = ordemDoc.data().nome || "";
+        console.log("Nome da ordem encontrado:", ordemNome);
       }
     } catch (e) {
       console.warn("Erro ao buscar nome da ordem:", e);
@@ -57,6 +78,8 @@ export const marcarFuncionarioEmServico = async (
       servicoTipo: servicoTipo || null,
       inicio: Timestamp.now()
     };
+    
+    console.log("Atualizando status do funcionário para ocupado:", atividadeAtual);
     
     // Atualizar o documento do funcionário
     await updateDoc(funcionarioRef, {
@@ -77,10 +100,12 @@ export const marcarFuncionarioEmServico = async (
       status: "em_andamento"
     });
     
-    console.log(`Funcionário ${funcionarioId} marcado como ocupado na ordem ${ordemId}`);
+    console.log(`Funcionário ${funcionarioId} marcado como ocupado com sucesso na ordem ${ordemId}`);
+    toast.success(`Funcionário ${funcionarioData.nome} marcado como ocupado`);
     return true;
   } catch (error) {
     console.error("Erro ao marcar funcionário como ocupado:", error);
+    toast.error("Erro interno ao marcar funcionário como ocupado");
     return false;
   }
 };

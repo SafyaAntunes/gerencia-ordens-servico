@@ -62,9 +62,17 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
       const servico = ordem.servicos.find(s => s.tipo === servicoTipo);
       const funcionarioId = servico?.funcionarioId;
       
+      console.log("Mudança de status do serviço:", {
+        servicoTipo,
+        newStatus,
+        funcionarioId,
+        funcionarioNome: servico?.funcionarioNome
+      });
+      
       // Gerenciar status do funcionário baseado no novo status do serviço
       if (funcionarioId) {
         if (newStatus === 'em_andamento') {
+          console.log("Tentando marcar funcionário como ocupado...");
           // Marcar funcionário como ocupado
           const success = await marcarFuncionarioEmServico(
             funcionarioId,
@@ -74,13 +82,24 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
           );
           
           if (!success) {
-            toast.error("Funcionário não pode ser marcado como ocupado");
+            console.error("Falha ao marcar funcionário como ocupado");
+            toast.error("Não foi possível iniciar o serviço. Verifique se o funcionário está disponível.");
             return;
           }
+          console.log("Funcionário marcado como ocupado com sucesso");
         } else if (newStatus === 'pausado' || newStatus === 'concluido') {
+          console.log("Liberando funcionário do serviço...");
           // Liberar funcionário
-          await liberarFuncionarioDeServico(funcionarioId);
+          const liberado = await liberarFuncionarioDeServico(funcionarioId);
+          if (liberado) {
+            console.log("Funcionário liberado com sucesso");
+          } else {
+            console.warn("Problema ao liberar funcionário, mas continuando...");
+          }
         }
+      } else if (newStatus === 'em_andamento') {
+        toast.error("É necessário atribuir um funcionário antes de iniciar o serviço");
+        return;
       }
       
       // Update the service status in the ordem
@@ -124,8 +143,17 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
       const servico = ordem.servicos.find(s => s.tipo === servicoTipo);
       const funcionarioAnteriorId = servico?.funcionarioId;
       
+      console.log("Mudança de funcionário:", {
+        servicoTipo,
+        funcionarioAnterior: funcionarioAnteriorId,
+        novoFuncionario: funcionarioId,
+        novoFuncionarioNome: funcionarioNome,
+        statusAtual: servico?.status
+      });
+      
       // Liberar funcionário anterior se existir
       if (funcionarioAnteriorId && funcionarioAnteriorId !== funcionarioId) {
+        console.log("Liberando funcionário anterior...");
         await liberarFuncionarioDeServico(funcionarioAnteriorId);
       }
       
@@ -148,6 +176,7 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
       
       // Se o serviço já está em andamento, marcar novo funcionário como ocupado
       if (servico?.status === 'em_andamento') {
+        console.log("Serviço já está em andamento, marcando novo funcionário como ocupado...");
         const success = await marcarFuncionarioEmServico(
           funcionarioId,
           ordem.id,
@@ -156,7 +185,16 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
         );
         
         if (!success) {
-          toast.warning("Funcionário atribuído mas não foi possível marcá-lo como ocupado");
+          toast.warning("Funcionário atribuído mas não foi possível marcá-lo como ocupado. O serviço foi pausado.");
+          // Pausar o serviço se não conseguir marcar funcionário como ocupado
+          const servicosPausados = updatedServicos.map(s => 
+            s.tipo === servicoTipo ? { ...s, status: 'pausado' as ServicoStatus } : s
+          );
+          await updateDoc(ordemRef, { servicos: servicosPausados });
+          if (onOrdemUpdate) {
+            onOrdemUpdate({ ...ordem, servicos: servicosPausados });
+          }
+          return;
         }
       }
       
