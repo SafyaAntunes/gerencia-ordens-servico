@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { SimpleFuncionarioSelector } from "@/components/funcionarios/SimpleFuncionarioSelector";
+import { marcarFuncionarioEmServico, liberarFuncionarioDeServico } from "@/services/funcionarioEmServicoService";
 
 type ServicoControlTabProps = {
   ordem: OrdemServico;
@@ -58,6 +59,30 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
     try {
       setIsSubmitting(true);
       
+      const servico = ordem.servicos.find(s => s.tipo === servicoTipo);
+      const funcionarioId = servico?.funcionarioId;
+      
+      // Gerenciar status do funcionário baseado no novo status do serviço
+      if (funcionarioId) {
+        if (newStatus === 'em_andamento') {
+          // Marcar funcionário como ocupado
+          const success = await marcarFuncionarioEmServico(
+            funcionarioId,
+            ordem.id,
+            'retifica', // Usar etapa padrão para serviços
+            servico?.tipo
+          );
+          
+          if (!success) {
+            toast.error("Funcionário não pode ser marcado como ocupado");
+            return;
+          }
+        } else if (newStatus === 'pausado' || newStatus === 'concluido') {
+          // Liberar funcionário
+          await liberarFuncionarioDeServico(funcionarioId);
+        }
+      }
+      
       // Update the service status in the ordem
       const updatedServicos = ordem.servicos.map(servico => 
         servico.tipo === servicoTipo 
@@ -96,6 +121,14 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
     try {
       setIsSubmitting(true);
       
+      const servico = ordem.servicos.find(s => s.tipo === servicoTipo);
+      const funcionarioAnteriorId = servico?.funcionarioId;
+      
+      // Liberar funcionário anterior se existir
+      if (funcionarioAnteriorId && funcionarioAnteriorId !== funcionarioId) {
+        await liberarFuncionarioDeServico(funcionarioAnteriorId);
+      }
+      
       // Update the service funcionario in the ordem
       const updatedServicos = ordem.servicos.map(servico => 
         servico.tipo === servicoTipo 
@@ -112,6 +145,20 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
       await updateDoc(ordemRef, {
         servicos: updatedServicos
       });
+      
+      // Se o serviço já está em andamento, marcar novo funcionário como ocupado
+      if (servico?.status === 'em_andamento') {
+        const success = await marcarFuncionarioEmServico(
+          funcionarioId,
+          ordem.id,
+          'retifica', // Usar etapa padrão para serviços
+          servico?.tipo
+        );
+        
+        if (!success) {
+          toast.warning("Funcionário atribuído mas não foi possível marcá-lo como ocupado");
+        }
+      }
       
       // Update local state
       if (onOrdemUpdate) {
@@ -190,7 +237,7 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
                       variant={(servico.status || 'nao_iniciado') === 'em_andamento' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleStatusChange(servico.tipo, 'em_andamento')}
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || !servico.funcionarioId}
                       className={`h-10 ${getStatusButtonStyle(servico.status || 'nao_iniciado', 'em_andamento')}`}
                     >
                       Em Andamento
@@ -216,6 +263,12 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
                       Finalizado
                     </Button>
                   </div>
+                  
+                  {!servico.funcionarioId && (
+                    <p className="text-sm text-amber-600 bg-amber-50 p-2 rounded">
+                      ⚠️ Atribua um funcionário antes de iniciar o serviço
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
