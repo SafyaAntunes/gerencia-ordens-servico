@@ -58,6 +58,11 @@ const getStatusButtonStyle = (currentStatus: ServicoStatus, buttonStatus: Servic
   return '';
 };
 
+// Type guard para verificar se é um erro
+const isErro = (diagnostico: any): diagnostico is { erro: string } => {
+  return diagnostico && 'erro' in diagnostico;
+};
+
 export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [diagnosticandoFuncionarios, setDiagnosticandoFuncionarios] = useState<string[]>([]);
@@ -71,7 +76,7 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
     try {
       const diagnostico = await diagnosticarStatusFuncionario(funcionarioId);
       
-      if (diagnostico.erro) {
+      if (isErro(diagnostico)) {
         toast.error(`Erro no diagnóstico: ${diagnostico.erro}`);
         return;
       }
@@ -207,7 +212,7 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
       }
       
       toast.success(`Status do serviço ${servicoTipo} atualizado para ${getStatusLabel(newStatus)}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Erro ao atualizar status do serviço:", error);
       console.error("❌ Detalhes do erro:", {
         message: error.message,
