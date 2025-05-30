@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useState } from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import { OrdemServico, Servico, ServicoStatus } from "@/types/ordens";
@@ -8,7 +9,13 @@ import { Button } from "@/components/ui/button";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { SimpleFuncionarioSelector } from "@/components/funcionarios/SimpleFuncionarioSelector";
-import { marcarFuncionarioEmServico, liberarFuncionarioDeServico } from "@/services/funcionarioEmServicoService";
+import { 
+  marcarFuncionarioEmServico, 
+  liberarFuncionarioDeServico,
+  diagnosticarStatusFuncionario,
+  limparDadosInconsistentes,
+  forcarLiberacaoFuncionario
+} from "@/services/funcionarioEmServicoService";
 
 type ServicoControlTabProps = {
   ordem: OrdemServico;
@@ -53,6 +60,61 @@ const getStatusButtonStyle = (currentStatus: ServicoStatus, buttonStatus: Servic
 
 export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [diagnosticandoFuncionarios, setDiagnosticandoFuncionarios] = useState<string[]>([]);
+
+  // Função para diagnosticar status de um funcionário específico
+  const handleDiagnosticarFuncionario = async (funcionarioId: string) => {
+    if (!funcionarioId) return;
+    
+    setDiagnosticandoFuncionarios(prev => [...prev, funcionarioId]);
+    
+    try {
+      const diagnostico = await diagnosticarStatusFuncionario(funcionarioId);
+      
+      if (diagnostico.erro) {
+        toast.error(`Erro no diagnóstico: ${diagnostico.erro}`);
+        return;
+      }
+      
+      // Mostrar resultado do diagnóstico
+      if (diagnostico.inconsistente) {
+        toast.warning(
+          `Dados inconsistentes detectados! Funcionário está marcado como ocupado mas a ordem não existe.`,
+          {
+            duration: 8000,
+            action: {
+              label: "Limpar Automaticamente",
+              onClick: () => handleLimparDados(funcionarioId)
+            }
+          }
+        );
+      } else {
+        toast.success("Status do funcionário está consistente");
+      }
+      
+      console.log("📋 Diagnóstico do funcionário:", diagnostico);
+    } catch (error) {
+      toast.error("Erro ao diagnosticar funcionário");
+      console.error("Erro no diagnóstico:", error);
+    } finally {
+      setDiagnosticandoFuncionarios(prev => prev.filter(id => id !== funcionarioId));
+    }
+  };
+
+  // Função para limpar dados inconsistentes
+  const handleLimparDados = async (funcionarioId: string) => {
+    try {
+      const sucesso = await limparDadosInconsistentes(funcionarioId);
+      if (sucesso) {
+        toast.success("Dados inconsistentes corrigidos com sucesso");
+      } else {
+        toast.error("Não foi possível corrigir os dados");
+      }
+    } catch (error) {
+      toast.error("Erro ao limpar dados inconsistentes");
+      console.error("Erro na limpeza:", error);
+    }
+  };
 
   const handleStatusChange = async (servicoTipo: string, newStatus: ServicoStatus) => {
     try {
@@ -90,7 +152,15 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
           
           if (!success) {
             console.error("❌ Falha ao marcar funcionário como ocupado");
-            toast.error("Não foi possível iniciar o serviço. Verifique se o funcionário está disponível.");
+            
+            // Oferecer opções de diagnóstico e correção
+            toast.error("Não foi possível iniciar o serviço. Verifique se o funcionário está disponível.", {
+              duration: 10000,
+              action: {
+                label: "Diagnosticar",
+                onClick: () => handleDiagnosticarFuncionario(funcionarioId)
+              }
+            });
             return;
           }
           console.log("✅ Funcionário marcado como ocupado com sucesso");
@@ -263,14 +333,40 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
               <CardContent className="space-y-6">
                 {/* Funcionário Responsável */}
                 <div className="space-y-2">
-                  <SimpleFuncionarioSelector
-                    label="Funcionário Responsável"
-                    especialidadeRequerida={servico.tipo}
-                    funcionarioAtualId={servico.funcionarioId}
-                    funcionarioAtualNome={servico.funcionarioNome}
-                    onFuncionarioSelecionado={(id, nome) => handleFuncionarioChange(servico.tipo, id, nome)}
-                    mostrarCancelar={false}
-                  />
+                  <div className="flex items-center justify-between">
+                    <SimpleFuncionarioSelector
+                      label="Funcionário Responsável"
+                      especialidadeRequerida={servico.tipo}
+                      funcionarioAtualId={servico.funcionarioId}
+                      funcionarioAtualNome={servico.funcionarioNome}
+                      onFuncionarioSelecionado={(id, nome) => handleFuncionarioChange(servico.tipo, id, nome)}
+                      mostrarCancelar={false}
+                    />
+                    
+                    {/* Botões de diagnóstico e liberação */}
+                    {servico.funcionarioId && (
+                      <div className="flex gap-2 ml-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDiagnosticarFuncionario(servico.funcionarioId!)}
+                          disabled={diagnosticandoFuncionarios.includes(servico.funcionarioId!)}
+                          className="text-xs"
+                        >
+                          {diagnosticandoFuncionarios.includes(servico.funcionarioId!) ? "Verificando..." : "Diagnosticar"}
+                        </Button>
+                        
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => forcarLiberacaoFuncionario(servico.funcionarioId!)}
+                          className="text-xs"
+                        >
+                          Liberar
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Botões de Status */}

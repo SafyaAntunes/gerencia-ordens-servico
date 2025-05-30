@@ -1,7 +1,105 @@
+
 import { db } from "@/lib/firebase";
 import { doc, updateDoc, getDoc, setDoc, Timestamp } from "firebase/firestore";
 import { EtapaOS, TipoServico } from "@/types/ordens";
 import { toast } from "sonner";
+
+// Função para diagnosticar o status de um funcionário
+export const diagnosticarStatusFuncionario = async (funcionarioId: string) => {
+  try {
+    console.log(`🔍 Diagnosticando status do funcionário ${funcionarioId}...`);
+    
+    const funcionarioRef = doc(db, "funcionarios", funcionarioId);
+    const funcionarioDoc = await getDoc(funcionarioRef);
+    
+    if (!funcionarioDoc.exists()) {
+      console.error("❌ Funcionário não encontrado");
+      return { erro: "Funcionário não encontrado" };
+    }
+    
+    const funcionarioData = funcionarioDoc.data();
+    const diagnostico = {
+      funcionarioId,
+      nome: funcionarioData.nome,
+      statusAtividade: funcionarioData.statusAtividade,
+      atividadeAtual: funcionarioData.atividadeAtual,
+      ordemExiste: false,
+      inconsistente: false
+    };
+    
+    // Verificar se a ordem atual existe
+    if (funcionarioData.atividadeAtual?.ordemId) {
+      try {
+        const ordemRef = doc(db, "ordens_servico", funcionarioData.atividadeAtual.ordemId);
+        const ordemDoc = await getDoc(ordemRef);
+        diagnostico.ordemExiste = ordemDoc.exists();
+        
+        // Marcar como inconsistente se está ocupado mas a ordem não existe
+        if (funcionarioData.statusAtividade === "ocupado" && !ordemDoc.exists()) {
+          diagnostico.inconsistente = true;
+        }
+      } catch (error) {
+        console.warn("⚠️ Erro ao verificar ordem:", error);
+        diagnostico.inconsistente = true;
+      }
+    }
+    
+    console.log("📋 Diagnóstico completo:", diagnostico);
+    return diagnostico;
+  } catch (error) {
+    console.error("❌ Erro no diagnóstico:", error);
+    return { erro: "Erro ao diagnosticar funcionário" };
+  }
+};
+
+// Função para limpeza preventiva de dados inconsistentes
+export const limparDadosInconsistentes = async (funcionarioId: string): Promise<boolean> => {
+  try {
+    console.log(`🧹 Limpando dados inconsistentes do funcionário ${funcionarioId}...`);
+    
+    const diagnostico = await diagnosticarStatusFuncionario(funcionarioId);
+    
+    if (diagnostico.erro) {
+      return false;
+    }
+    
+    if (diagnostico.inconsistente) {
+      console.log("🔧 Dados inconsistentes detectados, limpando...");
+      
+      const funcionarioRef = doc(db, "funcionarios", funcionarioId);
+      await updateDoc(funcionarioRef, {
+        statusAtividade: "disponivel",
+        atividadeAtual: null
+      });
+      
+      // Também limpar o registro de tracking se existir
+      try {
+        const emServicoRef = doc(db, "funcionarios_em_servico", funcionarioId);
+        const emServicoDoc = await getDoc(emServicoRef);
+        
+        if (emServicoDoc.exists()) {
+          await updateDoc(emServicoRef, {
+            finalizado: Timestamp.now(),
+            status: "limpo_automaticamente",
+            observacao: "Dados inconsistentes detectados e limpos automaticamente"
+          });
+        }
+      } catch (err) {
+        console.warn("⚠️ Aviso: Não foi possível limpar registro de tracking", err);
+      }
+      
+      console.log("✅ Dados inconsistentes limpos com sucesso");
+      toast.success("Dados inconsistentes detectados e corrigidos automaticamente");
+      return true;
+    }
+    
+    console.log("✅ Dados do funcionário estão consistentes");
+    return true;
+  } catch (error) {
+    console.error("❌ Erro na limpeza de dados:", error);
+    return false;
+  }
+};
 
 // Marcar um funcionário como ocupado em um serviço
 export const marcarFuncionarioEmServico = async (
@@ -28,6 +126,10 @@ export const marcarFuncionarioEmServico = async (
     }
     
     console.log("✅ Conexão com Firebase OK");
+    
+    // Primeiro, fazer limpeza preventiva de dados inconsistentes
+    console.log("🧹 Executando limpeza preventiva...");
+    await limparDadosInconsistentes(funcionarioId);
     
     // Verificar se o funcionário existe
     console.log(`📋 Verificando se funcionário ${funcionarioId} existe...`);
@@ -89,7 +191,21 @@ export const marcarFuncionarioEmServico = async (
           console.log("✅ Funcionário liberado automaticamente");
         } else {
           // A ordem existe, então o funcionário realmente está ocupado
-          toast.error(`Funcionário ${funcionarioData.nome} já está ocupado na ordem ${funcionarioData.atividadeAtual.ordemId}`);
+          const ordemNome = ordemAtualDoc.data()?.nome || 'Desconhecida';
+          console.error("❌ Funcionário realmente está ocupado em outra ordem válida");
+          
+          // Mostrar mensagem de erro mais informativa com opção de liberação manual
+          toast.error(
+            `Funcionário ${funcionarioData.nome} está ocupado na ordem "${ordemNome}" (${funcionarioData.atividadeAtual.ordemId}). ` +
+            `Use a função de liberação manual se necessário.`,
+            {
+              duration: 10000,
+              action: {
+                label: "Liberar Manualmente",
+                onClick: () => forcarLiberacaoFuncionario(funcionarioId)
+              }
+            }
+          );
           return false;
         }
       } catch (error: any) {
@@ -270,6 +386,12 @@ export const forcarLiberacaoFuncionario = async (
   }
   
   try {
+    console.log(`🚨 FORÇANDO liberação do funcionário ${funcionarioId}...`);
+    
+    // Primeiro fazer diagnóstico para logging
+    const diagnostico = await diagnosticarStatusFuncionario(funcionarioId);
+    console.log("📋 Status antes da liberação forçada:", diagnostico);
+    
     // Atualizar o documento do funcionário para registrar que está disponível
     const funcionarioRef = doc(db, "funcionarios", funcionarioId);
     
@@ -281,22 +403,26 @@ export const forcarLiberacaoFuncionario = async (
     // Atualizar o registro de tracking
     try {
       const emServicoRef = doc(db, "funcionarios_em_servico", funcionarioId);
-      await updateDoc(emServicoRef, {
-        finalizado: Timestamp.now(),
-        status: "finalizado_forcado",
-        observacao: "Liberação forçada pelo sistema"
-      });
+      const emServicoDoc = await getDoc(emServicoRef);
+      
+      if (emServicoDoc.exists()) {
+        await updateDoc(emServicoRef, {
+          finalizado: Timestamp.now(),
+          status: "finalizado_forcado",
+          observacao: "Liberação forçada pelo usuário - possível inconsistência de dados"
+        });
+      }
     } catch (err) {
       // Se não encontrar o documento de tracking, não é um problema crítico
       console.warn("Aviso: Não foi possível atualizar registro de tracking", err);
     }
     
-    toast.success(`Funcionário liberado com sucesso`);
-    console.log(`Funcionário ${funcionarioId} liberado forçadamente`);
+    toast.success(`Funcionário liberado forçadamente com sucesso`);
+    console.log(`✅ Funcionário ${funcionarioId} liberado forçadamente`);
     return true;
   } catch (error) {
-    console.error("Erro ao forçar liberação do funcionário:", error);
-    toast.error("Erro ao liberar funcionário");
+    console.error("❌ Erro ao forçar liberação do funcionário:", error);
+    toast.error("Erro ao liberar funcionário forçadamente");
     return false;
   }
 };
