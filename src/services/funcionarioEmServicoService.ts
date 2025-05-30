@@ -1,3 +1,4 @@
+
 import { db } from "@/lib/firebase";
 import { doc, updateDoc, getDoc, setDoc, Timestamp } from "firebase/firestore";
 import { EtapaOS, TipoServico } from "@/types/ordens";
@@ -36,9 +37,14 @@ export const marcarFuncionarioEmServico = async (
     let funcionarioDoc;
     try {
       funcionarioDoc = await getDoc(funcionarioRef);
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Erro ao buscar funcionário:", error);
-      toast.error(`Erro ao acessar dados do funcionário: ${error.message}`);
+      console.error("❌ Detalhes do erro Firebase:", {
+        code: error.code,
+        message: error.message,
+        details: error
+      });
+      toast.error(`Erro ao acessar dados do funcionário: ${error.message || 'Erro desconhecido'}`);
       return false;
     }
     
@@ -88,12 +94,20 @@ export const marcarFuncionarioEmServico = async (
       } else {
         console.warn("⚠️ Ordem não encontrada, mas continuando...");
       }
-    } catch (e) {
+    } catch (e: any) {
       console.warn("⚠️ Erro ao buscar nome da ordem:", e);
     }
     
-    // Converter servicoTipo para string se for enum
-    const servicoTipoString = typeof servicoTipo === 'string' ? servicoTipo : servicoTipo?.toString() || null;
+    // Converter servicoTipo para string de forma segura
+    let servicoTipoString: string | null = null;
+    if (servicoTipo !== undefined && servicoTipo !== null) {
+      if (typeof servicoTipo === 'string') {
+        servicoTipoString = servicoTipo;
+      } else {
+        // Se é um enum TipoServico, converter para string
+        servicoTipoString = String(servicoTipo);
+      }
+    }
     
     // Registrar a atividade atual do funcionário
     const atividadeAtual = {
@@ -113,9 +127,14 @@ export const marcarFuncionarioEmServico = async (
         atividadeAtual
       });
       console.log("✅ Documento do funcionário atualizado com sucesso");
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Erro ao atualizar documento do funcionário:", error);
-      toast.error(`Erro ao atualizar status do funcionário: ${error.message}`);
+      console.error("❌ Detalhes do erro Firebase:", {
+        code: error.code,
+        message: error.message,
+        details: error
+      });
+      toast.error(`Erro ao atualizar status do funcionário: ${error.message || 'Erro desconhecido'}`);
       return false;
     }
     
@@ -134,8 +153,13 @@ export const marcarFuncionarioEmServico = async (
         status: "em_andamento"
       });
       console.log("✅ Registro de tracking criado com sucesso");
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Erro ao criar registro de tracking:", error);
+      console.error("❌ Detalhes do erro Firebase:", {
+        code: error.code,
+        message: error.message,
+        details: error
+      });
       console.warn("⚠️ Funcionário foi marcado como ocupado, mas tracking falhou");
       // Não falhar completamente se apenas o tracking falhar
     }
@@ -143,7 +167,7 @@ export const marcarFuncionarioEmServico = async (
     console.log(`✅ Funcionário ${funcionarioId} marcado como ocupado com sucesso na ordem ${ordemId}`);
     toast.success(`Funcionário ${funcionarioData.nome} marcado como ocupado`);
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ Erro geral ao marcar funcionário como ocupado:", error);
     console.error("❌ Detalhes do erro:", {
       message: error.message,
