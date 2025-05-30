@@ -1,4 +1,3 @@
-
 import { db } from "@/lib/firebase";
 import { doc, updateDoc, getDoc, setDoc, Timestamp } from "firebase/firestore";
 import { EtapaOS, TipoServico } from "@/types/ordens";
@@ -62,17 +61,47 @@ export const marcarFuncionarioEmServico = async (
       atividadeAtual: funcionarioData.atividadeAtual
     });
     
-    // Verificar se o funcionário já está ocupado em outra ordem
-    if (funcionarioData.statusAtividade === "ocupado" && 
-        funcionarioData.atividadeAtual && 
-        funcionarioData.atividadeAtual.ordemId !== ordemId) {
-      console.warn("⚠️ Funcionário já está ocupado em outra ordem:", {
+    // Verificação mais robusta do status do funcionário
+    const isOcupadoEmOutraOrdem = funcionarioData.statusAtividade === "ocupado" && 
+                                  funcionarioData.atividadeAtual && 
+                                  funcionarioData.atividadeAtual.ordemId !== ordemId;
+    
+    if (isOcupadoEmOutraOrdem) {
+      console.warn("⚠️ Funcionário parece estar ocupado em outra ordem:", {
         funcionarioId,
         ordemAtual: funcionarioData.atividadeAtual.ordemId,
         novaOrdem: ordemId
       });
-      toast.error(`Funcionário ${funcionarioData.nome} já está ocupado em outra ordem`);
-      return false;
+      
+      // Verificar se a ordem atual realmente existe
+      console.log("🔍 Verificando se a ordem atual do funcionário ainda existe...");
+      try {
+        const ordemAtualRef = doc(db, "ordens_servico", funcionarioData.atividadeAtual.ordemId);
+        const ordemAtualDoc = await getDoc(ordemAtualRef);
+        
+        if (!ordemAtualDoc.exists()) {
+          console.log("⚠️ Ordem atual do funcionário não existe mais. Liberando funcionário automaticamente...");
+          // Liberar funcionário automaticamente se a ordem não existir
+          await updateDoc(funcionarioRef, {
+            statusAtividade: "disponivel",
+            atividadeAtual: null
+          });
+          console.log("✅ Funcionário liberado automaticamente");
+        } else {
+          // A ordem existe, então o funcionário realmente está ocupado
+          toast.error(`Funcionário ${funcionarioData.nome} já está ocupado na ordem ${funcionarioData.atividadeAtual.ordemId}`);
+          return false;
+        }
+      } catch (error: any) {
+        console.warn("⚠️ Erro ao verificar ordem atual do funcionário:", error);
+        // Em caso de erro, assumir que a ordem não existe e liberar funcionário
+        console.log("⚠️ Liberando funcionário devido a erro na verificação...");
+        await updateDoc(funcionarioRef, {
+          statusAtividade: "disponivel",
+          atividadeAtual: null
+        });
+        console.log("✅ Funcionário liberado devido a erro na verificação");
+      }
     }
     
     // Se já está ocupado na mesma ordem, permitir (pode ser mudança de serviço)
