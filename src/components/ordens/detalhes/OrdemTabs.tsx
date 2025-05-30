@@ -1,51 +1,44 @@
 
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { OrderDetailsTab } from "./OrderDetailsTab";
-import { ServicoControlTab } from "./ServicoControlTab";
-import { AtribuicaoFuncionariosTab } from "./AtribuicaoFuncionariosTab";
-import { FotosTab } from "./FotosTab";
-import { OrdemServico, StatusOS } from "@/types/ordens";
+import { OrdemServico, StatusOS, EtapaOS } from "@/types/ordens";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { OrderDetailsTab } from "@/components/ordens/detalhes/OrderDetailsTab";
+import { FotosTab } from "@/components/ordens/detalhes/FotosTab";
+import { ServicoControlTab } from "@/components/ordens/detalhes/ServicoControlTab";
 
-type OrdemTabsProps = {
+interface OrdemTabsProps {
   ordem: OrdemServico;
   activeTab: string;
-  onTabChange: (tab: string) => void;
+  onTabChange: (value: string) => void;
   onStatusChange: (status: StatusOS) => void;
-  onOrdemUpdate?: (ordem: OrdemServico) => void;
-};
+  onOrdemUpdate: (ordemAtualizada: OrdemServico) => void;
+}
 
 export function OrdemTabs({ 
   ordem, 
   activeTab, 
   onTabChange, 
-  onStatusChange, 
-  onOrdemUpdate 
+  onStatusChange,
+  onOrdemUpdate
 }: OrdemTabsProps) {
   return (
     <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-      <TabsList className="grid w-full grid-cols-4">
-        <TabsTrigger value="detalhes">Detalhes</TabsTrigger>
-        <TabsTrigger value="controle-servicos">Controle de Serviços</TabsTrigger>
-        <TabsTrigger value="atribuicao-funcionarios">Atribuição de Funcionários</TabsTrigger>
-        <TabsTrigger value="fotos">Fotos</TabsTrigger>
+      <TabsList className="w-full mb-6">
+        <TabsTrigger value="detalhes" className="flex-1">Detalhes</TabsTrigger>
+        <TabsTrigger value="controle-servicos" className="flex-1">Controle de Serviços</TabsTrigger>
+        <TabsTrigger value="fotos" className="flex-1">Fotos</TabsTrigger>
       </TabsList>
       
-      <OrderDetailsTab 
-        ordem={ordem}
-        onStatusChange={onStatusChange}
-      />
+      <TabsContent value="detalhes">
+        <OrderDetailsTab ordem={ordem} onStatusChange={onStatusChange} />
+      </TabsContent>
       
-      <ServicoControlTab 
-        ordem={ordem}
-        onOrdemUpdate={onOrdemUpdate}
-      />
+      <TabsContent value="controle-servicos">
+        <ServicoControlTab ordem={ordem} onOrdemUpdate={onOrdemUpdate} />
+      </TabsContent>
       
-      <AtribuicaoFuncionariosTab 
-        ordem={ordem}
-        onOrdemUpdate={onOrdemUpdate}
-      />
-      
-      <FotosTab ordem={ordem} />
+      <TabsContent value="fotos">
+        <FotosTab ordem={ordem} onOrdemUpdate={onOrdemUpdate} />
+      </TabsContent>
     </Tabs>
   );
 }
