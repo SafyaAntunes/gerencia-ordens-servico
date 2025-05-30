@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useState } from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import { OrdemServico, Servico, ServicoStatus } from "@/types/ordens";
@@ -62,17 +61,25 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
       const servico = ordem.servicos.find(s => s.tipo === servicoTipo);
       const funcionarioId = servico?.funcionarioId;
       
-      console.log("Mudança de status do serviço:", {
+      console.log("🔄 Mudança de status do serviço:", {
         servicoTipo,
         newStatus,
         funcionarioId,
-        funcionarioNome: servico?.funcionarioNome
+        funcionarioNome: servico?.funcionarioNome,
+        ordemId: ordem.id
       });
       
       // Gerenciar status do funcionário baseado no novo status do serviço
       if (funcionarioId) {
         if (newStatus === 'em_andamento') {
-          console.log("Tentando marcar funcionário como ocupado...");
+          console.log("🔄 Tentando marcar funcionário como ocupado...");
+          console.log("Dados para marcar funcionário:", {
+            funcionarioId,
+            ordemId: ordem.id,
+            etapa: 'retifica',
+            servicoTipo: servico?.tipo
+          });
+          
           // Marcar funcionário como ocupado
           const success = await marcarFuncionarioEmServico(
             funcionarioId,
@@ -82,19 +89,19 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
           );
           
           if (!success) {
-            console.error("Falha ao marcar funcionário como ocupado");
+            console.error("❌ Falha ao marcar funcionário como ocupado");
             toast.error("Não foi possível iniciar o serviço. Verifique se o funcionário está disponível.");
             return;
           }
-          console.log("Funcionário marcado como ocupado com sucesso");
+          console.log("✅ Funcionário marcado como ocupado com sucesso");
         } else if (newStatus === 'pausado' || newStatus === 'concluido') {
-          console.log("Liberando funcionário do serviço...");
+          console.log("🔄 Liberando funcionário do serviço...");
           // Liberar funcionário
           const liberado = await liberarFuncionarioDeServico(funcionarioId);
           if (liberado) {
-            console.log("Funcionário liberado com sucesso");
+            console.log("✅ Funcionário liberado com sucesso");
           } else {
-            console.warn("Problema ao liberar funcionário, mas continuando...");
+            console.warn("⚠️ Problema ao liberar funcionário, mas continuando...");
           }
         }
       } else if (newStatus === 'em_andamento') {
@@ -114,10 +121,12 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
       );
 
       // Update in Firestore
+      console.log("🔄 Atualizando serviços no Firestore...");
       const ordemRef = doc(db, "ordens_servico", ordem.id);
       await updateDoc(ordemRef, {
         servicos: updatedServicos
       });
+      console.log("✅ Serviços atualizados no Firestore");
       
       // Update local state
       if (onOrdemUpdate) {
@@ -129,8 +138,13 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
       
       toast.success(`Status do serviço ${servicoTipo} atualizado para ${getStatusLabel(newStatus)}`);
     } catch (error) {
-      console.error("Erro ao atualizar status do serviço:", error);
-      toast.error("Erro ao atualizar status do serviço");
+      console.error("❌ Erro ao atualizar status do serviço:", error);
+      console.error("❌ Detalhes do erro:", {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
+      toast.error(`Erro ao atualizar status do serviço: ${error.message || 'Erro desconhecido'}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -169,10 +183,12 @@ export function ServicoControlTab({ ordem, onOrdemUpdate }: ServicoControlTabPro
       );
 
       // Update in Firestore
+      console.log("Atualizando serviços no Firestore...");
       const ordemRef = doc(db, "ordens_servico", ordem.id);
       await updateDoc(ordemRef, {
         servicos: updatedServicos
       });
+      console.log("✅ Serviços atualizados no Firestore");
       
       // Se o serviço já está em andamento, marcar novo funcionário como ocupado
       if (servico?.status === 'em_andamento') {

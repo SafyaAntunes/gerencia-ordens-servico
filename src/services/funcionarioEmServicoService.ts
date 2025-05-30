@@ -8,7 +8,7 @@ export const marcarFuncionarioEmServico = async (
   funcionarioId: string,
   ordemId: string,
   etapa: EtapaOS,
-  servicoTipo?: TipoServico
+  servicoTipo?: TipoServico | string
 ): Promise<boolean> => {
   if (!funcionarioId || !ordemId) {
     console.error("IDs de funcionário ou ordem inválidos", { funcionarioId, ordemId });
@@ -17,20 +17,39 @@ export const marcarFuncionarioEmServico = async (
   }
 
   try {
-    console.log(`Iniciando processo para marcar funcionário ${funcionarioId} como ocupado na ordem ${ordemId}`);
+    console.log(`🔄 Iniciando processo para marcar funcionário ${funcionarioId} como ocupado na ordem ${ordemId}`);
+    console.log("Parâmetros recebidos:", { funcionarioId, ordemId, etapa, servicoTipo });
+    
+    // Verificar conexão com Firebase
+    if (!db) {
+      console.error("❌ Conexão com Firebase não disponível");
+      toast.error("Erro de conexão com o banco de dados");
+      return false;
+    }
+    
+    console.log("✅ Conexão com Firebase OK");
     
     // Verificar se o funcionário existe
+    console.log(`📋 Verificando se funcionário ${funcionarioId} existe...`);
     const funcionarioRef = doc(db, "funcionarios", funcionarioId);
-    const funcionarioDoc = await getDoc(funcionarioRef);
+    
+    let funcionarioDoc;
+    try {
+      funcionarioDoc = await getDoc(funcionarioRef);
+    } catch (error) {
+      console.error("❌ Erro ao buscar funcionário:", error);
+      toast.error(`Erro ao acessar dados do funcionário: ${error.message}`);
+      return false;
+    }
     
     if (!funcionarioDoc.exists()) {
-      console.error("Funcionário não encontrado:", funcionarioId);
+      console.error("❌ Funcionário não encontrado:", funcionarioId);
       toast.error("Funcionário não encontrado no sistema");
       return false;
     }
     
     const funcionarioData = funcionarioDoc.data();
-    console.log("Dados do funcionário:", { 
+    console.log("✅ Funcionário encontrado:", { 
       id: funcionarioId, 
       nome: funcionarioData.nome,
       statusAtividade: funcionarioData.statusAtividade,
@@ -41,7 +60,7 @@ export const marcarFuncionarioEmServico = async (
     if (funcionarioData.statusAtividade === "ocupado" && 
         funcionarioData.atividadeAtual && 
         funcionarioData.atividadeAtual.ordemId !== ordemId) {
-      console.warn("Funcionário já está ocupado em outra ordem:", {
+      console.warn("⚠️ Funcionário já está ocupado em outra ordem:", {
         funcionarioId,
         ordemAtual: funcionarioData.atividadeAtual.ordemId,
         novaOrdem: ordemId
@@ -54,58 +73,84 @@ export const marcarFuncionarioEmServico = async (
     if (funcionarioData.statusAtividade === "ocupado" && 
         funcionarioData.atividadeAtual && 
         funcionarioData.atividadeAtual.ordemId === ordemId) {
-      console.log("Funcionário já está ocupado na mesma ordem, atualizando serviço");
+      console.log("🔄 Funcionário já está ocupado na mesma ordem, atualizando serviço");
     }
     
     // Buscar o nome da ordem para salvar na atividade atual
     let ordemNome = "";
     try {
+      console.log(`📋 Buscando dados da ordem ${ordemId}...`);
       const ordemRef = doc(db, "ordens_servico", ordemId);
       const ordemDoc = await getDoc(ordemRef);
       if (ordemDoc.exists()) {
         ordemNome = ordemDoc.data().nome || "";
-        console.log("Nome da ordem encontrado:", ordemNome);
+        console.log("✅ Nome da ordem encontrado:", ordemNome);
+      } else {
+        console.warn("⚠️ Ordem não encontrada, mas continuando...");
       }
     } catch (e) {
-      console.warn("Erro ao buscar nome da ordem:", e);
+      console.warn("⚠️ Erro ao buscar nome da ordem:", e);
     }
+    
+    // Converter servicoTipo para string se for enum
+    const servicoTipoString = typeof servicoTipo === 'string' ? servicoTipo : servicoTipo?.toString() || null;
     
     // Registrar a atividade atual do funcionário
     const atividadeAtual = {
       ordemId,
       ordemNome,
       etapa,
-      servicoTipo: servicoTipo || null,
+      servicoTipo: servicoTipoString,
       inicio: Timestamp.now()
     };
     
-    console.log("Atualizando status do funcionário para ocupado:", atividadeAtual);
+    console.log("🔄 Atualizando status do funcionário para ocupado:", atividadeAtual);
     
     // Atualizar o documento do funcionário
-    await updateDoc(funcionarioRef, {
-      statusAtividade: "ocupado",
-      atividadeAtual
-    });
+    try {
+      await updateDoc(funcionarioRef, {
+        statusAtividade: "ocupado",
+        atividadeAtual
+      });
+      console.log("✅ Documento do funcionário atualizado com sucesso");
+    } catch (error) {
+      console.error("❌ Erro ao atualizar documento do funcionário:", error);
+      toast.error(`Erro ao atualizar status do funcionário: ${error.message}`);
+      return false;
+    }
     
     // Registrar na coleção de tracking
-    const emServicoRef = doc(db, "funcionarios_em_servico", funcionarioId);
-    await setDoc(emServicoRef, {
-      funcionarioId,
-      ordemId,
-      ordemNome,
-      etapa,
-      servicoTipo: servicoTipo || null,
-      inicio: Timestamp.now(),
-      timestamp: Timestamp.now(),
-      status: "em_andamento"
-    });
+    try {
+      console.log("🔄 Criando registro de tracking...");
+      const emServicoRef = doc(db, "funcionarios_em_servico", funcionarioId);
+      await setDoc(emServicoRef, {
+        funcionarioId,
+        ordemId,
+        ordemNome,
+        etapa,
+        servicoTipo: servicoTipoString,
+        inicio: Timestamp.now(),
+        timestamp: Timestamp.now(),
+        status: "em_andamento"
+      });
+      console.log("✅ Registro de tracking criado com sucesso");
+    } catch (error) {
+      console.error("❌ Erro ao criar registro de tracking:", error);
+      console.warn("⚠️ Funcionário foi marcado como ocupado, mas tracking falhou");
+      // Não falhar completamente se apenas o tracking falhar
+    }
     
-    console.log(`Funcionário ${funcionarioId} marcado como ocupado com sucesso na ordem ${ordemId}`);
+    console.log(`✅ Funcionário ${funcionarioId} marcado como ocupado com sucesso na ordem ${ordemId}`);
     toast.success(`Funcionário ${funcionarioData.nome} marcado como ocupado`);
     return true;
   } catch (error) {
-    console.error("Erro ao marcar funcionário como ocupado:", error);
-    toast.error("Erro interno ao marcar funcionário como ocupado");
+    console.error("❌ Erro geral ao marcar funcionário como ocupado:", error);
+    console.error("❌ Detalhes do erro:", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    toast.error(`Erro interno: ${error.message || 'Erro desconhecido'}`);
     return false;
   }
 };
