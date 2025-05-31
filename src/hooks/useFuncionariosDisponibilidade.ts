@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getFuncionarios } from '@/services/funcionarioService';
@@ -28,7 +27,7 @@ export const useFuncionariosDisponibilidade = () => {
   const [errorFuncionariosStatus, setErrorFuncionariosStatus] = useState<Error | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  // Fetch all funcionarios
+  // Fetch all funcionarios with shorter refetch interval
   const {
     data: funcionarios,
     isLoading: isLoadingFuncionarios,
@@ -37,9 +36,10 @@ export const useFuncionariosDisponibilidade = () => {
   } = useQuery({
     queryKey: ['funcionarios'],
     queryFn: getFuncionarios,
+    refetchInterval: 5000, // Refetch every 5 seconds
   });
 
-  // Fetch all ordens
+  // Fetch all ordens with shorter refetch interval
   const {
     data: ordens,
     isLoading: isLoadingOrdens,
@@ -48,6 +48,7 @@ export const useFuncionariosDisponibilidade = () => {
   } = useQuery({
     queryKey: ['ordens'],
     queryFn: getOrdens,
+    refetchInterval: 3000, // Refetch every 3 seconds
   });
 
   useEffect(() => {
