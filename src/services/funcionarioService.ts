@@ -1,3 +1,4 @@
+
 import { db } from '@/lib/firebase';
 import { Funcionario } from '@/types/funcionarios';
 import { 
@@ -19,6 +20,21 @@ import { registerUser } from './authService';
 import { OrdemServico } from '@/types/ordens';
 
 const COLLECTION = 'funcionarios';
+
+// Helper function to remove undefined values from an object
+const removeUndefinedValues = (obj: any): any => {
+  const clean: any = {};
+  Object.keys(obj).forEach(key => {
+    if (obj[key] !== undefined) {
+      if (obj[key] && typeof obj[key] === 'object' && !Array.isArray(obj[key]) && !(obj[key] instanceof Date)) {
+        clean[key] = removeUndefinedValues(obj[key]);
+      } else {
+        clean[key] = obj[key];
+      }
+    }
+  });
+  return clean;
+};
 
 export const getFuncionarios = async (): Promise<Funcionario[]> => {
   try {
@@ -63,7 +79,12 @@ const formatFuncionarioData = (id: string, data: DocumentData): Funcionario => {
     especialidades: data.especialidades || [],
     nivelPermissao: data.nivelPermissao || 'visualizacao',
     dataCriacao: data.dataCriacao ? data.dataCriacao.toDate() : null,
-    nomeUsuario: data.nomeUsuario || ''
+    nomeUsuario: data.nomeUsuario || '',
+    statusAtividade: data.statusAtividade || 'disponivel',
+    atividadeAtual: data.atividadeAtual ? {
+      ...data.atividadeAtual,
+      inicio: data.atividadeAtual.inicio ? data.atividadeAtual.inicio.toDate() : new Date()
+    } : undefined
   } as Funcionario;
 };
 
@@ -138,13 +159,16 @@ export const saveFuncionario = async (funcionario: Funcionario): Promise<boolean
     // Extract credentials data
     const { senha, nomeUsuario, ...funcionarioData } = funcionario;
     
+    // Remove undefined values to prevent Firebase errors
+    const cleanFuncionarioData = removeUndefinedValues(funcionarioData);
+    
     // If updating an existing employee
     if (funcionario.id) {
       docRef = doc(db, COLLECTION, funcionario.id);
       
       // Update employee data (excluding credentials)
       await updateDoc(docRef, {
-        ...funcionarioData,
+        ...cleanFuncionarioData,
         updatedAt: serverTimestamp()
       });
       
@@ -166,10 +190,11 @@ export const saveFuncionario = async (funcionario: Funcionario): Promise<boolean
       // Create new employee
       docRef = doc(collection(db, COLLECTION));
       await setDoc(docRef, {
-        ...funcionarioData,
+        ...cleanFuncionarioData,
         id: docRef.id,
         dataCriacao: serverTimestamp(),
-        nomeUsuario: nomeUsuario || ''
+        nomeUsuario: nomeUsuario || '',
+        statusAtividade: 'disponivel'
       });
       
       // Create user credentials if email and password are provided

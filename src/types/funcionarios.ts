@@ -1,4 +1,3 @@
-
 export interface Funcionario {
   id: string;
   nome: string;
@@ -20,6 +19,16 @@ export interface Funcionario {
   especialidades: string[];
   nivelPermissao: NivelPermissao;
   dataCriacao?: Date;
+  
+  // Novos campos para controle de status
+  statusAtividade?: 'disponivel' | 'ocupado' | 'inativo';
+  atividadeAtual?: {
+    ordemId: string;
+    ordemNome: string;
+    etapa: string;
+    servicoTipo?: string;
+    inicio: Date;
+  };
 }
 
 // Define NivelPermissao type com descrições claras
