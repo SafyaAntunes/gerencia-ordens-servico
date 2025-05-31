@@ -1,4 +1,3 @@
-
 import { db } from '@/lib/firebase';
 import { Funcionario } from '@/types/funcionarios';
 import { 
@@ -26,8 +25,16 @@ const removeUndefinedValues = (obj: any): any => {
   const clean: any = {};
   Object.keys(obj).forEach(key => {
     if (obj[key] !== undefined) {
-      if (obj[key] && typeof obj[key] === 'object' && !Array.isArray(obj[key]) && !(obj[key] instanceof Date)) {
-        clean[key] = removeUndefinedValues(obj[key]);
+      if (Array.isArray(obj[key])) {
+        // Preserve arrays (including empty arrays)
+        clean[key] = obj[key];
+      } else if (obj[key] && typeof obj[key] === 'object' && !(obj[key] instanceof Date)) {
+        // Recursively clean nested objects
+        const cleanedNested = removeUndefinedValues(obj[key]);
+        // Only include the nested object if it has properties after cleaning
+        if (Object.keys(cleanedNested).length > 0) {
+          clean[key] = cleanedNested;
+        }
       } else {
         clean[key] = obj[key];
       }
@@ -159,8 +166,15 @@ export const saveFuncionario = async (funcionario: Funcionario): Promise<boolean
     // Extract credentials data
     const { senha, nomeUsuario, ...funcionarioData } = funcionario;
     
-    // Remove undefined values to prevent Firebase errors
+    // Remove undefined values to prevent Firebase errors, but preserve arrays
     const cleanFuncionarioData = removeUndefinedValues(funcionarioData);
+    
+    // Ensure especialidades is always included (even if empty)
+    if (!cleanFuncionarioData.especialidades) {
+      cleanFuncionarioData.especialidades = funcionario.especialidades || [];
+    }
+    
+    console.log('Saving funcionario with especialidades:', cleanFuncionarioData.especialidades);
     
     // If updating an existing employee
     if (funcionario.id) {
