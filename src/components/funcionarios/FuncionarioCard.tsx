@@ -1,15 +1,16 @@
 
-import { Phone, Mail, Wrench, Shield, Trash, Edit, Eye, User, Circle } from "lucide-react";
+import { Phone, Mail, Wrench, Shield, Trash, Edit, Eye, User, Circle, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Funcionario, permissoesLabels, tipoServicoLabels } from "@/types/funcionarios";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { FuncionarioStatus } from "@/hooks/useFuncionariosDisponibilidade";
 import { useState, useEffect } from "react";
 
 interface FuncionarioCardProps {
-  funcionario: Funcionario;
+  funcionario: Funcionario | FuncionarioStatus;
   onView: (funcionario: Funcionario) => void;
   onEdit: (funcionario: Funcionario) => void;
   onDelete: (id: string) => void;
@@ -23,11 +24,27 @@ export default function FuncionarioCard({
   onDelete,
   hideDeleteButton = false
 }: FuncionarioCardProps) {
+  // Verificar se é um FuncionarioStatus (tem propriedades extras)
+  const isFuncionarioStatus = 'status' in funcionario && 'statusOrigem' in funcionario;
+  const funcionarioStatus = isFuncionarioStatus ? funcionario as FuncionarioStatus : null;
+  
   const [status, setStatus] = useState<'idle' | 'working' | 'paused' | 'inactive'>('idle');
   
   useEffect(() => {
     const checkStatus = () => {
-      // MODIFICADO: Verificar primeiro se o funcionário está inativo
+      // Se temos dados do FuncionarioStatus, usar eles primeiro
+      if (funcionarioStatus) {
+        if (funcionarioStatus.status === 'ocupado') {
+          setStatus('working');
+        } else if (funcionarioStatus.status === 'inativo') {
+          setStatus('inactive');
+        } else {
+          setStatus('idle');
+        }
+        return;
+      }
+      
+      // Fallback para lógica original baseada em localStorage
       if (funcionario.ativo === false) {
         setStatus('inactive');
         return;
@@ -64,7 +81,7 @@ export default function FuncionarioCard({
     const interval = setInterval(checkStatus, 5000);
     
     return () => clearInterval(interval);
-  }, [funcionario.id, funcionario.ativo]);
+  }, [funcionario.id, funcionario.ativo, funcionarioStatus]);
   
   const getStatusColor = () => {
     switch (status) {
@@ -76,6 +93,30 @@ export default function FuncionarioCard({
         return 'text-gray-400';
       default:
         return 'text-green-500';
+    }
+  };
+
+  const getStatusText = () => {
+    if (funcionarioStatus) {
+      switch (funcionarioStatus.status) {
+        case 'ocupado':
+          return `Ocupado (${funcionarioStatus.statusOrigem === 'statusAtividade' ? 'Sistema' : 'Timer'})`;
+        case 'inativo':
+          return 'Inativo';
+        default:
+          return 'Disponível';
+      }
+    }
+    
+    switch (status) {
+      case 'working':
+        return 'Trabalhando';
+      case 'paused':
+        return 'Em Pausa';
+      case 'inactive':
+        return 'Inativo';
+      default:
+        return 'Disponível';
     }
   };
 
@@ -95,7 +136,38 @@ export default function FuncionarioCard({
             <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center text-lg font-medium">
               {iniciais}
             </div>
-            <Circle className={`absolute -bottom-1 -right-1 h-4 w-4 ${getStatusColor()} fill-current`} />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Circle className={`absolute -bottom-1 -right-1 h-4 w-4 ${getStatusColor()} fill-current cursor-help`} />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{getStatusText()}</p>
+                  {funcionarioStatus?.atividadeAtual && (
+                    <div className="text-xs mt-1">
+                      <div>OS: {funcionarioStatus.atividadeAtual.ordemNome}</div>
+                      <div>Etapa: {funcionarioStatus.atividadeAtual.etapa}</div>
+                      {funcionarioStatus.atividadeAtual.servicoTipo && (
+                        <div>Serviço: {funcionarioStatus.atividadeAtual.servicoTipo}</div>
+                      )}
+                    </div>
+                  )}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            {funcionarioStatus?.statusOrigem === 'statusAtividade' && funcionarioStatus?.status === 'ocupado' && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <AlertTriangle className="absolute -top-1 -left-1 h-3 w-3 text-blue-500 fill-current" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Status definido pelo sistema de atribuição</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
           <div className="flex-1">
             <h3 className="font-semibold text-lg line-clamp-1">{funcionario.nome}</h3>
@@ -147,6 +219,19 @@ export default function FuncionarioCard({
               )}
             </div>
           </div>
+          
+          {funcionarioStatus?.atividadeAtual && (
+            <div className="bg-blue-50 p-2 rounded-md border">
+              <div className="text-xs font-medium text-blue-800 mb-1">Atividade Atual:</div>
+              <div className="text-xs text-blue-700">
+                <div>OS: {funcionarioStatus.atividadeAtual.ordemNome}</div>
+                <div>Etapa: {funcionarioStatus.atividadeAtual.etapa}</div>
+                {funcionarioStatus.atividadeAtual.servicoTipo && (
+                  <div>Serviço: {funcionarioStatus.atividadeAtual.servicoTipo}</div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
       

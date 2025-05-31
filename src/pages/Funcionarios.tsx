@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PlusCircle, Filter, Search, Users, CheckCircle2, FilterX, Clock, ListFilter } from "lucide-react";
 import Layout from "@/components/layout/Layout";
@@ -124,7 +123,7 @@ export default function Funcionarios({ onLogout, meuPerfil = false }: Funcionari
     }
   };
   
-  const filteredFuncionarios = funcionarios.filter((funcionario) => {
+  const filteredFuncionarios = (isMeuPerfil ? funcionarios : funcionariosStatus).filter((funcionario) => {
     // Se estiver no modo "meu perfil", retorna apenas o funcionário atual
     if (isMeuPerfil && currentUser) {
       return funcionario.id === currentUser.id;
@@ -462,7 +461,7 @@ export default function Funcionarios({ onLogout, meuPerfil = false }: Funcionari
           </div>
         </div>
         
-        {loading ? (
+        {loading || loadingStatus ? (
           <div className="flex items-center justify-center py-16">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>

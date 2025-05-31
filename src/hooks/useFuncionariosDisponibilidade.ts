@@ -19,6 +19,7 @@ export type FuncionarioStatus = Funcionario & {
     inicio: Date;
   };
   tempoDisponivel?: number;
+  statusOrigem: 'statusAtividade' | 'tempoRegistros' | 'inativo';
 };
 
 export const useFuncionariosDisponibilidade = () => {
@@ -57,20 +58,60 @@ export const useFuncionariosDisponibilidade = () => {
       setErrorFuncionariosStatus(null);
 
       try {
-        // Mapear os funcionários para incluir o status de atividade
         const funcionariosComStatus = funcionarios.map(funcionario => {
-          const funcionarioComStatus: FuncionarioStatus = {
-            ...funcionario,
-            status: 'disponivel', // Inicialmente, todos estão disponíveis
-            atividadeAtual: undefined,
-            tempoDisponivel: 0,
-          };
-          return funcionarioComStatus;
-        });
+          // PRIMEIRO: Verificar se o funcionário está inativo
+          if (funcionario.ativo === false) {
+            return {
+              ...funcionario,
+              status: 'inativo' as const,
+              atividadeAtual: undefined,
+              tempoDisponivel: 0,
+              statusOrigem: 'inativo' as const,
+            };
+          }
 
-        // Encontrar a atividade atual de cada funcionário
-        const funcionariosAtualizados = funcionariosComStatus.map(funcionario => {
-          // Filtrar registros de tempo para o funcionário e para o dia selecionado
+          // SEGUNDO: Priorizar o campo statusAtividade do funcionário
+          if (funcionario.statusAtividade === 'ocupado' && funcionario.atividadeAtual) {
+            console.log(`📋 Funcionário ${funcionario.nome} marcado como ocupado pelo statusAtividade`);
+            
+            // Verificar se a ordem ainda existe
+            const ordensArray = (ordens as OrdemServico[] || []);
+            const ordemRelacionada = ordensArray.find(ordem => ordem.id === funcionario.atividadeAtual?.ordemId);
+            
+            if (ordemRelacionada) {
+              return {
+                ...funcionario,
+                status: 'ocupado' as const,
+                atividadeAtual: {
+                  ordemId: funcionario.atividadeAtual.ordemId,
+                  ordemNome: ordemRelacionada.nome || funcionario.atividadeAtual.ordemNome || 'Ordem Desconhecida',
+                  etapa: funcionario.atividadeAtual.etapa,
+                  servicoTipo: funcionario.atividadeAtual.servicoTipo,
+                  inicio: funcionario.atividadeAtual.inicio ? new Date(funcionario.atividadeAtual.inicio) : new Date(),
+                },
+                tempoDisponivel: 0,
+                statusOrigem: 'statusAtividade' as const,
+              };
+            } else {
+              console.warn(`⚠️ Funcionário ${funcionario.nome} marcado como ocupado mas ordem ${funcionario.atividadeAtual.ordemId} não existe`);
+              // A ordem não existe mais, mas ainda está marcado como ocupado - manter o status mas indicar problema
+              return {
+                ...funcionario,
+                status: 'ocupado' as const,
+                atividadeAtual: {
+                  ordemId: funcionario.atividadeAtual.ordemId,
+                  ordemNome: funcionario.atividadeAtual.ordemNome || 'Ordem Não Encontrada',
+                  etapa: funcionario.atividadeAtual.etapa,
+                  servicoTipo: funcionario.atividadeAtual.servicoTipo,
+                  inicio: funcionario.atividadeAtual.inicio ? new Date(funcionario.atividadeAtual.inicio) : new Date(),
+                },
+                tempoDisponivel: 0,
+                statusOrigem: 'statusAtividade' as const,
+              };
+            }
+          }
+
+          // TERCEIRO: Fallback para análise dos registros de tempo (lógica original)
           const ordensArray = (ordens as OrdemServico[] || []);
           const registrosDeTempoDoDia = ordensArray.flatMap(ordem =>
             ordem.tempoRegistros ? ordem.tempoRegistros.filter(
@@ -87,9 +128,8 @@ export const useFuncionariosDisponibilidade = () => {
           const registroAberto = registrosDeTempoDoDia.find(registro => !registro.fim);
 
           if (registroAberto) {
-            // Se houver um registro aberto, o funcionário está "ocupado"
-            funcionario.status = 'ocupado';
-            // Find the corresponding ordem
+            console.log(`⏱️ Funcionário ${funcionario.nome} ocupado pelos registros de tempo`);
+            
             const ordemRelacionada = ordensArray.find(ordem =>
               ordem.tempoRegistros && ordem.tempoRegistros.some(tempo => 
                 tempo.funcionarioId === registroAberto.funcionarioId && 
@@ -97,79 +137,64 @@ export const useFuncionariosDisponibilidade = () => {
               )
             );
             
-            funcionario.atividadeAtual = {
-              ordemId: registroAberto.ordemId || '',
-              ordemNome: ordemRelacionada?.nome || 'Ordem Desconhecida',
-              etapa: registroAberto.etapa,
-              servicoTipo: registroAberto.servicoTipo,
-              inicio: new Date(registroAberto.inicio),
+            return {
+              ...funcionario,
+              status: 'ocupado' as const,
+              atividadeAtual: {
+                ordemId: registroAberto.ordemId || '',
+                ordemNome: ordemRelacionada?.nome || 'Ordem Desconhecida',
+                etapa: registroAberto.etapa,
+                servicoTipo: registroAberto.servicoTipo,
+                inicio: new Date(registroAberto.inicio),
+              },
+              tempoDisponivel: 0,
+              statusOrigem: 'tempoRegistros' as const,
             };
+          }
 
-            // Calcular o tempo total gasto na etapa atual
-            const tempoTotalNaEtapa = registrosDeTempoDoDia.reduce((total, registro) => {
-              const inicio = new Date(registro.inicio).getTime();
-              const fim = registro.fim ? new Date(registro.fim).getTime() : new Date().getTime(); // Use a data atual se não houver data de fim
-              return total + (fim - inicio);
-            }, 0);
+          // Verificar pausas não finalizadas
+          const pausaMaisRecente = registrosDeTempoDoDia.find(registro =>
+            registro.pausas && registro.pausas.length > 0 && !registro.pausas[registro.pausas.length - 1].fim
+          );
 
-            funcionario.tempoDisponivel = tempoTotalNaEtapa;
-          } else {
-            // Se não houver registro aberto, verificar se há pausas
-            const pausaMaisRecente = registrosDeTempoDoDia.find(registro =>
-              registro.pausas && registro.pausas.length > 0 && !registro.pausas[registro.pausas.length - 1].fim
+          if (pausaMaisRecente) {
+            console.log(`⏸️ Funcionário ${funcionario.nome} em pausa pelos registros de tempo`);
+            
+            const ordemRelacionada = ordensArray.find(ordem =>
+              ordem.tempoRegistros && ordem.tempoRegistros.some(tempo => 
+                tempo.funcionarioId === pausaMaisRecente.funcionarioId && 
+                tempo.inicio === pausaMaisRecente.inicio
+              )
             );
-
-            if (pausaMaisRecente) {
-              // Se houver uma pausa não finalizada, o funcionário ainda está "ocupado"
-              funcionario.status = 'ocupado';
-              // Find the corresponding ordem
-              const ordemRelacionada = ordensArray.find(ordem =>
-                ordem.tempoRegistros && ordem.tempoRegistros.some(tempo => 
-                  tempo.funcionarioId === pausaMaisRecente.funcionarioId && 
-                  tempo.inicio === pausaMaisRecente.inicio
-                )
-              );
-              
-              funcionario.atividadeAtual = {
+            
+            return {
+              ...funcionario,
+              status: 'ocupado' as const,
+              atividadeAtual: {
                 ordemId: pausaMaisRecente.ordemId || '',
                 ordemNome: ordemRelacionada?.nome || 'Ordem Desconhecida',
                 etapa: pausaMaisRecente.etapa,
                 servicoTipo: pausaMaisRecente.servicoTipo,
                 inicio: new Date(pausaMaisRecente.inicio),
-              };
-
-              // Calcular o tempo total gasto na etapa atual (antes da pausa)
-              const tempoTotalNaEtapa = registrosDeTempoDoDia.reduce((total, registro) => {
-                const inicio = new Date(registro.inicio).getTime();
-                const fim = registro.fim ? new Date(registro.fim).getTime() : new Date().getTime(); // Use a data atual se não houver data de fim
-                return total + (fim - inicio);
-              }, 0);
-
-              funcionario.tempoDisponivel = tempoTotalNaEtapa;
-            } else {
-              // Se não houver registro aberto nem pausa, o funcionário está "disponível"
-              funcionario.status = 'disponivel';
-
-              // Calcular o tempo disponível do funcionário
-              const tempoTotalTrabalhado = registrosDeTempoDoDia.reduce((total, registro) => {
-                const inicio = new Date(registro.inicio).getTime();
-                const fim = registro.fim ? new Date(registro.fim).getTime() : new Date().getTime(); // Use a data atual se não houver data de fim
-                return total + (fim - inicio);
-              }, 0);
-
-              funcionario.tempoDisponivel = 8 * 60 * 60 * 1000 - tempoTotalTrabalhado; // 8 horas em milissegundos
-            }
+              },
+              tempoDisponivel: 0,
+              statusOrigem: 'tempoRegistros' as const,
+            };
           }
 
-          // Marcar funcionários inativos
-          if (funcionario.ativo === false) {
-            funcionario.status = 'inativo';
-          }
-
-          return funcionario;
+          // QUARTO: Se não há evidência de atividade, marcar como disponível
+          console.log(`✅ Funcionário ${funcionario.nome} disponível`);
+          
+          return {
+            ...funcionario,
+            status: 'disponivel' as const,
+            atividadeAtual: undefined,
+            tempoDisponivel: 8 * 60 * 60 * 1000, // 8 horas em milissegundos
+            statusOrigem: 'tempoRegistros' as const,
+          };
         });
 
-        setFuncionariosStatus(funcionariosAtualizados);
+        setFuncionariosStatus(funcionariosComStatus);
       } catch (error: any) {
         console.error('Erro ao atualizar o status dos funcionários:', error);
         setErrorFuncionariosStatus(error);
@@ -188,7 +213,7 @@ export const useFuncionariosDisponibilidade = () => {
     }
   };
 
-  // Calculate conveniente variables for consuming components
+  // Calculate convenient variables for consuming components
   const funcionariosDisponiveis = funcionariosStatus.filter(f => f.status === 'disponivel' && f.ativo !== false);
   const funcionariosOcupados = funcionariosStatus.filter(f => f.status === 'ocupado' && f.ativo !== false);
   const funcionariosInativos = funcionariosStatus.filter(f => f.ativo === false || f.status === 'inativo');
