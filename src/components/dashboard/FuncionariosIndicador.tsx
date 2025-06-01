@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFuncionariosDisponibilidade } from "@/hooks/useFuncionariosDisponibilidade";
-import { Users, UserCheck, UserClock } from "lucide-react";
+import { Users, UserCheck, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function FuncionariosIndicador() {
@@ -47,7 +47,7 @@ export default function FuncionariosIndicador() {
           
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <UserClock className="h-4 w-4 text-orange-600" />
+              <Clock className="h-4 w-4 text-orange-600" />
               <span className="text-sm text-muted-foreground">Ocupados</span>
             </div>
             <Badge variant="secondary" className="bg-orange-100 text-orange-700">
