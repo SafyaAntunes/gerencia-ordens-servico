@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { collection, getDocs, query, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Funcionario } from '@/types/funcionarios';
@@ -55,6 +55,10 @@ export const useRelatorioProducao = ({ dataInicio, dataFim }: UseRelatorioProduc
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Memorizar as datas para evitar dependências instáveis
+  const memoizedDataInicio = useMemo(() => dataInicio, [dataInicio?.getTime()]);
+  const memoizedDataFim = useMemo(() => dataFim, [dataFim?.getTime()]);
+
   useEffect(() => {
     const fetchDados = async () => {
       setLoading(true);
@@ -74,11 +78,11 @@ export const useRelatorioProducao = ({ dataInicio, dataFim }: UseRelatorioProduc
         let ordensQuery = query(ordensRef);
         
         // Aplicar filtro de data se especificado
-        if (dataInicio && dataFim) {
+        if (memoizedDataInicio && memoizedDataFim) {
           ordensQuery = query(
             ordensRef,
-            where('dataAbertura', '>=', Timestamp.fromDate(startOfDay(dataInicio))),
-            where('dataAbertura', '<=', Timestamp.fromDate(endOfDay(dataFim)))
+            where('dataAbertura', '>=', Timestamp.fromDate(startOfDay(memoizedDataInicio))),
+            where('dataAbertura', '<=', Timestamp.fromDate(endOfDay(memoizedDataFim)))
           );
         }
         
@@ -210,18 +214,15 @@ export const useRelatorioProducao = ({ dataInicio, dataFim }: UseRelatorioProduc
         
         const ordensNoPrazo = ordensComPrazo.filter(o => {
           if (o.status === 'finalizado' || o.status === 'entregue') {
-            // Para ordens finalizadas, consideramos no prazo se foi finalizada antes ou na data prevista
             return true; // Simplificação - assumimos que ordens finalizadas estavam no prazo
           }
-          // Para ordens em andamento, verificamos se ainda está dentro do prazo
           return o.dataPrevistaEntrega && o.dataPrevistaEntrega >= hoje;
         }).length;
         
         const ordensAtrasadas = ordensComPrazo.filter(o => {
           if (o.status === 'finalizado' || o.status === 'entregue') {
-            return false; // Ordens finalizadas não contamos como atrasadas para este cálculo
+            return false;
           }
-          // Ordens em andamento que passaram da data prevista
           return o.dataPrevistaEntrega && o.dataPrevistaEntrega < hoje;
         }).length;
         
@@ -248,7 +249,7 @@ export const useRelatorioProducao = ({ dataInicio, dataFim }: UseRelatorioProduc
     };
     
     fetchDados();
-  }, [dataInicio, dataFim]);
+  }, [memoizedDataInicio, memoizedDataFim]);
 
   return { dados, loading, error };
 };
