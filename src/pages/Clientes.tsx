@@ -1,507 +1,295 @@
 
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { PlusCircle, Search, Building, Phone, Mail, FilterX, Car } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import Layout from "@/components/layout/Layout";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Cliente } from "@/types/clientes";
-import { getClientes, saveCliente, deleteCliente } from "@/services/clienteService";
 import ClienteForm from "@/components/clientes/ClienteForm";
 import ClienteCard from "@/components/clientes/ClienteCard";
 import ClienteDetalhes from "@/components/clientes/ClienteDetalhes";
-import { toast } from "sonner";
-import ExportButton from "@/components/common/ExportButton";
-import ImportButton from "@/components/common/ImportButton";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { OrdemServico } from "@/types/ordens";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useClientes } from "@/hooks/useClientes";
+import { Cliente } from "@/types/clientes";
+import { Plus, Search, CalendarIcon, Trophy, Users } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 interface ClientesProps {
-  onLogout?: () => void;
-}
-
-interface ClienteRanking {
-  clienteId: string;
-  nome: string;
-  email: string;
-  telefone?: string;
-  totalOrdens: number;
+  onLogout: () => void;
 }
 
 export default function Clientes({ onLogout }: ClientesProps) {
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [showForm, setShowForm] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
-  const [isDetalhesOpen, setIsDetalhesOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [clienteToDelete, setClienteToDelete] = useState<string | null>(null);
-  const [clientesRanking, setClientesRanking] = useState<ClienteRanking[]>([]);
-  const [loadingRanking, setLoadingRanking] = useState(true);
-  const [activeTab, setActiveTab] = useState("cadastro");
+  const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
+  const [showDetalhes, setShowDetalhes] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [periodoInicio, setPeriodoInicio] = useState<Date | undefined>();
+  const [periodoFim, setPeriodoFim] = useState<Date | undefined>();
   
-  const navigate = useNavigate();
+  const {
+    clientes,
+    isLoading,
+    createCliente,
+    updateCliente,
+    deleteCliente,
+  } = useClientes();
 
-  // Fetch clientes on mount
-  useEffect(() => {
-    fetchClientes();
-  }, []);
-  
-  // Fetch cliente ranking when active tab changes to ranking
-  useEffect(() => {
-    if (activeTab === "ranking" && clientesRanking.length === 0) {
-      fetchClientesRanking();
-    }
-  }, [activeTab]);
-  
-  const fetchClientes = async () => {
-    setLoading(true);
+  const handleSubmit = async (data: any) => {
     try {
-      const data = await getClientes();
-      setClientes(data);
-    } catch (error) {
-      console.error('Error fetching clientes:', error);
-      toast.error('Erro ao carregar clientes');
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const fetchClientesRanking = async () => {
-    setLoadingRanking(true);
-    try {
-      // 1. Buscar todas as ordens de serviço
-      const ordensRef = collection(db, 'ordens_servico');
-      const ordensSnapshot = await getDocs(ordensRef);
-      
-      // 2. Contar ordens por cliente
-      const clientesCountMap = new Map<string, number>();
-      const clientesInfoMap = new Map<string, { nome: string; email: string; telefone?: string }>();
-      
-      ordensSnapshot.forEach((doc) => {
-        const ordem = doc.data() as Partial<OrdemServico>;
-        
-        if (ordem.cliente && ordem.cliente.id) {
-          const clienteId = ordem.cliente.id;
-          clientesCountMap.set(clienteId, (clientesCountMap.get(clienteId) || 0) + 1);
-          
-          if (!clientesInfoMap.has(clienteId) && ordem.cliente) {
-            clientesInfoMap.set(clienteId, {
-              nome: ordem.cliente.nome || '',
-              email: ordem.cliente.email || '',
-              telefone: ordem.cliente.telefone
-            });
-          }
-        }
-      });
-      
-      // 3. Criar ranking
-      const ranking: ClienteRanking[] = Array.from(clientesCountMap.entries())
-        .map(([clienteId, totalOrdens]) => {
-          const info = clientesInfoMap.get(clienteId) || { nome: 'Cliente Desconhecido', email: '' };
-          
-          return {
-            clienteId,
-            nome: info.nome,
-            email: info.email,
-            telefone: info.telefone,
-            totalOrdens
-          };
-        })
-        .sort((a, b) => b.totalOrdens - a.totalOrdens);
-      
-      setClientesRanking(ranking);
-    } catch (error) {
-      console.error('Erro ao carregar ranking de clientes:', error);
-      toast.error('Erro ao carregar ranking de clientes');
-    } finally {
-      setLoadingRanking(false);
-    }
-  };
-  
-  // Filter clientes based on search
-  const filteredClientes = clientes.filter((cliente) =>
-    cliente.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cliente.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cliente.telefone?.includes(searchTerm)
-  );
-  
-  const handleOpenAddDialog = () => {
-    setSelectedCliente(null);
-    setIsDialogOpen(true);
-  };
-  
-  const handleOpenEditDialog = (cliente: Cliente) => {
-    setSelectedCliente(cliente);
-    setIsDialogOpen(true);
-  };
-  
-  const handleOpenDetailsDialog = (cliente: Cliente) => {
-    setSelectedCliente(cliente);
-    setIsDetalhesOpen(true);
-  };
-  
-  const handleOpenDeleteDialog = (id: string) => {
-    setClienteToDelete(id);
-    setDeleteDialogOpen(true);
-  };
-  
-  const handleSubmit = async (values: any) => {
-    setIsSubmitting(true);
-    
-    try {
-      // Prepare cliente object
-      const clienteData: Cliente = selectedCliente
-        ? { ...selectedCliente, ...values }
-        : {
-            id: "",
-            ...values,
-          };
-      
-      // Save cliente
-      const success = await saveCliente(clienteData);
-      
-      if (success) {
-        toast.success(
-          selectedCliente
-            ? "Cliente atualizado com sucesso!"
-            : "Cliente cadastrado com sucesso!"
-        );
-        setIsDialogOpen(false);
-        fetchClientes();
+      if (editingCliente) {
+        await updateCliente(editingCliente.id, data);
+        toast.success("Cliente atualizado com sucesso!");
+      } else {
+        await createCliente(data);
+        toast.success("Cliente criado com sucesso!");
       }
+      setShowForm(false);
+      setEditingCliente(null);
     } catch (error) {
-      console.error('Error saving cliente:', error);
-      toast.error('Erro ao salvar cliente');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-  
-  const handleDelete = async () => {
-    if (!clienteToDelete) return;
-    
-    try {
-      const success = await deleteCliente(clienteToDelete);
-      
-      if (success) {
-        toast.success("Cliente excluído com sucesso!");
-        fetchClientes();
-        setDeleteDialogOpen(false);
-        setClienteToDelete(null);
-      }
-    } catch (error) {
-      console.error('Error deleting cliente:', error);
-      toast.error('Erro ao excluir cliente');
+      console.error('Erro ao salvar cliente:', error);
+      toast.error("Erro ao salvar cliente");
     }
   };
 
-  const handleAdvancedEdit = (cliente: Cliente) => {
-    navigate(`/clientes/editar/${cliente.id}`);
+  const handleEdit = (cliente: Cliente) => {
+    setEditingCliente(cliente);
+    setShowForm(true);
   };
-  
-  const handleImportClientes = async (data: any) => {
-    if (!Array.isArray(data)) {
-      toast.error('Formato inválido. Esperado uma lista de clientes.');
-      return;
-    }
-    
-    setIsSubmitting(true);
-    let successCount = 0;
-    
+
+  const handleDelete = async (id: string) => {
     try {
-      for (const clienteData of data) {
-        // Verificar se o cliente tem dados mínimos necessários
-        if (!clienteData.nome) {
-          continue;
-        }
-        
-        const cliente: Cliente = {
-          id: '',  // ID será gerado no servidor
-          ...clienteData,
-        };
-        
-        const success = await saveCliente(cliente);
-        if (success) successCount++;
-      }
-      
-      toast.success(`${successCount} cliente(s) importado(s) com sucesso!`);
-      fetchClientes();
+      await deleteCliente(id);
+      toast.success("Cliente excluído com sucesso!");
     } catch (error) {
-      console.error('Erro ao importar clientes:', error);
-      toast.error('Erro ao importar clientes.');
-    } finally {
-      setIsSubmitting(false);
+      console.error('Erro ao excluir cliente:', error);
+      toast.error("Erro ao excluir cliente");
     }
   };
-  
-  const validateClienteData = (data: any): boolean => {
-    return Array.isArray(data) && data.some(item => !!item.nome);
+
+  const handleView = (cliente: Cliente) => {
+    setSelectedCliente(cliente);
+    setShowDetalhes(true);
   };
-  
-  const renderClientesList = () => {
-    if (loading) {
-      return (
-        <div className="flex items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      );
-    }
+
+  const filteredClientes = clientes.filter(cliente => {
+    const matchesSearch = cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         cliente.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         cliente.telefone?.includes(searchTerm);
     
-    if (filteredClientes.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Building className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium">Nenhum cliente encontrado</h3>
-          <p className="text-sm text-muted-foreground mt-1 max-w-md">
-            {searchTerm ? (
-              <>
-                Não encontramos nenhum cliente com o termo <strong>"{searchTerm}"</strong>. Tente ajustar a busca ou cadastre um novo cliente.
-              </>
-            ) : (
-              "Comece adicionando seu primeiro cliente para poder criar ordens de serviço."
-            )}
-          </p>
-          <Button className="mt-4" onClick={handleOpenAddDialog}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Novo Cliente
-          </Button>
-        </div>
-      );
-    }
+    if (!periodoInicio && !periodoFim) return matchesSearch;
     
-    return (
-      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredClientes.map((cliente) => (
-          <ClienteCard
-            key={cliente.id}
-            cliente={cliente}
-            onView={handleOpenDetailsDialog}
-            onEdit={handleOpenEditDialog}
-            onDelete={handleOpenDeleteDialog}
-          />
-        ))}
-      </div>
-    );
+    if (!cliente.dataCriacao) return matchesSearch;
+    
+    const clienteDate = new Date(cliente.dataCriacao);
+    const afterStart = !periodoInicio || clienteDate >= periodoInicio;
+    const beforeEnd = !periodoFim || clienteDate <= periodoFim;
+    
+    return matchesSearch && afterStart && beforeEnd;
+  });
+
+  const rankingClientes = [...filteredClientes]
+    .sort((a, b) => {
+      // Ordenar por data de criação mais recente primeiro
+      const dateA = a.dataCriacao ? new Date(a.dataCriacao).getTime() : 0;
+      const dateB = b.dataCriacao ? new Date(b.dataCriacao).getTime() : 0;
+      return dateB - dateA;
+    })
+    .slice(0, 10);
+
+  const handleResetPeriodo = () => {
+    setPeriodoInicio(undefined);
+    setPeriodoFim(undefined);
   };
-  
-  const renderRanking = () => {
-    if (loadingRanking) {
-      return (
-        <div className="flex items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      );
-    }
-    
-    if (clientesRanking.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Car className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium">Nenhuma OS registrada</h3>
-          <p className="text-sm text-muted-foreground mt-1 max-w-md">
-            Não encontramos ordens de serviço para gerar o ranking de clientes.
-          </p>
-        </div>
-      );
-    }
-    
-    return (
-      <div className="space-y-4">
-        {clientesRanking.map((cliente, index) => (
-          <Card key={cliente.clienteId} className={index < 3 ? "border-primary" : ""}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-start gap-4">
-                  <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-                    index === 0 ? "bg-yellow-100 text-yellow-700" : 
-                    index === 1 ? "bg-gray-200 text-gray-700" : 
-                    index === 2 ? "bg-amber-100 text-amber-700" : 
-                    "bg-muted text-muted-foreground"
-                  } font-bold`}>
-                    {index + 1}
-                  </div>
-                  <div>
-                    <h3 className="font-medium">{cliente.nome}</h3>
-                    <div className="text-sm text-muted-foreground flex flex-col gap-1">
-                      <div className="flex items-center">
-                        <Mail className="h-3.5 w-3.5 mr-1" />
-                        {cliente.email}
-                      </div>
-                      {cliente.telefone && (
-                        <div className="flex items-center">
-                          <Phone className="h-3.5 w-3.5 mr-1" />
-                          {cliente.telefone}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold">{cliente.totalOrdens}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {cliente.totalOrdens === 1 ? "ordem" : "ordens"}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  };
-  
+
   return (
     <Layout onLogout={onLogout}>
-      <div className="animate-fade-in space-y-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Clientes</h1>
             <p className="text-muted-foreground">
-              Gerencie os clientes da sua retífica
+              Gerencie seus clientes e visualize estatísticas
             </p>
           </div>
           
-          <div className="flex gap-2 flex-wrap">
-            <ImportButton 
-              onImport={handleImportClientes} 
-              validateData={validateClienteData}
-              disabled={isSubmitting}
+          <Button 
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Novo Cliente
+          </Button>
+        </div>
+
+        {/* Filtros */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar clientes..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
             />
-            <ExportButton 
-              data={clientes}
-              fileName="clientes.json"
-              disabled={clientes.length === 0}
-            />
-            <Button onClick={handleOpenAddDialog}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Novo Cliente
-            </Button>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="flex gap-2 items-center">
+                  <CalendarIcon className="h-4 w-4" />
+                  {periodoInicio && periodoFim ? (
+                    <>
+                      {format(periodoInicio, "dd/MM/yyyy", { locale: ptBR })} - {format(periodoFim, "dd/MM/yyyy", { locale: ptBR })}
+                    </>
+                  ) : (
+                    <>Filtrar por período</>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <div className="grid gap-2 p-4">
+                  <div className="grid">
+                    <div className="mb-2 font-medium">Data Inicial</div>
+                    <Calendar
+                      mode="single"
+                      selected={periodoInicio}
+                      onSelect={setPeriodoInicio}
+                      initialFocus
+                    />
+                  </div>
+                  <div className="grid">
+                    <div className="mb-2 font-medium">Data Final</div>
+                    <Calendar
+                      mode="single"
+                      selected={periodoFim}
+                      onSelect={setPeriodoFim}
+                      disabled={(date) => 
+                        periodoInicio ? date < periodoInicio : false
+                      }
+                      initialFocus
+                    />
+                  </div>
+                  <Button onClick={handleResetPeriodo} variant="outline" size="sm">
+                    Limpar filtro
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
-        
-        <Tabs 
-          defaultValue="cadastro" 
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="w-full"
-        >
-          <TabsList className="grid grid-cols-2 mb-6">
-            <TabsTrigger value="cadastro">Clientes Cadastrados</TabsTrigger>
-            <TabsTrigger value="ranking">Ranking de Clientes</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="cadastro" className="space-y-4">
-            <div className="flex gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por nome, email ou telefone..."
-                  className="pl-10"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              
-              {searchTerm && (
-                <Button variant="outline" size="icon" onClick={() => setSearchTerm("")}>
-                  <FilterX className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-            
-            {renderClientesList()}
-          </TabsContent>
-          
-          <TabsContent value="ranking">
-            {renderRanking()}
-          </TabsContent>
-        </Tabs>
-        
-        {/* Add/Edit Dialog */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>{selectedCliente ? "Editar" : "Novo"} Cliente</DialogTitle>
-              <DialogDescription>
-                Para cadastro completo com motores, use a <Button 
-                  variant="link" 
-                  className="p-0 h-auto text-primary underline" 
-                  onClick={() => {
-                    setIsDialogOpen(false);
-                    selectedCliente ? 
-                      navigate(`/clientes/editar/${selectedCliente.id}`) : 
-                      navigate("/clientes/cadastro");
-                  }}
-                >
-                  página de cadastro avançado
-                </Button>.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <ClienteForm
-              initialData={selectedCliente}
-              onSubmit={handleSubmit}
-              onCancel={() => setIsDialogOpen(false)}
-              isSubmitting={isSubmitting}
-            />
-          </DialogContent>
-        </Dialog>
-        
-        {/* View Details Dialog */}
-        <ClienteDetalhes 
-          cliente={selectedCliente} 
-          isOpen={isDetalhesOpen} 
-          onClose={() => setIsDetalhesOpen(false)}
-          onEdit={(cliente) => {
-            setIsDetalhesOpen(false);
-            setTimeout(() => handleOpenEditDialog(cliente), 100);
-          }}
-        />
 
-        {/* Confirm Delete Dialog */}
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Excluir Cliente</AlertDialogTitle>
-              <AlertDialogDescription>
-                Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={handleDelete}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Excluir
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Lista de Clientes */}
+          <div className="lg:col-span-3">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Clientes ({filteredClientes.length})
+                </CardTitle>
+                <CardDescription>
+                  Lista de todos os clientes cadastrados
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {showForm ? (
+                  <ClienteForm
+                    onSubmit={handleSubmit}
+                    onCancel={() => {
+                      setShowForm(false);
+                      setEditingCliente(null);
+                    }}
+                    initialData={editingCliente}
+                  />
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredClientes.map((cliente) => (
+                      <ClienteCard
+                        key={cliente.id}
+                        cliente={cliente}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        onView={handleView}
+                      />
+                    ))}
+                    
+                    {filteredClientes.length === 0 && !isLoading && (
+                      <div className="col-span-full text-center py-8">
+                        <p className="text-muted-foreground">
+                          {searchTerm || periodoInicio || periodoFim 
+                            ? "Nenhum cliente encontrado com os filtros aplicados" 
+                            : "Nenhum cliente cadastrado"
+                          }
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Ranking de Clientes */}
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Trophy className="h-5 w-5" />
+                  Ranking de Clientes
+                </CardTitle>
+                <CardDescription>
+                  Clientes mais recentes
+                  {(periodoInicio || periodoFim) && " (período filtrado)"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {rankingClientes.map((cliente, index) => (
+                    <div key={cliente.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
+                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-sm font-medium">
+                        {index + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{cliente.nome}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {cliente.dataCriacao 
+                            ? format(new Date(cliente.dataCriacao), "dd/MM/yyyy", { locale: ptBR })
+                            : "Data não informada"
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {rankingClientes.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Nenhum cliente encontrado
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
+
+      <ClienteDetalhes
+        cliente={selectedCliente}
+        isOpen={showDetalhes}
+        onClose={() => {
+          setShowDetalhes(false);
+          setSelectedCliente(null);
+        }}
+        onEdit={(cliente) => {
+          setShowDetalhes(false);
+          handleEdit(cliente);
+        }}
+      />
     </Layout>
   );
 }

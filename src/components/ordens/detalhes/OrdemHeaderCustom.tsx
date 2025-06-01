@@ -1,11 +1,11 @@
 
-import React from 'react';
-import { OrdemServico } from '@/types/ordens';
-import { Button } from '@/components/ui/button';
-import { Edit, Trash2 } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
-import OrdemActionButtons from './OrdemActionButtons';
-import { formatDateSafely } from '@/utils/dateUtils';
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Trash, Edit, FileText } from "lucide-react";
+import { format, isValid } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { OrdemServico, StatusOS } from "@/types/ordens";
+import { generateOrderPDF } from "@/utils/pdfUtils";
 
 interface OrdemHeaderCustomProps {
   id: string;
@@ -16,57 +16,91 @@ interface OrdemHeaderCustomProps {
   ordem: OrdemServico;
 }
 
-export const OrdemHeaderCustom: React.FC<OrdemHeaderCustomProps> = ({ 
+export function OrdemHeaderCustom({ 
   id, 
   nome, 
   canEdit, 
   onEditClick, 
   onDeleteClick,
-  ordem
-}) => {
-  return (
-    <div className="border rounded-lg p-4 bg-card">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center">
-            <h2 className="text-2xl font-bold tracking-tight">{nome || `Ordem #${id.slice(-5)}`}</h2>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Criada em {formatDateSafely(ordem.dataAbertura)}
-            {ordem.dataPrevistaEntrega && 
-              ` • Previsão de entrega: ${formatDateSafely(ordem.dataPrevistaEntrega)}`}
-          </p>
-        </div>
+  ordem 
+}: OrdemHeaderCustomProps) {
+  const statusLabels: Record<StatusOS, string> = {
+    desmontagem: "Desmontagem",
+    inspecao_inicial: "Inspeção Inicial",
+    orcamento: "Orçamento",
+    aguardando_aprovacao: "Aguardando Aprovação",
+    autorizado: "Autorizado",
+    executando_servico: "Executando Serviço",
+    aguardando_peca_cliente: "Aguardando Peça (Cliente)",
+    aguardando_peca_interno: "Aguardando Peça (Interno)",
+    finalizado: "Finalizado",
+    entregue: "Entregue"
+  };
 
-        <div className="flex items-center gap-2">
-          {canEdit && (
-            <>
-              <Button
-                variant="outline"
-                className="flex items-center gap-2"
-                onClick={onEditClick}
-                size="sm"
-              >
-                <Edit className="h-4 w-4" />
-                Editar
-              </Button>
-              <Button
-                variant="destructive"
-                className="flex items-center gap-2"
-                onClick={onDeleteClick}
-                size="sm"
-              >
-                <Trash2 className="h-4 w-4" />
-                Excluir
-              </Button>
-            </>
-          )}
-          <div className="ml-2">
-            <OrdemActionButtons ordem={ordem} />
-          </div>
-        </div>
+  const formatDateSafely = (date: any): string => {
+    if (!date) return "Data não definida";
+    
+    try {
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      
+      if (!isValid(dateObj)) return "Data inválida";
+      
+      return format(dateObj, "dd/MM/yyyy", { locale: ptBR });
+    } catch (error) {
+      console.error("Erro ao formatar data:", error, date);
+      return "Data inválida";
+    }
+  };
+
+  const handleExportPDF = () => {
+    try {
+      generateOrderPDF(ordem);
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+    }
+  };
+
+  return (
+    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-6 border-b bg-card">
+      <div className="flex-1">
+        <h1 className="text-2xl font-bold text-foreground">{id}</h1>
+        <p className="text-muted-foreground mt-1">
+          Criada em {formatDateSafely(ordem.dataAbertura)} • Previsão de entrega: {formatDateSafely(ordem.dataPrevistaEntrega)}
+        </p>
       </div>
-      <Separator className="my-4" />
+      
+      <div className="flex items-center gap-2">
+        <Button 
+          variant="outline"
+          onClick={handleExportPDF}
+          className="flex items-center gap-2"
+        >
+          <FileText className="h-4 w-4" />
+          Exportar PDF
+        </Button>
+        
+        {canEdit && (
+          <>
+            <Button 
+              variant="outline"
+              onClick={onEditClick}
+              className="flex items-center gap-2"
+            >
+              <Edit className="h-4 w-4" />
+              Editar
+            </Button>
+            
+            <Button 
+              variant="destructive"
+              onClick={onDeleteClick}
+              className="flex items-center gap-2"
+            >
+              <Trash className="h-4 w-4" />
+              Excluir
+            </Button>
+          </>
+        )}
+      </div>
     </div>
   );
-};
+}
