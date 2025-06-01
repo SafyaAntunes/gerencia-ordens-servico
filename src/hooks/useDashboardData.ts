@@ -1,8 +1,9 @@
 
 import { useState, useEffect } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { OrdemServico } from '@/types/ordens';
+import { startOfDay, endOfDay } from 'date-fns';
 
 export interface DashboardData {
   totalOrdens: number;
@@ -14,7 +15,12 @@ export interface DashboardData {
   servicosPorTipo: Array<{ name: string; total: number }>;
 }
 
-export const useDashboardData = () => {
+interface UseDashboardDataProps {
+  dataInicio?: Date;
+  dataFim?: Date;
+}
+
+export const useDashboardData = ({ dataInicio, dataFim }: UseDashboardDataProps = {}) => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +32,18 @@ export const useDashboardData = () => {
       
       try {
         const ordensRef = collection(db, 'ordens_servico');
-        const ordensSnapshot = await getDocs(ordensRef);
+        let ordensQuery = query(ordensRef);
+        
+        // Aplicar filtro de data se especificado
+        if (dataInicio && dataFim) {
+          ordensQuery = query(
+            ordensRef,
+            where('dataAbertura', '>=', Timestamp.fromDate(startOfDay(dataInicio))),
+            where('dataAbertura', '<=', Timestamp.fromDate(endOfDay(dataFim)))
+          );
+        }
+        
+        const ordensSnapshot = await getDocs(ordensQuery);
         
         const ordens = ordensSnapshot.docs.map(doc => {
           const data = doc.data();
@@ -108,7 +125,7 @@ export const useDashboardData = () => {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [dataInicio?.getTime(), dataFim?.getTime()]);
 
   return { data, loading, error, refetch: () => setLoading(true) };
 };
