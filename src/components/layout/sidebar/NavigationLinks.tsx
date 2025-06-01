@@ -8,6 +8,7 @@ import {
   UserCircle, 
   Calendar, 
   BarChart2,
+  Settings,
   Wrench 
 } from 'lucide-react';
 
@@ -81,6 +82,16 @@ const NavigationLinks = ({ isCollapsed }: NavigationLinksProps) => {
             isActive={isActive('/relatorios/producao')}
             isCollapsed={isCollapsed}
           />
+          
+          <div className="mt-2 border-t border-sidebar-muted pt-2">
+            <NavItem 
+              href="/configuracoes" 
+              icon={<Settings className="h-5 w-5" />}
+              label="Configurações"
+              isActive={isActive('/configuracoes')}
+              isCollapsed={isCollapsed}
+            />
+          </div>
         </div>
       </nav>
     </div>
