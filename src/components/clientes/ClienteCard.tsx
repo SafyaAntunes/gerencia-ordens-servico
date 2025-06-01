@@ -1,8 +1,7 @@
 
-import { Phone, Mail, Building, Trash, Edit, Eye, Car } from "lucide-react";
+import { Phone, Mail, Building, Trash, Edit, Eye } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Cliente } from "@/types/clientes";
 
@@ -19,12 +18,6 @@ export default function ClienteCard({ cliente, onView, onEdit, onDelete }: Clien
       <CardHeader className="pb-2">
         <CardTitle className="text-lg flex items-center justify-between">
           <span className="truncate pr-2">{cliente.nome}</span>
-          {cliente.motores && cliente.motores.length > 0 && (
-            <Badge variant="outline" className="flex items-center gap-1">
-              <Car className="h-3 w-3" />
-              {cliente.motores.length}
-            </Badge>
-          )}
         </CardTitle>
       </CardHeader>
       

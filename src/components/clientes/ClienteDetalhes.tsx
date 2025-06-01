@@ -1,9 +1,9 @@
+
 import { Cliente } from "@/types/clientes";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Phone, Mail, Building, Edit, Calendar, Car } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Phone, Mail, Building, Edit, Calendar } from "lucide-react";
 import { format, isValid } from "date-fns";
 
 interface ClienteDetalhesProps {
@@ -34,11 +34,6 @@ export default function ClienteDetalhes({
       : "Data inválida";
   })();
 
-  // Find the selected motor if there's a motorId in the cliente object
-  const selectedMotor = cliente.motores?.find(motor => 
-    motor.id === cliente.selectedMotorId
-  );
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[550px]">
@@ -63,15 +58,6 @@ export default function ClienteDetalhes({
             
             <div className="flex-1">
               <h3 className="text-xl font-semibold">{cliente.nome}</h3>
-              
-              <div className="flex items-center gap-2 mt-2">
-                {cliente.motores && cliente.motores.length > 0 && (
-                  <Badge variant="outline" className="flex items-center gap-1">
-                    <Car className="h-3 w-3" />
-                    {cliente.motores.length} {cliente.motores.length === 1 ? 'motor' : 'motores'}
-                  </Badge>
-                )}
-              </div>
             </div>
           </div>
           
@@ -103,6 +89,18 @@ export default function ClienteDetalhes({
             </div>
           </div>
           
+          {cliente.endereco && (
+            <>
+              <Separator />
+              
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-muted-foreground">Endereço</h4>
+                <p className="text-sm">{typeof cliente.endereco === 'string' ? cliente.endereco : 
+                  `${cliente.endereco.rua}, ${cliente.endereco.numero} - ${cliente.endereco.cidade}/${cliente.endereco.estado}`}</p>
+              </div>
+            </>
+          )}
+          
           {cliente.observacoes && (
             <>
               <Separator />
@@ -113,58 +111,6 @@ export default function ClienteDetalhes({
               </div>
             </>
           )}
-          
-          <Separator />
-          
-          <div className="space-y-4">
-            <h4 className="text-sm font-medium text-muted-foreground">Motores</h4>
-          
-            {selectedMotor ? (
-              <div className="border border-border rounded-md p-3">
-                <div className="flex justify-between">
-                  <h5 className="font-medium">{selectedMotor.marca} {selectedMotor.modelo}</h5>
-                  {selectedMotor.ano && <span className="text-sm text-muted-foreground">Ano: {selectedMotor.ano}</span>}
-                </div>
-                
-                {selectedMotor.cilindrada && (
-                  <p className="text-sm">
-                    Cilindrada: <span className="font-medium">{selectedMotor.cilindrada}</span>
-                  </p>
-                )}
-                
-                {selectedMotor.combustivel && (
-                  <p className="text-sm mt-1">
-                    Combustível: <span className="font-medium">{selectedMotor.combustivel}</span>
-                  </p>
-                )}
-              </div>
-            ) : cliente.motores && cliente.motores.length > 0 ? (
-              <div className="grid gap-3">
-                {cliente.motores.map(motor => (
-                  <div key={motor.id} className="border border-border rounded-md p-3">
-                    <div className="flex justify-between">
-                      <h5 className="font-medium">{motor.marca} {motor.modelo}</h5>
-                      {motor.ano && <span className="text-sm text-muted-foreground">Ano: {motor.ano}</span>}
-                    </div>
-                    
-                    {motor.cilindrada && (
-                      <p className="text-sm">
-                        Cilindrada: <span className="font-medium">{motor.cilindrada}</span>
-                      </p>
-                    )}
-                    
-                    {motor.combustivel && (
-                      <p className="text-sm mt-1">
-                        Combustível: <span className="font-medium">{motor.combustivel}</span>
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground">Nenhum motor cadastrado para este cliente.</p>
-            )}
-          </div>
         </div>
       </DialogContent>
     </Dialog>
