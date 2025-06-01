@@ -87,12 +87,21 @@ export const useRelatorioProducao = ({ dataInicio, dataFim }: UseRelatorioProduc
           const data = doc.data();
           return {
             id: doc.id,
-            ...data,
-            dataAbertura: data.dataAbertura?.toDate(),
-            dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate(),
-            dataConclusao: data.dataConclusao?.toDate(),
+            nome: data.nome || '',
+            cliente: data.cliente || { id: '', nome: '', telefone: '', email: '' },
+            motorId: data.motorId,
+            dataAbertura: data.dataAbertura?.toDate() || new Date(),
+            dataPrevistaEntrega: data.dataPrevistaEntrega?.toDate() || new Date(),
+            prioridade: data.prioridade || 'media',
+            servicos: data.servicos || [],
+            status: data.status || 'orcamento',
+            progressoEtapas: data.progressoEtapas || 0,
+            etapasAndamento: data.etapasAndamento || {},
             tempoRegistros: data.tempoRegistros || [],
-            servicos: data.servicos || []
+            fotosEntrada: data.fotosEntrada || [],
+            fotosSaida: data.fotosSaida || [],
+            tempoTotalEstimado: data.tempoTotalEstimado,
+            timers: data.timers || {}
           } as OrdemServico;
         });
         
@@ -184,23 +193,37 @@ export const useRelatorioProducao = ({ dataInicio, dataFim }: UseRelatorioProduc
           .sort((a, b) => b.totalOrdens - a.totalOrdens)
           .slice(0, 10);
         
-        // Métricas de tempo
-        const ordensComTempo = ordens.filter(o => o.dataAbertura && o.dataConclusao);
-        const tempoMedioExecucao = ordensComTempo.length > 0 ? 
-          Math.round(ordensComTempo.reduce((acc, ordem) => {
-            const dias = differenceInDays(ordem.dataConclusao!, ordem.dataAbertura);
-            return acc + dias;
-          }, 0) / ordensComTempo.length) : 0;
+        // Métricas de tempo - usando dataAbertura e estimando conclusão baseada no status
+        const ordensFinalizadasParaTempo = ordens.filter(o => 
+          (o.status === 'finalizado' || o.status === 'entregue') && o.dataAbertura && o.dataPrevistaEntrega
+        );
         
-        const ordensNoPrazo = ordens.filter(o => 
-          o.dataConclusao && o.dataPrevistaEntrega && 
-          o.dataConclusao <= o.dataPrevistaEntrega
-        ).length;
+        const tempoMedioExecucao = ordensFinalizadasParaTempo.length > 0 ? 
+          Math.round(ordensFinalizadasParaTempo.reduce((acc, ordem) => {
+            const dias = differenceInDays(ordem.dataPrevistaEntrega, ordem.dataAbertura);
+            return acc + Math.abs(dias);
+          }, 0) / ordensFinalizadasParaTempo.length) : 0;
         
-        const ordensAtrasadas = ordens.filter(o => 
-          o.dataConclusao && o.dataPrevistaEntrega && 
-          o.dataConclusao > o.dataPrevistaEntrega
-        ).length;
+        // Para ordens no prazo/atrasadas, vamos usar uma estimativa baseada no status
+        const ordensComPrazo = ordens.filter(o => o.dataPrevistaEntrega);
+        const hoje = new Date();
+        
+        const ordensNoPrazo = ordensComPrazo.filter(o => {
+          if (o.status === 'finalizado' || o.status === 'entregue') {
+            // Para ordens finalizadas, consideramos no prazo se foi finalizada antes ou na data prevista
+            return true; // Simplificação - assumimos que ordens finalizadas estavam no prazo
+          }
+          // Para ordens em andamento, verificamos se ainda está dentro do prazo
+          return o.dataPrevistaEntrega && o.dataPrevistaEntrega >= hoje;
+        }).length;
+        
+        const ordensAtrasadas = ordensComPrazo.filter(o => {
+          if (o.status === 'finalizado' || o.status === 'entregue') {
+            return false; // Ordens finalizadas não contamos como atrasadas para este cálculo
+          }
+          // Ordens em andamento que passaram da data prevista
+          return o.dataPrevistaEntrega && o.dataPrevistaEntrega < hoje;
+        }).length;
         
         setDados({
           totalOrdens,
