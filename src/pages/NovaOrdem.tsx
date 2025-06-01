@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -50,6 +49,13 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
     setIsSubmitting(true);
     
     try {
+      // Validar se o ID foi preenchido
+      if (!values.id || values.id.trim() === '') {
+        toast.error("Por favor, preencha o código da OS");
+        setIsSubmitting(false);
+        return;
+      }
+
       let clienteNome = "Cliente não encontrado";
       let clienteTelefone = "";
       let clienteEmail = "";

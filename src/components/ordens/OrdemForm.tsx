@@ -6,6 +6,7 @@ import * as z from "zod";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -54,7 +55,7 @@ const formSchema = z.object({
     message: "Código da OS precisa ter ao menos 3 caracteres.",
   }),
   nome: z.string().min(3, {
-    message: "Nome da OS precisa ter ao menos 3 caracteres.",
+    message: "Observação precisa ter ao menos 3 caracteres.",
   }),
   clienteId: z.string().min(3, {
     message: "Selecione um cliente.",
@@ -99,7 +100,7 @@ export default function OrdemForm({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      id: initialData?.id || generateId(),
+      id: initialData?.id || "",
       nome: initialData?.nome || "",
       clienteId: initialData?.cliente?.id || "",
       motorId: initialData?.motorId || "",
@@ -190,12 +191,12 @@ export default function OrdemForm({
             name="nome"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Nome da OS</FormLabel>
+                <FormLabel>Observação</FormLabel>
                 <FormControl>
                   <Input placeholder="Retífica do motor X" {...field} />
                 </FormControl>
                 <FormDescription>
-                  Um nome descritivo para fácil identificação.
+                  Uma observação descritiva para fácil identificação.
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -249,7 +250,7 @@ export default function OrdemForm({
                         )}
                       >
                         {field.value ? (
-                          format(field.value, "PPP")
+                          format(field.value, "dd/MM/yyyy", { locale: ptBR })
                         ) : (
                           <span>Selecione a data</span>
                         )}
@@ -266,6 +267,7 @@ export default function OrdemForm({
                         date > new Date()
                       }
                       initialFocus
+                      className={cn("p-3 pointer-events-auto")}
                     />
                   </PopoverContent>
                 </Popover>
@@ -294,7 +296,7 @@ export default function OrdemForm({
                         )}
                       >
                         {field.value ? (
-                          format(field.value, "PPP")
+                          format(field.value, "dd/MM/yyyy", { locale: ptBR })
                         ) : (
                           <span>Selecione a data</span>
                         )}
@@ -311,6 +313,7 @@ export default function OrdemForm({
                         date < new Date()
                       }
                       initialFocus
+                      className={cn("p-3 pointer-events-auto")}
                     />
                   </PopoverContent>
                 </Popover>
