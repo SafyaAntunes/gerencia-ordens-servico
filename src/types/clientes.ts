@@ -1,3 +1,4 @@
+
 export interface Cliente {
   id: string;
   nome: string;
@@ -5,22 +6,8 @@ export interface Cliente {
   telefone: string;
   endereco?: string | Endereco;
   cnpj_cpf?: string;
-  motores?: Motor[];
   dataCriacao?: Date | string;
   observacoes?: string;
-  selectedMotorId?: string; // ID do motor selecionado
-}
-
-export interface Motor {
-  id: string;
-  modelo: string;
-  marca: string;
-  ano?: string;
-  numeroSerie?: string;
-  cilindrada?: string; // Changed from cilindradas
-  combustivel?: 'gasolina' | 'diesel' | 'flex' | 'etanol' | 'gnv';
-  observacoes?: string;
-  fotos?: string[];
 }
 
 export interface Endereco {

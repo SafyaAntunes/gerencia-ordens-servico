@@ -12,7 +12,7 @@ import {
   deleteDoc, 
   Timestamp 
 } from 'firebase/firestore';
-import { Cliente, Motor } from '@/types/clientes';
+import { Cliente } from '@/types/clientes';
 
 export const useClientes = () => {
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -94,41 +94,12 @@ export const useClientes = () => {
     }
   };
 
-  const getClienteMotores = async (clienteId: string) => {
-    try {
-      const motoresRef = collection(db, `clientes/${clienteId}/motores`);
-      const snapshot = await getDocs(motoresRef);
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Motor[];
-    } catch (error) {
-      toast.error('Erro ao carregar motores do cliente.');
-      return [];
-    }
-  };
-
-  const saveMotor = async (motor: Motor, clienteId: string) => {
-    try {
-      const { id, ...motorData } = motor;
-      const motorRef = id ? doc(db, `clientes/${clienteId}/motores`, id) : doc(collection(db, `clientes/${clienteId}/motores`));
-      await setDoc(motorRef, motorData, { merge: true });
-      toast.success('Motor salvo com sucesso!');
-      return true;
-    } catch (error) {
-      toast.error('Erro ao salvar motor.');
-      return false;
-    }
-  };
-
   return {
     clientes,
     loading,
     fetchClientes,
     getCliente,
     saveCliente,
-    deleteCliente,
-    getClienteMotores,
-    saveMotor
+    deleteCliente
   };
 };

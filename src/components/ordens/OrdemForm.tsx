@@ -91,7 +91,6 @@ export default function OrdemForm({
   isLoadingClientes = false
 }: OrdemFormProps) {
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
-  const [filteredMotores, setFilteredMotores] = useState<Motor[]>([]);
   const [servicos, setServicos] = useState<string[]>([]);
   const [servicosDescricoes, setServicosDescricoes] = useState<Record<string, string>>({});
   
@@ -126,10 +125,6 @@ export default function OrdemForm({
       setSelectedCliente(null);
     }
   }, [values.clienteId, clientes]);
-  
-  useEffect(() => {
-    setFilteredMotores(allMotores || []);
-  }, [allMotores]);
   
   useEffect(() => {
     if (initialData?.servicos) {
@@ -208,66 +203,33 @@ export default function OrdemForm({
           />
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="clienteId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Cliente</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um cliente" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {clientes.map((cliente) => (
-                      <SelectItem key={cliente.id} value={cliente.id}>
-                        {cliente.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormDescription>
-                  O cliente associado a esta ordem de serviço.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="motorId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Motor</FormLabel>
-                <Select 
-                  onValueChange={field.onChange} 
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um motor" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {allMotores.map((motor) => (
-                      <SelectItem key={motor.id} value={motor.id}>
-                        {motor.marca} - {motor.modelo} ({motor.numeroSerie || "Sem Nº de série"})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormDescription>
-                  O motor que será trabalhado nesta ordem.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <FormField
+          control={form.control}
+          name="clienteId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Cliente</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um cliente" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {clientes.map((cliente) => (
+                    <SelectItem key={cliente.id} value={cliente.id}>
+                      {cliente.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                O cliente associado a esta ordem de serviço.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <FormField
