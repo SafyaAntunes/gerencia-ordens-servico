@@ -10,6 +10,7 @@ import { DeleteOrdemDialog } from "@/components/ordens/detalhes/DeleteOrdemDialo
 import { LoadingOrdem } from "@/components/ordens/detalhes/LoadingOrdem";
 import { NotFoundOrdem } from "@/components/ordens/detalhes/NotFoundOrdem";
 import { OrdemHeaderCustom } from "@/components/ordens/detalhes/OrdemHeaderCustom";
+import OrderProgress from "@/components/ordens/OrderProgress";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -103,6 +104,13 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
           onDeleteClick={() => setDeleteDialogOpen(true)}
           ordem={ordem}
         />
+        
+        {/* Add progress bar after header */}
+        {!isEditando && (
+          <div className="mt-4">
+            <OrderProgress ordem={ordem} />
+          </div>
+        )}
       </div>
 
       {isEditando ? (

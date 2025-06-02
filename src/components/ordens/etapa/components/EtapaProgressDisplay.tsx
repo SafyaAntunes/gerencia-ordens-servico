@@ -17,12 +17,12 @@ export default function EtapaProgressDisplay({
   useEffect(() => {
     if (servicos.length === 0) return;
     
-    // CORRIGIDO: Apenas considerar os serviços concluídos, ignorando atribuição de funcionários
+    // Calculate progress based on completed services (concluido: true)
     const servicosConcluidos = servicos.filter(servico => servico.concluido).length;
     const percentualProgresso = Math.round((servicosConcluidos / servicos.length) * 100);
     setProgresso(percentualProgresso);
     
-    // Notificar quando todos os serviços estiverem concluídos
+    // Notify when all services are completed
     if (servicosConcluidos === servicos.length && onAllServicosConcluidos) {
       onAllServicosConcluidos();
     }
@@ -34,6 +34,10 @@ export default function EtapaProgressDisplay({
   
   return (
     <div className="mb-4">
+      <div className="flex items-center justify-between text-sm text-gray-500 mb-1">
+        <span>Progresso da Etapa</span>
+        <span>{progresso}%</span>
+      </div>
       <Progress value={progresso} className="h-2" />
     </div>
   );
