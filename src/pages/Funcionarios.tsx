@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from "react";
-import { PlusCircle, Filter, Search, Users, CheckCircle2, FilterX, Clock, ListFilter } from "lucide-react";
+import { PlusCircle, Filter, Search, Users, CheckCircle2, FilterX } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +35,6 @@ import FuncionarioCard from "@/components/funcionarios/FuncionarioCard";
 import FuncionarioForm from "@/components/funcionarios/FuncionarioForm";
 import FuncionarioDetalhes from "@/components/funcionarios/FuncionarioDetalhes";
 import FuncionarioStatusTab from "@/components/funcionarios/FuncionarioStatusTab";
-import FuncionarioProdutividadeTab from "@/components/funcionarios/FuncionarioProdutividadeTab";
 import useFuncionariosDisponibilidade from "@/hooks/useFuncionariosDisponibilidade";
 import { toast } from "sonner";
 import { getFuncionarios, saveFuncionario, deleteFuncionario, getFuncionario } from "@/services/funcionarioService";
@@ -59,7 +59,7 @@ export default function Funcionarios({ onLogout, meuPerfil = false }: Funcionari
   const [isDetalhesOpen, setIsDetalhesOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [funcionarioToDelete, setFuncionarioToDelete] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"cadastro" | "status" | "produtividade">("cadastro");
+  const [activeTab, setActiveTab] = useState<"cadastro" | "status">("cadastro");
   
   const { funcionario: currentUser } = useAuth();
   const params = useParams();
@@ -316,10 +316,6 @@ export default function Funcionarios({ onLogout, meuPerfil = false }: Funcionari
                 <CheckCircle2 className="h-4 w-4" />
                 Status
               </TabsTrigger>
-              <TabsTrigger value="produtividade" className="gap-2">
-                <Clock className="h-4 w-4" />
-                Produtividade
-              </TabsTrigger>
             </TabsList>
             
             {/* Conteúdo das abas */}
@@ -332,10 +328,6 @@ export default function Funcionarios({ onLogout, meuPerfil = false }: Funcionari
                 funcionariosStatus={funcionariosStatus}
                 loading={loadingStatus}
               />
-            </TabsContent>
-            
-            <TabsContent value="produtividade">
-              <FuncionarioProdutividadeTab />
             </TabsContent>
           </Tabs>
         ) : (
