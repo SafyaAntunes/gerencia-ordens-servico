@@ -29,7 +29,7 @@ export const OrdemHeaderCustom: React.FC<OrdemHeaderCustomProps> = ({
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center">
-            <h2 className="text-2xl font-bold tracking-tight">{nome || `Ordem #${id.slice(-5)}`}</h2>
+            <h2 className="text-2xl font-bold tracking-tight">OS-{id.slice(-11)}</h2>
           </div>
           <p className="text-sm text-muted-foreground">
             Criada em {formatDateSafely(ordem.dataAbertura)}

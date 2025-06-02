@@ -19,46 +19,7 @@ interface OrderDetailsTabProps {
 }
 
 export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps) {
-  const [temposPorEtapa, setTemposPorEtapa] = useState<Record<string, number>>({});
-  const [tempoTotal, setTempoTotal] = useState<number>(0);
   const [isUpdatingPrioridade, setIsUpdatingPrioridade] = useState(false);
-
-  useEffect(() => {
-    if (ordem) {
-      calcularTemposPorEtapa(ordem);
-    }
-  }, [ordem]);
-
-  const calcularTemposPorEtapa = (ordem: OrdemServico) => {
-    const tempos: Record<string, number> = {};
-    let total = 0;
-    
-    // Todos os serviços agora têm subatividades com tempos estimados
-    ordem.servicos.forEach(servico => {
-      if (servico.subatividades) {
-        servico.subatividades
-          .filter(sub => sub.selecionada)
-          .forEach(sub => {
-            if (sub.tempoEstimado && typeof sub.tempoEstimado === 'number') {
-              const tempoEstimadoMs = sub.tempoEstimado * 60 * 60 * 1000; // horas para ms
-              
-              // Atribuir ao tipo de serviço correto
-              tempos[servico.tipo] = (tempos[servico.tipo] || 0) + tempoEstimadoMs;
-              
-              total += tempoEstimadoMs;
-            }
-          });
-      }
-    });
-    
-    // Usar o tempo total estimado armazenado se disponível
-    if (ordem.tempoTotalEstimado && typeof ordem.tempoTotalEstimado === 'number' && ordem.tempoTotalEstimado > 0) {
-      total = ordem.tempoTotalEstimado;
-    }
-    
-    setTemposPorEtapa(tempos);
-    setTempoTotal(total);
-  };
 
   const handlePrioridadeChange = async (novaPrioridade: Prioridade) => {
     if (isUpdatingPrioridade) return;
@@ -106,30 +67,6 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
     urgente: "bg-red-500"
   };
 
-  const etapasNomes: Record<string, string> = {
-    lavagem: "Lavagem",
-    inspecao_inicial: "Inspeção Inicial",
-    retifica: "Retífica",
-    montagem: "Montagem",
-    dinamometro: "Dinamômetro",
-    inspecao_final: "Inspeção Final",
-    bloco: "Bloco", 
-    biela: "Biela",
-    cabecote: "Cabeçote",
-    virabrequim: "Virabrequim",
-    eixo_comando: "Eixo de Comando"
-  };
-
-  const formatarTempo = (ms: number) => {
-    if (typeof ms !== 'number' || isNaN(ms)) {
-      return "0h";
-    }
-    const horas = Math.floor(ms / (1000 * 60 * 60));
-    const minutos = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-    
-    return `${horas}h${minutos > 0 ? ` ${minutos}m` : ''}`;
-  };
-  
   // Helper function to safely format dates
   const formatDateSafely = (date: any): string => {
     if (!date) return "Data não definida";
@@ -219,27 +156,6 @@ export function OrderDetailsTab({ ordem, onStatusChange }: OrderDetailsTabProps)
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          
-          <Separator />
-          
-          <div>
-            <p className="text-sm text-muted-foreground mb-2">Tempo Total Estimado</p>
-            <p className="font-medium text-lg">{formatarTempo(tempoTotal)}</p>
-            
-            <div className="mt-2 space-y-1">
-              <p className="text-sm text-muted-foreground">Detalhamento por serviço:</p>
-              <div className="ml-2 space-y-1">
-                {Object.entries(temposPorEtapa).map(([tipo, tempo]) => (
-                  tempo > 0 && (
-                    <div key={tipo} className="flex justify-between items-center">
-                      <span className="text-sm">{etapasNomes[tipo] || tipo}</span>
-                      <span className="text-sm font-medium">{formatarTempo(tempo)}</span>
-                    </div>
-                  )
-                ))}
-              </div>
-            </div>
           </div>
         </CardContent>
       </Card>
