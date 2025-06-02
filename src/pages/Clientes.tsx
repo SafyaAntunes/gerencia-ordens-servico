@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { PlusCircle, Search, Building, Phone, Mail, FilterX, Car } from "lucide-react";
+import { PlusCircle, Search, Building, Phone, Mail, FilterX, Car, Calendar } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +22,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Cliente } from "@/types/clientes";
 import { getClientes, saveCliente, deleteCliente } from "@/services/clienteService";
 import ClienteForm from "@/components/clientes/ClienteForm";
@@ -31,7 +32,7 @@ import ClienteDetalhes from "@/components/clientes/ClienteDetalhes";
 import { toast } from "sonner";
 import ExportButton from "@/components/common/ExportButton";
 import ImportButton from "@/components/common/ImportButton";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { OrdemServico } from "@/types/ordens";
 import { Card, CardContent } from "@/components/ui/card";
@@ -62,6 +63,12 @@ export default function Clientes({ onLogout }: ClientesProps) {
   const [loadingRanking, setLoadingRanking] = useState(true);
   const [activeTab, setActiveTab] = useState("cadastro");
   
+  // Filtros do ranking
+  const [filtroTipo, setFiltroTipo] = useState<"periodo" | "quantidade">("quantidade");
+  const [dataInicio, setDataInicio] = useState<Date | undefined>();
+  const [dataFim, setDataFim] = useState<Date | undefined>();
+  const [quantidadeMinima, setQuantidadeMinima] = useState<number>(1);
+  
   const navigate = useNavigate();
 
   // Fetch clientes on mount
@@ -69,12 +76,12 @@ export default function Clientes({ onLogout }: ClientesProps) {
     fetchClientes();
   }, []);
   
-  // Fetch cliente ranking when active tab changes to ranking
+  // Fetch cliente ranking when active tab changes to ranking or filters change
   useEffect(() => {
-    if (activeTab === "ranking" && clientesRanking.length === 0) {
+    if (activeTab === "ranking") {
       fetchClientesRanking();
     }
-  }, [activeTab]);
+  }, [activeTab, filtroTipo, dataInicio, dataFim, quantidadeMinima]);
   
   const fetchClientes = async () => {
     setLoading(true);
@@ -94,7 +101,19 @@ export default function Clientes({ onLogout }: ClientesProps) {
     try {
       // 1. Buscar todas as ordens de serviço
       const ordensRef = collection(db, 'ordens_servico');
-      const ordensSnapshot = await getDocs(ordensRef);
+      let ordensQuery = query(ordensRef);
+      
+      // Aplicar filtro por período se selecionado
+      if (filtroTipo === "periodo" && dataInicio && dataFim) {
+        const inicioTimestamp = Timestamp.fromDate(dataInicio);
+        const fimTimestamp = Timestamp.fromDate(dataFim);
+        ordensQuery = query(ordensRef, 
+          where('dataAbertura', '>=', inicioTimestamp),
+          where('dataAbertura', '<=', fimTimestamp)
+        );
+      }
+      
+      const ordensSnapshot = await getDocs(ordensQuery);
       
       // 2. Contar ordens por cliente
       const clientesCountMap = new Map<string, number>();
@@ -118,7 +137,7 @@ export default function Clientes({ onLogout }: ClientesProps) {
       });
       
       // 3. Criar ranking
-      const ranking: ClienteRanking[] = Array.from(clientesCountMap.entries())
+      let ranking: ClienteRanking[] = Array.from(clientesCountMap.entries())
         .map(([clienteId, totalOrdens]) => {
           const info = clientesInfoMap.get(clienteId) || { nome: 'Cliente Desconhecido', email: '' };
           
@@ -129,8 +148,15 @@ export default function Clientes({ onLogout }: ClientesProps) {
             telefone: info.telefone,
             totalOrdens
           };
-        })
-        .sort((a, b) => b.totalOrdens - a.totalOrdens);
+        });
+      
+      // Aplicar filtro por quantidade mínima
+      if (filtroTipo === "quantidade") {
+        ranking = ranking.filter(cliente => cliente.totalOrdens >= quantidadeMinima);
+      }
+      
+      // Ordenar por quantidade de ordens
+      ranking.sort((a, b) => b.totalOrdens - a.totalOrdens);
       
       setClientesRanking(ranking);
     } catch (error) {
@@ -261,6 +287,13 @@ export default function Clientes({ onLogout }: ClientesProps) {
     return Array.isArray(data) && data.some(item => !!item.nome);
   };
   
+  const clearFiltros = () => {
+    setDataInicio(undefined);
+    setDataFim(undefined);
+    setQuantidadeMinima(1);
+    setFiltroTipo("quantidade");
+  };
+  
   const renderClientesList = () => {
     if (loading) {
       return (
@@ -320,10 +353,13 @@ export default function Clientes({ onLogout }: ClientesProps) {
       return (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Car className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium">Nenhuma OS registrada</h3>
+          <h3 className="text-lg font-medium">Nenhuma OS encontrada</h3>
           <p className="text-sm text-muted-foreground mt-1 max-w-md">
-            Não encontramos ordens de serviço para gerar o ranking de clientes.
+            Não encontramos ordens de serviço com os filtros aplicados.
           </p>
+          <Button className="mt-4" variant="outline" onClick={clearFiltros}>
+            Limpar Filtros
+          </Button>
         </div>
       );
     }
@@ -435,7 +471,71 @@ export default function Clientes({ onLogout }: ClientesProps) {
             {renderClientesList()}
           </TabsContent>
           
-          <TabsContent value="ranking">
+          <TabsContent value="ranking" className="space-y-4">
+            {/* Filtros do Ranking */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-medium">Filtros do Ranking</h3>
+                    <Button variant="ghost" size="sm" onClick={clearFiltros}>
+                      <FilterX className="h-4 w-4 mr-2" />
+                      Limpar
+                    </Button>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">Filtrar por:</span>
+                      <Select value={filtroTipo} onValueChange={(value: "periodo" | "quantidade") => setFiltroTipo(value)}>
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="quantidade">Quantidade</SelectItem>
+                          <SelectItem value="periodo">Período</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {filtroTipo === "periodo" && (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">De:</span>
+                          <DatePicker
+                            date={dataInicio}
+                            onDateChange={setDataInicio}
+                            placeholder="Data início"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">Até:</span>
+                          <DatePicker
+                            date={dataFim}
+                            onDateChange={setDataFim}
+                            placeholder="Data fim"
+                          />
+                        </div>
+                      </>
+                    )}
+                    
+                    {filtroTipo === "quantidade" && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">Mín. OS:</span>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={quantidadeMinima}
+                          onChange={(e) => setQuantidadeMinima(Number(e.target.value))}
+                          className="w-20"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
             {renderRanking()}
           </TabsContent>
         </Tabs>
