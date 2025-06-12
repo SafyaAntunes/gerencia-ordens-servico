@@ -4,6 +4,9 @@ import Layout from "@/components/layout/Layout";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import MetricCard from "@/components/dashboard/MetricCard";
 import StatusChart from "@/components/dashboard/StatusChart";
+import PerformanceCard from "@/components/dashboard/PerformanceCard";
+import ResumoOperacionalCard from "@/components/dashboard/ResumoOperacionalCard";
+import FuncionariosIndicador from "@/components/dashboard/FuncionariosIndicador";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { FileText, Clock, CheckCircle, AlertTriangle, DollarSign } from "lucide-react";
@@ -107,6 +110,19 @@ export default function Dashboard({ onLogout }: DashboardProps) {
             value={data.ordensOrcamento}
             icon={<DollarSign className="h-4 w-4" />}
           />
+        </div>
+
+        {/* Novos cards informativos */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <PerformanceCard 
+            dataInicio={filters.dataInicio}
+            dataFim={filters.dataFim}
+          />
+          <ResumoOperacionalCard 
+            dataInicio={filters.dataInicio}
+            dataFim={filters.dataFim}
+          />
+          <FuncionariosIndicador />
         </div>
 
         {/* Gráficos */}
