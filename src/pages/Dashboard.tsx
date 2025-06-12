@@ -1,61 +1,45 @@
 
-import React, { useState } from "react";
+import { useState } from "react";
 import Layout from "@/components/layout/Layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DatePicker } from "@/components/ui/date-picker";
-import { Button } from "@/components/ui/button";
+import { useDashboardData } from "@/hooks/useDashboardData";
 import MetricCard from "@/components/dashboard/MetricCard";
 import StatusChart from "@/components/dashboard/StatusChart";
-import FuncionariosIndicador from "@/components/dashboard/FuncionariosIndicador";
-import { useDashboardData } from "@/hooks/useDashboardData";
-import { 
-  FileText, 
-  Clock, 
-  CheckCircle, 
-  AlertTriangle, 
-  TrendingUp,
-  Wrench,
-  Users,
-  BarChart3,
-  CalendarRange,
-  Filter,
-  RotateCcw
-} from "lucide-react";
-import { LogoutProps } from "@/types/props";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-export default function Dashboard({ onLogout }: LogoutProps) {
-  const [dataInicio, setDataInicio] = useState<Date | undefined>();
-  const [dataFim, setDataFim] = useState<Date | undefined>();
-  
-  const { data, loading, error } = useDashboardData({ dataInicio, dataFim });
+interface DashboardProps {
+  onLogout: () => void;
+}
 
-  const handleLimparFiltros = () => {
-    setDataInicio(undefined);
-    setDataFim(undefined);
-  };
-
-  const temFiltroAtivo = dataInicio || dataFim;
+export default function Dashboard({ onLogout }: DashboardProps) {
+  // Remove filter states and UI - filters are now hidden
+  const { data, loading, error } = useDashboardData();
 
   if (loading) {
     return (
       <Layout onLogout={onLogout}>
-        <div className="container mx-auto py-6">
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-lg">Carregando dados do dashboard...</div>
         </div>
       </Layout>
     );
   }
 
-  if (error || !data) {
+  if (error) {
     return (
       <Layout onLogout={onLogout}>
-        <div className="container mx-auto py-6">
-          <div className="text-center py-8">
-            <p className="text-red-600">Erro ao carregar dados: {error}</p>
-          </div>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-lg text-red-600">Erro: {error}</div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!data) {
+    return (
+      <Layout onLogout={onLogout}>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-lg">Nenhum dado disponível</div>
         </div>
       </Layout>
     );
@@ -63,203 +47,76 @@ export default function Dashboard({ onLogout }: LogoutProps) {
 
   return (
     <Layout onLogout={onLogout}>
-      <div className="container mx-auto py-6 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Visão geral do sistema de ordens de serviço
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="mt-2 text-sm text-gray-600">
+            Visão geral das ordens de serviço
           </p>
         </div>
 
-        {/* Filtros de Data */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              Filtros
-            </CardTitle>
-            <CardDescription>
-              Filtre as informações por período específico
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap items-end gap-4">
-              <div className="flex-1 min-w-[200px]">
-                <label className="text-sm font-medium mb-2 block">Data Início</label>
-                <DatePicker
-                  date={dataInicio}
-                  onDateChange={setDataInicio}
-                  placeholder="Selecione a data inicial"
-                />
-              </div>
-              
-              <div className="flex-1 min-w-[200px]">
-                <label className="text-sm font-medium mb-2 block">Data Fim</label>
-                <DatePicker
-                  date={dataFim}
-                  onDateChange={setDataFim}
-                  placeholder="Selecione a data final"
-                />
-              </div>
-              
-              {temFiltroAtivo && (
-                <Button 
-                  variant="outline" 
-                  onClick={handleLimparFiltros}
-                  className="flex items-center gap-2"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  Limpar Filtros
-                </Button>
-              )}
-            </div>
-            
-            {temFiltroAtivo && (
-              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <p className="text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
-                  <CalendarRange className="h-4 w-4" />
-                  Exibindo dados filtrados por período
-                  {dataInicio && dataFim && ` (${dataInicio.toLocaleDateString()} - ${dataFim.toLocaleDateString()})`}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Removed filter section - filters are now hidden */}
 
         {/* Métricas principais */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5 mb-8">
           <MetricCard
-            title="Total de OS"
+            title="Total de Ordens"
             value={data.totalOrdens}
-            description="Total de ordens de serviço"
-            icon={<FileText className="h-4 w-4" />}
-            variant="default"
+            icon="FileText"
+            color="blue"
           />
-          
           <MetricCard
             title="Em Andamento"
             value={data.ordensEmAndamento}
-            description="Ordens sendo executadas"
-            icon={<Clock className="h-4 w-4" />}
-            variant="warning"
+            icon="Clock"
+            color="yellow"
           />
-          
           <MetricCard
             title="Finalizadas"
             value={data.ordensFinalizadas}
-            description="Ordens concluídas"
-            icon={<CheckCircle className="h-4 w-4" />}
-            variant="success"
+            icon="CheckCircle"
+            color="green"
           />
-          
           <MetricCard
             title="Atrasadas"
             value={data.ordensAtrasadas}
-            description="Ordens com atraso"
-            icon={<AlertTriangle className="h-4 w-4" />}
-            variant="danger"
+            icon="AlertTriangle"
+            color="red"
           />
-          
           <MetricCard
             title="Orçamentos"
             value={data.ordensOrcamento}
-            description="Aguardando aprovação"
-            icon={<TrendingUp className="h-4 w-4" />}
-            variant="default"
+            icon="DollarSign"
+            color="purple"
           />
         </div>
 
         {/* Gráficos */}
-        <Tabs defaultValue="status" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="status">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Por Status
-            </TabsTrigger>
-            <TabsTrigger value="servicos">
-              <Wrench className="h-4 w-4 mr-2" />
-              Por Serviços
-            </TabsTrigger>
-          </TabsList>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <StatusChart data={data.ordensPorStatus} />
           
-          <TabsContent value="status">
-            <StatusChart
-              title="Ordens por Status"
-              description="Distribuição das ordens de serviço por status atual"
-              data={data.ordensPorStatus}
-            />
-          </TabsContent>
-          
-          <TabsContent value="servicos">
-            <StatusChart
-              title="Serviços Mais Executados"
-              description="Top 10 tipos de serviços mais realizados"
-              data={data.servicosPorTipo}
-            />
-          </TabsContent>
-        </Tabs>
-
-        {/* Cards informativos */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                Performance
-              </CardTitle>
-              <CardDescription>Indicadores de performance do sistema</CardDescription>
+              <CardTitle>Serviços por Tipo</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Taxa de Finalização</span>
-                  <span className="font-medium">
-                    {data.totalOrdens > 0 ? 
-                      Math.round((data.ordensFinalizadas / data.totalOrdens) * 100) : 0}%
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Ordens Ativas</span>
-                  <span className="font-medium">{data.ordensEmAndamento}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Taxa de Atraso</span>
-                  <span className="font-medium text-red-600">
-                    {data.totalOrdens > 0 ? 
-                      Math.round((data.ordensAtrasadas / data.totalOrdens) * 100) : 0}%
-                  </span>
-                </div>
-              </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={data.servicosPorTipo}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="name" 
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                    interval={0}
+                  />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="total" fill="#8884d8" />
+                </BarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Resumo Operacional
-              </CardTitle>
-              <CardDescription>Informações operacionais importantes</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Novos Orçamentos</span>
-                  <span className="font-medium">{data.ordensOrcamento}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Tipos de Serviços</span>
-                  <span className="font-medium">{data.servicosPorTipo.length}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Status Diferentes</span>
-                  <span className="font-medium">{data.ordensPorStatus.length}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <FuncionariosIndicador />
         </div>
       </div>
     </Layout>
