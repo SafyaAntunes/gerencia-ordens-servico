@@ -6,6 +6,7 @@ import MetricCard from "@/components/dashboard/MetricCard";
 import StatusChart from "@/components/dashboard/StatusChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { FileText, Clock, CheckCircle, AlertTriangle, DollarSign } from "lucide-react";
 
 interface DashboardProps {
   onLogout: () => void;
@@ -62,38 +63,36 @@ export default function Dashboard({ onLogout }: DashboardProps) {
           <MetricCard
             title="Total de Ordens"
             value={data.totalOrdens}
-            icon="FileText"
-            color="blue"
+            icon={<FileText className="h-4 w-4" />}
           />
           <MetricCard
             title="Em Andamento"
             value={data.ordensEmAndamento}
-            icon="Clock"
-            color="yellow"
+            icon={<Clock className="h-4 w-4" />}
           />
           <MetricCard
             title="Finalizadas"
             value={data.ordensFinalizadas}
-            icon="CheckCircle"
-            color="green"
+            icon={<CheckCircle className="h-4 w-4" />}
           />
           <MetricCard
             title="Atrasadas"
             value={data.ordensAtrasadas}
-            icon="AlertTriangle"
-            color="red"
+            icon={<AlertTriangle className="h-4 w-4" />}
           />
           <MetricCard
             title="Orçamentos"
             value={data.ordensOrcamento}
-            icon="DollarSign"
-            color="purple"
+            icon={<DollarSign className="h-4 w-4" />}
           />
         </div>
 
         {/* Gráficos */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <StatusChart data={data.ordensPorStatus} />
+          <StatusChart 
+            title="Ordens por Status"
+            data={data.ordensPorStatus} 
+          />
           
           <Card>
             <CardHeader>
