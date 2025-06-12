@@ -7,14 +7,27 @@ import StatusChart from "@/components/dashboard/StatusChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { FileText, Clock, CheckCircle, AlertTriangle, DollarSign } from "lucide-react";
+import OrdensAdvancedFilter, { FilterCriteria } from "@/components/ordens/OrdensAdvancedFilter";
 
 interface DashboardProps {
   onLogout: () => void;
 }
 
 export default function Dashboard({ onLogout }: DashboardProps) {
-  // Remove filter states and UI - filters are now hidden
-  const { data, loading, error } = useDashboardData();
+  // Add filter state similar to ordens page
+  const [filters, setFilters] = useState<FilterCriteria>({
+    numeroOS: "",
+    cliente: "",
+    selectedStatus: [],
+    selectedPrioridade: [],
+    dataInicio: undefined,
+    dataFim: undefined
+  });
+
+  const { data, loading, error } = useDashboardData({
+    dataInicio: filters.dataInicio,
+    dataFim: filters.dataFim
+  });
 
   if (loading) {
     return (
@@ -50,13 +63,22 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     <Layout onLogout={onLogout}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Visão geral das ordens de serviço
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+              <p className="mt-2 text-sm text-gray-600">
+                Visão geral das ordens de serviço
+              </p>
+            </div>
+            
+            <div className="flex items-center">
+              <OrdensAdvancedFilter
+                filters={filters}
+                onFiltersChange={setFilters}
+              />
+            </div>
+          </div>
         </div>
-
-        {/* Removed filter section - filters are now hidden */}
 
         {/* Métricas principais */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5 mb-8">
