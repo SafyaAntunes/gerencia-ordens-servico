@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { db } from "@/lib/firebase";
@@ -20,20 +19,11 @@ const extractFuncionarioIds = (ordem: OrdemServico): string[] => {
     });
   }
   
-  // Extract from etapas
-  if (ordem.etapas) {
-    ordem.etapas.forEach(etapa => {
-      if (etapa.funcionarioId) {
+  // Extract from etapasAndamento
+  if (ordem.etapasAndamento) {
+    Object.values(ordem.etapasAndamento).forEach(etapa => {
+      if (etapa?.funcionarioId) {
         funcionarioIds.add(etapa.funcionarioId);
-      }
-      
-      // Extract from etapa services
-      if (etapa.servicos) {
-        etapa.servicos.forEach(servico => {
-          if (servico.funcionarioId) {
-            funcionarioIds.add(servico.funcionarioId);
-          }
-        });
       }
     });
   }
