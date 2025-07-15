@@ -14,6 +14,74 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { OrdemServico } from '@/types/ordens';
+import { liberarFuncionarioDeServico } from '@/services/funcionarioEmServicoService';
+
+// Helper function to extract all employee IDs from an order
+const extractFuncionarioIds = (ordem: OrdemServico): string[] => {
+  const funcionarioIds = new Set<string>();
+  
+  // Extract from services
+  if (ordem.servicos) {
+    ordem.servicos.forEach(servico => {
+      if (servico.funcionarioId) {
+        funcionarioIds.add(servico.funcionarioId);
+      }
+    });
+  }
+  
+  // Extract from etapas
+  if (ordem.etapas) {
+    ordem.etapas.forEach(etapa => {
+      if (etapa.funcionarioId) {
+        funcionarioIds.add(etapa.funcionarioId);
+      }
+      
+      // Extract from etapa services
+      if (etapa.servicos) {
+        etapa.servicos.forEach(servico => {
+          if (servico.funcionarioId) {
+            funcionarioIds.add(servico.funcionarioId);
+          }
+        });
+      }
+    });
+  }
+  
+  return Array.from(funcionarioIds);
+};
+
+// Helper function to free employees from an order
+const liberarFuncionariosOrdem = async (ordem: OrdemServico): Promise<void> => {
+  const funcionarioIds = extractFuncionarioIds(ordem);
+  
+  if (funcionarioIds.length === 0) {
+    return;
+  }
+  
+  console.log(`🔓 Liberando ${funcionarioIds.length} funcionários da ordem ${ordem.id}...`);
+  
+  const liberacaoPromises = funcionarioIds.map(async (funcionarioId) => {
+    try {
+      const success = await liberarFuncionarioDeServico(funcionarioId);
+      if (success) {
+        console.log(`✅ Funcionário ${funcionarioId} liberado com sucesso`);
+      } else {
+        console.warn(`⚠️ Falha ao liberar funcionário ${funcionarioId}`);
+      }
+      return { funcionarioId, success };
+    } catch (error) {
+      console.error(`❌ Erro ao liberar funcionário ${funcionarioId}:`, error);
+      return { funcionarioId, success: false };
+    }
+  });
+  
+  const resultados = await Promise.allSettled(liberacaoPromises);
+  const sucessos = resultados.filter(result => 
+    result.status === 'fulfilled' && result.value.success
+  ).length;
+  
+  console.log(`📊 Resultado da liberação: ${sucessos}/${funcionarioIds.length} funcionários liberados`);
+};
 
 export const useOrdens = () => {
   const [ordens, setOrdens] = useState<OrdemServico[]>([]);
@@ -191,8 +259,22 @@ export const useOrdens = () => {
 
   const deleteOrdem = async (id: string) => {
     try {
+      console.log(`🗑️ Deletando ordem ${id}...`);
+      
+      // First, get the order data to identify associated employees
       const ordemRef = doc(db, 'ordens_servico', id);
+      const ordemDoc = await getDoc(ordemRef);
+      
+      if (ordemDoc.exists()) {
+        const ordemData = { id, ...ordemDoc.data() } as OrdemServico;
+        
+        // Free associated employees
+        await liberarFuncionariosOrdem(ordemData);
+      }
+      
+      // Delete the order
       await deleteDoc(ordemRef);
+      console.log(`✅ Ordem ${id} deletada com sucesso`);
       toast.success('Ordem excluída com sucesso!');
       return true;
     } catch (error) {
@@ -204,12 +286,41 @@ export const useOrdens = () => {
 
   const deleteMultipleOrdens = async (ids: string[]) => {
     try {
+      console.log(`🗑️ Deletando ${ids.length} ordens...`);
+      
+      // First, get all orders and free associated employees
+      const ordens = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const ordemRef = doc(db, 'ordens_servico', id);
+            const ordemDoc = await getDoc(ordemRef);
+            
+            if (ordemDoc.exists()) {
+              return { id, ...ordemDoc.data() } as OrdemServico;
+            }
+            return null;
+          } catch (error) {
+            console.error(`Erro ao buscar ordem ${id}:`, error);
+            return null;
+          }
+        })
+      );
+      
+      // Free employees from all orders
+      const ordensValidas = ordens.filter(ordem => ordem !== null) as OrdemServico[];
+      await Promise.all(
+        ordensValidas.map(ordem => liberarFuncionariosOrdem(ordem))
+      );
+      
+      // Delete all orders
       await Promise.all(
         ids.map(async (id) => {
           const ordemRef = doc(db, 'ordens_servico', id);
           await deleteDoc(ordemRef);
         })
       );
+      
+      console.log(`✅ ${ids.length} ordens deletadas com sucesso`);
       toast.success(`${ids.length} ${ids.length === 1 ? 'ordem excluída' : 'ordens excluídas'} com sucesso`);
       return true;
     } catch (error) {
