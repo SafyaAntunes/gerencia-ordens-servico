@@ -1,4 +1,3 @@
-
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -23,42 +22,5 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-  },
-  build: {
-    target: ["es2015"], // Support older browsers like Tizen
-    modulePreload: { polyfill: true }, // Updated from polyfillModulePreload
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          // Split vendor chunks for better caching
-          vendor: ['react', 'react-dom'],
-          router: ['react-router-dom'],
-          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
-          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
-          query: ['@tanstack/react-query'],
-        },
-      },
-    },
-    // Increase chunk size warning limit
-    chunkSizeWarningLimit: 1000,
-  },
-  optimizeDeps: {
-    include: [
-      'react',
-      'react-dom',
-      'react-router-dom',
-      '@tanstack/react-query',
-      'firebase/app',
-      'firebase/auth',
-      'firebase/firestore',
-      'firebase/storage'
-    ],
-    esbuildOptions: {
-      target: 'es2015', // Ensure compatibility with Tizen
-    },
-  },
-  define: {
-    // Define global variables for better compatibility
-    global: 'globalThis',
   },
 }));

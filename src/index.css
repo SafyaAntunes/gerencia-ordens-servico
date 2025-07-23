@@ -115,46 +115,4 @@
   .page-transition-exit-active {
     @apply opacity-0 transition-opacity duration-300;
   }
-  
-  /* Tizen compatibility styles */
-  .tizen-compatible {
-    /* Remove complex animations and transitions for Tizen */
-    transition: none !important;
-    transform: none !important;
-    animation: none !important;
-    
-    /* Use basic layouts */
-    display: flex;
-    flex-direction: column;
-    
-    /* Simplified shadows and effects */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-    border-radius: 4px !important;
-  }
-  
-  /* Fallback fonts for Tizen */
-  .tizen-font {
-    font-family: Arial, sans-serif !important;
-  }
-  
-  /* Simplified button styles for Tizen */
-  .tizen-button {
-    background-color: #2563eb;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    font-family: Arial, sans-serif;
-  }
-  
-  .tizen-button:hover {
-    background-color: #1d4ed8;
-  }
-  
-  .tizen-button:disabled {
-    background-color: #9ca3af;
-    cursor: not-allowed;
-  }
 }
