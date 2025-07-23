@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     target: ["es2015"], // Support older browsers like Tizen
-    polyfillModulePreload: true,
+    modulePreload: { polyfill: true }, // Updated from polyfillModulePreload
     rollupOptions: {
       output: {
         manualChunks: {
@@ -34,7 +34,7 @@ export default defineConfig(({ mode }) => ({
           vendor: ['react', 'react-dom'],
           router: ['react-router-dom'],
           ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
-          firebase: ['firebase'],
+          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
           query: ['@tanstack/react-query'],
         },
       },
@@ -48,9 +48,17 @@ export default defineConfig(({ mode }) => ({
       'react-dom',
       'react-router-dom',
       '@tanstack/react-query',
+      'firebase/app',
+      'firebase/auth',
+      'firebase/firestore',
+      'firebase/storage'
     ],
     esbuildOptions: {
       target: 'es2015', // Ensure compatibility with Tizen
     },
+  },
+  define: {
+    // Define global variables for better compatibility
+    global: 'globalThis',
   },
 }));
