@@ -359,7 +359,11 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {!shouldUseSimplifiedComponents(deviceInfo) && <TooltipProvider />}
+      {!shouldUseSimplifiedComponents(deviceInfo) && (
+        <TooltipProvider>
+          <div></div>
+        </TooltipProvider>
+      )}
       <BrowserRouter>
         <AuthProvider>
           <AppRoutes />

@@ -44,7 +44,37 @@ if (!window.Promise) {
     static reject(reason: any) {
       return new Promise((_, reject) => reject(reason));
     }
-  };
+    
+    static all(promises: any[]) {
+      return new Promise((resolve, reject) => {
+        const results: any[] = [];
+        let completed = 0;
+        
+        if (promises.length === 0) {
+          resolve([]);
+          return;
+        }
+        
+        promises.forEach((promise, index) => {
+          Promise.resolve(promise).then((value: any) => {
+            results[index] = value;
+            completed++;
+            if (completed === promises.length) {
+              resolve(results);
+            }
+          }).catch(reject);
+        });
+      });
+    }
+    
+    static race(promises: any[]) {
+      return new Promise((resolve, reject) => {
+        promises.forEach(promise => {
+          Promise.resolve(promise).then(resolve).catch(reject);
+        });
+      });
+    }
+  } as any;
 }
 
 // Polyfill for fetch (if not available)
@@ -63,13 +93,24 @@ if (!window.fetch) {
       }
       
       xhr.onload = () => {
-        resolve({
+        const response = {
           ok: xhr.status >= 200 && xhr.status < 300,
           status: xhr.status,
           statusText: xhr.statusText,
+          headers: new Headers(),
+          redirected: false,
+          type: 'basic' as ResponseType,
+          url: url,
+          clone: () => response,
+          body: null,
+          bodyUsed: false,
           json: () => Promise.resolve(JSON.parse(xhr.responseText)),
           text: () => Promise.resolve(xhr.responseText),
-        });
+          blob: () => Promise.resolve(new Blob([xhr.response])),
+          arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+          formData: () => Promise.resolve(new FormData())
+        };
+        resolve(response as any);
       };
       
       xhr.onerror = () => reject(new Error('Network Error'));
@@ -81,7 +122,7 @@ if (!window.fetch) {
 
 // Polyfill for Object.entries (if not available)
 if (!Object.entries) {
-  Object.entries = function(obj: any) {
+  Object.entries = function(obj: any): [string, any][] {
     return Object.keys(obj).map(key => [key, obj[key]]);
   };
 }

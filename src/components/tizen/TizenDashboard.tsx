@@ -136,7 +136,7 @@ export default function TizenDashboard({ onLogout }: TizenDashboardProps) {
                 borderRadius: '4px'
               }}>
                 <span style={{ fontSize: '16px' }}>{status.name}</span>
-                <span style={{ fontSize: '16px', fontWeight: 'bold' }}>{status.value}</span>
+                <span style={{ fontSize: '16px', fontWeight: 'bold' }}>{status.total}</span>
               </div>
             ))}
           </div>
