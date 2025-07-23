@@ -1,9 +1,17 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useDeviceDetection } from "@/hooks/useDeviceDetection";
+import { getOptimizedQueryConfig, logTizenInfo, shouldUseSimplifiedComponents } from "@/utils/tizenCompatibility";
+import { AuthProvider, useAuth } from "./hooks/useAuth";
+import { useEffect } from "react";
+
+// Import polyfills for Tizen compatibility
+import "@/polyfills";
+
+// Regular components
 import Dashboard from "./pages/Dashboard";
 import Ordens from "./pages/Ordens";
 import NovaOrdem from "./pages/NovaOrdem";
@@ -12,13 +20,15 @@ import NotFound from "./pages/NotFound";
 import OrdemDetalhes from "./pages/OrdemDetalhes";
 import Clientes from "./pages/Clientes";
 import ClienteCadastro from "./pages/ClienteCadastro";
-import Motores from "./pages/Motores"; // Import the new Motores page
+import Motores from "./pages/Motores";
 import Agenda from "./pages/Agenda";
 import RelatoriosProducao from "./pages/RelatoriosProducao";
 import RelatoriosFinanceiro from "./pages/RelatoriosFinanceiro";
 import Configuracoes from "./pages/Configuracoes";
 import Login from "./pages/Login";
-import { AuthProvider, useAuth } from "./hooks/useAuth";
+
+// Simplified Tizen components
+import TizenDashboard from "./components/tizen/TizenDashboard";
 
 // Authentication guard component
 const PrivateRoute = ({ children, requiredPermission = "visualizacao" }: { 
@@ -49,104 +59,228 @@ const PrivateRoute = ({ children, requiredPermission = "visualizacao" }: {
   return <>{children}</>;
 };
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutos
-      gcTime: 1000 * 60 * 30, // 30 minutos (formerly cacheTime)
-    },
-  },
-});
-
 const AppRoutes = () => {
   const { logout } = useAuth();
+  const deviceInfo = useDeviceDetection();
+  const useSimplified = shouldUseSimplifiedComponents(deviceInfo);
   
   const handleLogout = () => {
     logout();
   };
+
+  // Log device info for debugging
+  useEffect(() => {
+    logTizenInfo(deviceInfo);
+  }, [deviceInfo]);
+
+  // Show compatibility notice for Tizen users
+  useEffect(() => {
+    if (deviceInfo.isTizen) {
+      console.log('Running on Tizen OS - using simplified interface');
+      
+      // Show a brief notification (non-blocking)
+      const notice = document.createElement('div');
+      notice.innerHTML = 'Modo compatibilidade TV ativado';
+      notice.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #2563eb;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 4px;
+        z-index: 10000;
+        font-size: 14px;
+      `;
+      document.body.appendChild(notice);
+      
+      setTimeout(() => {
+        document.body.removeChild(notice);
+      }, 3000);
+    }
+  }, [deviceInfo.isTizen]);
   
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       
-      {/* Dashboard - todos os níveis têm acesso */}
+      {/* Dashboard - use simplified version for Tizen */}
       <Route path="/" element={
         <PrivateRoute>
-          <Dashboard onLogout={handleLogout} />
+          {useSimplified ? (
+            <TizenDashboard onLogout={handleLogout} />
+          ) : (
+            <Dashboard onLogout={handleLogout} />
+          )}
         </PrivateRoute>
       } />
       
       <Route path="/dashboard" element={
         <PrivateRoute>
-          <Dashboard onLogout={handleLogout} />
+          {useSimplified ? (
+            <TizenDashboard onLogout={handleLogout} />
+          ) : (
+            <Dashboard onLogout={handleLogout} />
+          )}
         </PrivateRoute>
       } />
       
-      {/* Ordens - todos os níveis têm acesso à listagem */}
+      {/* For now, only Dashboard has Tizen version - other routes show message */}
       <Route path="/ordens" element={
         <PrivateRoute>
-          <Ordens onLogout={handleLogout} />
+          {useSimplified ? (
+            <div style={{ padding: '40px', textAlign: 'center' }}>
+              <h2>Funcionalidade disponível apenas no Dashboard</h2>
+              <p>Use o Dashboard para visualizar informações principais</p>
+              <a href="/" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+                Voltar ao Dashboard
+              </a>
+            </div>
+          ) : (
+            <Ordens onLogout={handleLogout} />
+          )}
         </PrivateRoute>
       } />
       
       {/* Criação de Ordens - apenas gerente ou superior */}
       <Route path="/ordens/nova" element={
         <PrivateRoute requiredPermission="gerente">
-          <NovaOrdem onLogout={handleLogout} />
+          {useSimplified ? (
+            <div style={{ padding: '40px', textAlign: 'center' }}>
+              <h2>Funcionalidade não disponível na TV</h2>
+              <a href="/" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+                Voltar ao Dashboard
+              </a>
+            </div>
+          ) : (
+            <NovaOrdem onLogout={handleLogout} />
+          )}
         </PrivateRoute>
       } />
       
       {/* Detalhes de Ordens - técnicos ou superior */}
       <Route path="/ordens/:id" element={
         <PrivateRoute requiredPermission="tecnico">
-          <OrdemDetalhes onLogout={handleLogout} />
+          {useSimplified ? (
+            <div style={{ padding: '40px', textAlign: 'center' }}>
+              <h2>Funcionalidade não disponível na TV</h2>
+              <a href="/" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+                Voltar ao Dashboard
+              </a>
+            </div>
+          ) : (
+            <OrdemDetalhes onLogout={handleLogout} />
+          )}
         </PrivateRoute>
       } />
       
       {/* Funcionários - gerentes ou superior */}
       <Route path="/funcionarios" element={
         <PrivateRoute requiredPermission="gerente">
-          <Funcionarios onLogout={handleLogout} />
+          {useSimplified ? (
+            <div style={{ padding: '40px', textAlign: 'center' }}>
+              <h2>Funcionalidade não disponível na TV</h2>
+              <a href="/" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+                Voltar ao Dashboard
+              </a>
+            </div>
+          ) : (
+            <Funcionarios onLogout={handleLogout} />
+          )}
         </PrivateRoute>
       } />
       
       {/* Edição do próprio perfil - todos os níveis */}
       <Route path="/funcionarios/editar/:id" element={
         <PrivateRoute requiredPermission="tecnico">
-          <Funcionarios onLogout={handleLogout} meuPerfil={true} />
+          {useSimplified ? (
+            <div style={{ padding: '40px', textAlign: 'center' }}>
+              <h2>Funcionalidade não disponível na TV</h2>
+              <a href="/" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+                Voltar ao Dashboard
+              </a>
+            </div>
+          ) : (
+            <Funcionarios onLogout={handleLogout} meuPerfil={true} />
+          )}
         </PrivateRoute>
       } />
       
       {/* Clientes - gerentes ou superior */}
       <Route path="/clientes" element={
         <PrivateRoute requiredPermission="gerente">
-          <Clientes onLogout={handleLogout} />
+          {useSimplified ? (
+            <div style={{ padding: '40px', textAlign: 'center' }}>
+              <h2>Funcionalidade não disponível na TV</h2>
+              <a href="/" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+                Voltar ao Dashboard
+              </a>
+            </div>
+          ) : (
+            <Clientes onLogout={handleLogout} />
+          )}
         </PrivateRoute>
       } />
       
       <Route path="/clientes/cadastro" element={
         <PrivateRoute requiredPermission="gerente">
-          <ClienteCadastro onLogout={handleLogout} />
+          {useSimplified ? (
+            <div style={{ padding: '40px', textAlign: 'center' }}>
+              <h2>Funcionalidade não disponível na TV</h2>
+              <a href="/" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+                Voltar ao Dashboard
+              </a>
+            </div>
+          ) : (
+            <ClienteCadastro onLogout={handleLogout} />
+          )}
         </PrivateRoute>
       } />
       
       <Route path="/clientes/editar/:id" element={
         <PrivateRoute requiredPermission="gerente">
-          <ClienteCadastro onLogout={handleLogout} />
+          {useSimplified ? (
+            <div style={{ padding: '40px', textAlign: 'center' }}>
+              <h2>Funcionalidade não disponível na TV</h2>
+              <a href="/" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+                Voltar ao Dashboard
+              </a>
+            </div>
+          ) : (
+            <ClienteCadastro onLogout={handleLogout} />
+          )}
         </PrivateRoute>
       } />
       
       {/* Motores - gerentes ou superior */}
       <Route path="/motores" element={
         <PrivateRoute requiredPermission="gerente">
-          <Motores onLogout={handleLogout} />
+          {useSimplified ? (
+            <div style={{ padding: '40px', textAlign: 'center' }}>
+              <h2>Funcionalidade não disponível na TV</h2>
+              <a href="/" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+                Voltar ao Dashboard
+              </a>
+            </div>
+          ) : (
+            <Motores onLogout={handleLogout} />
+          )}
         </PrivateRoute>
       } />
       
       {/* Agenda - gerentes ou superior */}
       <Route path="/agenda" element={
         <PrivateRoute requiredPermission="gerente">
-          <Agenda onLogout={handleLogout} />
+          {useSimplified ? (
+            <div style={{ padding: '40px', textAlign: 'center' }}>
+              <h2>Funcionalidade não disponível na TV</h2>
+              <a href="/" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+                Voltar ao Dashboard
+              </a>
+            </div>
+          ) : (
+            <Agenda onLogout={handleLogout} />
+          )}
         </PrivateRoute>
       } />
       
@@ -158,14 +292,32 @@ const AppRoutes = () => {
       {/* Relatórios de Produção - gerentes ou superior */}
       <Route path="/relatorios/producao" element={
         <PrivateRoute requiredPermission="gerente">
-          <RelatoriosProducao />
+          {useSimplified ? (
+            <div style={{ padding: '40px', textAlign: 'center' }}>
+              <h2>Funcionalidade não disponível na TV</h2>
+              <a href="/" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+                Voltar ao Dashboard
+              </a>
+            </div>
+          ) : (
+            <RelatoriosProducao />
+          )}
         </PrivateRoute>
       } />
       
       {/* Relatórios Financeiros - apenas administradores */}
       <Route path="/relatorios/financeiro" element={
         <PrivateRoute requiredPermission="admin">
-          <RelatoriosFinanceiro onLogout={handleLogout} />
+          {useSimplified ? (
+            <div style={{ padding: '40px', textAlign: 'center' }}>
+              <h2>Funcionalidade não disponível na TV</h2>
+              <a href="/" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+                Voltar ao Dashboard
+              </a>
+            </div>
+          ) : (
+            <RelatoriosFinanceiro onLogout={handleLogout} />
+          )}
         </PrivateRoute>
       } />
       
@@ -177,7 +329,16 @@ const AppRoutes = () => {
       {/* Configurações - apenas administradores */}
       <Route path="/configuracoes" element={
         <PrivateRoute requiredPermission="admin">
-          <Configuracoes onLogout={handleLogout} />
+          {useSimplified ? (
+            <div style={{ padding: '40px', textAlign: 'center' }}>
+              <h2>Funcionalidade não disponível na TV</h2>
+              <a href="/" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+                Voltar ao Dashboard
+              </a>
+            </div>
+          ) : (
+            <Configuracoes onLogout={handleLogout} />
+          )}
         </PrivateRoute>
       } />
       
@@ -187,17 +348,29 @@ const AppRoutes = () => {
 };
 
 const App = () => {
+  const deviceInfo = useDeviceDetection();
+  const queryConfig = getOptimizedQueryConfig(deviceInfo);
+  
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: queryConfig,
+    },
+  });
+
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <BrowserRouter>
-          <AuthProvider>
-            <AppRoutes />
-            <Toaster />
-            <Sonner />
-          </AuthProvider>
-        </BrowserRouter>
-      </TooltipProvider>
+      {!shouldUseSimplifiedComponents(deviceInfo) && <TooltipProvider />}
+      <BrowserRouter>
+        <AuthProvider>
+          <AppRoutes />
+          {!shouldUseSimplifiedComponents(deviceInfo) && (
+            <>
+              <Toaster />
+              <Sonner />
+            </>
+          )}
+        </AuthProvider>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 };
