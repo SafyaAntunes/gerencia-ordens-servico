@@ -7,6 +7,7 @@ import { AuthProvider } from '@/hooks/useAuth';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { shouldUseSimplifiedComponents } from '@/utils/tizenCompatibility';
 import TizenLayout from '@/components/tizen/TizenLayout';
+import TizenDashboard from '@/components/tizen/TizenDashboard';
 import '@/polyfills';
 import './App.css';
 
@@ -48,16 +49,30 @@ const queryClient = new QueryClient({
 const AppRoutes = () => {
   const deviceInfo = useDeviceDetection();
   
+  const handleLogout = () => {
+    // Implement logout logic here
+    console.log('Logout functionality not implemented');
+  };
+
   // Use simplified components for Tizen/legacy devices
   if (shouldUseSimplifiedComponents(deviceInfo)) {
-    return <TizenLayout />;
+    return (
+      <TizenLayout onLogout={handleLogout}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<TizenDashboard onLogout={handleLogout} />} />
+          <Route path="/dashboard" element={<TizenDashboard onLogout={handleLogout} />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </TizenLayout>
+    );
   }
 
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/" element={<ProtectedRoute><Layout><Index /></Layout></ProtectedRoute>} />
-      <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard onLogout={handleLogout} /></Layout></ProtectedRoute>} />
       <Route path="/ordens" element={<ProtectedRoute><Layout><Ordens /></Layout></ProtectedRoute>} />
       <Route path="/ordens/nova" element={<ProtectedRoute><Layout><NovaOrdem /></Layout></ProtectedRoute>} />
       <Route path="/ordens/:id" element={<ProtectedRoute><Layout><OrdemDetalhes /></Layout></ProtectedRoute>} />
@@ -65,12 +80,12 @@ const AppRoutes = () => {
       <Route path="/clientes/novo" element={<ProtectedRoute><Layout><ClienteCadastro /></Layout></ProtectedRoute>} />
       <Route path="/clientes/:id" element={<ProtectedRoute><Layout><ClienteCadastro /></Layout></ProtectedRoute>} />
       <Route path="/funcionarios" element={<ProtectedRoute><Layout><Funcionarios /></Layout></ProtectedRoute>} />
-      <Route path="/motores" element={<ProtectedRoute><Layout><Motores /></Layout></ProtectedRoute>} />
+      <Route path="/motores" element={<ProtectedRoute><Layout><Motores onLogout={handleLogout} /></Layout></ProtectedRoute>} />
       <Route path="/relatorios" element={<ProtectedRoute><Layout><Relatorios /></Layout></ProtectedRoute>} />
       <Route path="/relatorios/producao" element={<ProtectedRoute><Layout><RelatoriosProducao /></Layout></ProtectedRoute>} />
       <Route path="/relatorios/financeiro" element={<ProtectedRoute><Layout><RelatoriosFinanceiro /></Layout></ProtectedRoute>} />
-      <Route path="/configuracoes" element={<ProtectedRoute><Layout><Configuracoes /></Layout></ProtectedRoute>} />
-      <Route path="/configuracoes/atividades" element={<ProtectedRoute><Layout><ConfiguracoesAtividades /></Layout></ProtectedRoute>} />
+      <Route path="/configuracoes" element={<ProtectedRoute><Layout><Configuracoes onLogout={handleLogout} /></Layout></ProtectedRoute>} />
+      <Route path="/configuracoes/atividades" element={<ProtectedRoute><Layout><ConfiguracoesAtividades onLogout={handleLogout} tipoAtividade="lavagem" titulo="Configurações de Atividades" descricao="Configure as atividades do sistema" /></Layout></ProtectedRoute>} />
       <Route path="/subatividades" element={<ProtectedRoute><Layout><SubatividadesConfig /></Layout></ProtectedRoute>} />
       <Route path="/subatividades/reset" element={<ProtectedRoute><Layout><SubatividadesReset /></Layout></ProtectedRoute>} />
       <Route path="/agenda" element={<ProtectedRoute><Layout><Agenda /></Layout></ProtectedRoute>} />
@@ -79,15 +94,7 @@ const AppRoutes = () => {
   );
 };
 
-// Create ProtectedRoute component
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  // You can add authentication logic here
-  return <>{children}</>;
-};
-
 function App() {
-  const deviceInfo = useDeviceDetection();
-  
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
