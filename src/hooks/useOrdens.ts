@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
@@ -87,6 +88,19 @@ export const useOrdens = () => {
       console.error('Erro ao inicializar IndexedDB:', error);
     });
   }, []);
+
+  // Helper function to add to sync queue
+  const addToSyncQueue = async (operation: 'CREATE' | 'UPDATE' | 'DELETE', data?: OrdemServico, id?: string): Promise<void> => {
+    const queueItem: QueueItem = {
+      id: id || data?.id || '',
+      operation,
+      data,
+      timestamp: Date.now(),
+      retries: 0
+    };
+
+    await indexedDBService.addToSyncQueue(queueItem);
+  };
 
   const fetchOrdens = async () => {
     setLoading(true);
@@ -281,13 +295,13 @@ export const useOrdens = () => {
         } catch (firebaseError) {
           console.error('Erro ao salvar no Firebase, adicionando à fila:', firebaseError);
           // Se falhar online, adiciona à fila para sincronizar depois
-          await this.addToSyncQueue('CREATE', ordemToSave);
+          await addToSyncQueue('CREATE', ordemToSave);
           toast.success('Ordem salva localmente. Será sincronizada quando a conexão estiver estável.');
           return true;
         }
       } else {
         // Offline: adiciona à fila de sincronização
-        await this.addToSyncQueue('CREATE', ordemToSave);
+        await addToSyncQueue('CREATE', ordemToSave);
         toast.success('Ordem salva offline. Será sincronizada quando voltar online.');
         return true;
       }
@@ -333,13 +347,13 @@ export const useOrdens = () => {
           return true;
         } catch (firebaseError) {
           console.error('Erro ao atualizar no Firebase, adicionando à fila:', firebaseError);
-          await this.addToSyncQueue('UPDATE', ordem);
+          await addToSyncQueue('UPDATE', ordem);
           toast.success('Ordem atualizada localmente. Será sincronizada quando a conexão estiver estável.');
           return true;
         }
       } else {
         // Offline: adiciona à fila de sincronização
-        await this.addToSyncQueue('UPDATE', ordem);
+        await addToSyncQueue('UPDATE', ordem);
         toast.success('Ordem atualizada offline. Será sincronizada quando voltar online.');
         return true;
       }
@@ -373,7 +387,7 @@ export const useOrdens = () => {
           return true;
         } catch (firebaseError) {
           console.error('Erro ao deletar no Firebase, adicionando à fila:', firebaseError);
-          await this.addToSyncQueue('DELETE', undefined, id);
+          await addToSyncQueue('DELETE', undefined, id);
           await indexedDBService.deleteOrdem(id);
           toast.success('Ordem marcada para exclusão. Será removida do servidor quando voltar online.');
           return true;
@@ -385,7 +399,7 @@ export const useOrdens = () => {
           await liberarFuncionariosOrdem(ordemLocal);
         }
         
-        await this.addToSyncQueue('DELETE', undefined, id);
+        await addToSyncQueue('DELETE', undefined, id);
         await indexedDBService.deleteOrdem(id);
         
         console.log(`📱 Ordem ${id} marcada para exclusão offline`);
@@ -443,7 +457,7 @@ export const useOrdens = () => {
           console.error('Erro ao deletar múltiplas ordens no Firebase:', firebaseError);
           // Se falhar, adiciona todas à fila
           for (const id of ids) {
-            await this.addToSyncQueue('DELETE', undefined, id);
+            await addToSyncQueue('DELETE', undefined, id);
             await indexedDBService.deleteOrdem(id);
           }
           toast.success(`${ids.length} ordens marcadas para exclusão. Serão removidas do servidor quando voltar online.`);
@@ -457,7 +471,7 @@ export const useOrdens = () => {
             await liberarFuncionariosOrdem(ordemLocal);
           }
           
-          await this.addToSyncQueue('DELETE', undefined, id);
+          await addToSyncQueue('DELETE', undefined, id);
           await indexedDBService.deleteOrdem(id);
         }
         
@@ -471,19 +485,6 @@ export const useOrdens = () => {
       return false;
     }
   };
-
-  // Método auxiliar para adicionar à fila de sincronização
-  private async addToSyncQueue(operation: 'CREATE' | 'UPDATE' | 'DELETE', data?: OrdemServico, id?: string): Promise<void> {
-    const queueItem: QueueItem = {
-      id: id || data?.id || '',
-      operation,
-      data,
-      timestamp: Date.now(),
-      retries: 0
-    };
-
-    await indexedDBService.addToSyncQueue(queueItem);
-  }
 
   return {
     ordens,
