@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Wifi, WifiOff, RotateCw, Cloud, CloudOff, Sync } from 'lucide-react';
+import { Wifi, WifiOff, RotateCw, Cloud, CloudOff, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
@@ -19,7 +19,7 @@ export const NetworkStatusIndicator = () => {
     }
 
     if (syncState.isSyncing) {
-      return <Sync className="h-4 w-4 animate-spin" />;
+      return <RefreshCw className="h-4 w-4 animate-spin" />;
     }
 
     return syncState.pendingCount > 0 ? 
@@ -75,7 +75,7 @@ export const NetworkStatusIndicator = () => {
           onClick={forcSync}
           className="h-6 px-2 text-xs"
         >
-          <Sync className="h-3 w-3 mr-1" />
+          <RefreshCw className="h-3 w-3 mr-1" />
           Sincronizar
         </Button>
       )}
