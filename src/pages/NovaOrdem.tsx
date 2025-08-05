@@ -56,6 +56,20 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         return;
       }
 
+      // Processar fotos se existirem
+      let fotosEntradaProcessadas: any[] = [];
+      let fotosSaidaProcessadas: any[] = [];
+
+      if (values.fotosEntrada && values.fotosEntrada.length > 0) {
+        // Para criação, as fotos serão files locais que serão processados após a criação da OS
+        fotosEntradaProcessadas = values.fotosEntrada.filter((foto: any) => foto instanceof File);
+      }
+
+      if (values.fotosSaida && values.fotosSaida.length > 0) {
+        // Para criação, as fotos serão files locais que serão processados após a criação da OS
+        fotosSaidaProcessadas = values.fotosSaida.filter((foto: any) => foto instanceof File);
+      }
+
       let clienteNome = "Cliente não encontrado";
       let clienteTelefone = "";
       let clienteEmail = "";
@@ -146,8 +160,8 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
         servicos,
         etapasAndamento,
         tempoRegistros: [],
-        fotosEntrada: [],
-        fotosSaida: [],
+        fotosEntrada: fotosEntradaProcessadas,
+        fotosSaida: fotosSaidaProcessadas,
         progressoEtapas: 0,
         tempoTotalEstimado: 0
       };
@@ -156,6 +170,43 @@ export default function NovaOrdem({ onLogout }: NovaOrdemProps) {
       
       try {
         await setDoc(doc(db, "ordens_servico", values.id), newOrder);
+        
+        // Fazer upload das fotos após salvar a OS
+        if (fotosEntradaProcessadas.length > 0 || fotosSaidaProcessadas.length > 0) {
+          try {
+            const fotosEntradaUrls: string[] = [];
+            const fotosSaidaUrls: string[] = [];
+
+            // Upload das fotos de entrada
+            for (const foto of fotosEntradaProcessadas) {
+              if (foto instanceof File) {
+                const url = await uploadFile(foto, `ordens/${values.id}/entrada`);
+                if (url) fotosEntradaUrls.push(url);
+              }
+            }
+
+            // Upload das fotos de saída
+            for (const foto of fotosSaidaProcessadas) {
+              if (foto instanceof File) {
+                const url = await uploadFile(foto, `ordens/${values.id}/saida`);
+                if (url) fotosSaidaUrls.push(url);
+              }
+            }
+
+            // Atualizar a OS com as URLs das fotos
+            if (fotosEntradaUrls.length > 0 || fotosSaidaUrls.length > 0) {
+              await setDoc(doc(db, "ordens_servico", values.id), {
+                ...newOrder,
+                fotosEntrada: fotosEntradaUrls,
+                fotosSaida: fotosSaidaUrls
+              });
+            }
+          } catch (uploadError) {
+            console.error("Erro no upload das fotos:", uploadError);
+            toast.warning("Ordem criada, mas houve erro no upload de algumas fotos");
+          }
+        }
+        
         toast.success("Ordem de serviço criada com sucesso!");
         navigate("/ordens");
       } catch (firestoreError) {
