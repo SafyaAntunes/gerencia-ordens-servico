@@ -112,7 +112,22 @@ export const useOrdensData = ({
       );
       
       // Ordena automaticamente por prioridade
-      const ordensOrdenadas = sortByPriority(ordensWithClienteMotores);
+      let ordensOrdenadas = sortByPriority(ordensWithClienteMotores);
+      
+      // Aplica ordenação customizada salva no localStorage, se existir
+      const customOrder = localStorage.getItem('ordens-custom-order');
+      if (customOrder) {
+        try {
+          const orderMap = JSON.parse(customOrder);
+          ordensOrdenadas = ordensOrdenadas.sort((a, b) => {
+            const indexA = orderMap[a.id] ?? Number.MAX_SAFE_INTEGER;
+            const indexB = orderMap[b.id] ?? Number.MAX_SAFE_INTEGER;
+            return indexA - indexB;
+          });
+        } catch (error) {
+          console.error('Erro ao aplicar ordenação customizada:', error);
+        }
+      }
       
       setOrdens(ordensOrdenadas);
       setLoading(false);
@@ -133,7 +148,23 @@ export const useOrdensData = ({
         if (isTecnico && especialidades?.length) {
           // Para técnicos, continuamos usando a abordagem baseada em especialidades
           const especialidadesOrdens = await getOrdensByFuncionarioEspecialidades(especialidades);
-          const ordensOrdenadas = sortByPriority(especialidadesOrdens as OrdemServico[]);
+          let ordensOrdenadas = sortByPriority(especialidadesOrdens as OrdemServico[]);
+          
+          // Aplica ordenação customizada para técnicos também
+          const customOrder = localStorage.getItem('ordens-custom-order');
+          if (customOrder) {
+            try {
+              const orderMap = JSON.parse(customOrder);
+              ordensOrdenadas = ordensOrdenadas.sort((a, b) => {
+                const indexA = orderMap[a.id] ?? Number.MAX_SAFE_INTEGER;
+                const indexB = orderMap[b.id] ?? Number.MAX_SAFE_INTEGER;
+                return indexA - indexB;
+              });
+            } catch (error) {
+              console.error('Erro ao aplicar ordenação customizada:', error);
+            }
+          }
+          
           setOrdens(ordensOrdenadas);
           setLoading(false);
         } else {
@@ -183,7 +214,23 @@ export const useOrdensData = ({
       setLoading(true);
       try {
         const especialidadesOrdens = await getOrdensByFuncionarioEspecialidades(especialidades);
-        const ordensOrdenadas = sortByPriority(especialidadesOrdens as OrdemServico[]);
+        let ordensOrdenadas = sortByPriority(especialidadesOrdens as OrdemServico[]);
+        
+        // Aplica ordenação customizada no refresh também
+        const customOrder = localStorage.getItem('ordens-custom-order');
+        if (customOrder) {
+          try {
+            const orderMap = JSON.parse(customOrder);
+            ordensOrdenadas = ordensOrdenadas.sort((a, b) => {
+              const indexA = orderMap[a.id] ?? Number.MAX_SAFE_INTEGER;
+              const indexB = orderMap[b.id] ?? Number.MAX_SAFE_INTEGER;
+              return indexA - indexB;
+            });
+          } catch (error) {
+            console.error('Erro ao aplicar ordenação customizada no refresh:', error);
+          }
+        }
+        
         setOrdens(ordensOrdenadas);
       } catch (error) {
         console.error("Error refreshing orders:", error);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Motor } from '@/types/motor';
 import { Cliente } from '@/types/clientes';
 import { 
@@ -10,7 +10,6 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Car } from 'lucide-react';
-import { getMotoresByClienteId } from '@/services/motorService';
 import { MotorForm } from './MotorForm';
 import { useMotores } from '@/hooks/useMotores';
 
@@ -27,62 +26,19 @@ export function MotorSelector({
   onMotorSelect, 
   disabled 
 }: MotorSelectorProps) {
-  const [clienteMotores, setClienteMotores] = useState<Motor[]>([]);
-  const [loadingMotores, setLoadingMotores] = useState(false);
   const [showNewMotorDialog, setShowNewMotorDialog] = useState(false);
-  const { saveMotor } = useMotores();
-
-  useEffect(() => {
-    if (selectedCliente?.id) {
-      fetchClienteMotores(selectedCliente.id);
-    } else {
-      setClienteMotores([]);
-    }
-  }, [selectedCliente]);
-
-  const fetchClienteMotores = async (clienteId: string) => {
-    setLoadingMotores(true);
-    try {
-      const motores = await getMotoresByClienteId(clienteId);
-      setClienteMotores(motores);
-    } catch (error) {
-      console.error('Erro ao buscar motores do cliente:', error);
-      setClienteMotores([]);
-    } finally {
-      setLoadingMotores(false);
-    }
-  };
+  const { motores, isLoading, saveMotor } = useMotores();
 
   const handleNewMotor = () => {
     setShowNewMotorDialog(true);
   };
 
   const handleSaveNewMotor = (motor: Motor) => {
-    if (selectedCliente) {
-      const motorWithClient = {
-        ...motor,
-        clienteId: selectedCliente.id,
-        clienteNome: selectedCliente.nome
-      };
-      saveMotor(motorWithClient);
-      setShowNewMotorDialog(false);
-      // Refresh motors list
-      fetchClienteMotores(selectedCliente.id);
-    }
+    saveMotor(motor);
+    setShowNewMotorDialog(false);
   };
 
-  if (!selectedCliente) {
-    return (
-      <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md">
-        <Car className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">
-          Selecione um cliente para escolher um motor
-        </span>
-      </div>
-    );
-  }
-
-  if (loadingMotores) {
+  if (isLoading) {
     return (
       <div className="flex items-center gap-2 p-3">
         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
@@ -94,12 +50,12 @@ export function MotorSelector({
   return (
     <>
       <div className="space-y-2">
-        {clienteMotores.length === 0 ? (
+        {motores.length === 0 ? (
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md">
               <Car className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">
-                Nenhum motor cadastrado para este cliente
+                Nenhum motor cadastrado no sistema
               </span>
             </div>
             <Button 
@@ -110,7 +66,7 @@ export function MotorSelector({
               className="w-full"
             >
               <PlusCircle className="mr-2 h-4 w-4" />
-              Cadastrar Motor para {selectedCliente.nome}
+              Cadastrar Novo Motor
             </Button>
           </div>
         ) : (
@@ -121,14 +77,15 @@ export function MotorSelector({
               disabled={disabled}
             >
               <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Selecione um motor" />
+                <SelectValue placeholder="Selecione um motor (opcional)" />
               </SelectTrigger>
               <SelectContent>
-                {clienteMotores.map((motor) => (
+                {motores.map((motor) => (
                   <SelectItem key={motor.id} value={motor.id}>
                     {motor.marca} {motor.modelo} 
                     {motor.ano && ` (${motor.ano})`}
                     {motor.numeroSerie && ` - ${motor.numeroSerie}`}
+                    {motor.clienteNome && ` - Cliente: ${motor.clienteNome}`}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -139,6 +96,7 @@ export function MotorSelector({
               size="icon" 
               onClick={handleNewMotor}
               disabled={disabled}
+              title="Cadastrar novo motor"
             >
               <PlusCircle className="h-4 w-4" />
             </Button>
