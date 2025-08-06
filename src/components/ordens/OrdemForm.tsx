@@ -41,7 +41,8 @@ import { Motor } from "@/types/motor";
 import { ServicosSelector } from "./ServicosSelector";
 import { FormSection } from "./FormSection";
 import FotosForm from "./FotosForm";
-import { FileText, User, CalendarDays, Settings, Camera } from "lucide-react";
+import { MotorSelector } from '@/components/motores/MotorSelector';
+import { FileText, User, CalendarDays, Settings, Camera, Car } from "lucide-react";
 
 interface OrdemFormProps {
   onSubmit: (values: any) => void;
@@ -99,6 +100,7 @@ export default function OrdemForm({
   showPhotos = true
 }: OrdemFormProps) {
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
+  const [selectedMotorId, setSelectedMotorId] = useState<string>("");
   const [servicos, setServicos] = useState<string[]>([]);
   const [servicosDescricoes, setServicosDescricoes] = useState<Record<string, string>>({});
   const [fotosEntrada, setFotosEntrada] = useState<any[]>([]);
@@ -133,12 +135,23 @@ export default function OrdemForm({
     if (values.clienteId) {
       const cliente = clientes.find(c => c.id === values.clienteId);
       setSelectedCliente(cliente || null);
+      // Reset motor selection when client changes
+      if (selectedCliente?.id !== values.clienteId) {
+        setSelectedMotorId("");
+        setValue("motorId", "");
+      }
     } else {
       setSelectedCliente(null);
+      setSelectedMotorId("");
+      setValue("motorId", "");
     }
   }, [values.clienteId, clientes]);
   
   useEffect(() => {
+    if (initialData?.motorId) {
+      setSelectedMotorId(initialData.motorId);
+    }
+    
     if (initialData?.servicos) {
       const initialServicos = initialData.servicos.map((servico: any) => servico.tipo);
       const initialDescricoes = initialData.servicos.reduce((acc: any, servico: any) => {
@@ -179,6 +192,11 @@ export default function OrdemForm({
     setValue("servicosTipos", newServicos);
   };
   
+  const handleMotorSelect = (motorId: string) => {
+    setSelectedMotorId(motorId);
+    setValue("motorId", motorId);
+  };
+
   const handleDescricaoChange = (tipo: string, descricao: string) => {
     const newDescricoes = { ...servicosDescricoes, [tipo]: descricao };
     setServicosDescricoes(newDescricoes);
@@ -279,6 +297,28 @@ export default function OrdemForm({
                 </Select>
                 <FormDescription>
                   O cliente associado a esta ordem de serviço.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="motorId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Motor (Opcional)</FormLabel>
+                <FormControl>
+                  <MotorSelector
+                    selectedCliente={selectedCliente}
+                    selectedMotorId={selectedMotorId}
+                    onMotorSelect={handleMotorSelect}
+                    disabled={isLoading}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Selecione o motor associado a esta ordem de serviço.
                 </FormDescription>
                 <FormMessage />
               </FormItem>

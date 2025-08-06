@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Motor } from '@/types/motor';
 import { Button } from '@/components/ui/button';
-import { EditIcon, Trash2Icon, PlusIcon, Wrench } from 'lucide-react';
+import { EditIcon, Trash2Icon, PlusIcon, Wrench, Search, FilterX } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface MotoresListProps {
   motores: Motor[];
@@ -56,105 +57,98 @@ export function MotoresList({ motores, onEdit, onDelete, onAdd, isLoading }: Mot
   return (
     <>
       <div className="flex flex-col space-y-4">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="relative w-full max-w-md">
+        <div className="flex gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar por marca, modelo ou nº de série..."
+              className="pl-10"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
             />
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
           </div>
-          <Button onClick={onAdd}>
-            <PlusIcon className="h-4 w-4 mr-2" />
-            Novo Motor
-          </Button>
+          
+          {searchTerm && (
+            <Button variant="outline" size="icon" onClick={() => setSearchTerm("")}>
+              <FilterX className="h-4 w-4" />
+            </Button>
+          )}
         </div>
 
         {isLoading ? (
-          <div className="space-y-3">
-            {[...Array(6)].map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full" />
-            ))}
+          <div className="flex items-center justify-center py-16">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         ) : filteredMotores.length === 0 ? (
-          <div className="text-center py-12">
-            <Wrench className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-lg font-medium text-gray-900">Nenhum motor encontrado</h3>
-            <p className="mt-1 text-gray-500">
-              {searchTerm ? 'Tente outra busca ou cadastre um novo motor.' : 'Cadastre um novo motor para começar.'}
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Wrench className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium">Nenhum motor encontrado</h3>
+            <p className="text-sm text-muted-foreground mt-1 max-w-md">
+              {searchTerm ? (
+                <>
+                  Não encontramos nenhum motor com o termo <strong>"{searchTerm}"</strong>. Tente ajustar a busca ou cadastre um novo motor.
+                </>
+              ) : (
+                "Comece adicionando seu primeiro motor para associar às ordens de serviço."
+              )}
             </p>
-            <div className="mt-6">
-              <Button onClick={onAdd}>
-                <PlusIcon className="h-4 w-4 mr-2" />
-                Novo Motor
-              </Button>
-            </div>
+            <Button className="mt-4" onClick={onAdd}>
+              <PlusIcon className="mr-2 h-4 w-4" />
+              Novo Motor
+            </Button>
           </div>
         ) : (
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Marca</TableHead>
-                  <TableHead>Modelo</TableHead>
-                  <TableHead>Cilindros</TableHead>
-                  <TableHead>Combustível</TableHead>
-                  <TableHead>Nº Série</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredMotores.map((motor) => (
-                  <TableRow key={motor.id}>
-                    <TableCell className="font-medium">{motor.marca}</TableCell>
-                    <TableCell>{motor.modelo}</TableCell>
-                    <TableCell>{motor.numeroCilindros || "-"}</TableCell>
-                    <TableCell>
-                      {motor.combustivel ? (
-                        <Badge variant="outline">
-                          {motor.combustivel.charAt(0).toUpperCase() + motor.combustivel.slice(1)}
-                        </Badge>
-                      ) : "-"}
-                    </TableCell>
-                    <TableCell>{motor.numeroSerie || "-"}</TableCell>
-                    <TableCell>{motor.clienteNome || "Sem cliente"}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm" onClick={() => onEdit(motor)}>
-                          <EditIcon className="h-4 w-4" />
-                          <span className="sr-only">Editar</span>
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => setMotorToDelete(motor.id)}
-                        >
-                          <Trash2Icon className="h-4 w-4" />
-                          <span className="sr-only">Excluir</span>
-                        </Button>
-                      </div>
-                    </TableCell>
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Marca</TableHead>
+                    <TableHead>Modelo</TableHead>
+                    <TableHead>Cilindros</TableHead>
+                    <TableHead>Combustível</TableHead>
+                    <TableHead>Nº Série</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {filteredMotores.map((motor) => (
+                    <TableRow key={motor.id}>
+                      <TableCell className="font-medium">{motor.marca}</TableCell>
+                      <TableCell>{motor.modelo}</TableCell>
+                      <TableCell>{motor.numeroCilindros || "-"}</TableCell>
+                      <TableCell>
+                        {motor.combustivel ? (
+                          <Badge variant="outline">
+                            {motor.combustivel.charAt(0).toUpperCase() + motor.combustivel.slice(1)}
+                          </Badge>
+                        ) : "-"}
+                      </TableCell>
+                      <TableCell>{motor.numeroSerie || "-"}</TableCell>
+                      <TableCell>{motor.clienteNome || "Sem cliente"}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="outline" size="sm" onClick={() => onEdit(motor)}>
+                            <EditIcon className="h-4 w-4" />
+                            <span className="sr-only">Editar</span>
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setMotorToDelete(motor.id)}
+                          >
+                            <Trash2Icon className="h-4 w-4" />
+                            <span className="sr-only">Excluir</span>
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         )}
       </div>
 
