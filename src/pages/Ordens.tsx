@@ -9,6 +9,7 @@ import { FilterCriteria } from "@/components/ordens/OrdensAdvancedFilter";
 import { doc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
+import OrdensPresentacaoView from "@/components/ordens/apresentacao/OrdensPresentacaoView";
 
 interface OrdensProps {
   onLogout?: () => void;
@@ -20,9 +21,9 @@ export default function Ordens({ onLogout }: OrdensProps) {
   const isTecnico = funcionario?.nivelPermissao === 'tecnico';
   
   // Set view type with local storage persistence
-  const [viewType, setViewType] = useState<"grid" | "list">(() => {
+const [viewType, setViewType] = useState<"grid" | "list" | "presentation">(() => {
     const savedViewType = localStorage.getItem("ordens-view-type");
-    return (savedViewType as "grid" | "list") || "grid";
+    return (savedViewType as "grid" | "list" | "presentation") || "grid";
   });
 
   // Advanced filters state
@@ -103,15 +104,22 @@ export default function Ordens({ onLogout }: OrdensProps) {
         onFiltersChange={setFilters}
       />
 
-      <OrdensContent
-        loading={loading}
-        filteredOrdens={filteredOrdens}
-        isTecnico={isTecnico}
-        viewType={viewType}
-        onReorder={handleReorder}
-        onVerOrdem={handleVerOrdem}
-        onDeleteOrdens={handleDeleteOrdens}
-      />
+      {viewType === 'presentation' ? (
+        <OrdensPresentacaoView
+          ordens={filteredOrdens}
+          onVerOrdem={handleVerOrdem}
+        />
+      ) : (
+        <OrdensContent
+          loading={loading}
+          filteredOrdens={filteredOrdens}
+          isTecnico={isTecnico}
+          viewType={viewType}
+          onReorder={handleReorder}
+          onVerOrdem={handleVerOrdem}
+          onDeleteOrdens={handleDeleteOrdens}
+        />
+      )}
     </Layout>
   );
 }
