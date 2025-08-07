@@ -88,6 +88,10 @@ const [viewType, setViewType] = useState<"grid" | "list" | "presentation">(() =>
     }
   };
 
+  const handleExitPresentation = () => {
+    setViewType("grid"); // Volta para o modo grid
+  };
+
   const title = isTecnico 
     ? `Ordens de Serviço - Minhas Especialidades`
     : 'Ordens de Serviço';
@@ -108,6 +112,7 @@ const [viewType, setViewType] = useState<"grid" | "list" | "presentation">(() =>
         <OrdensPresentacaoView
           ordens={filteredOrdens}
           onVerOrdem={handleVerOrdem}
+          onExitPresentation={handleExitPresentation}
         />
       ) : (
         <OrdensContent

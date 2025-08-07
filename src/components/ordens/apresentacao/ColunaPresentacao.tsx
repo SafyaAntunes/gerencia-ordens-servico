@@ -29,7 +29,7 @@ export default function ColunaPresentacao({ title, column, ordens, onReorder, on
       <DndContext onDragEnd={handleDragEnd}>
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
           <div className="flex-1 overflow-hidden">
-            <div className="grid grid-cols-2 gap-3 h-full overflow-y-auto pr-2">
+            <div className="grid grid-cols-3 gap-3 h-full">
               {ordens.map((ordem, index) => (
                 <SortableItem key={ordem.id} id={ordem.id}>
                   <OrdemCardApresentacao
