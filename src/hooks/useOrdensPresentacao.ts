@@ -9,7 +9,12 @@ type ColumnKey = "left" | "right";
 
 function classifyOrdem(ordem: OrdemServico): ColumnKey {
   const tipos = new Set((ordem.servicos || []).map((s) => s.tipo));
+  
+  // Serviços de montagem/teste
+  const montagemTesteSet = new Set([TipoServico.MONTAGEM, TipoServico.DINAMOMETRO]);
   const hasMontagemTeste = tipos.has(TipoServico.MONTAGEM) || tipos.has(TipoServico.DINAMOMETRO);
+  
+  // Serviços de retífica
   const retificaSet = new Set([
     TipoServico.BLOCO,
     TipoServico.BIELA,
@@ -17,11 +22,19 @@ function classifyOrdem(ordem: OrdemServico): ColumnKey {
     TipoServico.VIRABREQUIM,
     TipoServico.EIXO_COMANDO,
   ]);
-  const hasAnyTipo = tipos.size > 0;
-  const onlyRetifica = hasAnyTipo && Array.from(tipos).every((t) => retificaSet.has(t));
-  if (hasMontagemTeste) return "right";
-  if (onlyRetifica) return "left";
-  return "right"; // padrão: vai para direita se não for apenas retífica
+  const hasRetifica = Array.from(tipos).some((t) => retificaSet.has(t));
+  
+  // Nova lógica: Montagem APENAS se tiver SOMENTE serviços de montagem/dinamômetro
+  const onlyMontagemTeste = hasMontagemTeste && Array.from(tipos).every((t) => montagemTesteSet.has(t));
+  
+  // Se tem apenas montagem/teste -> direita
+  if (onlyMontagemTeste) return "right";
+  
+  // Se tem retífica (independente de outros) -> esquerda
+  if (hasRetifica) return "left";
+  
+  // Outros casos -> direita (padrão)
+  return "right";
 }
 
 function reconcileOrder(stored: string[], current: string[]) {

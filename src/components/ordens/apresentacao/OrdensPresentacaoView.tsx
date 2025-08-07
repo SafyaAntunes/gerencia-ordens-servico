@@ -12,8 +12,8 @@ export default function OrdensPresentacaoView({ ordens, onVerOrdem }: OrdensPres
   const { leftOrdens, rightOrdens, handleReorder } = useOrdensPresentacao(ordens);
 
   return (
-    <section className="w-full">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-[calc(100vh-12rem)] overflow-hidden">
+    <section className="w-full max-w-none mx-auto px-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[calc(100vh-8rem)] overflow-hidden">
         <ColunaPresentacao
           title="Retífica"
           column="left"

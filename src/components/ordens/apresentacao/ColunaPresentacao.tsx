@@ -25,11 +25,11 @@ export default function ColunaPresentacao({ title, column, ordens, onReorder, on
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <h2 className="text-lg font-semibold mb-3 px-1">{title}</h2>
+      <h2 className="text-2xl font-bold mb-4 text-center">{title}</h2>
       <DndContext onDragEnd={handleDragEnd}>
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
           <div className="flex-1 overflow-hidden">
-            <div className="flex flex-col gap-4 pr-2 overflow-hidden">
+            <div className="grid grid-cols-2 gap-3 h-full overflow-y-auto pr-2">
               {ordens.map((ordem, index) => (
                 <SortableItem key={ordem.id} id={ordem.id}>
                   <OrdemCardApresentacao

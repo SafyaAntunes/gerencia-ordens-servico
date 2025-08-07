@@ -28,43 +28,66 @@ export default function OrdemCardApresentacao({ ordem, prioridadeNumero, onClick
       ? "secondary"
       : "outline";
 
+  // Tipos de serviço para exibir
+  const tiposServico = ordem.servicos?.map(s => s.tipo) || [];
+
   return (
     <Card
       role="article"
       onClick={onClick}
-      className="relative p-4 cursor-grab select-none hover:shadow-lg transition-shadow"
+      className="relative p-3 cursor-grab select-none bg-card border-2 hover:border-primary/50 transition-colors h-fit"
     >
-      {/* Número da prioridade */}
-      <div className="absolute top-2 right-2">
-        <Badge className="text-base px-3 py-1" variant="secondary">#{prioridadeNumero}</Badge>
+      {/* Número da prioridade - canto superior direito */}
+      <div className="absolute -top-2 -right-2 z-10">
+        <Badge className="text-lg font-bold px-3 py-1 shadow-md" variant="default">#{prioridadeNumero}</Badge>
       </div>
 
-      {/* Cabeçalho */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="min-w-0">
-          <h3 className="text-xl font-bold truncate">{ordem.nome}</h3>
-          <p className="text-sm text-muted-foreground truncate">OS #{ordem.id}</p>
+      {/* OS # - Primeira linha, grande e negrito */}
+      <div className="mb-2">
+        <h3 className="text-2xl font-bold text-foreground truncate">OS #{ordem.id}</h3>
+      </div>
+
+      {/* Cliente - Segunda linha, negrito */}
+      <div className="mb-3">
+        <p className="text-lg font-bold text-foreground truncate">{ordem.cliente?.nome || 'Cliente não informado'}</p>
+      </div>
+
+      {/* Status, Prioridade, Progresso - Terceira linha */}
+      <div className="mb-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <StatusBadge status={ordem.status} />
+          <Badge variant={prioridadeVariant} className="text-sm">{ordem.prioridade}</Badge>
         </div>
-        <StatusBadge status={ordem.status} />
-      </div>
-
-      {/* Cliente e prioridade */}
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-base font-medium truncate">{ordem.cliente?.nome}</p>
-        <Badge variant={prioridadeVariant}>{ordem.prioridade}</Badge>
-      </div>
-
-      {/* Progresso */}
-      <div className="space-y-1">
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>Progresso</span>
-          <span>{progresso}%</span>
+        
+        <div className="space-y-1">
+          <div className="flex items-center justify-between text-base font-medium">
+            <span>Progresso</span>
+            <span className="font-bold">{progresso}%</span>
+          </div>
+          <Progress value={progresso} className="h-2" />
         </div>
-        <Progress value={progresso} className="h-3" />
       </div>
 
-      {/* Previsão */}
-      <div className="mt-3 text-sm text-muted-foreground">Previsão de entrega: {previsao}</div>
+      {/* Tipos de serviço - Quarta linha */}
+      <div className="mb-2">
+        <div className="flex flex-wrap gap-1">
+          {tiposServico.slice(0, 3).map((tipo, index) => (
+            <Badge key={index} variant="outline" className="text-xs px-2 py-0.5">
+              {tipo.replace('_', ' ').toUpperCase()}
+            </Badge>
+          ))}
+          {tiposServico.length > 3 && (
+            <Badge variant="outline" className="text-xs px-2 py-0.5">
+              +{tiposServico.length - 3}
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      {/* Previsão - Última linha */}
+      <div className="text-sm text-muted-foreground font-medium">
+        Entrega: {previsao}
+      </div>
     </Card>
   );
 }
