@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { arrayMove } from "@dnd-kit/sortable";
 import { OrdemServico, TipoServico } from "@/types/ordens";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, onSnapshot, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 
 const LEFT_KEY = "ordens-presentation-order-left";
 const RIGHT_KEY = "ordens-presentation-order-right";
@@ -59,6 +61,9 @@ export function useOrdensPresentacao(ordens: OrdemServico[]) {
     }
   });
 
+  const docRef = useMemo(() => doc(db, "ordens_presentation", "default"), []);
+  const writeInProgressRef = useRef(false);
+
   // Classificar ordens por coluna
   const { leftIds, rightIds, byId } = useMemo(() => {
     const byIdMap = new Map<string, OrdemServico>();
@@ -72,25 +77,89 @@ export function useOrdensPresentacao(ordens: OrdemServico[]) {
     return { leftIds: left, rightIds: right, byId: byIdMap };
   }, [ordens]);
 
-  // Reconciliar e persistir quando dados mudarem
+  // Sincronização em tempo real com Firestore
   useEffect(() => {
-    const newLeftOrder = reconcileOrder(leftOrderIds, leftIds);
-    const newRightOrder = reconcileOrder(rightOrderIds, rightIds);
+    let unsub: (() => void) | undefined;
 
-    // Remover IDs que migraram de coluna
-    const cleanedLeft = newLeftOrder.filter((id) => leftIds.includes(id));
-    const cleanedRight = newRightOrder.filter((id) => rightIds.includes(id));
+    async function ensureAndSubscribe() {
+      try {
+        const snap = await getDoc(docRef);
+        if (!snap.exists()) {
+          // Inicializa doc com a ordem atual (reconciliada com localStorage)
+          const initialLeft = reconcileOrder(leftOrderIds, leftIds).filter((id) => leftIds.includes(id));
+          const initialRight = reconcileOrder(rightOrderIds, rightIds).filter((id) => rightIds.includes(id));
+          writeInProgressRef.current = true;
+          await setDoc(docRef, {
+            left: initialLeft,
+            right: initialRight,
+            updatedAt: serverTimestamp(),
+          });
+          writeInProgressRef.current = false;
+          setLeftOrderIds(initialLeft);
+          setRightOrderIds(initialRight);
+          localStorage.setItem(LEFT_KEY, JSON.stringify(initialLeft));
+          localStorage.setItem(RIGHT_KEY, JSON.stringify(initialRight));
+        }
+      } catch (e) {
+        // Falha ao inicializar — segue sem travar
+      }
 
-    if (JSON.stringify(cleanedLeft) !== JSON.stringify(leftOrderIds)) {
-      setLeftOrderIds(cleanedLeft);
-      localStorage.setItem(LEFT_KEY, JSON.stringify(cleanedLeft));
+      unsub = onSnapshot(
+        docRef,
+        { includeMetadataChanges: true },
+        (snapshot) => {
+          // Ignora writes locais pendentes para evitar loops
+          if (snapshot.metadata.hasPendingWrites) return;
+          if (!snapshot.exists()) return;
+
+          const data = snapshot.data() as any;
+          const remoteLeft: string[] = Array.isArray(data.left) ? data.left : [];
+          const remoteRight: string[] = Array.isArray(data.right) ? data.right : [];
+
+          // Reconciliar com a classificação atual
+          const cleanedLeft = reconcileOrder(remoteLeft, leftIds).filter((id) => leftIds.includes(id));
+          const cleanedRight = reconcileOrder(remoteRight, rightIds).filter((id) => rightIds.includes(id));
+
+          const leftChanged = JSON.stringify(cleanedLeft) !== JSON.stringify(leftOrderIds);
+          const rightChanged = JSON.stringify(cleanedRight) !== JSON.stringify(rightOrderIds);
+
+          if (leftChanged) {
+            setLeftOrderIds(cleanedLeft);
+            localStorage.setItem(LEFT_KEY, JSON.stringify(cleanedLeft));
+          }
+          if (rightChanged) {
+            setRightOrderIds(cleanedRight);
+            localStorage.setItem(RIGHT_KEY, JSON.stringify(cleanedRight));
+          }
+
+          // Se houve limpeza (migraram de coluna ou IDs inexistentes), persiste doc limpo
+          const needsRemoteCleanup =
+            JSON.stringify(cleanedLeft) !== JSON.stringify(remoteLeft) ||
+            JSON.stringify(cleanedRight) !== JSON.stringify(remoteRight);
+
+          if (needsRemoteCleanup && !writeInProgressRef.current) {
+            writeInProgressRef.current = true;
+            updateDoc(docRef, {
+              left: cleanedLeft,
+              right: cleanedRight,
+              updatedAt: serverTimestamp(),
+            })
+              .catch(() => {})
+              .finally(() => {
+                writeInProgressRef.current = false;
+              });
+          }
+        }
+      );
     }
-    if (JSON.stringify(cleanedRight) !== JSON.stringify(rightOrderIds)) {
-      setRightOrderIds(cleanedRight);
-      localStorage.setItem(RIGHT_KEY, JSON.stringify(cleanedRight));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leftIds, rightIds]);
+
+    ensureAndSubscribe();
+
+    return () => {
+      if (unsub) unsub();
+    };
+    // Reassina quando classificação muda (ex.: OS entrou/saiu/mudou de coluna)
+  }, [docRef, leftIds, rightIds]);
 
   const leftOrdens = useMemo(
     () => leftOrderIds.map((id) => byId.get(id)).filter(Boolean) as OrdemServico[],
@@ -110,6 +179,14 @@ export function useOrdensPresentacao(ordens: OrdemServico[]) {
       const next = arrayMove(leftOrderIds, from, to);
       setLeftOrderIds(next);
       localStorage.setItem(LEFT_KEY, JSON.stringify(next));
+      writeInProgressRef.current = true;
+      updateDoc(docRef, { left: next, right: rightOrderIds, updatedAt: serverTimestamp() })
+        .catch(async () => {
+          await setDoc(docRef, { left: next, right: rightOrderIds, updatedAt: serverTimestamp() });
+        })
+        .finally(() => {
+          writeInProgressRef.current = false;
+        });
     } else {
       const from = rightOrderIds.indexOf(activeId);
       const to = rightOrderIds.indexOf(overId);
@@ -117,6 +194,14 @@ export function useOrdensPresentacao(ordens: OrdemServico[]) {
       const next = arrayMove(rightOrderIds, from, to);
       setRightOrderIds(next);
       localStorage.setItem(RIGHT_KEY, JSON.stringify(next));
+      writeInProgressRef.current = true;
+      updateDoc(docRef, { left: leftOrderIds, right: next, updatedAt: serverTimestamp() })
+        .catch(async () => {
+          await setDoc(docRef, { left: leftOrderIds, right: next, updatedAt: serverTimestamp() });
+        })
+        .finally(() => {
+          writeInProgressRef.current = false;
+        });
     }
   }
 
