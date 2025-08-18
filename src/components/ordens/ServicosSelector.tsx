@@ -207,7 +207,7 @@ export function ServicosSelector({
                             value={servicosDescricoes[servico.tipo] || ''}
                             onChange={(e) => onChangeDescricao(servico.tipo, e.target.value)}
                             rows={2}
-                            className="mt-1"
+                            className="mt-1 resize-y min-h-[60px] max-h-[120px] overflow-wrap-anywhere break-words"
                           />
                         </div>
                       )}

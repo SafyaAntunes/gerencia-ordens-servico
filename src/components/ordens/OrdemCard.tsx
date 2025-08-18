@@ -94,7 +94,7 @@ export default function OrdemCard({
     switch (ordem.status) {
       case 'orcamento': return 'Orçamento';
       case 'aguardando_aprovacao': return 'Aguardando Aprovação';
-      case 'executando_servico': return 'Em Fabricação'; // Updated to match StatusOS type
+      case 'executando_servico': return 'Executando Serviço';
       case 'aguardando_peca_cliente': return 'Aguardando Peça (Cliente)';
       case 'aguardando_peca_interno': return 'Aguardando Peça (Interno)';
       case 'finalizado': return 'Finalizado';
