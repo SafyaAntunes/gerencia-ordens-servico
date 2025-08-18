@@ -150,6 +150,7 @@ export default function OrdemForm({
   useEffect(() => {
     if (initialData?.motorId) {
       setSelectedMotorId(initialData.motorId);
+      setValue("motorId", initialData.motorId);
     }
     
     if (initialData?.servicos) {
@@ -161,16 +162,20 @@ export default function OrdemForm({
       
       setServicos(initialServicos);
       setServicosDescricoes(initialDescricoes);
+      setValue("servicosTipos", initialServicos);
+      setValue("servicosDescricoes", initialDescricoes);
     }
     
     if (initialData?.fotosEntrada) {
       setFotosEntrada(initialData.fotosEntrada);
+      setValue("fotosEntrada", initialData.fotosEntrada);
     }
     
     if (initialData?.fotosSaida) {
       setFotosSaida(initialData.fotosSaida);
+      setValue("fotosSaida", initialData.fotosSaida);
     }
-  }, [initialData]);
+  }, [initialData, setValue]);
   
   const handleServicoToggle = (tipo: string, checked: boolean) => {
     let newServicos = [...servicos];

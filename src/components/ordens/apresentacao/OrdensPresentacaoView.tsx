@@ -3,6 +3,7 @@ import ColunaPresentacao from "./ColunaPresentacao";
 import { useOrdensPresentacao } from "@/hooks/useOrdensPresentacao";
 import { OrdemServico } from "@/types/ordens";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { X, Monitor } from "lucide-react";
 
 interface OrdensPresentacaoViewProps {
@@ -42,21 +43,31 @@ export default function OrdensPresentacaoView({ ordens, onVerOrdem, onExitPresen
       </div>
 
       <div className="w-full h-full p-4">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full overflow-hidden">
-          <ColunaPresentacao
-            title="Retífica"
-            column="left"
-            ordens={leftOrdens}
-            onReorder={handleReorder}
-            onVerOrdem={onVerOrdem}
-          />
-          <ColunaPresentacao
-            title="Montagem/Teste"
-            column="right"
-            ordens={rightOrdens}
-            onReorder={handleReorder}
-            onVerOrdem={onVerOrdem}
-          />
+        <div className="flex h-full overflow-hidden">
+          <div className="flex-1">
+            <ColunaPresentacao
+              title="Retífica"
+              column="left"
+              ordens={leftOrdens}
+              onReorder={handleReorder}
+              onVerOrdem={onVerOrdem}
+            />
+          </div>
+          
+          {/* Linha separadora vertical */}
+          <div className="flex items-center justify-center px-4">
+            <Separator orientation="vertical" className="h-full bg-border/50" />
+          </div>
+          
+          <div className="flex-1">
+            <ColunaPresentacao
+              title="Montagem/Teste"
+              column="right"
+              ordens={rightOrdens}
+              onReorder={handleReorder}
+              onVerOrdem={onVerOrdem}
+            />
+          </div>
         </div>
       </div>
     </div>
