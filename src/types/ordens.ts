@@ -136,6 +136,7 @@ export type OrdemServico = {
   servicos: Servico[];
   status: StatusOS;
   progressoEtapas?: number;
+  observacoes?: string;
   etapasAndamento: {
     [key in EtapaOS]?: {
       concluido: boolean;
