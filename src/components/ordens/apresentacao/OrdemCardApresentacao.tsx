@@ -123,7 +123,7 @@ export default function OrdemCardApresentacao({ ordem, prioridadeNumero, onClick
         {/* Tipos de serviço com cores - Quinta linha */}
         <div className="mb-2">
           <div className="flex flex-wrap gap-1">
-            {tiposServico.slice(0, 2).map((tipo, index) => (
+            {tiposServico.map((tipo, index) => (
               <Badge 
                 key={index} 
                 variant={getServiceBadgeVariant(tipo)} 
@@ -132,11 +132,6 @@ export default function OrdemCardApresentacao({ ordem, prioridadeNumero, onClick
                 {tipo.replace('_', ' ').toUpperCase()}
               </Badge>
             ))}
-            {tiposServico.length > 2 && (
-              <Badge variant="outline" className="text-xs px-1 py-0.5">
-                +{tiposServico.length - 2}
-              </Badge>
-            )}
           </div>
         </div>
 

@@ -60,7 +60,7 @@ const formSchema = z.object({
     message: "Código da OS precisa ter ao menos 3 caracteres.",
   }),
   nome: z.string().min(3, {
-    message: "Observação precisa ter ao menos 3 caracteres.",
+    message: "Nome da OS precisa ter ao menos 3 caracteres.",
   }),
   clienteId: z.string().min(3, {
     message: "Selecione um cliente.",
@@ -71,6 +71,7 @@ const formSchema = z.object({
   prioridade: z.enum(["baixa", "media", "alta", "urgente"]).default("media"),
   servicosTipos: z.array(z.string()).optional(),
   servicosDescricoes: z.record(z.string(), z.string()).optional(),
+  observacoes: z.string().optional(),
   fotosEntrada: z.array(z.any()).optional(),
   fotosSaida: z.array(z.any()).optional(),
 });
@@ -123,6 +124,7 @@ export default function OrdemForm({
         acc[servico.tipo] = servico.descricao;
         return acc;
       }, {}) || {},
+      observacoes: initialData?.observacoes || "",
       fotosEntrada: initialData?.fotosEntrada || [],
       fotosSaida: initialData?.fotosSaida || [],
     }
@@ -272,6 +274,27 @@ export default function OrdemForm({
               )}
             />
           </div>
+          
+          <FormField
+            control={form.control}
+            name="observacoes"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Observações</FormLabel>
+                <FormControl>
+                  <textarea
+                    placeholder="Observações gerais sobre a ordem de serviço..."
+                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    {...field}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Observações gerais que aparecerão no modo de apresentação.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </FormSection>
 
         {/* Cliente */}
