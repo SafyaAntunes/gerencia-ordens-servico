@@ -47,7 +47,7 @@ export default function OrdemCardApresentacao({ ordem, prioridadeNumero, onClick
     if (tiposServico.includes(TipoServico.CABECOTE)) {
       return "bg-blue-50 border-blue-200 hover:border-blue-300";
     }
-    if (tiposServico.includes(TipoServico.MONTAGEM)) {
+    if (tiposServico.some(tipo => [TipoServico.MONTAGEM, TipoServico.MONTAGEM_PARCIAL].includes(tipo))) {
       return "bg-orange-50 border-orange-200 hover:border-orange-300";
     }
     return "bg-card border-border hover:border-primary/50";
@@ -65,6 +65,7 @@ export default function OrdemCardApresentacao({ ordem, prioridadeNumero, onClick
       case TipoServico.CABECOTE:
         return "cabecote";
       case TipoServico.MONTAGEM:
+      case TipoServico.MONTAGEM_PARCIAL:
         return "montagem";
       default:
         return "outline";
@@ -76,7 +77,7 @@ export default function OrdemCardApresentacao({ ordem, prioridadeNumero, onClick
       <Card
         role="article"
         onClick={onClick}
-        className={`relative p-3 cursor-grab select-none border-2 transition-colors h-fit w-full ${getCardBackgroundColor()}`}
+        className={`relative p-2 cursor-grab select-none border-2 transition-colors h-fit w-full ${getCardBackgroundColor()}`}
       >
         {/* Número da prioridade - canto superior direito */}
         <div className="absolute -top-1 -right-1 z-10">
@@ -84,19 +85,19 @@ export default function OrdemCardApresentacao({ ordem, prioridadeNumero, onClick
         </div>
 
         {/* OS # - Primeira linha, grande e negrito */}
-        <div className="mb-2">
-          <h3 className="text-lg font-bold text-foreground truncate">OS #{ordem.id}</h3>
+        <div className="mb-1">
+          <h3 className="text-base font-bold text-foreground truncate">OS #{ordem.id}</h3>
         </div>
 
         {/* Cliente - Segunda linha, negrito */}
-        <div className="mb-2">
-          <p className="text-sm font-bold text-foreground truncate">{ordem.cliente?.nome || 'Cliente não informado'}</p>
+        <div className="mb-1">
+          <p className="text-xs font-bold text-foreground truncate">{ordem.cliente?.nome || 'Cliente não informado'}</p>
         </div>
 
         {/* Motor - Terceira linha (novo) */}
         {motor && (
-          <div className="mb-2">
-            <p className="text-sm text-muted-foreground">
+          <div className="mb-1">
+            <p className="text-xs text-muted-foreground">
               <span className="font-medium">Motor:</span> {motor.marca} {motor.modelo}
               {motor.numeroCilindros && ` - ${motor.numeroCilindros}cil`}
               {motor.cilindrada && ` - ${motor.cilindrada}`}
@@ -104,24 +105,16 @@ export default function OrdemCardApresentacao({ ordem, prioridadeNumero, onClick
           </div>
         )}
 
-        {/* Status, Prioridade, Progresso - Quarta linha */}
-        <div className="mb-2 space-y-2">
+        {/* Status e Prioridade - Quarta linha */}
+        <div className="mb-1">
           <div className="flex items-center justify-between">
             <StatusBadge status={ordem.status} />
             <Badge variant={prioridadeVariant} className="text-xs">{ordem.prioridade}</Badge>
           </div>
-          
-          <div className="space-y-1">
-            <div className="flex items-center justify-between text-sm font-medium">
-              <span>Progresso</span>
-              <span className="font-bold">{progresso}%</span>
-            </div>
-            <Progress value={progresso} className="h-2" />
-          </div>
         </div>
 
         {/* Tipos de serviço com cores - Quinta linha */}
-        <div className="mb-2">
+        <div className="mb-1">
           <div className="flex flex-wrap gap-1">
             {tiposServico.map((tipo, index) => (
               <Badge 
@@ -137,8 +130,8 @@ export default function OrdemCardApresentacao({ ordem, prioridadeNumero, onClick
 
         {/* Observações - Sexta linha (novo) */}
         {ordem.observacoes && (
-          <div className="mb-2">
-            {ordem.observacoes.length > 60 ? (
+          <div className="mb-1">
+            {ordem.observacoes.length > 40 ? (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <p className="text-xs text-muted-foreground truncate cursor-help">

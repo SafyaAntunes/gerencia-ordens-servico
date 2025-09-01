@@ -44,6 +44,12 @@ export const useServicoSubatividades = () => {
       "Ajustes finais", 
       "Testes"
     ],
+    montagem_parcial: [
+      "Preparação", 
+      "Montagem parcial do cabeçote", 
+      "Montagem parcial do bloco", 
+      "Verificação intermediária"
+    ],
     dinamometro: [
       "Potência", 
       "Torque", 
@@ -77,6 +83,7 @@ export const useServicoSubatividades = () => {
       virabrequim: ["Preparação", "Lavagem química", "Secagem"],
       eixo_comando: ["Preparação", "Lavagem química", "Secagem"],
       montagem: ["Preparação", "Limpeza de componentes", "Secagem"],
+      montagem_parcial: ["Preparação", "Limpeza de componentes parciais", "Secagem"],
       dinamometro: ["Limpeza antes do teste", "Limpeza após o teste"],
       lavagem: ["Preparação", "Limpeza geral", "Secagem"],
       inspecao_inicial: ["Limpeza para inspeção"],
@@ -89,6 +96,7 @@ export const useServicoSubatividades = () => {
       virabrequim: ["Verificação de trincas", "Medição de mancais", "Verificação visual"],
       eixo_comando: ["Verificação de desgaste", "Medição de pontos", "Verificação visual"],
       montagem: ["Verificação de componentes", "Conferência de peças"],
+      montagem_parcial: ["Verificação de componentes parciais", "Conferência de peças"],
       dinamometro: ["Verificação de sensores", "Verificação de conexões"],
       lavagem: ["Inspeção de limpeza", "Verificação de produtos químicos"],
       inspecao_inicial: ["Verificação inicial completa", "Documentação"],
@@ -101,6 +109,7 @@ export const useServicoSubatividades = () => {
       virabrequim: ["Verificação de polimento", "Verificação de balanceamento", "Conformidade com especificações"],
       eixo_comando: ["Verificação de acabamento", "Conformidade com especificações"],
       montagem: ["Verificação de torque", "Teste de movimentação", "Conformidade com especificações"],
+      montagem_parcial: ["Verificação de torque parcial", "Teste básico", "Conformidade com especificações"],
       dinamometro: ["Análise de resultados", "Conformidade com especificações"],
       lavagem: ["Verificação final de limpeza"],
       inspecao_inicial: ["Revisão da inspeção inicial"],

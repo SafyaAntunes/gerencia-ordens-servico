@@ -36,6 +36,7 @@ export enum TipoServico {
   VIRABREQUIM = 'virabrequim',
   EIXO_COMANDO = 'eixo_comando',
   MONTAGEM = 'montagem',
+  MONTAGEM_PARCIAL = 'montagem_parcial',
   DINAMOMETRO = 'dinamometro',
   LAVAGEM = 'lavagem',
   INSPECAO_INICIAL = 'inspecao_inicial',

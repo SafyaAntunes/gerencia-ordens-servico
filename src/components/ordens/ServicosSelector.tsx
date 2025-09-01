@@ -28,6 +28,7 @@ const SERVICOS_CONFIG = {
   ],
   'Montagem e Testes': [
     { tipo: 'montagem', nome: 'Montagem', icon: Hammer, description: 'Montagem completa do motor' },
+    { tipo: 'montagem_parcial', nome: 'Montagem Parcial', icon: Hammer, description: 'Montagem parcial do motor' },
     { tipo: 'dinamometro', nome: 'Dinamômetro', icon: Activity, description: 'Teste no dinamômetro' },
   ],
   'Serviços Auxiliares': [

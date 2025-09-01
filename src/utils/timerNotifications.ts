@@ -20,6 +20,7 @@ const servicoNomes: Record<TipoServico, string> = {
   virabrequim: "Virabrequim",
   eixo_comando: "Eixo de Comando",
   montagem: "Montagem",
+  montagem_parcial: "Montagem Parcial",
   dinamometro: "Dinamômetro",
   lavagem: "Lavagem",
   inspecao_inicial: "Inspeção Inicial",

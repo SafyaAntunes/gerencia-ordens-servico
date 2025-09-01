@@ -53,6 +53,7 @@ export const tipoServicoLabels: Record<TipoServico, string> = {
   virabrequim: 'Virabrequim',
   eixo_comando: 'Eixo de Comando',
   montagem: 'Montagem',
+  montagem_parcial: 'Montagem Parcial',
   dinamometro: 'Dinamômetro',
   lavagem: 'Lavagem/Limpeza',
   inspecao_inicial: 'Inspeção Inicial',

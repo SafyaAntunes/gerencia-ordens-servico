@@ -518,7 +518,7 @@ export default function OrdemForm({
             Cancelar
           </Button>
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Salvando..." : "Criar Ordem de Serviço"}
+            {isLoading ? "Salvando..." : initialData ? "Salvar Ordem de Serviço" : "Criar Ordem de Serviço"}
           </Button>
         </div>
       </form>
