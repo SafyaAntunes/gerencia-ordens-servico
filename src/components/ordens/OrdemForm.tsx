@@ -119,11 +119,8 @@ export default function OrdemForm({
       dataAbertura: initialData?.dataAbertura ? new Date(initialData.dataAbertura) : new Date(),
       dataPrevistaEntrega: initialData?.dataPrevistaEntrega ? new Date(initialData.dataPrevistaEntrega) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       prioridade: initialData?.prioridade || "media",
-      servicosTipos: initialData?.servicos?.map((servico: any) => servico.tipo) || [],
-      servicosDescricoes: initialData?.servicos?.reduce((acc: any, servico: any) => {
-        acc[servico.tipo] = servico.descricao;
-        return acc;
-      }, {}) || {},
+      servicosTipos: [],
+      servicosDescricoes: {},
       observacoes: initialData?.observacoes || "",
       fotosEntrada: initialData?.fotosEntrada || [],
       fotosSaida: initialData?.fotosSaida || [],
@@ -149,13 +146,18 @@ export default function OrdemForm({
     }
   }, [values.clienteId, clientes]);
   
+  // Separate useEffect for initialData changes - only runs when initialData changes
   useEffect(() => {
-    if (initialData?.motorId) {
+    if (!initialData) return;
+    
+    // Initialize motor
+    if (initialData.motorId) {
       setSelectedMotorId(initialData.motorId);
       setValue("motorId", initialData.motorId);
     }
     
-    if (initialData?.servicos) {
+    // Initialize services - this is the key fix
+    if (initialData.servicos && initialData.servicos.length > 0) {
       const initialServicos = initialData.servicos.map((servico: any) => servico.tipo);
       const initialDescricoes = initialData.servicos.reduce((acc: any, servico: any) => {
         acc[servico.tipo] = servico.descricao || '';
@@ -166,18 +168,25 @@ export default function OrdemForm({
       setServicosDescricoes(initialDescricoes);
       setValue("servicosTipos", initialServicos);
       setValue("servicosDescricoes", initialDescricoes);
+    } else {
+      // Clear services if no initial services
+      setServicos([]);
+      setServicosDescricoes({});
+      setValue("servicosTipos", []);
+      setValue("servicosDescricoes", {});
     }
     
-    if (initialData?.fotosEntrada) {
+    // Initialize photos
+    if (initialData.fotosEntrada) {
       setFotosEntrada(initialData.fotosEntrada);
       setValue("fotosEntrada", initialData.fotosEntrada);
     }
     
-    if (initialData?.fotosSaida) {
+    if (initialData.fotosSaida) {
       setFotosSaida(initialData.fotosSaida);
       setValue("fotosSaida", initialData.fotosSaida);
     }
-  }, [initialData, setValue]);
+  }, [initialData?.id, setValue]); // Use initialData.id as dependency to avoid unnecessary reruns
   
   const handleServicoToggle = (tipo: string, checked: boolean) => {
     let newServicos = [...servicos];
