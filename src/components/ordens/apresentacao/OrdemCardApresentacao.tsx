@@ -77,7 +77,7 @@ export default function OrdemCardApresentacao({ ordem, prioridadeNumero, onClick
       <Card
         role="article"
         onClick={onClick}
-        className={`relative p-2 cursor-grab select-none border-2 transition-colors h-fit w-full ${getCardBackgroundColor()}`}
+        className={`relative p-2 cursor-grab select-none border-2 transition-colors h-[180px] w-full overflow-hidden ${getCardBackgroundColor()}`}
       >
         {/* Número da prioridade - canto superior direito */}
         <div className="absolute -top-1 -right-1 z-10">
