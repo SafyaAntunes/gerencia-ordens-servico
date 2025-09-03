@@ -134,8 +134,8 @@ export default function OrdemCardApresentacao({ ordem, prioridadeNumero, onClick
             {ordem.observacoes.length > 40 ? (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <p className="text-xs text-muted-foreground truncate cursor-help">
-                    <span className="font-medium">Obs:</span> {ordem.observacoes}
+                  <p className="text-xs font-bold text-foreground truncate cursor-help">
+                    <span className="font-bold">Obs:</span> {ordem.observacoes}
                   </p>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="max-w-xs">
@@ -143,8 +143,8 @@ export default function OrdemCardApresentacao({ ordem, prioridadeNumero, onClick
                 </TooltipContent>
               </Tooltip>
             ) : (
-              <p className="text-xs text-muted-foreground">
-                <span className="font-medium">Obs:</span> {ordem.observacoes}
+              <p className="text-xs font-bold text-foreground">
+                <span className="font-bold">Obs:</span> {ordem.observacoes}
               </p>
             )}
           </div>
