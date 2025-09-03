@@ -271,12 +271,12 @@ export default function OrdemForm({
               name="nome"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Observação</FormLabel>
+                  <FormLabel>Título da OS</FormLabel>
                   <FormControl>
-                    <Input placeholder="Retífica do motor X" {...field} />
+                    <Input placeholder="Ex: Retífica do motor Chevrolet S10" {...field} />
                   </FormControl>
                   <FormDescription>
-                    Uma observação descritiva para fácil identificação.
+                    Um título descritivo para fácil identificação da OS.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

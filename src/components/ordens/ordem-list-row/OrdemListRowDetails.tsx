@@ -50,10 +50,10 @@ export default function OrdemListRowDetails({ ordem, isAtrasada = false }: Ordem
     <div className={`grid grid-cols-12 gap-2 px-4 py-2 items-center ${
       isAtrasada ? 'bg-red-50' : ''
     }`}>
-      {/* Observação */}
+      {/* Título */}
       <div className="col-span-8">
         <div className={`text-sm font-medium mb-1 ${isAtrasada ? 'text-red-700' : 'text-gray-900'}`}>
-          Observação
+          Título
         </div>
         <div className={`text-sm ${isAtrasada ? 'text-red-700' : 'text-gray-700'}`}>
           {ordem.nome || "Sem título"}

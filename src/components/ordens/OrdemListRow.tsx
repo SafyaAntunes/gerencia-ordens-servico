@@ -202,9 +202,9 @@ export default function OrdemListRow({ ordem, index, onReorder, onClick }: Ordem
 
       {/* Informações secundárias */}
       <div className="grid grid-cols-12 gap-2 px-4 py-2 items-center">
-        {/* Observação */}
+        {/* Título */}
         <div className="col-span-8">
-          <div className="text-sm font-medium text-gray-900 mb-1">Observação</div>
+          <div className="text-sm font-medium text-gray-900 mb-1">Título</div>
           <div className="text-sm text-gray-700">
             {ordem.nome || "Sem título"}
           </div>
