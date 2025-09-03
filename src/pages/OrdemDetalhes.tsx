@@ -123,6 +123,7 @@ export default function OrdemDetalhes({ onLogout }: OrdemDetalhesProps) {
           initialData={{
             id: ordem.id,
             nome: ordem.nome,
+            observacoes: ordem.observacoes || "",
             cliente: ordem.cliente,
             motorId: ordem.motorId || "",
             dataAbertura: ordem.dataAbertura ? new Date(ordem.dataAbertura) : new Date(),
