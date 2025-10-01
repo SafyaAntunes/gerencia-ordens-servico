@@ -38,6 +38,31 @@ const SERVICOS_CONFIG = {
   ]
 };
 
+// Função para retornar as cores dos cards baseado no tipo de serviço
+const getServiceCardColor = (tipo: string, isSelected: boolean) => {
+  const baseColors = {
+    'bloco': 'border-blue-500 bg-blue-50 dark:bg-blue-950/20',
+    'cabecote': 'border-green-500 bg-green-50 dark:bg-green-950/20',
+    'biela': 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20',
+    'virabrequim': 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20',
+    'eixo_comando': 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20',
+  };
+
+  const selectedColors = {
+    'bloco': 'border-blue-600 bg-blue-100 dark:bg-blue-950/30 shadow-sm',
+    'cabecote': 'border-green-600 bg-green-100 dark:bg-green-950/30 shadow-sm',
+    'biela': 'border-yellow-600 bg-yellow-100 dark:bg-yellow-950/30 shadow-sm',
+    'virabrequim': 'border-yellow-600 bg-yellow-100 dark:bg-yellow-950/30 shadow-sm',
+    'eixo_comando': 'border-yellow-600 bg-yellow-100 dark:bg-yellow-950/30 shadow-sm',
+  };
+
+  if (isSelected && selectedColors[tipo as keyof typeof selectedColors]) {
+    return selectedColors[tipo as keyof typeof selectedColors];
+  }
+
+  return baseColors[tipo as keyof typeof baseColors] || (isSelected ? 'border-primary bg-primary/5' : 'border-border');
+};
+
 export function ServicosSelector({
   servicosSelecionados,
   servicosDescricoes,
@@ -167,10 +192,9 @@ export function ServicosSelector({
                     <div
                       key={servico.tipo}
                       className={cn(
-                        "border rounded-lg p-4 transition-all",
-                        isSelected 
-                          ? "border-primary bg-primary/5 shadow-sm" 
-                          : "border-border hover:border-muted-foreground/50"
+                        "border-2 rounded-lg p-4 transition-all",
+                        getServiceCardColor(servico.tipo, isSelected),
+                        !isSelected && "hover:border-muted-foreground/50"
                       )}
                     >
                       <div className="flex items-start gap-3">
