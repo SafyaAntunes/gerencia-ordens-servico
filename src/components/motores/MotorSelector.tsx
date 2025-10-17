@@ -47,6 +47,13 @@ export function MotorSelector({
     );
   }
 
+  // Ordenar motores alfabeticamente por marca e modelo
+  const sortedMotores = [...motores].sort((a, b) => {
+    const marcaCompare = a.marca.localeCompare(b.marca);
+    if (marcaCompare !== 0) return marcaCompare;
+    return a.modelo.localeCompare(b.modelo);
+  });
+
   return (
     <>
       <div className="space-y-2">
@@ -80,7 +87,7 @@ export function MotorSelector({
                 <SelectValue placeholder="Selecione um motor (opcional)" />
               </SelectTrigger>
               <SelectContent>
-                {motores.map((motor) => (
+                {sortedMotores.map((motor) => (
                   <SelectItem key={motor.id} value={motor.id}>
                     {motor.marca} {motor.modelo} 
                     {motor.ano && ` (${motor.ano})`}
