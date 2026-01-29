@@ -325,11 +325,13 @@ export default function OrdemForm({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {clientes.map((cliente) => (
-                      <SelectItem key={cliente.id} value={cliente.id}>
-                        {cliente.nome}
-                      </SelectItem>
-                    ))}
+                    {[...clientes]
+                      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+                      .map((cliente) => (
+                        <SelectItem key={cliente.id} value={cliente.id}>
+                          {cliente.nome}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 <FormDescription>
