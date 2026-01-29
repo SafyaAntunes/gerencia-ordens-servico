@@ -45,14 +45,20 @@ export function MotoresList({ motores, onEdit, onDelete, onAdd, isLoading }: Mot
     }
   };
 
-  const filteredMotores = motores.filter((motor) => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      motor.marca.toLowerCase().includes(searchLower) ||
-      motor.modelo.toLowerCase().includes(searchLower) ||
-      (motor.numeroSerie && motor.numeroSerie.toLowerCase().includes(searchLower))
-    );
-  });
+  const filteredMotores = motores
+    .filter((motor) => {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        motor.marca.toLowerCase().includes(searchLower) ||
+        motor.modelo.toLowerCase().includes(searchLower) ||
+        (motor.numeroSerie && motor.numeroSerie.toLowerCase().includes(searchLower))
+      );
+    })
+    .sort((a, b) => {
+      const marcaCompare = a.marca.localeCompare(b.marca);
+      if (marcaCompare !== 0) return marcaCompare;
+      return a.modelo.localeCompare(b.modelo);
+    });
 
   return (
     <>

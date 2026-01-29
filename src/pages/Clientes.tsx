@@ -167,12 +167,14 @@ export default function Clientes({ onLogout }: ClientesProps) {
     }
   };
   
-  // Filter clientes based on search
-  const filteredClientes = clientes.filter((cliente) =>
-    cliente.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cliente.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cliente.telefone?.includes(searchTerm)
-  );
+  // Filter clientes based on search and sort alphabetically
+  const filteredClientes = clientes
+    .filter((cliente) =>
+      cliente.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cliente.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cliente.telefone?.includes(searchTerm)
+    )
+    .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
   
   const handleOpenAddDialog = () => {
     setSelectedCliente(null);
