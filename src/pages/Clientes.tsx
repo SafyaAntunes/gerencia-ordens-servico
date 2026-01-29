@@ -29,6 +29,8 @@ import { getClientes, saveCliente, deleteCliente } from "@/services/clienteServi
 import ClienteForm from "@/components/clientes/ClienteForm";
 import ClienteCard from "@/components/clientes/ClienteCard";
 import ClienteDetalhes from "@/components/clientes/ClienteDetalhes";
+import ClienteListItem from "@/components/clientes/ClienteListItem";
+import ClienteViewToggle from "@/components/clientes/ClienteViewToggle";
 import { toast } from "sonner";
 import ExportButton from "@/components/common/ExportButton";
 import ImportButton from "@/components/common/ImportButton";
@@ -62,6 +64,7 @@ export default function Clientes({ onLogout }: ClientesProps) {
   const [clientesRanking, setClientesRanking] = useState<ClienteRanking[]>([]);
   const [loadingRanking, setLoadingRanking] = useState(true);
   const [activeTab, setActiveTab] = useState("cadastro");
+  const [viewType, setViewType] = useState<"grid" | "list">("grid");
   
   // Filtros do ranking
   const [filtroTipo, setFiltroTipo] = useState<"periodo" | "quantidade">("quantidade");
@@ -327,6 +330,22 @@ export default function Clientes({ onLogout }: ClientesProps) {
       );
     }
     
+    if (viewType === "list") {
+      return (
+        <div className="flex flex-col gap-2">
+          {filteredClientes.map((cliente) => (
+            <ClienteListItem
+              key={cliente.id}
+              cliente={cliente}
+              onView={handleOpenDetailsDialog}
+              onEdit={handleOpenEditDialog}
+              onDelete={handleOpenDeleteDialog}
+            />
+          ))}
+        </div>
+      );
+    }
+    
     return (
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {filteredClientes.map((cliente) => (
@@ -452,7 +471,7 @@ export default function Clientes({ onLogout }: ClientesProps) {
           </TabsList>
           
           <TabsContent value="cadastro" className="space-y-4">
-            <div className="flex gap-4">
+            <div className="flex gap-4 items-center">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -468,6 +487,8 @@ export default function Clientes({ onLogout }: ClientesProps) {
                   <FilterX className="h-4 w-4" />
                 </Button>
               )}
+              
+              <ClienteViewToggle viewType={viewType} onViewTypeChange={setViewType} />
             </div>
             
             {renderClientesList()}
